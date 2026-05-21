@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Brevet Maths — Quiz</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
+.container { max-width: 680px; margin: 0 auto; padding: 1rem; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e8e8e4; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px; }
+.nav-left { font-size: 18px; font-weight: 600; }
+.nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nav-email { font-size: 12px; color: #666; }
+.card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
+.btn:hover { background: #f5f5f0; }
+.btn-primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+.btn-primary:hover { background: #333; }
+.btn-full { width: 100%; justify-content: center; font-size: 15px; padding: 12px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 1rem; }
+.theme-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
+.theme-card:hover { border-color: #999; }
+.theme-card.active { border: 2px solid #1a1a1a; background: #f5f5f0; }
+.theme-icon { font-size: 22px; margin-bottom: 4px; }
+.theme-label { font-size: 12px; font-weight: 500; }
+.diff-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+.diff-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #d0d0c8; background: white; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+.diff-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+.option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid #e8e8e4; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.15s; margin-bottom: 8px; }
+.option:hover { border-color: #999; background: #f9f9f7; }
+.option.selected { border-color: #3730a3; background: #eef2ff; }
+.option.correct { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
+.option.wrong { border-color: #dc2626; background: #fef2f2; color: #dc2626; }
+.letter { font-size: 12px; font-weight: 600; color: #999; min-width: 18px; }
+.option.correct .letter, .option.wrong .letter { color: inherit; }
+.explication { margin-top: 10px; padding: 10px 14px; background: #f5f5f0; border-radius: 8px; font-size: 13px; color: #555; border-left: 3px solid #3730a3; line-height: 1.6; }
+.score-bar { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #f5f5f0; border-radius: 10px; margin-bottom: 1rem; }
+.score-val { font-size: 24px; font-weight: 600; }
+.score-label { font-size: 12px; color: #666; }
+.progress { flex: 1; height: 6px; background: #e0e0d8; border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; background: #3730a3; border-radius: 3px; transition: width 0.5s; }
+.pct { font-size: 14px; color: #666; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
+.q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.q-num { font-size: 12px; color: #999; }
+.q-text { font-size: 15px; line-height: 1.6; margin-bottom: 14px; color: #1a1a1a; }
+.loader { text-align: center; padding: 3rem; color: #666; font-size: 14px; }
+.saved-box { text-align: center; padding: 1rem; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 10px; color: #15803d; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="container">
+  <nav>
+    <div class="nav-left">📐 Brevet Maths</div>
+    <div class="nav-right">
+      <span class="nav-email" id="user-email"></span>
+      <a href="resultats.html" class="btn">Mes résultats</a>
+      <button class="btn" onclick="logout()">Déconnexion</button>
+    </div>
+  </nav>
+
+  <div class="card" id="config">
+    <h2>Choisis un thème</h2>
+    <div class="theme-grid" id="theme-grid"></div>
+    <h2 style="margin-top:1rem">Niveau</h2>
+    <div class="diff-row">
+      <button class="diff-btn" onclick="setDiff(this,'facile')">Facile</button>
+      <button class="diff-btn active" onclick="setDiff(this,'moyen')">Moyen</button>
+      <button class="diff-btn" onclick="setDiff(this,'difficile')">Difficile</button>
+    </div>
+    <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:0.5rem">🎲 Générer 5 questions</button>
+  </div>
+
+  <div id="quiz-area"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+const ANTHROPIC_KEY = 'REMPLACE_PAR_TA_CLE_ANTHROPIC'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+const THEMES = [
+  { label: 'Nombres & calculs', value: 'Nombres et calculs', icon: '🔢' },
+  { label: 'Géométrie', value: 'Géométrie', icon: '📐' },
+  { label: 'Algèbre', value: 'Algèbre et équations', icon: '🔣' },
+  { label: 'Stats & probas', value: 'Statistiques et probabilités', icon: '📊' },
+  { label: 'Fonctions', value: 'Fonctions', icon: '📈' },
+  { label: 'Tout mélanger', value: 'Mélange de tous les thèmes', icon: '✨' },
+]
+
+let user = null
+let theme = THEMES[0].value
+let diff = 'moyen'
+let questions = [], answers = {}, submitted = {}, saved = false
+
+async function init() {
+  const { data } = await sb.auth.getSession()
+  if (!data.session) { window.location.href = 'index.html'; return }
+  user = data.session.user
+  document.getElementById('user-email').textContent = user.email
+  renderThemes()
+}
+
+function renderThemes() {
+  const grid = document.getElementById('theme-grid')
+  grid.innerHTML = THEMES.map((t,i) => `
+    <div class="theme-card ${i===0?'active':''}" onclick="setTheme(this,'${t.value}')">
+      <div class="theme-icon">${t.icon}</div>
+      <div class="theme-label">${t.label}</div>
+    </div>`).join('')
+}
+
+function setTheme(el, val) {
+  document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'))
+  el.classList.add('active')
+  theme = val
+}
+
+function setDiff(el, val) {
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'))
+  el.classList.add('active')
+  diff = val
+}
+
+async function logout() {
+  await sb.auth.signOut()
+  window.location.href = 'index.html'
+}
+
+async function generer() {
+  const btn = document.getElementById('gen-btn')
+  btn.disabled = true
+  btn.textContent = '⏳ Génération en cours...'
+  questions = []; answers = {}; submitted = {}; saved = false
+  document.getElementById('quiz-area').innerHTML = '<div class="loader">Claude prépare tes questions…</div>'
+
+  const prompt = `Tu es un professeur de mathématiques préparant des élèves au Brevet des collèges français.
+Génère exactement 5 questions QCM de niveau "${diff}" sur le thème "${theme}".
+Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après, sans markdown.
+Format: [{"q":"question","opts":["A","B","C","D"],"answer":0,"explication":"explication"}]
+"answer" est l'index 0-3 de la bonne réponse.`
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    })
+    const data = await res.json()
+    const text = data.content.map(i => i.text||'').join('').trim()
+    const match = text.match(/\[[\s\S]*\]/)
+    questions = JSON.parse(match[0])
+    renderQuiz()
+  } catch(e) {
+    document.getElementById('quiz-area').innerHTML = '<div class="loader">❌ Erreur. Vérifie ta clé API et réessaie.</div>'
+  }
+  btn.disabled = false
+  btn.textContent = '🎲 Générer 5 nouvelles questions'
+}
+
+function renderQuiz() {
+  const area = document.getElementById('quiz-area')
+  const nbOk = Object.values(submitted).filter(Boolean).length
+  const nbDone = Object.keys(submitted).length
+  let html = ''
+
+  if (nbDone > 0) {
+    const pct = Math.round((nbOk/nbDone)*100)
+    html += `<div class="score-bar">
+      <div><div class="score-label">Score</div><div class="score-val">${nbOk}/${nbDone}</div></div>
+      <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="pct">${pct}%</div>
+    </div>`
+  }
+
+  const letters = ['A','B','C','D']
+  questions.forEach((q,i) => {
+    const sel = answers[i]
+    const done = submitted[i] !== undefined
+    html += `<div class="card">
+      <div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div>
+      <p class="q-text">${q.q}</p>`
+    q.opts.forEach((opt,j) => {
+      let cls = 'option'
+      if (done) { if(j===q.answer) cls+=' correct'; else if(j===sel) cls+=' wrong' }
+      else if(j===sel) cls+=' selected'
+      html += `<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}>
+        <span class="letter">${letters[j]}</span>${opt}</div>`
+    })
+    if (!done) html += `<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`
+    if (done) html += `<div class="explication"><strong>${submitted[i]?'✓ Bravo !':'✗ Pas tout à fait.'}</strong> ${q.explication}</div>`
+    html += '</div>'
+  })
+
+  const terminer = nbDone === questions.length && questions.length > 0
+  if (terminer && !saved) {
+    html += `<button class="btn btn-primary btn-full" style="margin-bottom:1rem" onclick="sauvegarder()">💾 Enregistrer mes résultats</button>`
+  }
+  if (saved) {
+    html += `<div class="saved-box">✅ Résultats enregistrés ! Score : ${nbOk}/${questions.length}</div>`
+  }
+  area.innerHTML = html
+}
+
+function pick(qi, oi) {
+  if (submitted[qi] !== undefined) return
+  answers[qi] = oi
+  renderQuiz()
+}
+
+function valider(qi) {
+  if (answers[qi] === undefined) return
+  submitted[qi] = answers[qi] === questions[qi].answer
+  renderQuiz()
+}
+
+async function sauvegarder() {
+  const nbOk = Object.values(submitted).filter(Boolean).length
+  const ratees = questions.filter((_,i) => submitted[i]===false).map(q => q.q)
+  await sb.from('resultats').insert({
+    user_id: user.id, email: user.email,
+    theme, difficulte: diff,
+    score: nbOk, total: questions.length,
+    questions_ratees: ratees
+  })
+  saved = true
+  renderQuiz()
+}
+
+init()
+</script>
+</body>
+</html>
