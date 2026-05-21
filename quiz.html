@@ -49,7 +49,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .q-num { font-size: 12px; color: #999; }
 .q-text { font-size: 15px; line-height: 1.6; margin-bottom: 14px; color: #1a1a1a; }
 .loader { text-align: center; padding: 3rem; color: #666; font-size: 14px; }
-.saved-box { text-align: center; padding: 1rem; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 10px; color: #15803d; font-weight: 500; }
+.saved-box { text-align: center; padding: 1rem; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 10px; color: #15803d; font-weight: 500; margin-bottom: 1rem; }
 </style>
 </head>
 <body>
@@ -62,7 +62,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
       <button class="btn" onclick="logout()">Déconnexion</button>
     </div>
   </nav>
-
   <div class="card" id="config">
     <h2>Choisis un thème</h2>
     <div class="theme-grid" id="theme-grid"></div>
@@ -74,16 +73,12 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
     </div>
     <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:0.5rem">🎲 Générer 5 questions</button>
   </div>
-
   <div id="quiz-area"></div>
 </div>
-
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
-const ANTHROPIC_KEY = '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'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-
 const THEMES = [
   { label: 'Nombres & calculs', value: 'Nombres et calculs', icon: '🔢' },
   { label: 'Géométrie', value: 'Géométrie', icon: '📐' },
@@ -92,12 +87,8 @@ const THEMES = [
   { label: 'Fonctions', value: 'Fonctions', icon: '📈' },
   { label: 'Tout mélanger', value: 'Mélange de tous les thèmes', icon: '✨' },
 ]
-
-let user = null
-let theme = THEMES[0].value
-let diff = 'moyen'
+let user = null, theme = 'Nombres et calculs', diff = 'moyen'
 let questions = [], answers = {}, submitted = {}, saved = false
-
 async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'index.html'; return }
@@ -105,45 +96,27 @@ async function init() {
   document.getElementById('user-email').textContent = user.email
   renderThemes()
 }
-
 function renderThemes() {
-  const grid = document.getElementById('theme-grid')
-  grid.innerHTML = THEMES.map((t,i) => `
+  document.getElementById('theme-grid').innerHTML = THEMES.map((t,i) => `
     <div class="theme-card ${i===0?'active':''}" onclick="setTheme(this,'${t.value}')">
       <div class="theme-icon">${t.icon}</div>
       <div class="theme-label">${t.label}</div>
     </div>`).join('')
 }
-
 function setTheme(el, val) {
   document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'))
-  el.classList.add('active')
-  theme = val
+  el.classList.add('active'); theme = val
 }
-
 function setDiff(el, val) {
   document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'))
-  el.classList.add('active')
-  diff = val
+  el.classList.add('active'); diff = val
 }
-
-async function logout() {
-  await sb.auth.signOut()
-  window.location.href = 'index.html'
-}
-
+async function logout() { await sb.auth.signOut(); window.location.href = 'index.html' }
 async function generer() {
   const btn = document.getElementById('gen-btn')
-  btn.disabled = true
-  btn.textContent = '⏳ Génération en cours...'
+  btn.disabled = true; btn.textContent = '⏳ Génération en cours...'
   questions = []; answers = {}; submitted = {}; saved = false
   document.getElementById('quiz-area').innerHTML = '<div class="loader">Claude prépare tes questions…</div>'
-
- const prompt = `Tu es un professeur de mathématiques préparant des élèves au Brevet des collèges français.
-Génère exactement 5 questions QCM de niveau "${diff}" sur le thème "${theme}".
-Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après, sans markdown.
-Format: [{"q":"question","opts":["A","B","C","D"],"answer":0,"explication":"explication"}]
-"answer" est l'index 0-3 de la bonne réponse.`
   try {
     const res = await fetch('/api/generer', {
       method: 'POST',
@@ -151,86 +124,51 @@ Format: [{"q":"question","opts":["A","B","C","D"],"answer":0,"explication":"expl
       body: JSON.stringify({ theme, difficulte: diff })
     })
     const data = await res.json()
-    const text = data.content.map(i => i.text||'').join('').trim()
-    const match = text.match(/\[[\s\S]*\]/)
-    questions = JSON.parse(match[0])
+    if (data.error) throw new Error(data.error)
+    questions = data.questions
     renderQuiz()
   } catch(e) {
-    document.getElementById('quiz-area').innerHTML = '<div class="loader">❌ Erreur. Vérifie ta clé API et réessaie.</div>'
+    document.getElementById('quiz-area').innerHTML = '<div class="loader">❌ Erreur : ' + e.message + '</div>'
   }
-  btn.disabled = false
-  btn.textContent = '🎲 Générer 5 nouvelles questions'
+  btn.disabled = false; btn.textContent = '🎲 Générer 5 nouvelles questions'
 }
-
 function renderQuiz() {
   const area = document.getElementById('quiz-area')
   const nbOk = Object.values(submitted).filter(Boolean).length
   const nbDone = Object.keys(submitted).length
   let html = ''
-
   if (nbDone > 0) {
     const pct = Math.round((nbOk/nbDone)*100)
-    html += `<div class="score-bar">
-      <div><div class="score-label">Score</div><div class="score-val">${nbOk}/${nbDone}</div></div>
-      <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="pct">${pct}%</div>
-    </div>`
+    html += `<div class="score-bar"><div><div class="score-label">Score</div><div class="score-val">${nbOk}/${nbDone}</div></div><div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div><div class="pct">${pct}%</div></div>`
   }
-
   const letters = ['A','B','C','D']
   questions.forEach((q,i) => {
-    const sel = answers[i]
-    const done = submitted[i] !== undefined
-    html += `<div class="card">
-      <div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div>
-      <p class="q-text">${q.q}</p>`
+    const sel = answers[i], done = submitted[i] !== undefined
+    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>`
     q.opts.forEach((opt,j) => {
       let cls = 'option'
       if (done) { if(j===q.answer) cls+=' correct'; else if(j===sel) cls+=' wrong' }
       else if(j===sel) cls+=' selected'
-      html += `<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}>
-        <span class="letter">${letters[j]}</span>${opt}</div>`
+      html += `<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}><span class="letter">${letters[j]}</span>${opt}</div>`
     })
     if (!done) html += `<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`
     if (done) html += `<div class="explication"><strong>${submitted[i]?'✓ Bravo !':'✗ Pas tout à fait.'}</strong> ${q.explication}</div>`
     html += '</div>'
   })
-
-  const terminer = nbDone === questions.length && questions.length > 0
-  if (terminer && !saved) {
+  if (nbDone === questions.length && questions.length > 0 && !saved)
     html += `<button class="btn btn-primary btn-full" style="margin-bottom:1rem" onclick="sauvegarder()">💾 Enregistrer mes résultats</button>`
-  }
-  if (saved) {
+  if (saved)
     html += `<div class="saved-box">✅ Résultats enregistrés ! Score : ${nbOk}/${questions.length}</div>`
-  }
   area.innerHTML = html
 }
-
-function pick(qi, oi) {
-  if (submitted[qi] !== undefined) return
-  answers[qi] = oi
-  renderQuiz()
-}
-
-function valider(qi) {
-  if (answers[qi] === undefined) return
-  submitted[qi] = answers[qi] === questions[qi].answer
-  renderQuiz()
-}
-
+function pick(qi, oi) { if(submitted[qi]!==undefined) return; answers[qi]=oi; renderQuiz() }
+function valider(qi) { if(answers[qi]===undefined) return; submitted[qi]=answers[qi]===questions[qi].answer; renderQuiz() }
 async function sauvegarder() {
   const nbOk = Object.values(submitted).filter(Boolean).length
   const ratees = questions.filter((_,i) => submitted[i]===false).map(q => q.q)
-  await sb.from('resultats').insert({
-    user_id: user.id, email: user.email,
-    theme, difficulte: diff,
-    score: nbOk, total: questions.length,
-    questions_ratees: ratees
-  })
-  saved = true
-  renderQuiz()
+  await sb.from('resultats').insert({ user_id: user.id, email: user.email, theme, difficulte: diff, score: nbOk, total: questions.length, questions_ratees: ratees })
+  saved = true; renderQuiz()
 }
-
 init()
 </script>
 </body>
