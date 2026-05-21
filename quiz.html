@@ -139,26 +139,16 @@ async function generer() {
   questions = []; answers = {}; submitted = {}; saved = false
   document.getElementById('quiz-area').innerHTML = '<div class="loader">Claude prépare tes questions…</div>'
 
-  const prompt = `Tu es un professeur de mathématiques préparant des élèves au Brevet des collèges français.
+ const prompt = `Tu es un professeur de mathématiques préparant des élèves au Brevet des collèges français.
 Génère exactement 5 questions QCM de niveau "${diff}" sur le thème "${theme}".
 Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après, sans markdown.
 Format: [{"q":"question","opts":["A","B","C","D"],"answer":0,"explication":"explication"}]
 "answer" est l'index 0-3 de la bonne réponse.`
-
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('/api/generer', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1200,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ theme, difficulte: diff })
     })
     const data = await res.json()
     const text = data.content.map(i => i.text||'').join('').trim()
