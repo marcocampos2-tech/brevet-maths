@@ -20,14 +20,18 @@ export default async function handler(req, res) {
       })
     })
     const data = await response.json()
-    if (data.error) return res.status(500).json({ error: `Erreur Anthropic: ${data.error.message}` })
+    if (data.error) {
+      if (data.error.type === 'overloaded_error') {
+        return res.status(503).json({ error: '⏳ Claude est surchargé en ce moment, réessaie dans 1 minute !' })
+      }
+      return res.status(500).json({ error: `Erreur : ${data.error.message}` })
+    }
     const text = data.content.map(i => i.text || '').join('').trim()
     const match = text.match(/\[[\s\S]*\]/)
-    if (!match) return res.status(500).json({ error: "Format invalide" })
+    if (!match) return res.status(500).json({ error: "Format invalide, réessaie !" })
     const questions = JSON.parse(match[0])
     res.status(200).json({ questions })
   } catch(e) {
     res.status(500).json({ error: e.message })
   }
-} 
-
+}
