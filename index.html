@@ -28,6 +28,7 @@ input:focus { outline: none; border-color: #1a1a1a; }
 .forgot { text-align: right; margin-top: 6px; }
 .forgot a { font-size: 12px; color: #666; text-decoration: none; }
 .forgot a:hover { color: #1a1a1a; text-decoration: underline; }
+.champs-inscription { display: none; }
 </style>
 </head>
 <body>
@@ -43,7 +44,14 @@ input:focus { outline: none; border-color: #1a1a1a; }
     <button class="tab" onclick="setMode('register')">Créer un compte</button>
   </div>
 
-  <label>Email</label>
+  <div class="champs-inscription" id="champs-inscription">
+    <label>Prénom de l'élève</label>
+    <input type="text" id="prenom" placeholder="Ex: Lucas">
+    <label>Email des parents</label>
+    <input type="email" id="email-parent" placeholder="parents@email.com">
+  </div>
+
+  <label>Email de l'élève</label>
   <input type="email" id="email" placeholder="ton@email.com">
 
   <label>Mot de passe</label>
@@ -75,22 +83,32 @@ function setMode(m) {
   document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&m==='login')||(i===1&&m==='register')))
   document.getElementById('btn').textContent = m === 'login' ? 'Se connecter' : 'Créer mon compte'
   document.getElementById('msg').className = 'msg'
+  document.getElementById('champs-inscription').style.display = m === 'register' ? 'block' : 'none'
 }
 
 async function soumettre() {
   const email = document.getElementById('email').value.trim()
   const password = document.getElementById('password').value
   const btn = document.getElementById('btn')
-  if (!email || !password) { afficherMsg('Remplis tous les champs', 'error'); return }
+  if (!email || !password) { afficherMsg('Remplis tous les champs obligatoires.', 'error'); return }
   btn.disabled = true
   btn.textContent = 'Chargement...'
+
   if (mode === 'login') {
     const { error } = await sb.auth.signInWithPassword({ email, password })
     if (error) afficherMsg('Email ou mot de passe incorrect. Réessaie.', 'error')
     else window.location.href = 'quiz.html'
   } else {
-    const { error } = await sb.auth.signUp({ email, password })
-    if (error) afficherMsg('Erreur lors de la création : ' + error.message, 'error')
+    const prenom = document.getElementById('prenom').value.trim()
+    const emailParent = document.getElementById('email-parent').value.trim()
+    if (!prenom) { afficherMsg('Entre le prénom de l\'élève.', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
+    if (!emailParent) { afficherMsg('Entre l\'email des parents.', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
+
+    const { data, error } = await sb.auth.signUp({
+      email, password,
+      options: { data: { prenom, email_parent: emailParent } }
+    })
+    if (error) afficherMsg('Erreur : ' + error.message, 'error')
     else afficherMsg('✅ Compte créé ! Tu peux maintenant te connecter.', 'success')
   }
   btn.disabled = false
