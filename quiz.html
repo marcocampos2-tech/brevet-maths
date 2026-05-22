@@ -100,9 +100,28 @@ async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'index.html'; return }
   user = data.session.user
+
+  // Récupérer le profil depuis la table resultats
   prenom = user.user_metadata?.prenom || ''
   emailParent = user.user_metadata?.email_parent || ''
-  document.getElementById('user-email').textContent = prenom ? prenom : user.email
+
+  // Si pas dans metadata, chercher dans la dernière session
+  if (!prenom || !emailParent) {
+    const { data: derniere } = await sb.from('resultats')
+      .select('prenom, email_parent')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+    if (derniere && derniere.length > 0) {
+      prenom = prenom || derniere[0].prenom || ''
+      emailParent = emailParent || derniere[0].email_parent || ''
+    }
+  }
+
+  console.log('prenom:', prenom)
+  console.log('emailParent:', emailParent)
+
+  document.getElementById('user-email').textContent = prenom || user.email
   renderThemes()
 }
 
@@ -187,26 +206,34 @@ async function sauvegarder() {
   await sb.from('resultats').insert({
     user_id: user.id,
     email: user.email,
-    prenom,
-    email_parent: emailParent,
+    prenom: prenom || '',
+    email_parent: emailParent || '',
     theme, difficulte: diff,
     score: nbOk, total: questions.length,
     questions_ratees: ratees
   })
 
   if (emailParent) {
-    await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        emailParent,
-        emailEleve: user.email,
-        prenom: prenom || user.email,
-        theme, difficulte: diff,
-        score: nbOk, total: questions.length,
-        questionsRatees: ratees
+    try {
+      const resp = await fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailParent,
+          emailEleve: user.email,
+          prenom: prenom || user.email,
+          theme, difficulte: diff,
+          score: nbOk, total: questions.length,
+          questionsRatees: ratees
+        })
       })
-    })
+      const result = await resp.json()
+      console.log('Email result:', result)
+    } catch(e) {
+      console.log('Erreur email:', e.message)
+    }
+  } else {
+    console.log('Pas d email parent trouvé')
   }
 
   saved = true
