@@ -8,7 +8,7 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
-.container { max-width: 780px; margin: 0 auto; padding: 1rem; }
+.container { max-width: 900px; margin: 0 auto; padding: 1rem; }
 nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e8e8e4; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px; }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
 .btn:hover { background: #f5f5f0; }
@@ -21,13 +21,18 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .stat-label { font-size: 12px; color: #666; margin-top: 4px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { text-align: left; padding: 8px 10px; font-size: 11px; color: #666; font-weight: 500; border-bottom: 1px solid #e8e8e4; }
-td { padding: 9px 10px; border-bottom: 1px solid #f0f0ec; }
+td { padding: 9px 10px; border-bottom: 1px solid #f0f0ec; vertical-align: top; }
 tr:last-child td { border-bottom: none; }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
+.badge-green { background: #f0fdf4; color: #16a34a; }
 .ratee-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0ec; font-size: 13px; }
 .ratee-count { color: #dc2626; font-weight: 600; white-space: nowrap; margin-left: 12px; }
 .loader { text-align: center; color: #666; padding: 3rem; }
-.access-denied { text-align: center; color: #dc2626; padding: 3rem; }
+.tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; }
+.tab { padding: 8px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+.tab.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+.section { display: none; }
+.section.active { display: block; }
 </style>
 </head>
 <body>
@@ -42,20 +47,29 @@ tr:last-child td { border-bottom: none; }
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
-const PROF_EMAIL = 'marcocampos2@gmail.com'
+const PROF_EMAIL = 'REMPLACE_PAR_TON_EMAIL'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 async function logout() { await sb.auth.signOut(); window.location.href = 'index.html' }
+
+function setTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'))
+  document.getElementById('tab-' + tab).classList.add('active')
+  document.getElementById('section-' + tab).classList.add('active')
+}
 
 async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'index.html'; return }
   if (data.session.user.email !== PROF_EMAIL) {
-    document.getElementById('content').innerHTML = '<div class="access-denied">⛔ Accès réservé au professeur.</div>'
+    document.getElementById('content').innerHTML = '<div style="text-align:center;color:#dc2626;padding:3rem">⛔ Accès réservé au professeur.</div>'
     return
   }
+
   const { data: rows } = await sb.from('resultats').select('*').order('created_at', { ascending: false })
   if (!rows) return
+
   const eleves = [...new Set(rows.map(r => r.email))].length
   const moy = rows.length ? Math.round((rows.reduce((a,r) => a+r.score/r.total,0)/rows.length)*100) : 0
 
@@ -69,6 +83,14 @@ async function init() {
     .reduce((acc,q) => { acc[q]=(acc[q]||0)+1; return acc }, {})
   const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
 
+  const elevesUniques = Object.values(rows.reduce((acc, r) => {
+    if (!acc[r.email]) acc[r.email] = { email: r.email, prenom: r.prenom || '—', email_parent: r.email_parent || '—', sessions: 0, totalScore: 0, totalQ: 0 }
+    acc[r.email].sessions++
+    acc[r.email].totalScore += r.score
+    acc[r.email].totalQ += r.total
+    return acc
+  }, {}))
+
   document.getElementById('content').innerHTML = `
     <div class="stats-grid">
       <div class="stat"><div class="stat-val">${eleves}</div><div class="stat-label">Élèves actifs</div></div>
@@ -76,38 +98,68 @@ async function init() {
       <div class="stat"><div class="stat-val">${moy}%</div><div class="stat-label">Moyenne générale</div></div>
     </div>
 
-    <div class="card">
-      <h2>Résultats par thème</h2>
-      <table>
-        <thead><tr><th>Thème</th><th>Sessions</th><th>Moyenne</th></tr></thead>
-        <tbody>${Object.entries(themeStats).map(([t,s])=>`
-          <tr><td>${t}</td><td>${s.n}</td><td><strong>${Math.round((s.ok/s.tot)*100)}%</strong></td></tr>
-        `).join('')}</tbody>
-      </table>
+    <div class="tabs">
+      <button class="tab active" id="tab-eleves" onclick="setTab('eleves')">👥 Élèves</button>
+      <button class="tab" id="tab-themes" onclick="setTab('themes')">📊 Thèmes</button>
+      <button class="tab" id="tab-sessions" onclick="setTab('sessions')">📋 Sessions</button>
+      <button class="tab" id="tab-ratees" onclick="setTab('ratees')">❌ Questions ratées</button>
     </div>
 
-    ${topRatees.length ? `
-    <div class="card">
-      <h2>Questions les plus ratées</h2>
-      ${topRatees.map(([q,n])=>`
-        <div class="ratee-item"><span>${q}</span><span class="ratee-count">${n}× ratée</span></div>
-      `).join('')}
-    </div>` : ''}
+    <div class="section active" id="section-eleves">
+      <div class="card">
+        <h2>Liste des élèves</h2>
+        <table>
+          <thead><tr><th>Prénom</th><th>Email élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th></tr></thead>
+          <tbody>${elevesUniques.map(e=>`
+            <tr>
+              <td><strong>${e.prenom}</strong></td>
+              <td style="color:#666">${e.email}</td>
+              <td style="color:#3730a3">${e.email_parent}</td>
+              <td>${e.sessions}</td>
+              <td><strong>${Math.round((e.totalScore/e.totalQ)*100)}%</strong></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
 
-    <div class="card">
-      <h2>Dernières sessions</h2>
-      <table>
-        <thead><tr><th>Élève</th><th>Thème</th><th>Niveau</th><th>Score</th><th>Date</th></tr></thead>
-        <tbody>${rows.slice(0,30).map(r=>`
-          <tr>
-            <td>${r.email}</td>
-            <td style="font-size:12px">${r.theme}</td>
-            <td><span class="badge">${r.difficulte}</span></td>
-            <td><strong>${r.score}/${r.total}</strong></td>
-            <td style="font-size:12px;color:#999">${new Date(r.created_at).toLocaleDateString('fr-FR')}</td>
-          </tr>
-        `).join('')}</tbody>
-      </table>
+    <div class="section" id="section-themes">
+      <div class="card">
+        <h2>Résultats par thème</h2>
+        <table>
+          <thead><tr><th>Thème</th><th>Sessions</th><th>Moyenne</th></tr></thead>
+          <tbody>${Object.entries(themeStats).map(([t,s])=>`
+            <tr><td>${t}</td><td>${s.n}</td><td><strong>${Math.round((s.ok/s.tot)*100)}%</strong></td></tr>
+          `).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="section-sessions">
+      <div class="card">
+        <h2>Dernières sessions</h2>
+        <table>
+          <thead><tr><th>Prénom</th><th>Thème</th><th>Niveau</th><th>Score</th><th>Date</th></tr></thead>
+          <tbody>${rows.slice(0,30).map(r=>`
+            <tr>
+              <td><strong>${r.prenom || '—'}</strong><br><span style="font-size:11px;color:#999">${r.email}</span></td>
+              <td style="font-size:12px">${r.theme}</td>
+              <td><span class="badge">${r.difficulte}</span></td>
+              <td><strong>${r.score}/${r.total}</strong></td>
+              <td style="font-size:12px;color:#999">${new Date(r.created_at).toLocaleDateString('fr-FR')}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section" id="section-ratees">
+      <div class="card">
+        <h2>Questions les plus ratées</h2>
+        ${topRatees.length ? topRatees.map(([q,n])=>`
+          <div class="ratee-item"><span>${q}</span><span class="ratee-count">${n}× ratée</span></div>
+        `).join('') : '<p style="color:#666;font-size:13px">Pas encore de données.</p>'}
+      </div>
     </div>`
 }
 init()
