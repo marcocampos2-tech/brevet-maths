@@ -46,7 +46,7 @@ answer est l index 0-3 de la bonne réponse. Varie les bonnes réponses.`
 
     if (!response.ok) {
       const errText = await response.text()
-      return res.status(500).json({ error: `Erreur serveur (${response.status}). Réessaie dans quelques secondes.` })
+      return res.status(500).json({ error: '⏳ Claude est surchargé en ce moment, réessaie dans 1 minute !'})
     }
 
     const data = await response.json()
