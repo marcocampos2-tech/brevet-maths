@@ -22,12 +22,18 @@ export default function Quiz() {
   const [saved, setSaved] = useState(false)
   const router = useRouter()
 
+  // 🔐 Écoute dynamique et propre de la session Supabase
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.push('/')
-      else setUser(data.session.user)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        router.push('/')
+      } else {
+        setUser(session.user)
+      }
     })
-  }, [])
+
+    return () => subscription.unsubscribe()
+  }, [router])
 
   async function logout() {
     await supabase.auth.signOut()
@@ -66,26 +72,37 @@ export default function Quiz() {
   }
 
   async function sauvegarder() {
+    if (!user) return alert("Vous devez être connecté pour enregistrer vos résultats.")
+    
     const correct = Object.values(submitted).filter(Boolean).length
     const ratees = questions
       .filter((_, i) => submitted[i] === false)
       .map(q => q.q)
 
-    await supabase.from('resultats').insert({
-      user_id: user.id,
-      email: user.email,
-      theme,
-      difficulte: diff,
-      score: correct,
-      total: questions.length,
-      questions_ratees: ratees
-    })
-    setSaved(true)
+    try {
+      const { error } = await supabase.from('resultats').insert({
+        user_id: user.id,
+        email: user.email,
+        theme,
+        difficulte: diff,
+        score: correct,
+        total: questions.length,
+        questions_ratees: ratees
+      })
+      
+      if (error) throw error
+      setSaved(true)
+    } catch (error) {
+      alert("Erreur lors de la sauvegarde des résultats.")
+    }
   }
 
   const nbSoumis = Object.keys(submitted).length
   const nbCorrects = Object.values(submitted).filter(Boolean).length
   const terminer = nbSoumis === questions.length && questions.length > 0
+  
+  // 🧮 Sécurisation du pourcentage (évite le NaN et la division par 0)
+  const pourcentagereussite = nbSoumis > 0 ? Math.round((nbCorrects / nbSoumis) * 100) : 0
 
   return (
     <div className="container">
@@ -137,9 +154,9 @@ export default function Quiz() {
                 <div className="score-val">{nbCorrects}/{nbSoumis}</div>
               </div>
               <div className="progress">
-                <div className="progress-fill" style={{ width: `${Math.round((nbCorrects / nbSoumis) * 100)}%` }} />
+                <div className="progress-fill" style={{ width: `${pourcentagereussite}%` }} />
               </div>
-              <div style={{ fontSize: 14, color: '#666' }}>{Math.round((nbCorrects / nbSoumis) * 100)}%</div>
+              <div style={{ fontSize: 14, color: '#666' }}>{pourcentagereussite}%</div>
             </div>
           )}
 
@@ -155,26 +172,32 @@ export default function Quiz() {
                 </div>
                 <p style={{ fontSize: 15, lineHeight: 1.6, marginBottom: 14 }}>{q.q}</p>
 
-                {/* 📊 AJOUT : Rendu du tableau mathématique si disponible */}
-                {q.tableau && (
+                {/* 📊 RENDU SÉCURISÉ DU TABLEAU MATHÉMATIQUE */}
+                {q.tableau && q.tableau.headers && q.tableau.headers.length > 0 && (
                   <div style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
-                    <table className="tableau-maths">
+                    <table className="tableau-maths" style={{ width: '100%', borderCollapse: 'collapse', marginTop: 10 }}>
                       <thead>
                         <tr>
-                          {q.tableau.headers?.map((header, index) => (
-                            <th key={index}>{header}</th>
+                          {q.tableau.headers.map((header, index) => (
+                            <th key={index} style={{ border: '1px solid #ccc', padding: '8px', backgroundColor: '#f9f9f9' }}>
+                              {header}
+                            </th>
                           ))}
                         </tr>
                       </thead>
-                      <tbody>
-                        {q.tableau.rows?.map((row, rowIndex) => (
-                          <tr key={rowIndex}>
-                            {row.map((cell, cellIndex) => (
-                              <td key={cellIndex}>{cell}</td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
+                      {q.tableau.rows && q.tableau.rows.length > 0 && (
+                        <tbody>
+                          {q.tableau.rows.map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                              {row.map((cell, cellIndex) => (
+                                <td key={cellIndex} style={{ border: '1px solid #ccc', padding: '8px', textAlign: 'center' }}>
+                                  {cell}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      )}
                     </table>
                   </div>
                 )}
