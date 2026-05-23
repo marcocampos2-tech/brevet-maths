@@ -22,49 +22,73 @@ export default async function handler(req, res) {
       'difficile': 'de niveau Brevet mention Très Bien, questions complexes avec plusieurs étapes'
     }
 
-    // ÉTAPE 1 : Générer les questions
-    const promptGeneration = `Tu es un professeur de mathématiques expert en préparation au Brevet des collèges français (DNB).
+    // ÉTAPE 1 : Générer les questions SANS index - Claude donne la bonne réponse en texte
+    const prompt1 = `Tu es un professeur de mathématiques expert au Brevet des collèges français.
 Génère exactement 5 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
-Les notions à couvrir : ${contexte[theme] || theme}.
+Les notions : ${contexte[theme] || theme}.
 
-RÈGLES STRICTES :
-1. Calcule la bonne réponse AVANT d'écrire les options
-2. Les 3 mauvaises réponses doivent être plausibles et proches de la bonne
-3. Varie les positions de la bonne réponse (pas toujours index 0 ou 1)
-4. Explique le calcul en détail dans "explication"
-5. NE génère PAS d'option "je ne sais pas" - seulement 4 vraies propositions mathématiques
+IMPORTANT : Pour chaque question, tu dois :
+1. Calculer la bonne réponse
+2. Écrire la bonne réponse dans le champ "bonne_reponse" EXACTEMENT comme elle apparaît dans "opts"
+3. Ne PAS mettre de champ "answer"
 
 Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ni après, sans markdown.
-Format : [{"q":"question","opts":["opt0","opt1","opt2","opt3"],"answer":0,"explication":"calcul détaillé"}]`
+Format EXACT :
+[{"q":"question","opts":["opt0","opt1","opt2","opt3"],"bonne_reponse":"opt_correct","explication":"calcul détaillé"}]
 
-    const response1 = await claudeCall(promptGeneration)
+Exemple :
+[{"q":"Combien font 3x+2=11 ?","opts":["x=2","x=3","x=4","x=5"],"bonne_reponse":"x=3","explication":"3x=9 donc x=3"}]`
+
+    const response1 = await claudeCall(prompt1)
     if (response1.error) return res.status(500).json({ error: response1.error })
 
-    const text1 = response1.text
-    const match1 = text1.match(/\[[\s\S]*\]/)
-    if (!match1) return res.status(500).json({ error: '❌ Réponse inattendue. Réessaie !' })
-    let questions = JSON.parse(match1[0])
+    const match = response1.text.match(/\[[\s\S]*\]/)
+    if (!match) return res.status(500).json({ error: '❌ Réponse inattendue. Réessaie !' })
 
-    // ÉTAPE 2 : Vérification de chaque réponse
+    let questions = JSON.parse(match[0])
+
+    // ÉTAPE 2 : On calcule nous-mêmes l'index correct
+    questions = questions.map(q => {
+      const bonneReponse = q.bonne_reponse?.trim()
+      let answer = q.opts.findIndex(opt => opt.trim() === bonneReponse)
+      
+      // Si pas trouvé exactement, cherche une correspondance partielle
+      if (answer === -1) {
+        answer = q.opts.findIndex(opt => 
+          opt.trim().toLowerCase() === bonneReponse?.toLowerCase()
+        )
+      }
+      
+      // Si toujours pas trouvé, vérifie avec Claude
+      if (answer === -1) answer = 0
+
+      return {
+        q: q.q,
+        opts: q.opts,
+        answer,
+        explication: q.explication
+      }
+    })
+
+    // ÉTAPE 3 : Vérification — Claude confirme la bonne réponse pour chaque question
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i]
-      const promptVerif = `Tu es un professeur de mathématiques. Voici une question QCM :
+      const prompt2 = `Résous cette question de mathématiques et réponds UNIQUEMENT avec la bonne réponse parmi les options, EXACTEMENT comme écrite.
 
 Question : ${q.q}
-Options :
-0 : ${q.opts[0]}
-1 : ${q.opts[1]}
-2 : ${q.opts[2]}
-3 : ${q.opts[3]}
+Options : ${q.opts.map((o,j) => `${j}: "${o}"`).join(', ')}
 
-Calcule soigneusement et réponds UNIQUEMENT avec le chiffre 0, 1, 2 ou 3 correspondant à la bonne réponse. Rien d'autre.`
+Réponds UNIQUEMENT avec le texte exact de la bonne réponse, rien d'autre.`
 
-      const response2 = await claudeCall(promptVerif)
+      const response2 = await claudeCall(prompt2)
       if (!response2.error) {
-        const verifText = response2.text.trim()
-        const verifIndex = parseInt(verifText.match(/[0-3]/)?.[0])
-        if (!isNaN(verifIndex) && verifIndex !== q.answer) {
-          console.log(`Question ${i+1} corrigée : ${q.answer} → ${verifIndex}`)
+        const verifReponse = response2.text.trim()
+        const verifIndex = q.opts.findIndex(opt => 
+          opt.trim().toLowerCase() === verifReponse.toLowerCase() ||
+          verifReponse.toLowerCase().includes(opt.trim().toLowerCase())
+        )
+        if (verifIndex !== -1 && verifIndex !== q.answer) {
+          console.log(`Q${i+1} corrigée: "${q.opts[q.answer]}" → "${q.opts[verifIndex]}"`)
           questions[i].answer = verifIndex
         }
       }
@@ -73,6 +97,7 @@ Calcule soigneusement et réponds UNIQUEMENT avec le chiffre 0, 1, 2 ou 3 corres
     res.status(200).json({ questions })
 
   } catch(e) {
+    console.log('Erreur:', e.message)
     res.status(500).json({ error: '❌ Une erreur est survenue. Réessaie.' })
   }
 }
@@ -88,20 +113,19 @@ async function claudeCall(prompt) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 1500,
+        max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }]
       })
     })
 
     if (!response.ok) {
-      return { error: '⏳ Claude est surchargé en ce moment. Réessaie dans 1 minute !' }
+      return { error: '⏳ Claude est surchargé. Réessaie dans 1 minute !' }
     }
 
     const data = await response.json()
-
     if (data.error) {
       if (data.error.type === 'overloaded_error') {
-        return { error: '⏳ Claude est surchargé en ce moment. Réessaie dans 1 minute !' }
+        return { error: '⏳ Claude est surchargé. Réessaie dans 1 minute !' }
       }
       return { error: `Erreur : ${data.error.message}` }
     }
