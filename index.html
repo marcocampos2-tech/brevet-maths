@@ -55,7 +55,10 @@ input:focus { outline: none; border-color: #1a1a1a; }
   <input type="email" id="email" placeholder="ton@email.com">
 
   <label>Mot de passe</label>
-  <input type="password" id="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') soumettre()">
+  <div style="position:relative">
+    <input type="password" id="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') soumettre()" style="padding-right:40px;width:100%">
+    <span onclick="toggleMdp()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil">👁️</span>
+  </div>
 
   <div class="forgot">
     <a href="#" onclick="resetPassword()">Mot de passe oublié ?</a>
@@ -77,6 +80,18 @@ async function init() {
   if (data.session) window.location.href = 'quiz.html'
 }
 init()
+
+function toggleMdp() {
+  const input = document.getElementById('password')
+  const oeil = document.getElementById('oeil')
+  if (input.type === 'password') {
+    input.type = 'text'
+    oeil.textContent = '🙈'
+  } else {
+    input.type = 'password'
+    oeil.textContent = '👁️'
+  }
+}
 
 function setMode(m) {
   mode = m
@@ -104,7 +119,7 @@ async function soumettre() {
     if (!prenom) { afficherMsg('Entre le prénom de l\'élève.', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
     if (!emailParent) { afficherMsg('Entre l\'email des parents.', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
 
-    const { data, error } = await sb.auth.signUp({
+    const { error } = await sb.auth.signUp({
       email, password,
       options: { data: { prenom, email_parent: emailParent } }
     })
