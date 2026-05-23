@@ -22,9 +22,9 @@ export default async function handler(req, res) {
       'difficile': 'de niveau Brevet mention Très Bien, questions complexes avec plusieurs étapes'
     }
 
-    // ÉTAPE 1 : Générer exactement 5 questions adaptées au bouton du Frontend
+    // ÉTAPE 1 : Générer exactement 10 questions adaptées à ton choix
     const prompt1 = `Tu es un professeur de mathématiques expert au Brevet des collèges français.
-Génère exactement 5 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
+Génère exactement 10 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
 Les notions à couvrir : ${contexte[theme] || theme}.
 
 RÈGLE ABSOLUE POUR LES TABLEAUX :
@@ -75,11 +75,10 @@ Si la question ne nécessite aucun tableau (ex: calcul pur ou géométrie), écr
       }
     })
 
-    // ÉTAPE 3 : Vérification stricte par Index numérique (uniquement si la question n'a pas été vidée d'un tableau obligatoire)
+    // ÉTAPE 3 : Vérification par Index numérique (avec prise en compte sécurisée du tableau)
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i]
       
-      // Si l'énoncé demande un tableau mais que l'objet tableau est null, on force Claude à recréer le tableau manquant
       const prompt2 = `Résous cette question de mathématiques de niveau Brevet. Regarde les options numérotées de 0 à 3 et donne UNIQUEMENT le numéro de la bonne réponse.
 
 Question : ${q.q}
@@ -105,7 +104,7 @@ Réponds UNIQUEMENT avec le chiffre de l'index correspondant à la bonne répons
       }
     }
 
-    // Renvoie exactement les 5 questions nettoyées et vérifiées au client React
+    // Renvoie les 10 questions nettoyées et vérifiées au client React
     res.status(200).json({ questions })
 
   } catch(e) {
@@ -124,8 +123,8 @@ async function claudeCall(prompt) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-5-sonnet-20241022', // Utilisation de l'identifiant de modèle standardisé pour Claude 3.5 Sonnet
-        max_tokens: 2000,
+        model: 'claude-3-5-sonnet-20241022', // Identifiant de modèle officiel pour Claude 3.5 Sonnet
+        max_tokens: 3000, // Augmenté pour gérer sans problème le volume de 10 questions complexes
         messages: [{ role: 'user', content: prompt }]
       })
     })
