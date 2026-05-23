@@ -27,17 +27,26 @@ export default async function handler(req, res) {
 Génère exactement 10 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
 Les notions : ${contexte[theme] || theme}.
 
-IMPORTANT : Pour chaque question, tu dois :
-1. Calculer la bonne réponse
-2. Écrire la bonne réponse dans le champ "bonne_reponse" EXACTEMENT comme elle apparaît dans "opts"
-3. Ne PAS mettre de champ "answer"
+IMPORTANT : Si la question nécessite un tableau de valeurs (notamment pour le thème Fonctions ou Statistiques), ne mets pas de texte brut avec des barres "|". Utilise plutôt le champ optionnel "tableau" structuré comme dans l'exemple. Dans ce cas, la consigne dans "q" doit simplement introduire le tableau (ex: "Quelle fonction correspond au tableau suivant ?").
 
 Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ni après, sans markdown.
 Format EXACT :
-[{"q":"question","opts":["opt0","opt1","opt2","opt3"],"bonne_reponse":"opt_correct","explication":"calcul détaillé"}]
+[
+  {
+    "q": "question",
+    "tableau": {
+      "headers": ["x", "0", "1", "2"],
+      "rows": [
+        ["f(x)", "-3", "-1", "1"]
+      ]
+    },
+    "opts": ["opt0","opt1","opt2","opt3"],
+    "bonne_reponse": "opt_correct",
+    "explication": "calcul détaillé"
+  }
+]
 
-Exemple :
-[{"q":"Combien font 3x+2=11 ?","opts":["x=2","x=3","x=4","x=5"],"bonne_reponse":"x=3","explication":"3x=9 donc x=3"}]`
+Exemple pour une question classique sans tableau, laisse simplement le champ "tableau": null.`
 
     const response1 = await claudeCall(prompt1)
     if (response1.error) return res.status(500).json({ error: response1.error })
@@ -47,9 +56,8 @@ Exemple :
 
     let questions = JSON.parse(match[0])
 
-    // ÉTAPE 2 : On calcule l'index correct (avec nettoyage strict des espaces)
+    // ÉTAPE 2 : On calcule l'index correct (avec nettoyage les espaces)
     questions = questions.map(q => {
-      // Nettoie la chaîne en enlevant tous les espaces et en mettant en minuscule
       const cleanString = (str) => str?.replace(/\s+/g, '').toLowerCase();
       
       const bonneReponseNettoyee = cleanString(q.bonne_reponse);
@@ -57,8 +65,9 @@ Exemple :
       
       return {
         q: q.q,
+        tableau: q.tableau || null,
         opts: q.opts,
-        answer: answer !== -1 ? answer : 0, // Sécurité par défaut si introuvable
+        answer: answer !== -1 ? answer : 0, 
         explication: q.explication
       }
     })
@@ -69,6 +78,7 @@ Exemple :
       const prompt2 = `Résous cette question de mathématiques. Regarde les options numérotées de 0 à 3 et donne UNIQUEMENT le numéro de la bonne réponse.
 
 Question : ${q.q}
+${q.tableau ? `Tableau : ${JSON.stringify(q.tableau)}` : ''}
 Options :
 ${q.opts.map((o, j) => `${j} : ${o}`).join('\n')}
 
@@ -76,7 +86,6 @@ Réponds UNIQUEMENT avec le chiffre de l'index (0, 1, 2 ou 3), rien d'autre.`
 
       const response2 = await claudeCall(prompt2)
       if (!response2.error) {
-        // On extrait le premier chiffre entre 0 et 3 trouvé dans la réponse
         const matchChiffre = response2.text.trim().match(/^[0-3]/);
         
         if (matchChiffre) {
