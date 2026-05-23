@@ -35,9 +35,12 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .option.selected { border-color: #3730a3; background: #eef2ff; }
 .option.correct { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
 .option.wrong { border-color: #dc2626; background: #fef2f2; color: #dc2626; }
+.option.aucune { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+.option.aucune-selected { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
 .letter { font-size: 12px; font-weight: 600; color: #999; min-width: 18px; }
-.option.correct .letter, .option.wrong .letter { color: inherit; }
+.option.correct .letter, .option.wrong .letter, .option.aucune .letter { color: inherit; }
 .explication { margin-top: 10px; padding: 10px 14px; background: #f5f5f0; border-radius: 8px; font-size: 13px; color: #555; border-left: 3px solid #3730a3; line-height: 1.6; }
+.explication-aucune { margin-top: 10px; padding: 10px 14px; background: #fffbeb; border-radius: 8px; font-size: 13px; color: #92400e; border-left: 3px solid #f59e0b; line-height: 1.6; }
 .score-bar { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #f5f5f0; border-radius: 10px; margin-bottom: 1rem; }
 .score-val { font-size: 24px; font-weight: 600; }
 .score-label { font-size: 12px; color: #666; }
@@ -50,6 +53,9 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .q-text { font-size: 15px; line-height: 1.6; margin-bottom: 14px; color: #1a1a1a; }
 .loader { text-align: center; padding: 3rem; color: #666; font-size: 14px; }
 .saved-box { text-align: center; padding: 1rem; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 10px; color: #15803d; font-weight: 500; margin-bottom: 1rem; }
+.chrono { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #e8e8e4; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: #1a1a1a; }
+.chrono-dot { width: 8px; height: 8px; background: #16a34a; border-radius: 50%; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 </style>
 </head>
 <body>
@@ -58,6 +64,10 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
     <div class="nav-left">📐 Brevet Maths</div>
     <div class="nav-right">
       <span class="nav-email" id="user-email"></span>
+      <div class="chrono" id="chrono" style="display:none">
+        <div class="chrono-dot"></div>
+        <span id="chrono-text">00:00</span>
+      </div>
       <a href="resultats.html" class="btn">Mes résultats</a>
       <button class="btn" onclick="logout()">Déconnexion</button>
     </div>
@@ -95,17 +105,15 @@ const THEMES = [
 let user = null, prenom = '', emailParent = ''
 let theme = 'Nombres et calculs', diff = 'moyen'
 let questions = [], answers = {}, submitted = {}, saved = false
+let chronoInterval = null, chronoSecondes = 0
 
 async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'index.html'; return }
   user = data.session.user
-
-  // Récupérer le profil depuis la table resultats
   prenom = user.user_metadata?.prenom || ''
   emailParent = user.user_metadata?.email_parent || ''
 
-  // Si pas dans metadata, chercher dans la dernière session
   if (!prenom || !emailParent) {
     const { data: derniere } = await sb.from('resultats')
       .select('prenom, email_parent')
@@ -117,9 +125,6 @@ async function init() {
       emailParent = emailParent || derniere[0].email_parent || ''
     }
   }
-
-  console.log('prenom:', prenom)
-  console.log('emailParent:', emailParent)
 
   document.getElementById('user-email').textContent = prenom || user.email
   renderThemes()
@@ -145,11 +150,38 @@ function setDiff(el, val) {
 
 async function logout() { await sb.auth.signOut(); window.location.href = 'index.html' }
 
+function demarrerChrono() {
+  chronoSecondes = 0
+  document.getElementById('chrono').style.display = 'flex'
+  chronoInterval = setInterval(() => {
+    chronoSecondes++
+    const m = Math.floor(chronoSecondes / 60).toString().padStart(2, '0')
+    const s = (chronoSecondes % 60).toString().padStart(2, '0')
+    document.getElementById('chrono-text').textContent = `${m}:${s}`
+  }, 1000)
+}
+
+function arreterChrono() {
+  clearInterval(chronoInterval)
+  document.getElementById('chrono-dot') && (document.querySelector('.chrono-dot').style.animation = 'none')
+}
+
+function formatTemps(secondes) {
+  const m = Math.floor(secondes / 60)
+  const s = secondes % 60
+  if (m === 0) return `${s} secondes`
+  return `${m} min ${s} sec`
+}
+
 async function generer() {
   const btn = document.getElementById('gen-btn')
-  btn.disabled = true; btn.textContent = '⏳ Génération en cours...'
+  btn.disabled = true
+  btn.textContent = '⏳ Vérification des réponses en cours (2 étapes)...'
   questions = []; answers = {}; submitted = {}; saved = false
-  document.getElementById('quiz-area').innerHTML = '<div class="loader">Claude prépare tes questions…</div>'
+  arreterChrono()
+  document.getElementById('chrono').style.display = 'none'
+  document.getElementById('quiz-area').innerHTML = '<div class="loader">🔍 Claude génère et vérifie les questions… (~15 secondes)</div>'
+
   try {
     const res = await fetch('/api/generer', {
       method: 'POST',
@@ -159,49 +191,112 @@ async function generer() {
     const data = await res.json()
     if (data.error) throw new Error(data.error)
     questions = data.questions
+    demarrerChrono()
     renderQuiz()
   } catch(e) {
     document.getElementById('quiz-area').innerHTML = '<div class="loader">❌ ' + e.message + '</div>'
   }
-  btn.disabled = false; btn.textContent = '🎲 Générer 5 nouvelles questions'
+  btn.disabled = false
+  btn.textContent = '🎲 Générer 5 nouvelles questions'
 }
 
 function renderQuiz() {
   const area = document.getElementById('quiz-area')
-  const nbOk = Object.values(submitted).filter(Boolean).length
+  const nbOk = Object.values(submitted).filter(v => v === 'correct').length
+  const nbAucune = Object.values(submitted).filter(v => v === 'aucune').length
   const nbDone = Object.keys(submitted).length
   let html = ''
+
   if (nbDone > 0) {
-    const pct = Math.round((nbOk/nbDone)*100)
-    html += `<div class="score-bar"><div><div class="score-label">Score</div><div class="score-val">${nbOk}/${nbDone}</div></div><div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div><div class="pct">${pct}%</div></div>`
+    const pct = Math.round((nbOk / nbDone) * 100)
+    html += `<div class="score-bar">
+      <div><div class="score-label">Score</div><div class="score-val">${nbOk}/${nbDone}</div></div>
+      <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
+      <div class="pct">${pct}%</div>
+    </div>`
   }
+
   const letters = ['A','B','C','D']
   questions.forEach((q,i) => {
-    const sel = answers[i], done = submitted[i] !== undefined
-    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>`
+    const sel = answers[i]
+    const done = submitted[i] !== undefined
+    const estAucune = submitted[i] === 'aucune'
+
+    html += `<div class="card">
+      <div class="q-meta">
+        <span class="q-num">Question ${i+1}/${questions.length}</span>
+        <span class="badge">${diff}</span>
+      </div>
+      <p class="q-text">${q.q}</p>`
+
     q.opts.forEach((opt,j) => {
       let cls = 'option'
-      if (done) { if(j===q.answer) cls+=' correct'; else if(j===sel) cls+=' wrong' }
-      else if(j===sel) cls+=' selected'
-      html += `<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}><span class="letter">${letters[j]}</span>${opt}</div>`
+      if (done) {
+        if (j === q.answer) cls += ' correct'
+        else if (j === sel && sel !== 'aucune') cls += ' wrong'
+      } else if (j === sel) cls += ' selected'
+      html += `<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}>
+        <span class="letter">${letters[j]}</span>${opt}</div>`
     })
-    if (!done) html += `<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`
-    if (done) html += `<div class="explication"><strong>${submitted[i]?'✓ Bravo !':'✗ Pas tout à fait.'}</strong> ${q.explication}</div>`
+
+    // Option "Aucune idée"
+    if (!done) {
+      const aucuneSel = sel === 'aucune'
+      html += `<div class="option ${aucuneSel ? 'aucune-selected' : ''}" onclick="pick(${i},'aucune')" style="margin-top:4px;border-style:dashed">
+        <span class="letter">😅</span>Aucune idée !</div>`
+    } else if (estAucune) {
+      html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed">
+        <span class="letter">😅</span>Aucune idée !</div>`
+    }
+
+    if (!done) {
+      html += `<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`
+    }
+
+    if (done && !estAucune) {
+      html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait.'}</strong> ${q.explication}</div>`
+    }
+    if (done && estAucune) {
+      html += `<div class="explication-aucune"><strong>💡 Pas de panique !</strong> La bonne réponse est : <strong>${q.opts[q.answer]}</strong>. ${q.explication}</div>`
+    }
+
     html += '</div>'
   })
-  if (nbDone === questions.length && questions.length > 0 && !saved)
-    html += `<button class="btn btn-primary btn-full" style="margin-bottom:1rem" onclick="sauvegarder()">💾 Enregistrer et envoyer aux parents</button>`
-  if (saved)
-    html += `<div class="saved-box">✅ Résultats enregistrés et email envoyé aux parents !</div>`
+
+  const terminer = nbDone === questions.length && questions.length > 0
+  if (terminer && !saved) {
+    html += `<button class="btn btn-primary btn-full" style="margin-bottom:1rem" onclick="sauvegarder()">💾 Enregistrer mes résultats</button>`
+  }
+  if (saved) {
+    html += `<div class="saved-box">✅ Résultats enregistrés ! Score : ${nbOk}/${questions.length} en ${formatTemps(chronoSecondes)}</div>`
+  }
+
   area.innerHTML = html
 }
 
-function pick(qi, oi) { if(submitted[qi]!==undefined) return; answers[qi]=oi; renderQuiz() }
-function valider(qi) { if(answers[qi]===undefined) return; submitted[qi]=answers[qi]===questions[qi].answer; renderQuiz() }
+function pick(qi, oi) {
+  if (submitted[qi] !== undefined) return
+  answers[qi] = oi
+  renderQuiz()
+}
+
+function valider(qi) {
+  if (answers[qi] === undefined) return
+  const sel = answers[qi]
+  if (sel === 'aucune') {
+    submitted[qi] = 'aucune'
+  } else {
+    submitted[qi] = sel === questions[qi].answer ? 'correct' : 'wrong'
+  }
+  if (Object.keys(submitted).length === questions.length) arreterChrono()
+  renderQuiz()
+}
 
 async function sauvegarder() {
-  const nbOk = Object.values(submitted).filter(Boolean).length
-  const ratees = questions.filter((_,i) => submitted[i]===false).map(q => q.q)
+  const nbOk = Object.values(submitted).filter(v => v === 'correct').length
+  const nbAucune = Object.values(submitted).filter(v => v === 'aucune').length
+  const ratees = questions.filter((_,i) => submitted[i] === 'wrong').map(q => q.q)
+  const inconnues = questions.filter((_,i) => submitted[i] === 'aucune').map(q => q.q)
 
   await sb.from('resultats').insert({
     user_id: user.id,
@@ -209,13 +304,16 @@ async function sauvegarder() {
     prenom: prenom || '',
     email_parent: emailParent || '',
     theme, difficulte: diff,
-    score: nbOk, total: questions.length,
-    questions_ratees: ratees
+    score: nbOk,
+    total: questions.length,
+    questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
+    temps_secondes: chronoSecondes,
+    aucune_idee: nbAucune
   })
 
   if (emailParent) {
     try {
-      const resp = await fetch('/api/email', {
+      await fetch('/api/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -223,17 +321,17 @@ async function sauvegarder() {
           emailEleve: user.email,
           prenom: prenom || user.email,
           theme, difficulte: diff,
-          score: nbOk, total: questions.length,
-          questionsRatees: ratees
+          score: nbOk,
+          total: questions.length,
+          questionsRatees: ratees,
+          questionsInconnues: inconnues,
+          tempsSecondes: chronoSecondes,
+          aucuneIdee: nbAucune
         })
       })
-      const result = await resp.json()
-      console.log('Email result:', result)
     } catch(e) {
       console.log('Erreur email:', e.message)
     }
-  } else {
-    console.log('Pas d email parent trouvé')
   }
 
   saved = true
