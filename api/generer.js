@@ -22,22 +22,25 @@ export default async function handler(req, res) {
       'difficile': 'de niveau Brevet mention Très Bien, questions complexes avec plusieurs étapes'
     }
 
-    // ÉTAPE 1 : Générer les questions SANS index - Claude donne la bonne réponse en texte
+    // ÉTAPE 1 : Générer exactement 5 questions adaptées au bouton du Frontend
     const prompt1 = `Tu es un professeur de mathématiques expert au Brevet des collèges français.
-Génère exactement 10 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
-Les notions : ${contexte[theme] || theme}.
+Génère exactement 5 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
+Les notions à couvrir : ${contexte[theme] || theme}.
 
-IMPORTANT : Si la question nécessite un tableau de valeurs (notamment pour le thème Fonctions ou Statistiques), ne mets pas de texte brut avec des barres "|". Utilise plutôt le champ optionnel "tableau" structuré comme dans l'exemple. Dans ce cas, la consigne dans "q" doit simplement introduire le tableau (ex: "Quelle fonction correspond au tableau suivant ?").
+RÈGLE ABSOLUE POUR LES TABLEAUX :
+Si la question utilise ou nécessite un tableau de valeurs (notamment pour le thème "Fonctions" ou "Statistiques"), tu as l'INTERDICTION FORMELLE de dessiner le tableau avec du texte brut (comme des barres "|"). 
+Tu DOIS obligatoirement créer et remplir l'objet "tableau" structuré dans le JSON. La consigne dans "q" doit simplement introduire le tableau (ex: "Quelle fonction correspond au tableau de valeurs suivant ?").
 
-Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ni après, sans markdown.
-Format EXACT :
+Réponds UNIQUEMENT avec un tableau JSON valide, sans texte décoratif avant ou après, sans balises de code markdown.
+
+Format EXACT de la structure :
 [
   {
-    "q": "question",
+    "q": "énoncé de la question",
     "tableau": {
-      "headers": ["x", "0", "1", "2"],
+      "headers": ["x", "-2", "0", "2"],
       "rows": [
-        ["f(x)", "-3", "-1", "1"]
+        ["f(x)", "-7", "-3", "1"]
       ]
     },
     "opts": ["opt0","opt1","opt2","opt3"],
@@ -46,7 +49,7 @@ Format EXACT :
   }
 ]
 
-Exemple pour une question classique sans tableau, laisse simplement le champ "tableau": null.`
+Si la question ne nécessite aucun tableau (ex: calcul pur ou géométrie), écris strictement "tableau": null.`
 
     const response1 = await claudeCall(prompt1)
     if (response1.error) return res.status(500).json({ error: response1.error })
@@ -56,7 +59,7 @@ Exemple pour une question classique sans tableau, laisse simplement le champ "ta
 
     let questions = JSON.parse(match[0])
 
-    // ÉTAPE 2 : On calcule l'index correct (avec nettoyage les espaces)
+    // ÉTAPE 2 : On calcule l'index correct
     questions = questions.map(q => {
       const cleanString = (str) => str?.replace(/\s+/g, '').toLowerCase();
       
@@ -65,24 +68,27 @@ Exemple pour une question classique sans tableau, laisse simplement le champ "ta
       
       return {
         q: q.q,
-        tableau: q.tableau || null,
+        tableau: q.tableau && q.tableau.headers ? q.tableau : null, // Double vérification de la structure du tableau
         opts: q.opts,
         answer: answer !== -1 ? answer : 0, 
         explication: q.explication
       }
     })
 
-    // ÉTAPE 3 : Vérification stricte par Index numérique auprès de Claude
+    // ÉTAPE 3 : Vérification stricte par Index numérique (uniquement si la question n'a pas été vidée d'un tableau obligatoire)
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i]
-      const prompt2 = `Résous cette question de mathématiques. Regarde les options numérotées de 0 à 3 et donne UNIQUEMENT le numéro de la bonne réponse.
+      
+      // Si l'énoncé demande un tableau mais que l'objet tableau est null, on force Claude à recréer le tableau manquant
+      const prompt2 = `Résous cette question de mathématiques de niveau Brevet. Regarde les options numérotées de 0 à 3 et donne UNIQUEMENT le numéro de la bonne réponse.
 
 Question : ${q.q}
-${q.tableau ? `Tableau : ${JSON.stringify(q.tableau)}` : ''}
-Options :
+${q.tableau ? `Tableau de données à utiliser : ${JSON.stringify(q.tableau)}` : 'Aucun tableau pour cette question.'}
+
+Options disponibles :
 ${q.opts.map((o, j) => `${j} : ${o}`).join('\n')}
 
-Réponds UNIQUEMENT avec le chiffre de l'index (0, 1, 2 ou 3), rien d'autre.`
+Réponds UNIQUEMENT avec le chiffre de l'index correspondant à la bonne réponse (0, 1, 2 ou 3), sans ajouter d'explication ni de texte.`
 
       const response2 = await claudeCall(prompt2)
       if (!response2.error) {
@@ -99,6 +105,7 @@ Réponds UNIQUEMENT avec le chiffre de l'index (0, 1, 2 ou 3), rien d'autre.`
       }
     }
 
+    // Renvoie exactement les 5 questions nettoyées et vérifiées au client React
     res.status(200).json({ questions })
 
   } catch(e) {
@@ -117,7 +124,7 @@ async function claudeCall(prompt) {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-3-5-sonnet-20241022', // Utilisation de l'identifiant de modèle standardisé pour Claude 3.5 Sonnet
         max_tokens: 2000,
         messages: [{ role: 'user', content: prompt }]
       })
