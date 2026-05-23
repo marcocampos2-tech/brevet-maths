@@ -24,7 +24,7 @@ export default async function handler(req, res) {
 
     // ÉTAPE 1 : Générer les questions SANS index - Claude donne la bonne réponse en texte
     const prompt1 = `Tu es un professeur de mathématiques expert au Brevet des collèges français.
-Génère exactement 5 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
+Génère exactement 10 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
 Les notions : ${contexte[theme] || theme}.
 
 IMPORTANT : Pour chaque question, tu dois :
