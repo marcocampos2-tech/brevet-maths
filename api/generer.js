@@ -1,4 +1,4 @@
-// Banque de secours intelligente classée par thèmes et difficultés
+// Banque de secours intelligente classée par thèmes et difficultés en cas claude plainte
 const banqueDeSecours = [
   // --- THÈME : FONCTIONS ---
   {
