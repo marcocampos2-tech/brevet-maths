@@ -47,49 +47,45 @@ Exemple :
 
     let questions = JSON.parse(match[0])
 
-    // ÉTAPE 2 : On calcule nous-mêmes l'index correct
+    // ÉTAPE 2 : On calcule l'index correct (avec nettoyage strict des espaces)
     questions = questions.map(q => {
-      const bonneReponse = q.bonne_reponse?.trim()
-      let answer = q.opts.findIndex(opt => opt.trim() === bonneReponse)
+      // Nettoie la chaîne en enlevant tous les espaces et en mettant en minuscule
+      const cleanString = (str) => str?.replace(/\s+/g, '').toLowerCase();
       
-      // Si pas trouvé exactement, cherche une correspondance partielle
-      if (answer === -1) {
-        answer = q.opts.findIndex(opt => 
-          opt.trim().toLowerCase() === bonneReponse?.toLowerCase()
-        )
-      }
+      const bonneReponseNettoyee = cleanString(q.bonne_reponse);
+      let answer = q.opts.findIndex(opt => cleanString(opt) === bonneReponseNettoyee);
       
-      // Si toujours pas trouvé, vérifie avec Claude
-      if (answer === -1) answer = 0
-
       return {
         q: q.q,
         opts: q.opts,
-        answer,
+        answer: answer !== -1 ? answer : 0, // Sécurité par défaut si introuvable
         explication: q.explication
       }
     })
 
-    // ÉTAPE 3 : Vérification — Claude confirme la bonne réponse pour chaque question
+    // ÉTAPE 3 : Vérification stricte par Index numérique auprès de Claude
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i]
-      const prompt2 = `Résous cette question de mathématiques et réponds UNIQUEMENT avec la bonne réponse parmi les options, EXACTEMENT comme écrite.
+      const prompt2 = `Résous cette question de mathématiques. Regarde les options numérotées de 0 à 3 et donne UNIQUEMENT le numéro de la bonne réponse.
 
 Question : ${q.q}
-Options : ${q.opts.map((o,j) => `${j}: "${o}"`).join(', ')}
+Options :
+${q.opts.map((o, j) => `${j} : ${o}`).join('\n')}
 
-Réponds UNIQUEMENT avec le texte exact de la bonne réponse, rien d'autre.`
+Réponds UNIQUEMENT avec le chiffre de l'index (0, 1, 2 ou 3), rien d'autre.`
 
       const response2 = await claudeCall(prompt2)
       if (!response2.error) {
-        const verifReponse = response2.text.trim()
-        const verifIndex = q.opts.findIndex(opt => 
-          opt.trim().toLowerCase() === verifReponse.toLowerCase() ||
-          verifReponse.toLowerCase().includes(opt.trim().toLowerCase())
-        )
-        if (verifIndex !== -1 && verifIndex !== q.answer) {
-          console.log(`Q${i+1} corrigée: "${q.opts[q.answer]}" → "${q.opts[verifIndex]}"`)
-          questions[i].answer = verifIndex
+        // On extrait le premier chiffre entre 0 et 3 trouvé dans la réponse
+        const matchChiffre = response2.text.trim().match(/^[0-3]/);
+        
+        if (matchChiffre) {
+          const verifIndex = parseInt(matchChiffre[0], 10);
+          
+          if (verifIndex !== q.answer) {
+            console.log(`Q${i+1} corrigée par index: ${q.answer} → ${verifIndex} ("${q.opts[verifIndex]}")`)
+            questions[i].answer = verifIndex
+          }
         }
       }
     }
