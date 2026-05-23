@@ -154,6 +154,31 @@ export default function Quiz() {
                   <span className="badge">{diff}</span>
                 </div>
                 <p style={{ fontSize: 15, lineHeight: 1.6, marginBottom: 14 }}>{q.q}</p>
+
+                {/* 📊 AJOUT : Rendu du tableau mathématique si disponible */}
+                {q.tableau && (
+                  <div style={{ overflowX: 'auto', marginBottom: '1.5rem' }}>
+                    <table className="tableau-maths">
+                      <thead>
+                        <tr>
+                          {q.tableau.headers?.map((header, index) => (
+                            <th key={index}>{header}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {q.tableau.rows?.map((row, rowIndex) => (
+                          <tr key={rowIndex}>
+                            {row.map((cell, cellIndex) => (
+                              <td key={cellIndex}>{cell}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
                 <div>
                   {q.opts.map((opt, j) => {
                     let cls = 'option'
