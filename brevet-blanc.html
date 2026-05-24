@@ -23,14 +23,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
 h2 { font-size: 16px; font-weight: 600; margin-bottom: 1rem; color: #1a1a1a; }
-h3 { font-size: 14px; font-weight: 600; margin-bottom: 0.5rem; color: #1a1a1a; }
 label { font-size: 13px; color: #666; display: block; margin-bottom: 4px; margin-top: 12px; }
 input, select, textarea { width: 100%; padding: 10px 14px; border: 1px solid #d0d0c8; border-radius: 8px; font-size: 14px; background: white; color: #1a1a1a; font-family: inherit; }
 input:focus, select:focus, textarea:focus { outline: none; border-color: #1a1a1a; }
-.badge { display: inline-block; font-size: 11px; padding: 2px 10px; border-radius: 20px; }
-.badge-blue { background: #eef2ff; color: #3730a3; }
-.badge-green { background: #f0fdf4; color: #16a34a; }
-.badge-orange { background: #fffbeb; color: #92400e; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 10px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
 .session-card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
 .session-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; flex-wrap: wrap; gap: 8px; }
 .session-title { font-size: 15px; font-weight: 600; }
@@ -96,7 +92,7 @@ async function init() {
   user = data.session.user
 
   const [{ data: elevesData }, { data: sessionsData }] = await Promise.all([
-    sb.from('resultats').select('user_id, email, prenom').order('prenom'),
+    sb.from('resultats').select('user_id, email, prenom, email_parent').order('prenom'),
     sb.from('brevets_blancs').select('*, resultats_brevet_blanc(*)').order('date_session', { ascending: false })
   ])
 
@@ -164,11 +160,21 @@ async function creerSession() {
   btn.textContent = '📝 Créer la session'
 }
 
-async function enregistrerNote(bbId, userId, prenom, email) {
-  const note = parseFloat(document.getElementById('note-' + userId).value)
-  const commentaire = document.getElementById('comment-' + userId)?.value?.trim() || ''
+async function enregistrerNote(bbId, userId, prenom, email, emailParent) {
+  const noteEl = document.getElementById('note-' + userId)
+  const commentEl = document.getElementById('comment-' + userId)
+  
+  if (!noteEl) { alert('Erreur : champ note introuvable.'); return }
+  
+  const note = parseFloat(noteEl.value)
+  const commentaire = commentEl ? commentEl.value.trim() : ''
 
-  if (isNaN(note) || note < 0 || note > 40) { alert('Entre une note entre 0 et 40.'); return }
+  if (isNaN(note) || note < 0 || note > 40) { 
+    alert('Entre une note entre 0 et 40.'); return 
+  }
+
+  const btn = document.getElementById('btn-note-' + userId)
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enregistrement...' }
 
   const { data: qcmData } = await sb.from('resultats')
     .select('score, total')
@@ -181,22 +187,38 @@ async function enregistrerNote(bbId, userId, prenom, email) {
     : null
 
   const { error } = await sb.from('resultats_brevet_blanc').upsert({
-    brevet_blanc_id: bbId, user_id: userId,
-    email, prenom, note, note_max: 40, commentaire
+    brevet_blanc_id: bbId,
+    user_id: userId,
+    email, prenom,
+    note, note_max: 40,
+    commentaire
   }, { onConflict: 'brevet_blanc_id,user_id' })
 
-  if (!error) {
+  if (error) {
+    alert('Erreur : ' + error.message)
+    if (btn) { btn.disabled = false; btn.textContent = '💾 Enregistrer' }
+    return
+  }
+
+  // Envoyer email
+  try {
     await fetch('/api/email-brevet-blanc', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        emailParent: email, prenom, email,
-        note, noteMax: 40, commentaire, qcmMoyenne: qcmMoy
+        emailParent: emailParent || email,
+        prenom, email,
+        note, noteMax: 40,
+        commentaire,
+        qcmMoyenne: qcmMoy
       })
     })
-    await init()
-    setTab('sessions')
+  } catch(e) {
+    console.log('Erreur email:', e.message)
   }
+
+  await init()
+  setTab('sessions')
 }
 
 function afficherMsg(id, texte, type) {
@@ -242,7 +264,7 @@ function render() {
                 <div class="session-info">${dateStr} · ${formatLabel}</div>
                 ${s.lien_visio ? `<a href="${s.lien_visio}" target="_blank" style="font-size:12px;color:#3730a3">🔗 Lien visio</a>` : ''}
               </div>
-              <span class="badge badge-blue">${resultats.length}/${elevesSession.length} noté(s)</span>
+              <span class="badge">${resultats.length}/${elevesSession.length} noté(s)</span>
             </div>
             ${eleves.filter(e => elevesSession.includes(e.user_id)).map(e => {
               const resultat = resultats.find(r => r.user_id === e.user_id)
@@ -268,7 +290,8 @@ function render() {
                       <div style="font-size:11px;color:#666;margin-bottom:2px">Commentaire</div>
                       <input type="text" id="comment-${e.user_id}" placeholder="Bon travail..." style="padding:6px 10px;font-size:13px">
                     </div>
-                    <button class="btn btn-primary" onclick="enregistrerNote('${s.id}','${e.user_id}','${e.prenom}','${e.email}')">
+                    <button class="btn btn-primary" id="btn-note-${e.user_id}" 
+                      onclick="enregistrerNote('${s.id}','${e.user_id}','${e.prenom || ''}','${e.email}','${e.email_parent || ''}')">
                       💾 Enregistrer
                     </button>
                   </div>
@@ -321,11 +344,11 @@ function render() {
     <div class="section" id="section-annales">
       <div class="card">
         <h2>📄 Annales officielles Eduscol</h2>
-        <p style="font-size:13px;color:#666;margin-bottom:1rem">Télécharge les vrais sujets du Brevet depuis le site officiel et envoie-les à tes élèves avant chaque session.</p>
+        <p style="font-size:13px;color:#666;margin-bottom:1rem">Télécharge les vrais sujets du Brevet depuis le site officiel.</p>
         <a href="https://eduscol.education.fr/2221/sujets-du-brevet" target="_blank" class="annee-link">🔗 Tous les sujets officiels — eduscol.education.fr</a>
         <a href="https://www.education.gouv.fr/le-diplome-national-du-brevet-1929" target="_blank" class="annee-link">🔗 Diplôme National du Brevet — education.gouv.fr</a>
         <div style="margin-top:1rem;background:#fffbeb;border:1px solid #f59e0b;border-radius:8px;padding:12px;font-size:13px;color:#92400e">
-          <strong>💡 Conseil :</strong> Télécharge le sujet PDF → envoie-le via WhatsApp 30 min avant → l'élève travaille sur papier ou écran.
+          <strong>💡 Conseil :</strong> Télécharge le sujet PDF → envoie via WhatsApp 30 min avant → l'élève travaille sur papier ou écran.
         </div>
         <div style="margin-top:1rem;background:#f0fdf4;border:1px solid #16a34a;border-radius:8px;padding:12px;font-size:13px;color:#15803d">
           <strong>📋 Format officiel :</strong><br>
