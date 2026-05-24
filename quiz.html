@@ -59,7 +59,8 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .chrono { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #e8e8e4; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: #1a1a1a; }
 .chrono-dot { width: 8px; height: 8px; background: #16a34a; border-radius: 50%; animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-.source-banque { font-size: 11px; color: #f59e0b; background: #fffbeb; border: 1px solid #f59e0b; border-radius: 20px; padding: 2px 10px; margin-left: 8px; }
+.badge-source-banque { font-size: 11px; color: #f59e0b; background: #fffbeb; border: 1px solid #f59e0b; border-radius: 20px; padding: 2px 10px; }
+.badge-source-ia { font-size: 11px; color: #16a34a; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 20px; padding: 2px 10px; }
 </style>
 </head>
 <body>
@@ -165,9 +166,7 @@ function demarrerChrono() {
   }, 1000)
 }
 
-function arreterChrono() {
-  clearInterval(chronoInterval)
-}
+function arreterChrono() { clearInterval(chronoInterval) }
 
 function formatTemps(secondes) {
   const m = Math.floor(secondes / 60)
@@ -220,7 +219,9 @@ function renderQuiz() {
   let html = ''
 
   if (sourceQuestions === 'banque') {
-    html += `<div style="text-align:center;margin-bottom:1rem"><span class="source-banque">⚡ Questions depuis la banque locale</span></div>`
+    html += `<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-banque">⚡ Questions depuis la banque locale</span></div>`
+  } else {
+    html += `<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-ia">✨ Questions générées par IA</span></div>`
   }
 
   if (nbDone > 0) {
