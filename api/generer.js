@@ -1,5 +1,11 @@
+import { QUESTIONS_BANQUE } from '../questions.js'
+
+function getQuestionsAleatoires(theme, difficulte) {
+  const banque = QUESTIONS_BANQUE[theme]?.[difficulte] || []
+  return [...banque].sort(() => Math.random() - 0.5).slice(0, 5)
+}
+
 export default async function handler(req, res) {
-  // Configuration des entêtes CORS pour autoriser les requêtes
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
@@ -11,7 +17,7 @@ export default async function handler(req, res) {
     const contexte = {
       'Nombres et calculs': 'puissances, fractions, nombres relatifs, calcul littéral, factorisation, développement, pourcentages, proportionnalité',
       'Géométrie': 'théorème de Pythagore, théorème de Thalès, trigonométrie (sin/cos/tan), angles, triangles, cercles, transformations',
-      'Algèbre et équations': 'équations du premier degré, systèmes equations, inéquations, problèmes algébriques',
+      'Algèbre et équations': 'équations du premier degré, systèmes equations, inéquations, problèmes algébriques, équations du second degré par produit nul',
       'Statistiques et probabilités': 'moyenne, médiane, étendue, fréquences, probabilités, tableaux de données',
       'Fonctions': 'fonctions linéaires et affines, tableau de valeurs, représentation graphique, taux de variation',
       'Mélange de tous les thèmes': 'puissances, Pythagore, Thalès, trigonométrie, équations, probabilités, fonctions affines, statistiques'
@@ -23,7 +29,6 @@ export default async function handler(req, res) {
       'difficile': 'de niveau Brevet mention Très Bien, questions complexes avec plusieurs étapes'
     }
 
-    // ÉTAPE 1 : Prompt envoyé à Claude pour générer les 5 questions
     const prompt1 = `Tu es un professeur de mathématiques expert au Brevet des collèges français.
 Génère exactement 5 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
 Les notions à couvrir absolument : ${contexte[theme] || theme}.
@@ -50,44 +55,54 @@ Format EXACT de la structure :
 Si la question ne nécessite aucun tableau, écris strictement "tableau": null.`
 
     const response1 = await claudeCall(prompt1)
-    
-    // Si l'IA sature, on renvoie l'erreur d'attente à l'écran
+
+    // Si Claude est surchargé → banque de questions
     if (response1.error) {
-      return res.status(500).json({ error: '❌ ⏳ Claude est surchargé. Réessaie dans 1 minute !' })
+      console.log('Claude surchargé, utilisation de la banque de questions')
+      const questions = getQuestionsAleatoires(theme, difficulte)
+      if (questions.length > 0) {
+        return res.status(200).json({ questions, source: 'banque' })
+      }
+      return res.status(503).json({ error: '⏳ Service temporairement indisponible. Réessaie dans 1 minute !' })
     }
 
     const match = response1.text.match(/\[[\s\S]*\]/)
     if (!match) {
-      return res.status(500).json({ error: '❌ Format de réponse invalide de la part de l’IA.' })
+      // Fallback banque si JSON invalide
+      console.log('JSON invalide, utilisation de la banque de questions')
+      const questions = getQuestionsAleatoires(theme, difficulte)
+      if (questions.length > 0) {
+        return res.status(200).json({ questions, source: 'banque' })
+      }
+      return res.status(500).json({ error: '❌ Format de réponse invalide.' })
     }
 
     let questions = JSON.parse(match[0])
 
-    // ÉTAPE 2 : Nettoyage et calcul automatique de l'index de la bonne réponse
+    // Calcul automatique de l'index de la bonne réponse
     questions = questions.map(q => {
-      const cleanString = (str) => str?.replace(/\s+/g, '').toLowerCase();
-      const bonneReponseNettoyee = cleanString(q.bonne_reponse);
-      let answer = q.opts.findIndex(opt => cleanString(opt) === bonneReponseNettoyee);
-      
+      const cleanString = (str) => str?.replace(/\s+/g, '').toLowerCase()
+      const bonneReponseNettoyee = cleanString(q.bonne_reponse)
+      let answer = q.opts.findIndex(opt => cleanString(opt) === bonneReponseNettoyee)
       return {
         q: q.q,
-        tableau: q.tableau && q.tableau.headers ? q.tableau : null, 
+        tableau: q.tableau && q.tableau.headers ? q.tableau : null,
         opts: q.opts,
-        answer: answer !== -1 ? answer : 0, 
+        answer: answer !== -1 ? answer : 0,
         explication: q.explication
       }
     })
 
-    // ÉTAPE 3 : Double vérification de l'index par Claude pour éviter les décalages de réponses
+    // Double vérification
     for (let i = 0; i < questions.length; i++) {
       const q = questions[i]
       const prompt2 = `Résous cette question. Donne UNIQUEMENT le numéro de la bonne réponse (0, 1, 2 ou 3).\nQuestion : ${q.q}\n${q.tableau ? `Tableau : ${JSON.stringify(q.tableau)}` : ''}\nOptions :\n${q.opts.map((o, j) => `${j} : ${o}`).join('\n')}`
 
       const response2 = await claudeCall(prompt2)
       if (!response2.error) {
-        const matchChiffre = response2.text.trim().match(/^[0-3]/);
+        const matchChiffre = response2.text.trim().match(/^[0-3]/)
         if (matchChiffre) {
-          const verifIndex = parseInt(matchChiffre[0], 10);
+          const verifIndex = parseInt(matchChiffre[0], 10)
           if (verifIndex !== q.answer) {
             questions[i].answer = verifIndex
           }
@@ -95,11 +110,18 @@ Si la question ne nécessite aucun tableau, écris strictement "tableau": null.`
       }
     }
 
-    // Succès : envoi des 5 questions fraîches au frontend
-    res.status(200).json({ questions })
+    res.status(200).json({ questions, source: 'ia' })
 
   } catch(e) {
-    console.log('Erreur générale :', e.message)
+    // Dernier recours : banque de questions
+    console.log('Erreur générale:', e.message)
+    try {
+      const { theme, difficulte } = req.body
+      const questions = getQuestionsAleatoires(theme, difficulte)
+      if (questions.length > 0) {
+        return res.status(200).json({ questions, source: 'banque' })
+      }
+    } catch(e2) {}
     res.status(500).json({ error: '❌ Une erreur est survenue lors de la génération.' })
   }
 }
