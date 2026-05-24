@@ -22,6 +22,8 @@ input:focus { outline: none; border-color: #1a1a1a; }
 .btn { width: 100%; padding: 12px; border-radius: 8px; border: none; background: #1a1a1a; color: white; font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 16px; transition: background 0.15s; }
 .btn:hover { background: #333; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: white; color: #1a1a1a; border: 1px solid #d0d0c8; margin-top: 8px; }
+.btn-secondary:hover { background: #f5f5f0; }
 .msg { font-size: 13px; margin-top: 10px; padding: 8px 12px; border-radius: 6px; display: none; }
 .msg.error { background: #fef2f2; color: #dc2626; display: block; }
 .msg.success { background: #f0fdf4; color: #16a34a; display: block; }
@@ -29,6 +31,7 @@ input:focus { outline: none; border-color: #1a1a1a; }
 .forgot a { font-size: 12px; color: #666; text-decoration: none; }
 .forgot a:hover { color: #1a1a1a; text-decoration: underline; }
 .champs-inscription { display: none; }
+.reset-view { display: none; }
 </style>
 </head>
 <body>
@@ -36,36 +39,51 @@ input:focus { outline: none; border-color: #1a1a1a; }
   <div class="logo">
     <div>📐</div>
     <h1>Brevet Maths</h1>
-    <p>Prépare ton brevet avec des QCM IA</p>
+    <p id="logo-subtitle">Prépare ton brevet avec des QCM IA</p>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" onclick="setMode('login')">Se connecter</button>
-    <button class="tab" onclick="setMode('register')">Créer un compte</button>
+  <!-- VUE CONNEXION / INSCRIPTION -->
+  <div id="login-view">
+    <div class="tabs">
+      <button class="tab active" onclick="setMode('login')">Se connecter</button>
+      <button class="tab" onclick="setMode('register')">Créer un compte</button>
+    </div>
+
+    <div class="champs-inscription" id="champs-inscription">
+      <label>Prénom de l'élève</label>
+      <input type="text" id="prenom" placeholder="Ex: Lucas">
+      <label>Email des parents</label>
+      <input type="email" id="email-parent" placeholder="parents@email.com">
+    </div>
+
+    <label>Email de l'élève</label>
+    <input type="email" id="email" placeholder="ton@email.com">
+
+    <label>Mot de passe</label>
+    <div style="position:relative">
+      <input type="password" id="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') soumettre()" style="padding-right:40px;width:100%">
+      <span onclick="toggleMdp()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil">👁️</span>
+    </div>
+
+    <div class="forgot">
+      <a href="#" onclick="afficherReset()">Mot de passe oublié ?</a>
+    </div>
+
+    <button class="btn" id="btn" onclick="soumettre()">Se connecter</button>
+    <div class="msg" id="msg"></div>
   </div>
 
-  <div class="champs-inscription" id="champs-inscription">
-    <label>Prénom de l'élève</label>
-    <input type="text" id="prenom" placeholder="Ex: Lucas">
-    <label>Email des parents</label>
-    <input type="email" id="email-parent" placeholder="parents@email.com">
+  <!-- VUE RESET MOT DE PASSE -->
+  <div id="reset-view" class="reset-view">
+    <p style="color:#666;font-size:14px;margin-bottom:1.5rem;line-height:1.6">
+      Entre ton adresse email — tu recevras un lien pour créer un nouveau mot de passe.
+    </p>
+    <label>Ton adresse email</label>
+    <input type="email" id="reset-email" placeholder="ton@email.com">
+    <button class="btn" onclick="resetPassword()">📧 Envoyer le lien</button>
+    <button class="btn btn-secondary" onclick="afficherLogin()">← Retour à la connexion</button>
+    <div class="msg" id="reset-msg"></div>
   </div>
-
-  <label>Email de l'élève</label>
-  <input type="email" id="email" placeholder="ton@email.com">
-
-  <label>Mot de passe</label>
-  <div style="position:relative">
-    <input type="password" id="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') soumettre()" style="padding-right:40px;width:100%">
-    <span onclick="toggleMdp()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil">👁️</span>
-  </div>
-
-  <div class="forgot">
-    <a href="#" onclick="resetPassword()">Mot de passe oublié ?</a>
-  </div>
-
-  <button class="btn" id="btn" onclick="soumettre()">Se connecter</button>
-  <div class="msg" id="msg"></div>
 </div>
 
 <script>
@@ -80,6 +98,21 @@ async function init() {
   if (data.session) window.location.href = 'quiz.html'
 }
 init()
+
+function afficherReset() {
+  document.getElementById('login-view').style.display = 'none'
+  document.getElementById('reset-view').style.display = 'block'
+  document.getElementById('logo-subtitle').textContent = 'Réinitialisation du mot de passe'
+  document.getElementById('reset-msg').className = 'msg'
+  const emailVal = document.getElementById('email').value
+  if (emailVal) document.getElementById('reset-email').value = emailVal
+}
+
+function afficherLogin() {
+  document.getElementById('login-view').style.display = 'block'
+  document.getElementById('reset-view').style.display = 'none'
+  document.getElementById('logo-subtitle').textContent = 'Prépare ton brevet avec des QCM IA'
+}
 
 function toggleMdp() {
   const input = document.getElementById('password')
@@ -131,17 +164,23 @@ async function soumettre() {
 }
 
 async function resetPassword() {
-  const email = document.getElementById('email').value.trim()
-  if (!email) { afficherMsg('Entre ton adresse email pour recevoir le lien de réinitialisation.', 'error'); return }
+  const email = document.getElementById('reset-email').value.trim()
+  if (!email) { afficherResetMsg('Entre ton adresse email.', 'error'); return }
   const { error } = await sb.auth.resetPasswordForEmail(email, {
     redirectTo: window.location.origin + '/index.html'
   })
-  if (error) afficherMsg('Erreur : ' + error.message, 'error')
-  else afficherMsg('📧 Email envoyé ! Vérifie ta boîte mail pour réinitialiser ton mot de passe.', 'success')
+  if (error) afficherResetMsg('Erreur : ' + error.message, 'error')
+  else afficherResetMsg('📧 Email envoyé ! Vérifie ta boîte mail pour réinitialiser ton mot de passe.', 'success')
 }
 
 function afficherMsg(texte, type) {
   const msg = document.getElementById('msg')
+  msg.textContent = texte
+  msg.className = 'msg ' + type
+}
+
+function afficherResetMsg(texte, type) {
+  const msg = document.getElementById('reset-msg')
   msg.textContent = texte
   msg.className = 'msg ' + type
 }
