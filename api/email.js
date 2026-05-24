@@ -72,7 +72,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         from: 'onboarding@resend.dev',
-        to: 'marcocampos2s@gmail.com',
+        to: 'marcocampos2@gmail.com',
         subject: `📐 [A transférer à ${emailParent}] ${prenom} a obtenu ${score}/${total} en ${theme} — ${tempsFormat}`,
         html
       })
