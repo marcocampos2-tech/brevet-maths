@@ -77,6 +77,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
         <div class="chrono-dot"></div>
         <span id="chrono-text">00:00</span>
       </div>
+      <a href="prof.html" class="btn btn-primary" id="btn-prof" style="display:none">🎓 Prof</a>
       <a href="resultats.html" class="btn">Mes résultats</a>
       <button class="btn" onclick="logout()">Déconnexion</button>
     </div>
@@ -100,6 +101,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+const PROF_EMAIL = 'marcocampos2@gmail.com'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const THEMES = [
@@ -136,6 +138,12 @@ async function init() {
   }
 
   document.getElementById('user-email').textContent = prenom || user.email
+
+  // Afficher le bouton prof si c'est le prof
+  if (user.email === PROF_EMAIL) {
+    document.getElementById('btn-prof').style.display = 'inline-flex'
+  }
+
   renderThemes()
 }
 
