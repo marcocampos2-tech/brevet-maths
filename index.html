@@ -39,7 +39,7 @@ input:focus { outline: none; border-color: #1a1a1a; }
 </style>
 </head>
 <body>
-<div class="card">
+<div class="card" id="content-card">
   <div class="logo">
     <div>📐</div>
     <h1>Brevet Maths</h1>
@@ -88,6 +88,20 @@ input:focus { outline: none; border-color: #1a1a1a; }
     <button class="btn btn-secondary" onclick="afficherLogin()">← Retour à la connexion</button>
     <div class="msg" id="reset-msg"></div>
   </div>
+
+  <!-- VUE NOUVEAU MOT DE PASSE -->
+  <div id="nouveau-mdp-view" style="display:none">
+    <p style="color:#666;font-size:14px;margin-bottom:1.5rem;line-height:1.6">
+      Entre ton nouveau mot de passe ci-dessous.
+    </p>
+    <label>Nouveau mot de passe</label>
+    <div style="position:relative">
+      <input type="password" id="new-password" placeholder="••••••••" style="padding-right:40px;width:100%">
+      <span onclick="toggleNouveauMdp()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil2">👁️</span>
+    </div>
+    <button class="btn" onclick="sauvegarderNouveauMdp()">✅ Sauvegarder le mot de passe</button>
+    <div class="msg" id="new-msg"></div>
+  </div>
 </div>
 
 <script>
@@ -98,10 +112,48 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 let mode = 'login'
 
 async function init() {
+  // Vérifier si c'est un lien de réinitialisation de mot de passe
+  const hash = window.location.hash
+  if (hash && hash.includes('type=recovery')) {
+    afficherNouveauMdp()
+    return
+  }
   const { data } = await sb.auth.getSession()
   if (data.session) window.location.href = 'quiz.html'
 }
-init()
+
+function afficherNouveauMdp() {
+  document.getElementById('login-view').style.display = 'none'
+  document.getElementById('reset-view').style.display = 'none'
+  document.getElementById('nouveau-mdp-view').style.display = 'block'
+  document.getElementById('logo-subtitle').textContent = 'Créer un nouveau mot de passe'
+}
+
+function toggleNouveauMdp() {
+  const input = document.getElementById('new-password')
+  const oeil = document.getElementById('oeil2')
+  if (input.type === 'password') { input.type = 'text'; oeil.textContent = '🙈' }
+  else { input.type = 'password'; oeil.textContent = '👁️' }
+}
+
+async function sauvegarderNouveauMdp() {
+  const password = document.getElementById('new-password').value
+  const msg = document.getElementById('new-msg')
+  if (!password || password.length < 6) {
+    msg.textContent = 'Le mot de passe doit faire au moins 6 caractères.'
+    msg.className = 'msg error'
+    return
+  }
+  const { error } = await sb.auth.updateUser({ password })
+  if (error) {
+    msg.textContent = 'Erreur : ' + error.message
+    msg.className = 'msg error'
+  } else {
+    msg.textContent = '✅ Mot de passe mis à jour ! Redirection...'
+    msg.className = 'msg success'
+    setTimeout(() => window.location.href = 'quiz.html', 2000)
+  }
+}
 
 function afficherReset() {
   document.getElementById('login-view').style.display = 'none'
@@ -115,19 +167,15 @@ function afficherReset() {
 function afficherLogin() {
   document.getElementById('login-view').style.display = 'block'
   document.getElementById('reset-view').style.display = 'none'
+  document.getElementById('nouveau-mdp-view').style.display = 'none'
   document.getElementById('logo-subtitle').textContent = 'Prépare ton brevet avec des QCM IA'
 }
 
 function toggleMdp() {
   const input = document.getElementById('password')
   const oeil = document.getElementById('oeil')
-  if (input.type === 'password') {
-    input.type = 'text'
-    oeil.textContent = '🙈'
-  } else {
-    input.type = 'password'
-    oeil.textContent = '👁️'
-  }
+  if (input.type === 'password') { input.type = 'text'; oeil.textContent = '🙈' }
+  else { input.type = 'password'; oeil.textContent = '👁️' }
 }
 
 function setMode(m) {
@@ -188,6 +236,8 @@ function afficherResetMsg(texte, type) {
   msg.textContent = texte
   msg.className = 'msg ' + type
 }
+
+init()
 </script>
 </body>
 </html>
