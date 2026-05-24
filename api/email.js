@@ -38,6 +38,7 @@ export default async function handler(req, res) {
           📐 Brevet Maths — Resultat de ${prenom}
         </h1>
         <p style="color:#666">Bonjour,</p>
+        <p style="color:#e65100;font-weight:500;margin-bottom:8px">⚠️ A transférer aux parents de ${prenom} : <strong>${emailParent}</strong></p>
         <p style="color:#666"><strong>${prenom}</strong> vient de terminer une session de revision en mathematiques !</p>
 
         <div style="background:#f5f5f0;border-radius:10px;padding:20px;margin:20px 0;text-align:center">
@@ -47,6 +48,7 @@ export default async function handler(req, res) {
         </div>
 
         <table style="width:100%;border-collapse:collapse;margin-bottom:10px">
+          <tr><td style="padding:8px;color:#666;border-bottom:1px solid #f0f0ec">Eleve</td><td style="padding:8px;font-weight:500;border-bottom:1px solid #f0f0ec">${prenom} (${emailEleve})</td></tr>
           <tr><td style="padding:8px;color:#666;border-bottom:1px solid #f0f0ec">Theme</td><td style="padding:8px;font-weight:500;border-bottom:1px solid #f0f0ec">${theme}</td></tr>
           <tr><td style="padding:8px;color:#666;border-bottom:1px solid #f0f0ec">Niveau</td><td style="padding:8px;font-weight:500;border-bottom:1px solid #f0f0ec">${difficulte}</td></tr>
           <tr><td style="padding:8px;color:#666;border-bottom:1px solid #f0f0ec">Temps de revision</td><td style="padding:8px;font-weight:500;border-bottom:1px solid #f0f0ec">⏱️ ${tempsFormat}</td></tr>
@@ -70,8 +72,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         from: 'onboarding@resend.dev',
-        to: emailParent,
-        subject: `📐 ${prenom} a obtenu ${score}/${total} en ${theme} — ${tempsFormat}`,
+        to: 'marcocampos2s@gmail.com',
+        subject: `📐 [A transférer à ${emailParent}] ${prenom} a obtenu ${score}/${total} en ${theme} — ${tempsFormat}`,
         html
       })
     })
