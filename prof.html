@@ -18,17 +18,22 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn:hover { background: #f5f5f0; }
 .btn-primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
 .card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
-h1 { font-size: 20px; font-weight: 600; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
-.stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 1rem; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 1rem; }
 .stat { background: white; border-radius: 10px; border: 1px solid #e8e8e4; padding: 1rem; text-align: center; }
-.stat-val { font-size: 28px; font-weight: 600; }
+.stat-val { font-size: 26px; font-weight: 600; }
 .stat-label { font-size: 12px; color: #666; margin-top: 4px; }
+.stat-ia { background: #f0fdf4; border-color: #16a34a; }
+.stat-ia .stat-val { color: #16a34a; }
+.stat-banque { background: #fffbeb; border-color: #f59e0b; }
+.stat-banque .stat-val { color: #f59e0b; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { text-align: left; padding: 8px 10px; font-size: 11px; color: #666; font-weight: 500; border-bottom: 1px solid #e8e8e4; }
 td { padding: 9px 10px; border-bottom: 1px solid #f0f0ec; vertical-align: top; }
 tr:last-child td { border-bottom: none; }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
+.badge-ia { background: #f0fdf4; color: #16a34a; }
+.badge-banque { background: #fffbeb; color: #92400e; }
 .ratee-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0ec; font-size: 13px; }
 .ratee-count { color: #dc2626; font-weight: 600; white-space: nowrap; margin-left: 12px; }
 .loader { text-align: center; color: #666; padding: 3rem; }
@@ -37,6 +42,8 @@ tr:last-child td { border-bottom: none; }
 .tab.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
 .section { display: none; }
 .section.active { display: block; }
+.progress-bar { height: 8px; background: #e0e0d8; border-radius: 4px; overflow: hidden; margin-top: 6px; }
+.progress-ia { height: 100%; background: #16a34a; border-radius: 4px; }
 </style>
 </head>
 <body>
@@ -77,8 +84,12 @@ async function init() {
   const { data: rows } = await sb.from('resultats').select('*').order('created_at', { ascending: false })
   if (!rows) return
 
-  const eleves = [...new Set(rows.map(r => r.email))].length
+  const nbEleves = [...new Set(rows.map(r => r.email))].length
   const moy = rows.length ? Math.round((rows.reduce((a,r) => a+r.score/r.total,0)/rows.length)*100) : 0
+
+  const nbIA = rows.filter(r => !r.source_questions || r.source_questions === 'ia').length
+  const nbBanque = rows.filter(r => r.source_questions === 'banque').length
+  const pctIA = rows.length ? Math.round((nbIA/rows.length)*100) : 0
 
   const themeStats = rows.reduce((acc,r) => {
     if (!acc[r.theme]) acc[r.theme] = { ok:0, tot:0, n:0 }
@@ -91,18 +102,33 @@ async function init() {
   const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
 
   const elevesUniques = Object.values(rows.reduce((acc, r) => {
-    if (!acc[r.email]) acc[r.email] = { email: r.email, prenom: r.prenom || '—', email_parent: r.email_parent || '—', sessions: 0, totalScore: 0, totalQ: 0 }
+    if (!acc[r.email]) acc[r.email] = {
+      email: r.email, prenom: r.prenom||'—', email_parent: r.email_parent||'—',
+      sessions: 0, totalScore: 0, totalQ: 0, nbIA: 0, nbBanque: 0
+    }
     acc[r.email].sessions++
     acc[r.email].totalScore += r.score
     acc[r.email].totalQ += r.total
+    if (!r.source_questions || r.source_questions === 'ia') acc[r.email].nbIA++
+    else acc[r.email].nbBanque++
     return acc
   }, {}))
 
   document.getElementById('content').innerHTML = `
     <div class="stats-grid">
-      <div class="stat"><div class="stat-val">${eleves}</div><div class="stat-label">Élèves actifs</div></div>
+      <div class="stat"><div class="stat-val">${nbEleves}</div><div class="stat-label">Élèves actifs</div></div>
       <div class="stat"><div class="stat-val">${rows.length}</div><div class="stat-label">Sessions totales</div></div>
       <div class="stat"><div class="stat-val">${moy}%</div><div class="stat-label">Moyenne générale</div></div>
+      <div class="stat stat-ia">
+        <div class="stat-val">✨ ${nbIA}</div>
+        <div class="stat-label">Sessions IA (${pctIA}%)</div>
+        <div class="progress-bar"><div class="progress-ia" style="width:${pctIA}%"></div></div>
+      </div>
+      <div class="stat stat-banque">
+        <div class="stat-val">⚡ ${nbBanque}</div>
+        <div class="stat-label">Sessions banque (${100-pctIA}%)</div>
+        <div class="progress-bar"><div class="progress-ia" style="width:${100-pctIA}%;background:#f59e0b"></div></div>
+      </div>
     </div>
 
     <div class="tabs">
@@ -116,14 +142,18 @@ async function init() {
       <div class="card">
         <h2>Liste des élèves</h2>
         <table>
-          <thead><tr><th>Prénom</th><th>Email élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th></tr></thead>
+          <thead><tr><th>Prénom</th><th>Email élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th><th>Source</th></tr></thead>
           <tbody>${elevesUniques.map(e=>`
             <tr>
               <td><strong>${e.prenom}</strong></td>
-              <td style="color:#666">${e.email}</td>
-              <td style="color:#3730a3">${e.email_parent}</td>
+              <td style="color:#666;font-size:12px">${e.email}</td>
+              <td style="color:#3730a3;font-size:12px">${e.email_parent}</td>
               <td>${e.sessions}</td>
               <td><strong>${e.totalQ > 0 ? Math.round((e.totalScore/e.totalQ)*100) : 0}%</strong></td>
+              <td>
+                <span style="font-size:11px;color:#16a34a">✨ ${e.nbIA}</span>
+                <span style="font-size:11px;color:#f59e0b;margin-left:4px">⚡ ${e.nbBanque}</span>
+              </td>
             </tr>`).join('')}
           </tbody>
         </table>
@@ -146,13 +176,16 @@ async function init() {
       <div class="card">
         <h2>Dernières sessions</h2>
         <table>
-          <thead><tr><th>Prénom</th><th>Thème</th><th>Niveau</th><th>Score</th><th>Date</th></tr></thead>
+          <thead><tr><th>Prénom</th><th>Thème</th><th>Niveau</th><th>Score</th><th>Source</th><th>Date</th></tr></thead>
           <tbody>${rows.slice(0,30).map(r=>`
             <tr>
-              <td><strong>${r.prenom || '—'}</strong><br><span style="font-size:11px;color:#999">${r.email}</span></td>
+              <td><strong>${r.prenom||'—'}</strong><br><span style="font-size:11px;color:#999">${r.email}</span></td>
               <td style="font-size:12px">${r.theme}</td>
               <td><span class="badge">${r.difficulte}</span></td>
               <td><strong>${r.score}/${r.total}</strong></td>
+              <td>${!r.source_questions || r.source_questions==='ia'
+                ? '<span class="badge badge-ia">✨ IA</span>'
+                : '<span class="badge badge-banque">⚡ Banque</span>'}</td>
               <td style="font-size:12px;color:#999">${new Date(r.created_at).toLocaleDateString('fr-FR')}</td>
             </tr>`).join('')}
           </tbody>
@@ -164,7 +197,7 @@ async function init() {
       <div class="card">
         <h2>Questions les plus ratées</h2>
         ${topRatees.length ? topRatees.map(([q,n])=>`
-          <div class="ratee-item"><span>${q}</span><span class="ratee-count">${n}× ratée</span></div>
+          <div class="ratee-item"><span style="font-size:12px">${q}</span><span class="ratee-count">${n}× ratée</span></div>
         `).join('') : '<p style="color:#666;font-size:13px">Pas encore de données.</p>'}
       </div>
     </div>`
