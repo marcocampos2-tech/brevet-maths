@@ -18,15 +18,15 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .nav-email { font-size: 12px; color: #666; }
 .card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
 .btn:hover { background: #f5f5f0; }
 .btn-primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
 .btn-primary:hover { background: #333; }
-.btn-green { background: #16a34a; color: white; border-color: #16a34a; }
+.btn-green { background: #16a34a; color: white; border-color: #16a34a; font-size: 16px; padding: 16px; }
 .btn-green:hover { background: #15803d; }
-.btn-red { background: #dc2626; color: white; border-color: #dc2626; }
-.btn-red:hover { background: #b91c1c; }
-.btn-full { width: 100%; justify-content: center; font-size: 15px; padding: 12px; }
+.btn-outline { background: white; color: #666; border: 1px solid #d0d0c8; font-size: 14px; padding: 12px; }
+.btn-outline:hover { background: #f5f5f0; }
+.btn-full { width: 100%; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 1rem; }
@@ -55,19 +55,15 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .progress-step.done { background: #3730a3; }
 .progress-step.current { background: #3730a3; opacity: 0.4; }
 .progress-label { font-size: 12px; color: #666; white-space: nowrap; }
-.results-screen { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 2rem; margin-bottom: 1rem; text-align: center; }
-.results-score { font-size: 64px; font-weight: 700; color: #1a1a1a; line-height: 1; }
-.results-total { font-size: 18px; color: #666; margin-top: 4px; }
-.results-pct { font-size: 32px; font-weight: 600; margin: 8px 0; }
-.results-mention { font-size: 20px; margin-bottom: 1.5rem; }
-.results-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 1.5rem 0; text-align: center; }
-.results-detail-item { background: #f5f5f0; border-radius: 10px; padding: 12px; }
-.results-detail-val { font-size: 20px; font-weight: 600; }
-.results-detail-label { font-size: 11px; color: #666; margin-top: 2px; }
-.results-actions { display: flex; gap: 12px; margin-top: 1.5rem; }
-.results-actions .btn { flex: 1; justify-content: center; padding: 14px; font-size: 14px; }
-.saved-msg { background: #f0fdf4; border: 1px solid #16a34a; border-radius: 10px; padding: 12px; color: #15803d; font-weight: 500; margin-bottom: 1rem; text-align: center; }
+.results-screen { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 2rem 1.5rem; margin-bottom: 1rem; text-align: center; }
+.results-score-big { font-size: 72px; font-weight: 700; color: #1a1a1a; line-height: 1; }
+.results-pct { font-size: 28px; font-weight: 600; margin: 10px 0 6px; }
+.results-mention { font-size: 18px; margin-bottom: 1rem; }
+.results-temps { font-size: 12px; color: #999; margin-bottom: 2rem; }
+.results-btns { display: flex; flex-direction: column; gap: 10px; }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
+.badge-ia { background: #f0fdf4; color: #16a34a; }
+.badge-banque { background: #fffbeb; color: #92400e; }
 .q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .q-num { font-size: 12px; color: #999; }
 .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 10px; color: #1a1a1a; }
@@ -80,6 +76,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 .badge-source-banque { font-size: 11px; color: #f59e0b; background: #fffbeb; border: 1px solid #f59e0b; border-radius: 20px; padding: 2px 10px; }
 .badge-source-ia { font-size: 11px; color: #16a34a; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 20px; padding: 2px 10px; }
+.saving-msg { text-align: center; color: #666; font-size: 13px; padding: 8px; }
 </style>
 </head>
 <body>
@@ -195,7 +192,7 @@ function arreterChrono() { clearInterval(chronoInterval) }
 function formatTemps(secondes) {
   const m = Math.floor(secondes / 60)
   const s = secondes % 60
-  if (m === 0) return `${s} secondes`
+  if (m === 0) return `${s} sec`
   return `${m} min ${s} sec`
 }
 
@@ -224,7 +221,7 @@ async function generer() {
     document.getElementById('quiz-area').innerHTML = '<div class="loader">❌ ' + e.message + '</div>'
   }
   btn.disabled = false
-  btn.textContent = '🎲 Générer 5 nouvelles questions'
+  btn.textContent = '🎲 Générer 5 questions'
 }
 
 function renderTableau(tableau) {
@@ -240,10 +237,9 @@ function renderQuiz() {
   const nbDone = Object.keys(submitted).length
   const toutFini = nbDone === questions.length && questions.length > 0
 
-  if (toutFini) { renderResultats(); return }
+  if (toutFini) { arreterChrono(); renderResultats(); return }
 
   let html = ''
-
   if (sourceQuestions === 'banque') {
     html += `<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-banque">⚡ Questions depuis la banque locale</span></div>`
   } else {
@@ -286,7 +282,7 @@ function renderQuiz() {
 
     if (!done) {
       const aucuneSel = sel === 'aucune'
-      html += `<div class="option ${aucuneSel ? 'aucune-selected' : ''}" onclick="pick(${i},'aucune')" style="margin-top:4px;border-style:dashed">
+      html += `<div class="option ${aucuneSel?'aucune-selected':''}" onclick="pick(${i},'aucune')" style="margin-top:4px;border-style:dashed">
         <span class="letter">😅</span>Aucune idée !</div>`
       html += `<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`
     } else if (estAucune) {
@@ -296,7 +292,6 @@ function renderQuiz() {
     } else {
       html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait.'}</strong><br><br>${q.explication}</div>`
     }
-
     html += '</div>'
   })
 
@@ -306,8 +301,6 @@ function renderQuiz() {
 function renderResultats() {
   const area = document.getElementById('quiz-area')
   const nbOk = Object.values(submitted).filter(v => v === 'correct').length
-  const nbAucune = Object.values(submitted).filter(v => v === 'aucune').length
-  const nbErreur = Object.values(submitted).filter(v => v === 'wrong').length
   const pct = Math.round((nbOk / questions.length) * 100)
 
   let mention = '', couleur = ''
@@ -316,51 +309,29 @@ function renderResultats() {
   else if (pct >= 40) { mention = '💪 Continue !'; couleur = '#f59e0b' }
   else { mention = '📚 À retravailler'; couleur = '#dc2626' }
 
-  let html = ''
-
-  if (saved) {
-    html += `<div class="saved-msg">✅ Résultats enregistrés ! Email envoyé aux parents.</div>`
-  }
-
-  html += `<div class="results-screen">
-    <div style="margin-bottom:1rem">
-      ${sourceQuestions === 'banque'
-        ? '<span class="badge-source-banque">⚡ Questions depuis la banque locale</span>'
-        : '<span class="badge-source-ia">✨ Questions générées par IA</span>'}
+  let html = `<div class="results-screen">
+    <div style="margin-bottom:1.2rem">
+      ${sourceQuestions==='banque'
+        ? '<span class="badge-source-banque">⚡ Banque locale</span>'
+        : '<span class="badge-source-ia">✨ IA</span>'}
     </div>
-    <div class="results-score">${nbOk}</div>
-    <div class="results-total">sur ${questions.length} questions</div>
+    <div class="results-score-big">${nbOk}/${questions.length}</div>
     <div class="results-pct" style="color:${couleur}">${pct}%</div>
     <div class="results-mention">${mention}</div>
-    <div class="results-details">
-      <div class="results-detail-item">
-        <div class="results-detail-val" style="color:#16a34a">✅ ${nbOk}</div>
-        <div class="results-detail-label">Bonnes réponses</div>
-      </div>
-      <div class="results-detail-item">
-        <div class="results-detail-val" style="color:#dc2626">❌ ${nbErreur}</div>
-        <div class="results-detail-label">Erreurs</div>
-      </div>
-      <div class="results-detail-item">
-        <div class="results-detail-val" style="color:#f59e0b">😅 ${nbAucune}</div>
-        <div class="results-detail-label">Aucune idée</div>
-      </div>
-    </div>
-    <div style="font-size:13px;color:#666;margin-bottom:1.5rem">
-      ⏱️ Temps : ${formatTemps(chronoSecondes)} · 📚 ${theme} · ${diff}
-    </div>
-    ${!saved ? `
-    <button class="btn btn-primary btn-full" onclick="sauvegarder()" style="margin-bottom:12px">
-      💾 Enregistrer mes résultats
-    </button>` : ''}
-    <div class="results-actions">
-      <button class="btn btn-green" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
-      <button class="btn btn-red" onclick="terminer()">🚪 Terminer</button>
+    <div class="results-temps">⏱️ ${formatTemps(chronoSecondes)} · ${theme} · ${diff}</div>
+    <div class="results-btns">
+      <button class="btn btn-green btn-full" id="btn-nouvelle" onclick="nouvelleRonde()">
+        🔄 Nouvelle ronde
+      </button>
+      <button class="btn btn-outline btn-full" id="btn-terminer" onclick="terminer()">
+        🚪 Terminer
+      </button>
+      <div class="saving-msg" id="saving-msg" style="display:none">⏳ Enregistrement en cours…</div>
     </div>
   </div>
 
   <div style="margin-bottom:0.5rem;font-size:14px;font-weight:600;color:#1a1a1a;padding:0 4px">
-    📋 Récapitulatif des questions
+    📋 Récapitulatif
   </div>`
 
   const letters = ['A','B','C','D']
@@ -395,20 +366,76 @@ function renderResultats() {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function nouvelleRonde() {
-  questions = []; answers = {}; submitted = {}; saved = false
-  arreterChrono()
-  document.getElementById('chrono').style.display = 'none'
-  document.getElementById('quiz-area').innerHTML = ''
-  generer()
+async function sauvegarder() {
+  if (saved) return true
+  const nbOk = Object.values(submitted).filter(v => v === 'correct').length
+  const nbAucune = Object.values(submitted).filter(v => v === 'aucune').length
+  const ratees = questions.filter((_,i) => submitted[i] === 'wrong').map(q => q.q)
+  const inconnues = questions.filter((_,i) => submitted[i] === 'aucune').map(q => q.q)
+
+  try {
+    await sb.from('resultats').insert({
+      user_id: user.id,
+      email: user.email,
+      prenom: prenom || '',
+      email_parent: emailParent || '',
+      theme, difficulte: diff,
+      score: nbOk,
+      total: questions.length,
+      questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
+      temps_secondes: chronoSecondes,
+      aucune_idee: nbAucune,
+      source_questions: sourceQuestions
+    })
+
+    if (emailParent) {
+      fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailParent, emailEleve: user.email,
+          prenom: prenom || user.email,
+          theme, difficulte: diff,
+          score: nbOk, total: questions.length,
+          questionsRatees: ratees, questionsInconnues: inconnues,
+          tempsSecondes: chronoSecondes, aucuneIdee: nbAucune
+        })
+      }).catch(e => console.log('Erreur email:', e.message))
+    }
+
+    saved = true
+    return true
+  } catch(e) {
+    console.log('Erreur sauvegarde:', e.message)
+    return false
+  }
 }
 
-function terminer() {
+async function nouvelleRonde() {
+  document.getElementById('btn-nouvelle').disabled = true
+  document.getElementById('btn-terminer').disabled = true
+  const msg = document.getElementById('saving-msg')
+  if (msg) msg.style.display = 'block'
+
+  await sauvegarder()
+
   questions = []; answers = {}; submitted = {}; saved = false
   arreterChrono()
   document.getElementById('chrono').style.display = 'none'
   document.getElementById('quiz-area').innerHTML = ''
-  document.getElementById('config').scrollIntoView({ behavior: 'smooth' })
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+async function terminer() {
+  const btnT = document.getElementById('btn-terminer')
+  const btnN = document.getElementById('btn-nouvelle')
+  if (btnT) btnT.disabled = true
+  if (btnN) btnN.disabled = true
+  const msg = document.getElementById('saving-msg')
+  if (msg) msg.style.display = 'block'
+
+  await sauvegarder()
+  window.location.href = 'index.html'
 }
 
 function pick(qi, oi) {
@@ -420,11 +447,8 @@ function pick(qi, oi) {
 function valider(qi) {
   if (answers[qi] === undefined) return
   const sel = answers[qi]
-  if (sel === 'aucune') {
-    submitted[qi] = 'aucune'
-  } else {
-    submitted[qi] = sel === questions[qi].answer ? 'correct' : 'wrong'
-  }
+  submitted[qi] = sel === 'aucune' ? 'aucune' : (sel === questions[qi].answer ? 'correct' : 'wrong')
+
   const toutFini = Object.keys(submitted).length === questions.length
   if (toutFini) {
     arreterChrono()
@@ -437,47 +461,6 @@ function valider(qi) {
       if (nextCard) nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 300)
   }
-}
-
-async function sauvegarder() {
-  const nbOk = Object.values(submitted).filter(v => v === 'correct').length
-  const nbAucune = Object.values(submitted).filter(v => v === 'aucune').length
-  const ratees = questions.filter((_,i) => submitted[i] === 'wrong').map(q => q.q)
-  const inconnues = questions.filter((_,i) => submitted[i] === 'aucune').map(q => q.q)
-
-  await sb.from('resultats').insert({
-    user_id: user.id,
-    email: user.email,
-    prenom: prenom || '',
-    email_parent: emailParent || '',
-    theme, difficulte: diff,
-    score: nbOk,
-    total: questions.length,
-    questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
-    temps_secondes: chronoSecondes,
-    aucune_idee: nbAucune,
-    source_questions: sourceQuestions
-  })
-
-  if (emailParent) {
-    try {
-      await fetch('/api/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          emailParent, emailEleve: user.email,
-          prenom: prenom || user.email,
-          theme, difficulte: diff,
-          score: nbOk, total: questions.length,
-          questionsRatees: ratees, questionsInconnues: inconnues,
-          tempsSecondes: chronoSecondes, aucuneIdee: nbAucune
-        })
-      })
-    } catch(e) { console.log('Erreur email:', e.message) }
-  }
-
-  saved = true
-  renderResultats()
 }
 
 init()
