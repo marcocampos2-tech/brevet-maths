@@ -330,7 +330,8 @@ async function sauvegarder() {
     total: questions.length,
     questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
     temps_secondes: chronoSecondes,
-    aucune_idee: nbAucune
+    aucune_idee: nbAucune,
+    source_questions: sourceQuestions
   })
 
   if (emailParent) {
