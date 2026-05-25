@@ -22,6 +22,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn:hover { background: #f5f5f0; }
 .btn-primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
 .btn-primary:hover { background: #333; }
+.btn-green { background: #16a34a; color: white; border-color: #16a34a; }
+.btn-green:hover { background: #15803d; }
+.btn-red { background: #dc2626; color: white; border-color: #dc2626; }
+.btn-red:hover { background: #b91c1c; }
 .btn-full { width: 100%; justify-content: center; font-size: 15px; padding: 12px; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
@@ -45,12 +49,24 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .option.correct .letter, .option.wrong .letter, .option.aucune .letter { color: inherit; }
 .explication { margin-top: 10px; padding: 10px 14px; background: #f5f5f0; border-radius: 8px; font-size: 13px; color: #555; border-left: 3px solid #3730a3; line-height: 1.6; }
 .explication-aucune { margin-top: 10px; padding: 10px 14px; background: #fffbeb; border-radius: 8px; font-size: 13px; color: #92400e; border-left: 3px solid #f59e0b; line-height: 1.6; }
-.score-bar { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: #f5f5f0; border-radius: 10px; margin-bottom: 1rem; }
-.score-val { font-size: 24px; font-weight: 600; }
-.score-label { font-size: 12px; color: #666; }
-.progress { flex: 1; height: 6px; background: #e0e0d8; border-radius: 3px; overflow: hidden; }
-.progress-fill { height: 100%; background: #3730a3; border-radius: 3px; transition: width 0.5s; }
-.pct { font-size: 14px; color: #666; }
+.quiz-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+.progress-steps { display: flex; gap: 4px; flex: 1; }
+.progress-step { height: 6px; flex: 1; border-radius: 3px; background: #e0e0d8; }
+.progress-step.done { background: #3730a3; }
+.progress-step.current { background: #3730a3; opacity: 0.4; }
+.progress-label { font-size: 12px; color: #666; white-space: nowrap; }
+.results-screen { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 2rem; margin-bottom: 1rem; text-align: center; }
+.results-score { font-size: 64px; font-weight: 700; color: #1a1a1a; line-height: 1; }
+.results-total { font-size: 18px; color: #666; margin-top: 4px; }
+.results-pct { font-size: 32px; font-weight: 600; margin: 8px 0; }
+.results-mention { font-size: 20px; margin-bottom: 1.5rem; }
+.results-details { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 1.5rem 0; text-align: center; }
+.results-detail-item { background: #f5f5f0; border-radius: 10px; padding: 12px; }
+.results-detail-val { font-size: 20px; font-weight: 600; }
+.results-detail-label { font-size: 11px; color: #666; margin-top: 2px; }
+.results-actions { display: flex; gap: 12px; margin-top: 1.5rem; }
+.results-actions .btn { flex: 1; justify-content: center; padding: 14px; font-size: 14px; }
+.saved-msg { background: #f0fdf4; border: 1px solid #16a34a; border-radius: 10px; padding: 12px; color: #15803d; font-weight: 500; margin-bottom: 1rem; text-align: center; }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
 .q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .q-num { font-size: 12px; color: #999; }
@@ -59,7 +75,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .q-tableau th { border: 1px solid #ccc; padding: 6px 14px; background: #f5f5f0; font-weight: 600; text-align: center; }
 .q-tableau td { border: 1px solid #ccc; padding: 6px 14px; text-align: center; }
 .loader { text-align: center; padding: 3rem; color: #666; font-size: 14px; }
-.saved-box { text-align: center; padding: 1rem; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 10px; color: #15803d; font-weight: 500; margin-bottom: 1rem; }
 .chrono { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #e8e8e4; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: #1a1a1a; }
 .chrono-dot { width: 8px; height: 8px; background: #16a34a; border-radius: 50%; animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
@@ -138,12 +153,9 @@ async function init() {
   }
 
   document.getElementById('user-email').textContent = prenom || user.email
-
-  // Afficher le bouton prof si c'est le prof
   if (user.email === PROF_EMAIL) {
     document.getElementById('btn-prof').style.display = 'inline-flex'
   }
-
   renderThemes()
 }
 
@@ -190,7 +202,7 @@ function formatTemps(secondes) {
 async function generer() {
   const btn = document.getElementById('gen-btn')
   btn.disabled = true
-  btn.textContent = '⏳ Génération et vérification en cours...'
+  btn.textContent = '⏳ Génération en cours...'
   questions = []; answers = {}; submitted = {}; saved = false
   arreterChrono()
   document.getElementById('chrono').style.display = 'none'
@@ -225,9 +237,11 @@ function renderTableau(tableau) {
 
 function renderQuiz() {
   const area = document.getElementById('quiz-area')
-  const nbOk = Object.values(submitted).filter(v => v === 'correct').length
-  const nbAucune = Object.values(submitted).filter(v => v === 'aucune').length
   const nbDone = Object.keys(submitted).length
+  const toutFini = nbDone === questions.length && questions.length > 0
+
+  if (toutFini) { renderResultats(); return }
+
   let html = ''
 
   if (sourceQuestions === 'banque') {
@@ -236,14 +250,15 @@ function renderQuiz() {
     html += `<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-ia">✨ Questions générées par IA</span></div>`
   }
 
-  if (nbDone > 0) {
-    const pct = Math.round((nbOk / nbDone) * 100)
-    html += `<div class="score-bar">
-      <div><div class="score-label">Score</div><div class="score-val">${nbOk}/${nbDone}</div></div>
-      <div class="progress"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <div class="pct">${pct}%</div>
-    </div>`
-  }
+  html += `<div class="quiz-progress">
+    <div class="progress-steps">${questions.map((_,i) => {
+      let cls = 'progress-step'
+      if (submitted[i] !== undefined) cls += ' done'
+      else if (i === nbDone) cls += ' current'
+      return `<div class="${cls}"></div>`
+    }).join('')}</div>
+    <span class="progress-label">Question ${Math.min(nbDone+1, questions.length)}/${questions.length}</span>
+  </div>`
 
   const letters = ['A','B','C','D']
   questions.forEach((q,i) => {
@@ -277,23 +292,123 @@ function renderQuiz() {
     } else if (estAucune) {
       html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed">
         <span class="letter">😅</span>Aucune idée !</div>`
-      html += `<div class="explication-aucune"><strong>💡 Pas de panique !</strong> La bonne réponse est : <strong>${q.opts[q.answer]}</strong>. ${q.explication}</div>`
+      html += `<div class="explication-aucune"><strong>💡 Pas de panique !</strong> La bonne réponse est : <strong>${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
     } else {
-      html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait.'}</strong> ${q.explication}</div>`
+      html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait.'}</strong><br><br>${q.explication}</div>`
     }
 
     html += '</div>'
   })
 
-  const terminer = nbDone === questions.length && questions.length > 0
-  if (terminer && !saved) {
-    html += `<button class="btn btn-primary btn-full" style="margin-bottom:1rem" onclick="sauvegarder()">💾 Enregistrer mes résultats</button>`
-  }
+  area.innerHTML = html
+}
+
+function renderResultats() {
+  const area = document.getElementById('quiz-area')
+  const nbOk = Object.values(submitted).filter(v => v === 'correct').length
+  const nbAucune = Object.values(submitted).filter(v => v === 'aucune').length
+  const nbErreur = Object.values(submitted).filter(v => v === 'wrong').length
+  const pct = Math.round((nbOk / questions.length) * 100)
+
+  let mention = '', couleur = ''
+  if (pct >= 80) { mention = '🌟 Excellent !'; couleur = '#16a34a' }
+  else if (pct >= 60) { mention = '👍 Bien !'; couleur = '#3730a3' }
+  else if (pct >= 40) { mention = '💪 Continue !'; couleur = '#f59e0b' }
+  else { mention = '📚 À retravailler'; couleur = '#dc2626' }
+
+  let html = ''
+
   if (saved) {
-    html += `<div class="saved-box">✅ Résultats enregistrés ! Score : ${nbOk}/${questions.length} en ${formatTemps(chronoSecondes)}</div>`
+    html += `<div class="saved-msg">✅ Résultats enregistrés ! Email envoyé aux parents.</div>`
   }
 
+  html += `<div class="results-screen">
+    <div style="margin-bottom:1rem">
+      ${sourceQuestions === 'banque'
+        ? '<span class="badge-source-banque">⚡ Questions depuis la banque locale</span>'
+        : '<span class="badge-source-ia">✨ Questions générées par IA</span>'}
+    </div>
+    <div class="results-score">${nbOk}</div>
+    <div class="results-total">sur ${questions.length} questions</div>
+    <div class="results-pct" style="color:${couleur}">${pct}%</div>
+    <div class="results-mention">${mention}</div>
+    <div class="results-details">
+      <div class="results-detail-item">
+        <div class="results-detail-val" style="color:#16a34a">✅ ${nbOk}</div>
+        <div class="results-detail-label">Bonnes réponses</div>
+      </div>
+      <div class="results-detail-item">
+        <div class="results-detail-val" style="color:#dc2626">❌ ${nbErreur}</div>
+        <div class="results-detail-label">Erreurs</div>
+      </div>
+      <div class="results-detail-item">
+        <div class="results-detail-val" style="color:#f59e0b">😅 ${nbAucune}</div>
+        <div class="results-detail-label">Aucune idée</div>
+      </div>
+    </div>
+    <div style="font-size:13px;color:#666;margin-bottom:1.5rem">
+      ⏱️ Temps : ${formatTemps(chronoSecondes)} · 📚 ${theme} · ${diff}
+    </div>
+    ${!saved ? `
+    <button class="btn btn-primary btn-full" onclick="sauvegarder()" style="margin-bottom:12px">
+      💾 Enregistrer mes résultats
+    </button>` : ''}
+    <div class="results-actions">
+      <button class="btn btn-green" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
+      <button class="btn btn-red" onclick="terminer()">🚪 Terminer</button>
+    </div>
+  </div>
+
+  <div style="margin-bottom:0.5rem;font-size:14px;font-weight:600;color:#1a1a1a;padding:0 4px">
+    📋 Récapitulatif des questions
+  </div>`
+
+  const letters = ['A','B','C','D']
+  questions.forEach((q,i) => {
+    const estAucune = submitted[i] === 'aucune'
+    html += `<div class="card">
+      <div class="q-meta">
+        <span class="q-num">Question ${i+1}/${questions.length}</span>
+        <span class="badge" style="${submitted[i]==='correct'?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626'}">${submitted[i]==='correct'?'✅ Correct':'❌ Raté'}</span>
+      </div>
+      <p class="q-text">${q.q}</p>
+      ${renderTableau(q.tableau)}`
+
+    q.opts.forEach((opt,j) => {
+      let cls = 'option'
+      if (j === q.answer) cls += ' correct'
+      else if (j === answers[i] && answers[i] !== 'aucune') cls += ' wrong'
+      html += `<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`
+    })
+
+    if (estAucune) {
+      html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed">
+        <span class="letter">😅</span>Aucune idée !</div>`
+      html += `<div class="explication-aucune"><strong>💡 La bonne réponse :</strong> ${q.opts[q.answer]}<br><br>${q.explication}</div>`
+    } else {
+      html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait.'}</strong><br><br>${q.explication}</div>`
+    }
+    html += '</div>'
+  })
+
   area.innerHTML = html
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+function nouvelleRonde() {
+  questions = []; answers = {}; submitted = {}; saved = false
+  arreterChrono()
+  document.getElementById('chrono').style.display = 'none'
+  document.getElementById('quiz-area').innerHTML = ''
+  generer()
+}
+
+function terminer() {
+  questions = []; answers = {}; submitted = {}; saved = false
+  arreterChrono()
+  document.getElementById('chrono').style.display = 'none'
+  document.getElementById('quiz-area').innerHTML = ''
+  document.getElementById('config').scrollIntoView({ behavior: 'smooth' })
 }
 
 function pick(qi, oi) {
@@ -310,8 +425,18 @@ function valider(qi) {
   } else {
     submitted[qi] = sel === questions[qi].answer ? 'correct' : 'wrong'
   }
-  if (Object.keys(submitted).length === questions.length) arreterChrono()
-  renderQuiz()
+  const toutFini = Object.keys(submitted).length === questions.length
+  if (toutFini) {
+    arreterChrono()
+    renderResultats()
+  } else {
+    renderQuiz()
+    setTimeout(() => {
+      const cards = document.querySelectorAll('.card')
+      const nextCard = cards[qi + 1]
+      if (nextCard) nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 300)
+  }
 }
 
 async function sauvegarder() {
@@ -340,25 +465,19 @@ async function sauvegarder() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          emailParent,
-          emailEleve: user.email,
+          emailParent, emailEleve: user.email,
           prenom: prenom || user.email,
           theme, difficulte: diff,
-          score: nbOk,
-          total: questions.length,
-          questionsRatees: ratees,
-          questionsInconnues: inconnues,
-          tempsSecondes: chronoSecondes,
-          aucuneIdee: nbAucune
+          score: nbOk, total: questions.length,
+          questionsRatees: ratees, questionsInconnues: inconnues,
+          tempsSecondes: chronoSecondes, aucuneIdee: nbAucune
         })
       })
-    } catch(e) {
-      console.log('Erreur email:', e.message)
-    }
+    } catch(e) { console.log('Erreur email:', e.message) }
   }
 
   saved = true
-  renderQuiz()
+  renderResultats()
 }
 
 init()
