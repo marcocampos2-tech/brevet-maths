@@ -28,6 +28,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn-outline:hover { background: #f5f5f0; }
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+#btn-prof { background: #fbbf24; border-color: #f59e0b; color: #1a1a1a; }
+#btn-prof:hover { background: #f59e0b; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 1rem; }
 .theme-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
@@ -62,8 +64,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .results-temps { font-size: 12px; color: #999; margin-bottom: 2rem; }
 .results-btns { display: flex; flex-direction: column; gap: 10px; }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
-.badge-ia { background: #f0fdf4; color: #16a34a; }
-.badge-banque { background: #fffbeb; color: #92400e; }
 .q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .q-num { font-size: 12px; color: #999; }
 .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 10px; color: #1a1a1a; }
@@ -89,7 +89,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
         <div class="chrono-dot"></div>
         <span id="chrono-text">00:00</span>
       </div>
-      <a href="prof.html" class="btn btn-primary" id="btn-prof" style="display:none">🎓 Prof</a>
+      <a href="prof.html" class="btn" id="btn-prof" style="display:none">🎓 Prof</a>
       <a href="resultats.html" class="btn">Mes résultats</a>
       <button class="btn" onclick="logout()">Déconnexion</button>
     </div>
@@ -324,7 +324,7 @@ function renderResultats() {
         🔄 Nouvelle ronde
       </button>
       <button class="btn btn-outline btn-full" id="btn-terminer" onclick="terminer()">
-        🚪 Terminer
+        🚪 Terminer et se déconnecter
       </button>
       <div class="saving-msg" id="saving-msg" style="display:none">⏳ Enregistrement en cours…</div>
     </div>
@@ -387,7 +387,6 @@ async function sauvegarder() {
       aucune_idee: nbAucune,
       source_questions: sourceQuestions
     })
-
     if (emailParent) {
       fetch('/api/email', {
         method: 'POST',
@@ -402,7 +401,6 @@ async function sauvegarder() {
         })
       }).catch(e => console.log('Erreur email:', e.message))
     }
-
     saved = true
     return true
   } catch(e) {
@@ -416,9 +414,7 @@ async function nouvelleRonde() {
   document.getElementById('btn-terminer').disabled = true
   const msg = document.getElementById('saving-msg')
   if (msg) msg.style.display = 'block'
-
   await sauvegarder()
-
   questions = []; answers = {}; submitted = {}; saved = false
   arreterChrono()
   document.getElementById('chrono').style.display = 'none'
@@ -433,8 +429,8 @@ async function terminer() {
   if (btnN) btnN.disabled = true
   const msg = document.getElementById('saving-msg')
   if (msg) msg.style.display = 'block'
-
   await sauvegarder()
+  await sb.auth.signOut()
   window.location.href = 'index.html'
 }
 
@@ -448,7 +444,6 @@ function valider(qi) {
   if (answers[qi] === undefined) return
   const sel = answers[qi]
   submitted[qi] = sel === 'aucune' ? 'aucune' : (sel === questions[qi].answer ? 'correct' : 'wrong')
-
   const toutFini = Object.keys(submitted).length === questions.length
   if (toutFini) {
     arreterChrono()
