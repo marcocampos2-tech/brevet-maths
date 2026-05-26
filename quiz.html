@@ -35,11 +35,13 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .theme-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
 .theme-card:hover { border-color: #999; }
 .theme-card.active { border: 2px solid #1a1a1a; background: #f5f5f0; }
+.theme-card.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 .theme-icon { font-size: 22px; margin-bottom: 4px; }
 .theme-label { font-size: 12px; font-weight: 500; }
 .diff-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
 .diff-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #d0d0c8; background: white; font-size: 13px; cursor: pointer; transition: all 0.15s; }
 .diff-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+.diff-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid #e8e8e4; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.15s; margin-bottom: 8px; }
 .option:hover { border-color: #999; background: #f9f9f7; }
 .option.selected { border-color: #3730a3; background: #eef2ff; }
@@ -67,7 +69,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .q-num { font-size: 12px; color: #999; }
 .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 10px; color: #1a1a1a; }
-.q-tableau { border-collapse: collapse; margin: 10px 0 14px 0; font-size: 14px; }
+.q-tableau { border-collapse: collapse; margin: 10px 0 14px 0; font-size: 14px; width: 100%; }
 .q-tableau th { border: 1px solid #ccc; padding: 6px 14px; background: #f5f5f0; font-weight: 600; text-align: center; }
 .q-tableau td { border: 1px solid #ccc; padding: 6px 14px; text-align: center; }
 .loader { text-align: center; padding: 3rem; color: #666; font-size: 14px; }
@@ -77,6 +79,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .badge-source-banque { font-size: 11px; color: #f59e0b; background: #fffbeb; border: 1px solid #f59e0b; border-radius: 20px; padding: 2px 10px; }
 .badge-source-ia { font-size: 11px; color: #16a34a; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 20px; padding: 2px 10px; }
 .saving-msg { text-align: center; color: #666; font-size: 13px; padding: 8px; }
+.quiz-en-cours { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #92400e; margin-bottom: 1rem; text-align: center; }
 </style>
 </head>
 <body>
@@ -99,7 +102,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
     <h2>Choisis un thème</h2>
     <div class="theme-grid" id="theme-grid"></div>
     <h2 style="margin-top:1rem">Niveau</h2>
-    <div class="diff-row">
+    <div class="diff-row" id="diff-row">
       <button class="diff-btn" onclick="setDiff(this,'facile')">Facile</button>
       <button class="diff-btn active" onclick="setDiff(this,'moyen')">Moyen</button>
       <button class="diff-btn" onclick="setDiff(this,'difficile')">Difficile</button>
@@ -129,6 +132,53 @@ let user = null, prenom = '', emailParent = ''
 let theme = 'Nombres et calculs', diff = 'moyen'
 let questions = [], answers = {}, submitted = {}, saved = false
 let chronoInterval = null, chronoSecondes = 0, sourceQuestions = 'ia'
+let quizEnCours = false
+
+window.addEventListener('beforeunload', function(e) {
+  if (quizEnCours && !saved) {
+    e.preventDefault()
+    e.returnValue = '⚠️ Si vous quittez, votre quiz sera enregistré avec un score de 0.'
+    sauvegarderAbandonne()
+  }
+})
+
+async function sauvegarderAbandonne() {
+  if (saved || !user || questions.length === 0) return
+  try {
+    await sb.from('resultats').insert({
+      user_id: user.id,
+      email: user.email,
+      prenom: prenom || '',
+      email_parent: emailParent || '',
+      theme, difficulte: diff,
+      score: 0,
+      total: 5,
+      questions_ratees: ['Quiz abandonné'],
+      temps_secondes: chronoSecondes,
+      aucune_idee: 0,
+      source_questions: sourceQuestions
+    })
+    saved = true
+  } catch(e) {
+    console.log('Erreur abandon:', e.message)
+  }
+}
+
+function bloquerConfig() {
+  quizEnCours = true
+  document.getElementById('gen-btn').disabled = true
+  document.getElementById('gen-btn').textContent = '⏳ Quiz en cours...'
+  document.querySelectorAll('.theme-card').forEach(c => c.classList.add('disabled'))
+  document.querySelectorAll('.diff-btn').forEach(b => b.disabled = true)
+}
+
+function debloquerConfig() {
+  quizEnCours = false
+  document.getElementById('gen-btn').disabled = false
+  document.getElementById('gen-btn').textContent = '🎲 Générer 5 questions'
+  document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('disabled'))
+  document.querySelectorAll('.diff-btn').forEach(b => b.disabled = false)
+}
 
 async function init() {
   const { data } = await sb.auth.getSession()
@@ -165,16 +215,26 @@ function renderThemes() {
 }
 
 function setTheme(el, val) {
+  if (quizEnCours) return
   document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'))
   el.classList.add('active'); theme = val
 }
 
 function setDiff(el, val) {
+  if (quizEnCours) return
   document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'))
   el.classList.add('active'); diff = val
 }
 
-async function logout() { await sb.auth.signOut(); window.location.href = 'index.html' }
+async function logout() {
+  if (quizEnCours && !saved) {
+    const ok = confirm('⚠️ Tu as un quiz en cours. Si tu te déconnectes, il sera enregistré avec un score de 0. Continuer ?')
+    if (!ok) return
+    await sauvegarderAbandonne()
+  }
+  await sb.auth.signOut()
+  window.location.href = 'index.html'
+}
 
 function demarrerChrono() {
   chronoSecondes = 0
@@ -215,13 +275,13 @@ async function generer() {
     if (data.error) throw new Error(data.error)
     questions = data.questions
     sourceQuestions = data.source || 'ia'
+    bloquerConfig()
     demarrerChrono()
     renderQuiz()
   } catch(e) {
     document.getElementById('quiz-area').innerHTML = '<div class="loader">❌ ' + e.message + '</div>'
+    debloquerConfig()
   }
-  btn.disabled = false
-  btn.textContent = '🎲 Générer 5 questions'
 }
 
 function renderTableau(tableau) {
@@ -240,6 +300,8 @@ function renderQuiz() {
   if (toutFini) { arreterChrono(); renderResultats(); return }
 
   let html = ''
+  html += `<div class="quiz-en-cours">⚠️ Quiz en cours — Ne quitte pas la page !</div>`
+
   if (sourceQuestions === 'banque') {
     html += `<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-banque">⚡ Questions depuis la banque locale</span></div>`
   } else {
@@ -299,6 +361,7 @@ function renderQuiz() {
 }
 
 function renderResultats() {
+  debloquerConfig()
   const area = document.getElementById('quiz-area')
   const nbOk = Object.values(submitted).filter(v => v === 'correct').length
   const pct = Math.round((nbOk / questions.length) * 100)
@@ -308,6 +371,8 @@ function renderResultats() {
   else if (pct >= 60) { mention = '👍 Bien !'; couleur = '#3730a3' }
   else if (pct >= 40) { mention = '💪 Continue !'; couleur = '#f59e0b' }
   else { mention = '📚 À retravailler'; couleur = '#dc2626' }
+
+  sauvegarder()
 
   let html = `<div class="results-screen">
     <div style="margin-bottom:1.2rem">
@@ -319,20 +384,13 @@ function renderResultats() {
     <div class="results-pct" style="color:${couleur}">${pct}%</div>
     <div class="results-mention">${mention}</div>
     <div class="results-temps">⏱️ ${formatTemps(chronoSecondes)} · ${theme} · ${diff}</div>
+    <div style="font-size:12px;color:#16a34a;margin-bottom:1rem">✅ Résultats enregistrés automatiquement</div>
     <div class="results-btns">
-      <button class="btn btn-green btn-full" id="btn-nouvelle" onclick="nouvelleRonde()">
-        🔄 Nouvelle ronde
-      </button>
-      <button class="btn btn-outline btn-full" id="btn-terminer" onclick="terminer()">
-        🚪 Terminer et se déconnecter
-      </button>
-      <div class="saving-msg" id="saving-msg" style="display:none">⏳ Enregistrement en cours…</div>
+      <button class="btn btn-green btn-full" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
+      <button class="btn btn-outline btn-full" onclick="terminer()">🚪 Terminer et se déconnecter</button>
     </div>
   </div>
-
-  <div style="margin-bottom:0.5rem;font-size:14px;font-weight:600;color:#1a1a1a;padding:0 4px">
-    📋 Récapitulatif
-  </div>`
+  <div style="margin-bottom:0.5rem;font-size:14px;font-weight:600;color:#1a1a1a;padding:0 4px">📋 Récapitulatif</div>`
 
   const letters = ['A','B','C','D']
   questions.forEach((q,i) => {
@@ -367,7 +425,7 @@ function renderResultats() {
 }
 
 async function sauvegarder() {
-  if (saved) return true
+  if (saved || !user || questions.length === 0) return
   const nbOk = Object.values(submitted).filter(v => v === 'correct').length
   const nbAucune = Object.values(submitted).filter(v => v === 'aucune').length
   const ratees = questions.filter((_,i) => submitted[i] === 'wrong').map(q => q.q)
@@ -402,19 +460,12 @@ async function sauvegarder() {
       }).catch(e => console.log('Erreur email:', e.message))
     }
     saved = true
-    return true
   } catch(e) {
     console.log('Erreur sauvegarde:', e.message)
-    return false
   }
 }
 
 async function nouvelleRonde() {
-  document.getElementById('btn-nouvelle').disabled = true
-  document.getElementById('btn-terminer').disabled = true
-  const msg = document.getElementById('saving-msg')
-  if (msg) msg.style.display = 'block'
-  await sauvegarder()
   questions = []; answers = {}; submitted = {}; saved = false
   arreterChrono()
   document.getElementById('chrono').style.display = 'none'
@@ -423,13 +474,6 @@ async function nouvelleRonde() {
 }
 
 async function terminer() {
-  const btnT = document.getElementById('btn-terminer')
-  const btnN = document.getElementById('btn-nouvelle')
-  if (btnT) btnT.disabled = true
-  if (btnN) btnN.disabled = true
-  const msg = document.getElementById('saving-msg')
-  if (msg) msg.style.display = 'block'
-  await sauvegarder()
   await sb.auth.signOut()
   window.location.href = 'index.html'
 }
