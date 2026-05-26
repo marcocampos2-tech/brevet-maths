@@ -423,6 +423,7 @@ async function nouvelleRonde() {
   arreterChrono()
   document.getElementById('chrono').style.display='none'
   document.getElementById('quiz-area').innerHTML=''
+  debloquerConfig()
   window.scrollTo({top:0,behavior:'smooth'})
 }
 async function terminer() {
