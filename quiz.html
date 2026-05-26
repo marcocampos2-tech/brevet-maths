@@ -420,6 +420,7 @@ async function sauvegarder() {
 }
 async function nouvelleRonde() {
   questions=[]; answers={}; submitted={}; saved=false
+  quizEnCours = false
   arreterChrono()
   document.getElementById('chrono').style.display='none'
   document.getElementById('quiz-area').innerHTML=''
