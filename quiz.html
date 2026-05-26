@@ -80,45 +80,43 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .badge-source-ia { font-size: 11px; color: #16a34a; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 20px; padding: 2px 10px; }
 .saving-msg { text-align: center; color: #666; font-size: 13px; padding: 8px; }
 .quiz-en-cours { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #92400e; margin-bottom: 1rem; text-align: center; }
+.q-figure { margin: 10px 0 14px; display: flex; justify-content: center; background: #f9f9f7; border-radius: 8px; padding: 12px; }
+.q-figure svg { max-width: 220px; height: auto; display: block; }
 </style>
 </head>
 <body>
 <div class="container">
-  <nav>
-    <div class="nav-left">📐 Brevet Maths</div>
-    <div class="nav-right">
-      <span class="nav-email" id="user-email"></span>
-      <div class="chrono" id="chrono" style="display:none">
-        <div class="chrono-dot"></div>
-        <span id="chrono-text">00:00</span>
-      </div>
-      <a href="prof.html" class="btn" id="btn-prof" style="display:none">🎓 Prof</a>
-      <a href="resultats.html" class="btn">Mes résultats</a>
-      <button class="btn" onclick="logout()">Déconnexion</button>
+<nav>
+  <div class="nav-left">📐 Brevet Maths</div>
+  <div class="nav-right">
+    <span class="nav-email" id="user-email"></span>
+    <div class="chrono" id="chrono" style="display:none">
+      <div class="chrono-dot"></div>
+      <span id="chrono-text">00:00</span>
     </div>
-  </nav>
-
-  <div class="card" id="config">
-    <h2>Choisis un thème</h2>
-    <div class="theme-grid" id="theme-grid"></div>
-    <h2 style="margin-top:1rem">Niveau</h2>
-    <div class="diff-row" id="diff-row">
-      <button class="diff-btn" onclick="setDiff(this,'facile')">Facile</button>
-      <button class="diff-btn active" onclick="setDiff(this,'moyen')">Moyen</button>
-      <button class="diff-btn" onclick="setDiff(this,'difficile')">Difficile</button>
-    </div>
-    <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:0.5rem">🎲 Générer 5 questions</button>
+    <a href="prof.html" class="btn" id="btn-prof" style="display:none">🎓 Prof</a>
+    <a href="resultats.html" class="btn">Mes résultats</a>
+    <button class="btn" onclick="logout()">Déconnexion</button>
   </div>
-
-  <div id="quiz-area"></div>
+</nav>
+<div class="card" id="config">
+  <h2>Choisis un thème</h2>
+  <div class="theme-grid" id="theme-grid"></div>
+  <h2 style="margin-top:1rem">Niveau</h2>
+  <div class="diff-row" id="diff-row">
+    <button class="diff-btn" onclick="setDiff(this,'facile')">Facile</button>
+    <button class="diff-btn active" onclick="setDiff(this,'moyen')">Moyen</button>
+    <button class="diff-btn" onclick="setDiff(this,'difficile')">Difficile</button>
+  </div>
+  <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:0.5rem">🎲 Générer 5 questions</button>
 </div>
-
+<div id="quiz-area"></div>
+</div>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const PROF_EMAIL = 'marcocampos2@gmail.com'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-
 const THEMES = [
   { label: 'Nombres & calculs', value: 'Nombres et calculs', icon: '🔢' },
   { label: 'Géométrie', value: 'Géométrie', icon: '📐' },
@@ -127,13 +125,11 @@ const THEMES = [
   { label: 'Fonctions', value: 'Fonctions', icon: '📈' },
   { label: 'Tout mélanger', value: 'Mélange de tous les thèmes', icon: '✨' },
 ]
-
 let user = null, prenom = '', emailParent = ''
 let theme = 'Nombres et calculs', diff = 'moyen'
 let questions = [], answers = {}, submitted = {}, saved = false
 let chronoInterval = null, chronoSecondes = 0, sourceQuestions = 'ia'
 let quizEnCours = false
-
 window.addEventListener('beforeunload', function(e) {
   if (quizEnCours && !saved) {
     e.preventDefault()
@@ -141,29 +137,20 @@ window.addEventListener('beforeunload', function(e) {
     sauvegarderAbandonne()
   }
 })
-
 async function sauvegarderAbandonne() {
   if (saved || !user || questions.length === 0) return
   try {
     await sb.from('resultats').insert({
-      user_id: user.id,
-      email: user.email,
-      prenom: prenom || '',
-      email_parent: emailParent || '',
-      theme, difficulte: diff,
-      score: 0,
-      total: 5,
+      user_id: user.id, email: user.email,
+      prenom: prenom || '', email_parent: emailParent || '',
+      theme, difficulte: diff, score: 0, total: 5,
       questions_ratees: ['Quiz abandonné'],
-      temps_secondes: chronoSecondes,
-      aucune_idee: 0,
+      temps_secondes: chronoSecondes, aucune_idee: 0,
       source_questions: sourceQuestions
     })
     saved = true
-  } catch(e) {
-    console.log('Erreur abandon:', e.message)
-  }
+  } catch(e) { console.log('Erreur abandon:', e.message) }
 }
-
 function bloquerConfig() {
   quizEnCours = true
   document.getElementById('gen-btn').disabled = true
@@ -171,7 +158,6 @@ function bloquerConfig() {
   document.querySelectorAll('.theme-card').forEach(c => c.classList.add('disabled'))
   document.querySelectorAll('.diff-btn').forEach(b => b.disabled = true)
 }
-
 function debloquerConfig() {
   quizEnCours = false
   document.getElementById('gen-btn').disabled = false
@@ -179,14 +165,12 @@ function debloquerConfig() {
   document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('disabled'))
   document.querySelectorAll('.diff-btn').forEach(b => b.disabled = false)
 }
-
 async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'index.html'; return }
   user = data.session.user
   prenom = user.user_metadata?.prenom || ''
   emailParent = user.user_metadata?.email_parent || ''
-
   if (!prenom || !emailParent) {
     const { data: derniere } = await sb.from('resultats')
       .select('prenom, email_parent')
@@ -198,14 +182,12 @@ async function init() {
       emailParent = emailParent || derniere[0].email_parent || ''
     }
   }
-
   document.getElementById('user-email').textContent = prenom || user.email
   if (user.email === PROF_EMAIL) {
     document.getElementById('btn-prof').style.display = 'inline-flex'
   }
   renderThemes()
 }
-
 function renderThemes() {
   document.getElementById('theme-grid').innerHTML = THEMES.map((t,i) => `
     <div class="theme-card ${i===0?'active':''}" onclick="setTheme(this,'${t.value}')">
@@ -213,19 +195,16 @@ function renderThemes() {
       <div class="theme-label">${t.label}</div>
     </div>`).join('')
 }
-
 function setTheme(el, val) {
   if (quizEnCours) return
   document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'))
   el.classList.add('active'); theme = val
 }
-
 function setDiff(el, val) {
   if (quizEnCours) return
   document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'))
   el.classList.add('active'); diff = val
 }
-
 async function logout() {
   if (quizEnCours && !saved) {
     const ok = confirm('⚠️ Tu as un quiz en cours. Si tu te déconnectes, il sera enregistré avec un score de 0. Continuer ?')
@@ -235,7 +214,6 @@ async function logout() {
   await sb.auth.signOut()
   window.location.href = 'index.html'
 }
-
 function demarrerChrono() {
   chronoSecondes = 0
   document.getElementById('chrono').style.display = 'flex'
@@ -246,16 +224,13 @@ function demarrerChrono() {
     document.getElementById('chrono-text').textContent = `${m}:${s}`
   }, 1000)
 }
-
 function arreterChrono() { clearInterval(chronoInterval) }
-
 function formatTemps(secondes) {
   const m = Math.floor(secondes / 60)
   const s = secondes % 60
   if (m === 0) return `${s} sec`
   return `${m} min ${s} sec`
 }
-
 async function generer() {
   const btn = document.getElementById('gen-btn')
   btn.disabled = true
@@ -264,7 +239,6 @@ async function generer() {
   arreterChrono()
   document.getElementById('chrono').style.display = 'none'
   document.getElementById('quiz-area').innerHTML = '<div class="loader">🔍 Claude génère et vérifie les questions… (~15 secondes)</div>'
-
   try {
     const res = await fetch('/api/generer', {
       method: 'POST',
@@ -283,166 +257,149 @@ async function generer() {
     debloquerConfig()
   }
 }
-
+function renderFigure(fig) {
+  if (!fig || !fig.type) return ''
+  const S = 200, P = 26
+  const style = `<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:11px;fill:#3730a3;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>`
+  const open = `<svg width="220" height="220" viewBox="0 0 ${S} ${S}" xmlns="http://www.w3.org/2000/svg">${style}`
+  const f = fig
+  if (f.type === 'triangle_rect') {
+    const u = f.unite||'cm', sc = Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85
+    const W=f.base*sc, H=f.hauteur*sc, ox=P, oy=S-P, sq=10
+    return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox},${oy} ${ox+W},${oy} ${ox},${oy-H}"/><rect class="fig-rt" x="${ox}" y="${oy-sq}" width="${sq}" height="${sq}"/><text class="fig-lb" x="${ox+W/2}" y="${oy+16}" text-anchor="middle">${f.base} ${u}</text><text class="fig-lb" x="${ox-18}" y="${oy-H/2+4}" text-anchor="middle">${f.hauteur} ${u}</text></svg></div>`
+  }
+  if (f.type === 'triangle') {
+    const u = f.unite||'cm', sc = Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85
+    const W=f.base*sc, H=f.hauteur*sc, ox=(S-W)/2, oy=S-P, ax=ox+W*0.38, ay=oy-H
+    return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox},${oy} ${ox+W},${oy} ${ax},${ay}"/><line class="fig-dm" x1="${ax}" y1="${ay}" x2="${ax}" y2="${oy}"/><text class="fig-lb" x="${S/2}" y="${oy+16}" text-anchor="middle">${f.base} ${u}</text><text class="fig-lb" x="${ax+9}" y="${(ay+oy)/2+4}" text-anchor="start">${f.hauteur} ${u}</text></svg></div>`
+  }
+  if (f.type === 'rectangle') {
+    const u = f.unite||'cm', sc = Math.min((S-2*P)/f.largeur,(S-2*P)/f.hauteur)*0.85
+    const W=f.largeur*sc, H=f.hauteur*sc, ox=(S-W)/2, oy=(S-H)/2
+    return `<div class="q-figure">${open}<rect class="fig-sh" x="${ox}" y="${oy}" width="${W}" height="${H}"/><text class="fig-lb" x="${ox+W/2}" y="${oy+H+17}" text-anchor="middle">${f.largeur} ${u}</text><text class="fig-lb" x="${ox-16}" y="${oy+H/2+4}" text-anchor="middle">${f.hauteur} ${u}</text></svg></div>`
+  }
+  if (f.type === 'cercle') {
+    const u = f.unite||'cm', R=(S-2*P)/2*0.82, cx=S/2, cy=S/2
+    return `<div class="q-figure">${open}<circle class="fig-sh" cx="${cx}" cy="${cy}" r="${R}"/><line class="fig-dm" x1="${cx}" y1="${cy}" x2="${cx+R}" y2="${cy}"/><circle class="fig-dot" cx="${cx}" cy="${cy}" r="2.5"/><text class="fig-lb" x="${cx+R/2}" y="${cy-8}" text-anchor="middle">r = ${f.rayon} ${u}</text></svg></div>`
+  }
+  if (f.type === 'trapeze') {
+    const u = f.unite||'cm', sc=Math.min((S-2*P)/f.grande_base,(S-2*P)/f.hauteur)*0.82
+    const GB=f.grande_base*sc, PB=f.petite_base*sc, H=f.hauteur*sc, ox=(S-GB)/2, oy=S-P, off=(GB-PB)/2
+    return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox},${oy} ${ox+GB},${oy} ${ox+GB-off},${oy-H} ${ox+off},${oy-H}"/><line class="fig-dm" x1="${S/2}" y1="${oy}" x2="${S/2}" y2="${oy-H}"/><text class="fig-lb" x="${S/2}" y="${oy+16}" text-anchor="middle">${f.grande_base} ${u}</text><text class="fig-lb" x="${S/2}" y="${oy-H-7}" text-anchor="middle">${f.petite_base} ${u}</text><text class="fig-lb" x="${S/2+9}" y="${oy-H/2+4}" text-anchor="start">${f.hauteur} ${u}</text></svg></div>`
+  }
+  if (f.type === 'parallelogramme') {
+    const u = f.unite||'cm', sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.78
+    const W=f.base*sc, H=f.hauteur*sc, sh=H*0.5, ox=P, oy=S-P
+    return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox+sh},${oy-H} ${ox+sh+W},${oy-H} ${ox+W},${oy} ${ox},${oy}"/><line class="fig-dm" x1="${ox+W*0.3+sh}" y1="${oy-H}" x2="${ox+W*0.3}" y2="${oy}"/><text class="fig-lb" x="${ox+sh/2+W/2}" y="${oy+16}" text-anchor="middle">${f.base} ${u}</text><text class="fig-lb" x="${ox+W*0.3+sh/2+9}" y="${oy-H/2+4}" text-anchor="start">${f.hauteur} ${u}</text></svg></div>`
+  }
+  if (f.type === 'pythagore') {
+    const u = f.unite||'cm', sc=Math.min((S-2*P)/(f.b+4),(S-2*P)/(f.a+4))*0.72
+    const A=f.a*sc, B=f.b*sc, sq=10, ox=P+10, oy=S-P, hypLabel=f.c?`${f.c} ${u}`:'?'
+    return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox},${oy} ${ox+B},${oy} ${ox},${oy-A}"/><rect class="fig-rt" x="${ox}" y="${oy-sq}" width="${sq}" height="${sq}"/><text class="fig-lb" x="${ox+B/2}" y="${oy+16}" text-anchor="middle">${f.b} ${u}</text><text class="fig-lb" x="${ox-18}" y="${oy-A/2+4}" text-anchor="middle">${f.a} ${u}</text><text class="fig-lb" x="${ox+B/2+14}" y="${oy-A/2-6}" text-anchor="start">${hypLabel}</text></svg></div>`
+  }
+  if (f.type === 'thales') {
+    const u=f.unite||'cm', sc=26, ox=S/2, oy=S-P+4
+    const pts={A:{x:ox,y:oy},M:{x:ox-f.am*sc*0.55,y:oy-f.am*sc},B:{x:ox-f.ab*sc*0.55,y:oy-f.ab*sc},N:{x:ox+f.an*sc*0.45,y:oy-f.an*sc},C:{x:ox+f.ac*sc*0.45,y:oy-f.ac*sc}}
+    const dot=(pt,cls)=>`<circle class="${cls}" cx="${pt.x}" cy="${pt.y}" r="3"/>`
+    const lbl=(pt,txt,anchor,dx,dy)=>`<text class="fig-lb" x="${pt.x+dx}" y="${pt.y+dy}" text-anchor="${anchor}">${txt}</text>`
+    return `<div class="q-figure">${open}<line class="fig-ln" x1="${pts.A.x}" y1="${pts.A.y}" x2="${pts.B.x}" y2="${pts.B.y}"/><line class="fig-ln" x1="${pts.A.x}" y1="${pts.A.y}" x2="${pts.C.x}" y2="${pts.C.y}"/><line class="fig-lnb" x1="${pts.M.x}" y1="${pts.M.y}" x2="${pts.N.x}" y2="${pts.N.y}"/><line class="fig-lng" x1="${pts.B.x}" y1="${pts.B.y}" x2="${pts.C.x}" y2="${pts.C.y}"/>${dot(pts.A,'fig-dot')}${dot(pts.M,'fig-dot')}${dot(pts.B,'fig-dot')}${dot(pts.N,'fig-dotg')}${dot(pts.C,'fig-dotg')}${lbl(pts.A,'A','start',7,-2)}${lbl(pts.M,'M','end',-7,0)}${lbl(pts.B,'B','end',-7,0)}${lbl(pts.N,'N','start',7,0)}${lbl(pts.C,'C','start',7,0)}</svg></div>`
+  }
+  if (f.type === 'axe') {
+    const {xmin=-2,xmax=5,ymin=-1,ymax=4}=f, W=S-2*P, H=S-2*P
+    const scx=W/(xmax-xmin), scy=H/(ymax-ymin), Ox=P+(-xmin)*scx, Oy=S-P-(-ymin)*scy
+    let ticks=''
+    for(let x=Math.ceil(xmin);x<=xmax;x++){if(x===0)continue;const px=P+(x-xmin)*scx;ticks+=`<line x1="${px}" y1="${Oy-4}" x2="${px}" y2="${Oy+4}" stroke="#aaa" stroke-width="0.8"/><text style="font-size:9px;fill:#888;font-family:-apple-system,sans-serif" x="${px}" y="${Oy+14}" text-anchor="middle">${x}</text>`}
+    for(let y=Math.ceil(ymin);y<=ymax;y++){if(y===0)continue;const py=S-P-(y-ymin)*scy;ticks+=`<line x1="${Ox-4}" y1="${py}" x2="${Ox+4}" y2="${py}" stroke="#aaa" stroke-width="0.8"/><text style="font-size:9px;fill:#888;font-family:-apple-system,sans-serif" x="${Ox-8}" y="${py+3}" text-anchor="end">${y}</text>`}
+    return `<div class="q-figure">${open}<defs><marker id="ax" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M1 1L7 4L1 7" fill="none" stroke="#333" stroke-width="1.2"/></marker></defs>${ticks}<line x1="${P}" y1="${Oy}" x2="${S-P+10}" y2="${Oy}" stroke="#333" stroke-width="1.2" marker-end="url(#ax)"/><line x1="${Ox}" y1="${S-P}" x2="${Ox}" y2="${P-10}" stroke="#333" stroke-width="1.2" marker-end="url(#ax)"/><text style="font-size:10px;fill:#555;font-family:-apple-system,sans-serif" x="${S-P+13}" y="${Oy+4}">x</text><text style="font-size:10px;fill:#555;font-family:-apple-system,sans-serif" x="${Ox+5}" y="${P-12}">y</text></svg></div>`
+  }
+  return ''
+}
 function renderTableau(tableau) {
   if (!tableau || !tableau.headers) return ''
-  return `<table class="q-tableau">
-    <tr>${tableau.headers.map(h => `<th>${h}</th>`).join('')}</tr>
-    ${tableau.rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}
-  </table>`
+  return `<table class="q-tableau"><tr>${tableau.headers.map(h=>`<th>${h}</th>`).join('')}</tr>${tableau.rows.map(row=>`<tr>${row.map(cell=>`<td>${cell}</td>`).join('')}</tr>`).join('')}</table>`
 }
-
 function renderQuiz() {
   const area = document.getElementById('quiz-area')
   const nbDone = Object.keys(submitted).length
   const toutFini = nbDone === questions.length && questions.length > 0
-
   if (toutFini) { arreterChrono(); renderResultats(); return }
-
   let html = ''
   html += `<div class="quiz-en-cours">⚠️ Quiz en cours — Ne quitte pas la page !</div>`
-
   if (sourceQuestions === 'banque') {
     html += `<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-banque">⚡ Questions depuis la banque locale</span></div>`
   } else {
     html += `<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-ia">✨ Questions générées par IA</span></div>`
   }
-
-  html += `<div class="quiz-progress">
-    <div class="progress-steps">${questions.map((_,i) => {
-      let cls = 'progress-step'
-      if (submitted[i] !== undefined) cls += ' done'
-      else if (i === nbDone) cls += ' current'
-      return `<div class="${cls}"></div>`
-    }).join('')}</div>
-    <span class="progress-label">Question ${Math.min(nbDone+1, questions.length)}/${questions.length}</span>
-  </div>`
-
+  html += `<div class="quiz-progress"><div class="progress-steps">${questions.map((_,i)=>{let cls='progress-step';if(submitted[i]!==undefined)cls+=' done';else if(i===nbDone)cls+=' current';return `<div class="${cls}"></div>`}).join('')}</div><span class="progress-label">Question ${Math.min(nbDone+1,questions.length)}/${questions.length}</span></div>`
   const letters = ['A','B','C','D']
   questions.forEach((q,i) => {
-    const sel = answers[i]
-    const done = submitted[i] !== undefined
-    const estAucune = submitted[i] === 'aucune'
-
-    html += `<div class="card">
-      <div class="q-meta">
-        <span class="q-num">Question ${i+1}/${questions.length}</span>
-        <span class="badge">${diff}</span>
-      </div>
-      <p class="q-text">${q.q}</p>
-      ${renderTableau(q.tableau)}`
-
+    const sel = answers[i], done = submitted[i] !== undefined, estAucune = submitted[i] === 'aucune'
+    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>${renderTableau(q.tableau)}${renderFigure(q.figure)}`
     q.opts.forEach((opt,j) => {
       let cls = 'option'
-      if (done) {
-        if (j === q.answer) cls += ' correct'
-        else if (j === sel && sel !== 'aucune') cls += ' wrong'
-      } else if (j === sel) cls += ' selected'
-      html += `<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}>
-        <span class="letter">${letters[j]}</span>${opt}</div>`
+      if (done) { if(j===q.answer)cls+=' correct'; else if(j===sel&&sel!=='aucune')cls+=' wrong' } else if(j===sel)cls+=' selected'
+      html += `<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}><span class="letter">${letters[j]}</span>${opt}</div>`
     })
-
     if (!done) {
       const aucuneSel = sel === 'aucune'
-      html += `<div class="option ${aucuneSel?'aucune-selected':''}" onclick="pick(${i},'aucune')" style="margin-top:4px;border-style:dashed">
-        <span class="letter">😅</span>Aucune idée !</div>`
+      html += `<div class="option ${aucuneSel?'aucune-selected':''}" onclick="pick(${i},'aucune')" style="margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
       html += `<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`
     } else if (estAucune) {
-      html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed">
-        <span class="letter">😅</span>Aucune idée !</div>`
+      html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
       html += `<div class="explication-aucune"><strong>💡 Pas de panique !</strong> La bonne réponse est : <strong>${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
     } else {
       html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait.'}</strong><br><br>${q.explication}</div>`
     }
     html += '</div>'
   })
-
   area.innerHTML = html
 }
-
 function renderResultats() {
   debloquerConfig()
   const area = document.getElementById('quiz-area')
-  const nbOk = Object.values(submitted).filter(v => v === 'correct').length
-  const pct = Math.round((nbOk / questions.length) * 100)
-
-  let mention = '', couleur = ''
-  if (pct >= 80) { mention = '🌟 Excellent !'; couleur = '#16a34a' }
-  else if (pct >= 60) { mention = '👍 Bien !'; couleur = '#3730a3' }
-  else if (pct >= 40) { mention = '💪 Continue !'; couleur = '#f59e0b' }
-  else { mention = '📚 À retravailler'; couleur = '#dc2626' }
-
+  const nbOk = Object.values(submitted).filter(v=>v==='correct').length
+  const pct = Math.round((nbOk/questions.length)*100)
+  let mention='', couleur=''
+  if(pct>=80){mention='🌟 Excellent !';couleur='#16a34a'}
+  else if(pct>=60){mention='👍 Bien !';couleur='#3730a3'}
+  else if(pct>=40){mention='💪 Continue !';couleur='#f59e0b'}
+  else{mention='📚 À retravailler';couleur='#dc2626'}
   sauvegarder()
-
-  let html = `<div class="results-screen">
-    <div style="margin-bottom:1.2rem">
-      ${sourceQuestions==='banque'
-        ? '<span class="badge-source-banque">⚡ Banque locale</span>'
-        : '<span class="badge-source-ia">✨ IA</span>'}
-    </div>
-    <div class="results-score-big">${nbOk}/${questions.length}</div>
-    <div class="results-pct" style="color:${couleur}">${pct}%</div>
-    <div class="results-mention">${mention}</div>
-    <div class="results-temps">⏱️ ${formatTemps(chronoSecondes)} · ${theme} · ${diff}</div>
-    <div style="font-size:12px;color:#16a34a;margin-bottom:1rem">✅ Résultats enregistrés automatiquement</div>
-    <div class="results-btns">
-      <button class="btn btn-green btn-full" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
-      <button class="btn btn-outline btn-full" onclick="terminer()">🚪 Terminer et se déconnecter</button>
-    </div>
-  </div>
-  <div style="margin-bottom:0.5rem;font-size:14px;font-weight:600;color:#1a1a1a;padding:0 4px">📋 Récapitulatif</div>`
-
+  let html = `<div class="results-screen"><div style="margin-bottom:1.2rem">${sourceQuestions==='banque'?'<span class="badge-source-banque">⚡ Banque locale</span>':'<span class="badge-source-ia">✨ IA</span>'}</div><div class="results-score-big">${nbOk}/${questions.length}</div><div class="results-pct" style="color:${couleur}">${pct}%</div><div class="results-mention">${mention}</div><div class="results-temps">⏱️ ${formatTemps(chronoSecondes)} · ${theme} · ${diff}</div><div style="font-size:12px;color:#16a34a;margin-bottom:1rem">✅ Résultats enregistrés automatiquement</div><div class="results-btns"><button class="btn btn-green btn-full" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button><button class="btn btn-outline btn-full" onclick="terminer()">🚪 Terminer et se déconnecter</button></div></div><div style="margin-bottom:0.5rem;font-size:14px;font-weight:600;color:#1a1a1a;padding:0 4px">📋 Récapitulatif</div>`
   const letters = ['A','B','C','D']
   questions.forEach((q,i) => {
     const estAucune = submitted[i] === 'aucune'
-    html += `<div class="card">
-      <div class="q-meta">
-        <span class="q-num">Question ${i+1}/${questions.length}</span>
-        <span class="badge" style="${submitted[i]==='correct'?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626'}">${submitted[i]==='correct'?'✅ Correct':'❌ Raté'}</span>
-      </div>
-      <p class="q-text">${q.q}</p>
-      ${renderTableau(q.tableau)}`
-
+    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge" style="${submitted[i]==='correct'?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626'}">${submitted[i]==='correct'?'✅ Correct':'❌ Raté'}</span></div><p class="q-text">${q.q}</p>${renderTableau(q.tableau)}${renderFigure(q.figure)}`
     q.opts.forEach((opt,j) => {
-      let cls = 'option'
-      if (j === q.answer) cls += ' correct'
-      else if (j === answers[i] && answers[i] !== 'aucune') cls += ' wrong'
+      let cls='option'
+      if(j===q.answer)cls+=' correct'; else if(j===answers[i]&&answers[i]!=='aucune')cls+=' wrong'
       html += `<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`
     })
-
     if (estAucune) {
-      html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed">
-        <span class="letter">😅</span>Aucune idée !</div>`
+      html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
       html += `<div class="explication-aucune"><strong>💡 La bonne réponse :</strong> ${q.opts[q.answer]}<br><br>${q.explication}</div>`
     } else {
       html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait.'}</strong><br><br>${q.explication}</div>`
     }
     html += '</div>'
   })
-
   area.innerHTML = html
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
-
 async function sauvegarder() {
   if (saved || !user || questions.length === 0) return
-  const nbOk = Object.values(submitted).filter(v => v === 'correct').length
-  const nbAucune = Object.values(submitted).filter(v => v === 'aucune').length
-  const ratees = questions.filter((_,i) => submitted[i] === 'wrong').map(q => q.q)
-  const inconnues = questions.filter((_,i) => submitted[i] === 'aucune').map(q => q.q)
-
+  const nbOk = Object.values(submitted).filter(v=>v==='correct').length
+  const nbAucune = Object.values(submitted).filter(v=>v==='aucune').length
+  const ratees = questions.filter((_,i)=>submitted[i]==='wrong').map(q=>q.q)
+  const inconnues = questions.filter((_,i)=>submitted[i]==='aucune').map(q=>q.q)
   try {
     await sb.from('resultats').insert({
-      user_id: user.id,
-      email: user.email,
-      prenom: prenom || '',
-      email_parent: emailParent || '',
+      user_id: user.id, email: user.email,
+      prenom: prenom||'', email_parent: emailParent||'',
       theme, difficulte: diff,
-      score: nbOk,
-      total: questions.length,
-      questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
-      temps_secondes: chronoSecondes,
-      aucune_idee: nbAucune,
+      score: nbOk, total: questions.length,
+      questions_ratees: [...ratees, ...inconnues.map(q=>`[Aucune idée] ${q}`)],
+      temps_secondes: chronoSecondes, aucune_idee: nbAucune,
       source_questions: sourceQuestions
     })
     if (emailParent) {
@@ -451,57 +408,48 @@ async function sauvegarder() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           emailParent, emailEleve: user.email,
-          prenom: prenom || user.email,
+          prenom: prenom||user.email,
           theme, difficulte: diff,
           score: nbOk, total: questions.length,
           questionsRatees: ratees, questionsInconnues: inconnues,
           tempsSecondes: chronoSecondes, aucuneIdee: nbAucune
         })
-      }).catch(e => console.log('Erreur email:', e.message))
+      }).catch(e=>console.log('Erreur email:',e.message))
     }
     saved = true
-  } catch(e) {
-    console.log('Erreur sauvegarde:', e.message)
-  }
+  } catch(e) { console.log('Erreur sauvegarde:', e.message) }
 }
-
 async function nouvelleRonde() {
-  questions = []; answers = {}; submitted = {}; saved = false
+  questions=[]; answers={}; submitted={}; saved=false
   arreterChrono()
-  document.getElementById('chrono').style.display = 'none'
-  document.getElementById('quiz-area').innerHTML = ''
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  document.getElementById('chrono').style.display='none'
+  document.getElementById('quiz-area').innerHTML=''
+  window.scrollTo({top:0,behavior:'smooth'})
 }
-
 async function terminer() {
   await sb.auth.signOut()
-  window.location.href = 'index.html'
+  window.location.href='index.html'
 }
-
 function pick(qi, oi) {
   if (submitted[qi] !== undefined) return
   answers[qi] = oi
   renderQuiz()
 }
-
 function valider(qi) {
   if (answers[qi] === undefined) return
   const sel = answers[qi]
-  submitted[qi] = sel === 'aucune' ? 'aucune' : (sel === questions[qi].answer ? 'correct' : 'wrong')
+  submitted[qi] = sel==='aucune' ? 'aucune' : (sel===questions[qi].answer ? 'correct' : 'wrong')
   const toutFini = Object.keys(submitted).length === questions.length
-  if (toutFini) {
-    arreterChrono()
-    renderResultats()
-  } else {
+  if (toutFini) { arreterChrono(); renderResultats() }
+  else {
     renderQuiz()
     setTimeout(() => {
       const cards = document.querySelectorAll('.card')
-      const nextCard = cards[qi + 1]
-      if (nextCard) nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const nextCard = cards[qi+1]
+      if (nextCard) nextCard.scrollIntoView({behavior:'smooth',block:'start'})
     }, 300)
   }
 }
-
 init()
 </script>
 </body>
