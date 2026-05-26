@@ -355,7 +355,6 @@ function renderQuiz() {
   area.innerHTML = html
 }
 function renderResultats() {
-  debloquerConfig()
   const area = document.getElementById('quiz-area')
   const nbOk = Object.values(submitted).filter(v=>v==='correct').length
   const pct = Math.round((nbOk/questions.length)*100)
