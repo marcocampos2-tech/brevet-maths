@@ -38,8 +38,9 @@ tr:last-child td { border-bottom: none; }
 .ratee-count { color: #dc2626; font-weight: 600; white-space: nowrap; margin-left: 12px; }
 .loader { text-align: center; color: #666; padding: 3rem; }
 .tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; flex-wrap: wrap; }
-.tab { padding: 8px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
-.tab.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+.tab { padding: 8px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+/* Modification ici : l'onglet actif reste blanc avec le texte noir et une bordure plus marquée */
+.tab.active { background: white; color: #1a1a1a; border-color: #1a1a1a; border-width: 2px; padding: 7px 15px; }
 .section { display: none; }
 .section.active { display: block; }
 .progress-bar { height: 8px; background: #e0e0d8; border-radius: 4px; overflow: hidden; margin-top: 6px; }
