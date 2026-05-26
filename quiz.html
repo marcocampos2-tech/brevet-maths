@@ -292,17 +292,38 @@ function renderFigure(fig) {
     const W=f.base*sc, H=f.hauteur*sc, sh=H*0.5, ox=P, oy=S-P
     return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox+sh},${oy-H} ${ox+sh+W},${oy-H} ${ox+W},${oy} ${ox},${oy}"/><line class="fig-dm" x1="${ox+W*0.3+sh}" y1="${oy-H}" x2="${ox+W*0.3}" y2="${oy}"/><text class="fig-lb" x="${ox+sh/2+W/2}" y="${oy+16}" text-anchor="middle">${f.base} ${u}</text><text class="fig-lb" x="${ox+W*0.3+sh/2+9}" y="${oy-H/2+4}" text-anchor="start">${f.hauteur} ${u}</text></svg></div>`
   }
-  if (f.type === 'pythagore') {
+if (f.type === 'pythagore') {
     const u = f.unite||'cm', sc=Math.min((S-2*P)/(f.b+4),(S-2*P)/(f.a+4))*0.72
-    const A=f.a*sc, B=f.b*sc, sq=10, ox=P+10, oy=S-P, hypLabel=f.c?`${f.c} ${u}`:'?'
+    const A=f.a*sc, B=f.b*sc, sq=10, ox=P+10, oy=S-P
+    const hypLabel = (f.c && f.c !== 'null') ? `${f.c} ${u}` : '?'
     return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox},${oy} ${ox+B},${oy} ${ox},${oy-A}"/><rect class="fig-rt" x="${ox}" y="${oy-sq}" width="${sq}" height="${sq}"/><text class="fig-lb" x="${ox+B/2}" y="${oy+16}" text-anchor="middle">${f.b} ${u}</text><text class="fig-lb" x="${ox-18}" y="${oy-A/2+4}" text-anchor="middle">${f.a} ${u}</text><text class="fig-lb" x="${ox+B/2+14}" y="${oy-A/2-6}" text-anchor="start">${hypLabel}</text></svg></div>`
   }
   if (f.type === 'thales') {
-    const u=f.unite||'cm', sc=26, ox=S/2, oy=S-P+4
-    const pts={A:{x:ox,y:oy},M:{x:ox-f.am*sc*0.55,y:oy-f.am*sc},B:{x:ox-f.ab*sc*0.55,y:oy-f.ab*sc},N:{x:ox+f.an*sc*0.45,y:oy-f.an*sc},C:{x:ox+f.ac*sc*0.45,y:oy-f.ac*sc}}
-    const dot=(pt,cls)=>`<circle class="${cls}" cx="${pt.x}" cy="${pt.y}" r="3"/>`
-    const lbl=(pt,txt,anchor,dx,dy)=>`<text class="fig-lb" x="${pt.x+dx}" y="${pt.y+dy}" text-anchor="${anchor}">${txt}</text>`
-    return `<div class="q-figure">${open}<line class="fig-ln" x1="${pts.A.x}" y1="${pts.A.y}" x2="${pts.B.x}" y2="${pts.B.y}"/><line class="fig-ln" x1="${pts.A.x}" y1="${pts.A.y}" x2="${pts.C.x}" y2="${pts.C.y}"/><line class="fig-lnb" x1="${pts.M.x}" y1="${pts.M.y}" x2="${pts.N.x}" y2="${pts.N.y}"/><line class="fig-lng" x1="${pts.B.x}" y1="${pts.B.y}" x2="${pts.C.x}" y2="${pts.C.y}"/>${dot(pts.A,'fig-dot')}${dot(pts.M,'fig-dot')}${dot(pts.B,'fig-dot')}${dot(pts.N,'fig-dotg')}${dot(pts.C,'fig-dotg')}${lbl(pts.A,'A','start',7,-2)}${lbl(pts.M,'M','end',-7,0)}${lbl(pts.B,'B','end',-7,0)}${lbl(pts.N,'N','start',7,0)}${lbl(pts.C,'C','start',7,0)}</svg></div>`
+    const u = f.unite || 'cm', sc = 26
+    const ox = S / 2, oy = P + 10
+    const pts = {
+      A: { x: ox, y: oy },
+      M: { x: ox - f.am * sc * 0.55, y: oy + f.am * sc },
+      B: { x: ox - f.ab * sc * 0.55, y: oy + f.ab * sc },
+      N: { x: ox + f.an * sc * 0.45, y: oy + f.an * sc },
+      C: { x: ox + f.ac * sc * 0.45, y: oy + f.ac * sc },
+    }
+    const dot = (pt, cls) => `<circle class="${cls}" cx="${pt.x}" cy="${pt.y}" r="3"/>`
+    const lbl = (pt, txt, anchor, dx, dy) =>
+      `<text class="fig-lb" x="${pt.x + dx}" y="${pt.y + dy}" text-anchor="${anchor}">${txt}</text>`
+    return `<div class="q-figure">${open}
+      <line class="fig-ln" x1="${pts.A.x}" y1="${pts.A.y}" x2="${pts.B.x}" y2="${pts.B.y}"/>
+      <line class="fig-ln" x1="${pts.A.x}" y1="${pts.A.y}" x2="${pts.C.x}" y2="${pts.C.y}"/>
+      <line class="fig-lnb" x1="${pts.M.x}" y1="${pts.M.y}" x2="${pts.N.x}" y2="${pts.N.y}"/>
+      <line class="fig-lng" x1="${pts.B.x}" y1="${pts.B.y}" x2="${pts.C.x}" y2="${pts.C.y}"/>
+      ${dot(pts.A, 'fig-dot')}${dot(pts.M, 'fig-dot')}${dot(pts.B, 'fig-dot')}
+      ${dot(pts.N, 'fig-dotg')}${dot(pts.C, 'fig-dotg')}
+      ${lbl(pts.A, 'A', 'middle', 0, -6)}
+      ${lbl(pts.M, 'M', 'end', -7, 0)}
+      ${lbl(pts.B, 'B', 'end', -7, 0)}
+      ${lbl(pts.N, 'N', 'start', 7, 0)}
+      ${lbl(pts.C, 'C', 'start', 7, 0)}
+    </svg></div>`
   }
   if (f.type === 'axe') {
     const {xmin=-2,xmax=5,ymin=-1,ymax=4}=f, W=S-2*P, H=S-2*P
