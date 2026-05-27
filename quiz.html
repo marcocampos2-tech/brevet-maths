@@ -125,6 +125,7 @@ const THEMES = [
   { label: 'Algèbre', value: 'Algèbre et équations', icon: '🔣' },
   { label: 'Stats & probas', value: 'Statistiques et probabilités', icon: '📊' },
   { label: 'Fonctions', value: 'Fonctions', icon: '📈' },
+  { label: 'Algorithmique', value: 'Algorithmique', icon: '💻' },
   { label: 'Tout mélanger', value: 'Mélange de tous les thèmes', icon: '✨' },
 ]
 let user = null, prenom = '', emailParent = ''
@@ -309,7 +310,7 @@ function renderFigure(fig) {
     return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox+sh},${oy-H} ${ox+sh+W},${oy-H} ${ox+W},${oy} ${ox},${oy}"/><line class="fig-dm" x1="${ox+W*0.3+sh}" y1="${oy-H}" x2="${ox+W*0.3}" y2="${oy}"/><text class="fig-lb" x="${ox+sh/2+W/2}" y="${oy+16}" text-anchor="middle">${f.base} ${u}</text><text class="fig-lb" x="${ox+W*0.3+sh/2+9}" y="${oy-H/2+4}" text-anchor="start">${f.hauteur} ${u}</text></svg></div>`
   }
   if (f.type === 'pythagore') {
-    const u=f.unite||'cm',sc=Math.min((S-2*P)/(f.b+4),(S-2*P)/(f.a+4))*0.72
+    const u=f.unite||'cm'
     const aVal=(f.a&&f.a!=='?'&&f.a!==null&&f.a!=='null')?Number(f.a):null
     const bVal=(f.b&&f.b!=='?'&&f.b!==null&&f.b!=='null')?Number(f.b):null
     const scA=aVal?(S-2*P)/(aVal+4):S-2*P
@@ -340,7 +341,11 @@ function renderFigure(fig) {
 }
 
 function renderTableau(tableau) {
-  if (!tableau || !tableau.headers) return ''
+  if (!tableau) return ''
+  if (typeof tableau === 'string') {
+    try { tableau = JSON.parse(tableau) } catch(e) { return '' }
+  }
+  if (!tableau.headers || !tableau.rows) return ''
   return `<table class="q-tableau"><tr>${tableau.headers.map(h=>`<th>${h}</th>`).join('')}</tr>${tableau.rows.map(row=>`<tr>${row.map(cell=>`<td>${cell}</td>`).join('')}</tr>`).join('')}</table>`
 }
 
@@ -372,9 +377,9 @@ function renderQuiz() {
       html += `<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`
     } else if (estAucune) {
       html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
-      html += `<div class="explication-aucune"><strong>💡 Pas de panique !</strong> La bonne réponse est : <strong>${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
+      html += `<div class="explication-aucune"><strong>😅 Pas de panique — La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
     } else {
-      html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait.'}</strong><br><br>${q.explication}</div>`
+      html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait — La bonne réponse est : ' + q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
     }
     html += '</div>'
   })
@@ -403,9 +408,9 @@ function renderResultats() {
     })
     if(estAucune){
       html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
-      html += `<div class="explication-aucune"><strong>💡 La bonne réponse :</strong> ${q.opts[q.answer]}<br><br>${q.explication}</div>`
+      html += `<div class="explication-aucune"><strong>😅 Pas de panique — La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
     } else {
-      html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait.'}</strong><br><br>${q.explication}</div>`
+      html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait — La bonne réponse est : ' + q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
     }
     html += '</div>'
   })
