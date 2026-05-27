@@ -477,9 +477,9 @@ function valider(qi){
     arreterChrono()
     renderQuiz()
     setTimeout(()=>{
-      const cards=document.querySelectorAll('.card')
-      const lastCard=cards[qi]
-      if(lastCard)lastCard.scrollIntoView({behavior:'smooth',block:'start'})
+      const explications=document.querySelectorAll('.explication, .explication-aucune')
+      const lastExplication=explications[explications.length-1]
+      if(lastExplication)lastExplication.scrollIntoView({behavior:'smooth',block:'center'})
     }, 100)
     setTimeout(()=>{ renderResultats() }, 4000)
   } else {
@@ -491,6 +491,7 @@ function valider(qi){
     },300)
   }
 }
+  
 init()
 </script>
 </body>
