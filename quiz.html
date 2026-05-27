@@ -353,7 +353,7 @@ function renderQuiz() {
   const area = document.getElementById('quiz-area')
   const nbDone = Object.keys(submitted).length
   const toutFini = nbDone === questions.length && questions.length > 0
-  if (toutFini) { arreterChrono(); renderResultats(); return }
+  if (toutFini) { return }
   let html = ''
   html += `<div class="quiz-en-cours">⚠️ Quiz en cours — Ne quitte pas la page !</div>`
   if (sourceQuestions === 'banque') {
@@ -377,9 +377,12 @@ function renderQuiz() {
       html += `<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`
     } else if (estAucune) {
       html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
-      html += `<div class="explication-aucune"><strong>😅 Pas de panique — La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
+      html += `<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
     } else {
-      html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait — La bonne réponse est : ' + q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
+      html += `<div class="explication">${submitted[i]==='correct'
+        ? '<strong style="color:#16a34a">✓ Bravo !</strong>'
+        : `<strong style="color:#dc2626">✗ Pas tout à fait —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong>`
+      }<br><br>${q.explication}</div>`
     }
     html += '</div>'
   })
@@ -408,9 +411,12 @@ function renderResultats() {
     })
     if(estAucune){
       html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
-      html += `<div class="explication-aucune"><strong>😅 Pas de panique — La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
+      html += `<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
     } else {
-      html += `<div class="explication"><strong>${submitted[i]==='correct'?'✓ Bravo !':'✗ Pas tout à fait — La bonne réponse est : ' + q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
+      html += `<div class="explication">${submitted[i]==='correct'
+        ? '<strong style="color:#16a34a">✓ Bravo !</strong>'
+        : `<strong style="color:#dc2626">✗ Pas tout à fait —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong>`
+      }<br><br>${q.explication}</div>`
     }
     html += '</div>'
   })
@@ -467,8 +473,11 @@ function valider(qi){
   const sel=answers[qi]
   submitted[qi]=sel==='aucune'?'aucune':(sel===questions[qi].answer?'correct':'wrong')
   const toutFini=Object.keys(submitted).length===questions.length
-  if(toutFini){arreterChrono();renderResultats()}
-  else{
+  if(toutFini){
+    arreterChrono()
+    renderQuiz()
+    setTimeout(()=>{ renderResultats() }, 2500)
+  } else {
     renderQuiz()
     setTimeout(()=>{
       const cards=document.querySelectorAll('.card')
