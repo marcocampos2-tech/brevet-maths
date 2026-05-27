@@ -41,17 +41,32 @@ Inéquations simples du premier degré (ax+b > c).
 Vocabulaire : double (2x), moitié (x/2), carré (x²), successeur (x+1), prédécesseur (x-1).
 INTERDIT : factoriser avec (a+b)² ou (a-b)², discriminant, systèmes d'équations complexes.`,
 
-      'Statistiques et probabilités': `Statistiques : moyenne simple (somme÷effectif), moyenne pondérée (avec coefficients/effectifs), médiane (valeur centrale si effectif impair ; moyenne des deux valeurs centrales si effectif pair), étendue (max-min).
-Lecture et exploitation de tableaux de données et diagrammes (barres, circulaires, courbes).
-Proportionnalité dans les stats : fréquence relative (effectif÷effectif total).
-Probabilités : vocabulaire (univers, issue, événement impossible P=0, certain P=1, contraire P(non A)=1-P(A)), probabilité d'un événement simple en situation d'équiprobabilité (cas favorables÷cas totaux).
-Arbre des possibles : représenter et calculer des probabilités sur deux épreuves successives INDÉPENDANTES (ex: lancer un dé PUIS tirer une carte, lancer deux pièces).
-TOUJOURS mettre en situation concrète pour les probabilités.
-Bon : "Dans un sac de 10 billes, 6 sont rouges. Quelle est la probabilité de NE PAS tirer une bille rouge ?"
-Bon : "On lance un dé. La probabilité d'obtenir un 6 est 1/6. Quelle est la probabilité de NE PAS obtenir un 6 ?"
-Mauvais : "P(A)=0,6, calcule P(non A)." — INTERDIT car aucun contexte réel.
-Mauvais : "Soit A un événement tel que P(A)=0,3..." — INTERDIT car trop abstrait.
-INTERDIT ABSOLUMENT : mode (valeur la plus fréquente), espérance, probabilité conditionnelle P(A|B), tirage sans remise, P(A∩B), P(A∪B), dénombrement complexe. Ne JAMAIS poser de question sur "la valeur la plus fréquente" ou "le mode".`,
+     'Statistiques et probabilités': `Tu dois générer UNIQUEMENT ces types de questions, rien d'autre :
+
+TYPE 1 — MOYENNE SIMPLE : "Dans une classe, les notes sont 8, 12, 14, 10, 16. Calcule la moyenne."
+
+TYPE 2 — MOYENNE PONDÉRÉE avec tableau obligatoire : La question doit dire "Voici les notes d'un élève. Calcule sa moyenne pondérée." et le tableau DOIT être fourni dans le champ "tableau" EXACTEMENT ainsi : {"headers":["Matière","Français","Maths","Histoire","Sport"],"rows":[["Note","12","14","10","16"],["Coefficient","3","4","2","1"]]}
+
+TYPE 3 — MÉDIANE : "Voici 7 notes classées : 8, 10, 11, 12, 13, 14, 16. Quelle est la médiane ?"
+
+TYPE 4 — ÉTENDUE : "Les températures cette semaine sont 12°, 18°, 15°, 20°, 9°. Quelle est l'étendue ?"
+
+TYPE 5 — FRÉQUENCE RELATIVE : "Dans une classe de 30 élèves, 12 font du sport. Quelle est la fréquence relative des élèves qui font du sport ?"
+
+TYPE 6 — PROBABILITÉ SIMPLE : "Un sac contient 4 billes rouges et 6 bleues. On tire une bille au hasard. Quelle est la probabilité de tirer une bille rouge ?"
+
+TYPE 7 — ÉVÉNEMENT CONTRAIRE : "Dans un sac de 10 billes, 3 sont vertes. Quelle est la probabilité de NE PAS tirer une bille verte ?"
+
+TYPE 8 — ARBRE 2 ÉPREUVES INDÉPENDANTES : "On lance une pièce puis un dé équilibré. Quelle est la probabilité d'obtenir pile ET un nombre pair ?"
+
+TYPE 9 — TABLEAU STATS : calcul de moyenne ou médiane à partir d'un tableau de données avec effectifs. Tableau OBLIGATOIRE dans le champ "tableau" : {"headers":["Notes","8","10","12","14","16"],"rows":[["Effectif","2","5","7","6","3"]]}
+
+RÈGLES ABSOLUES :
+- Chaque question doit avoir un contexte réel (sport, école, météo, jeux, cuisine...)
+- JAMAIS de notation abstraite : INTERDIT "P(A)=0,6", "soit A un événement", "P(A∩B)", "P(A∪B)", "deux 6 consécutifs sans arbre"
+- JAMAIS de tirage sans remise, espérance, probabilité conditionnelle
+- JAMAIS de mode, classe modale, valeur la plus fréquente — ces notions n'existent pas dans ce cours
+- JAMAIS de question hors des 9 types listés ci-dessus`,
           
 
       'Fonctions': `Vocabulaire fondamental : définition de f(x), image d'un nombre (se lit sur l'axe des ordonnées vertical), antécédent d'un nombre (se lit sur l'axe des abscisses horizontal).
