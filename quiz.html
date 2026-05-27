@@ -30,6 +30,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 #btn-prof { background: #fbbf24; border-color: #f59e0b; color: #1a1a1a; }
 #btn-prof:hover { background: #f59e0b; }
+#btn-examen { background: #eef2ff; border-color: #3730a3; color: #3730a3; }
+#btn-examen:hover { background: #3730a3; color: white; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 1rem; }
 .theme-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
@@ -78,7 +80,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 .badge-source-banque { font-size: 11px; color: #f59e0b; background: #fffbeb; border: 1px solid #f59e0b; border-radius: 20px; padding: 2px 10px; }
 .badge-source-ia { font-size: 11px; color: #16a34a; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 20px; padding: 2px 10px; }
-.saving-msg { text-align: center; color: #666; font-size: 13px; padding: 8px; }
 .quiz-en-cours { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #92400e; margin-bottom: 1rem; text-align: center; }
 .q-figure { margin: 10px 0 14px; display: flex; justify-content: center; background: #f9f9f7; border-radius: 8px; padding: 12px; }
 .q-figure svg { max-width: 220px; height: auto; display: block; }
@@ -95,6 +96,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
       <span id="chrono-text">00:00</span>
     </div>
     <a href="prof.html" class="btn" id="btn-prof" style="display:none">🎓 Prof</a>
+    <a href="examen.html" class="btn" id="btn-examen">📝 Examen Blanc</a>
     <a href="resultats.html" class="btn">Mes résultats</a>
     <button class="btn" onclick="logout()">Déconnexion</button>
   </div>
@@ -221,7 +223,7 @@ async function logout() {
     await sauvegarderAbandonne()
   }
   await sb.auth.signOut()
-  window.location.href = 'index.html'
+  window.location.href = 'index-login.html'
 }
 
 function demarrerChrono() {
@@ -277,7 +279,6 @@ function renderFigure(fig) {
   const style = `<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:11px;fill:#3730a3;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>`
   const open = `<svg width="220" height="220" viewBox="0 0 ${S} ${S}" xmlns="http://www.w3.org/2000/svg">${style}`
   const f = fig
-
   if (f.type === 'triangle_rect') {
     const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85
     const W=f.base*sc,H=f.hauteur*sc,ox=P,oy=S-P,sq=10
@@ -307,31 +308,22 @@ function renderFigure(fig) {
     const W=f.base*sc,H=f.hauteur*sc,sh=H*0.5,ox=P,oy=S-P
     return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox+sh},${oy-H} ${ox+sh+W},${oy-H} ${ox+W},${oy} ${ox},${oy}"/><line class="fig-dm" x1="${ox+W*0.3+sh}" y1="${oy-H}" x2="${ox+W*0.3}" y2="${oy}"/><text class="fig-lb" x="${ox+sh/2+W/2}" y="${oy+16}" text-anchor="middle">${f.base} ${u}</text><text class="fig-lb" x="${ox+W*0.3+sh/2+9}" y="${oy-H/2+4}" text-anchor="start">${f.hauteur} ${u}</text></svg></div>`
   }
- if (f.type === 'pythagore') {
-    const u=f.unite||'cm'
+  if (f.type === 'pythagore') {
+    const u=f.unite||'cm',sc=Math.min((S-2*P)/(f.b+4),(S-2*P)/(f.a+4))*0.72
     const aVal=(f.a&&f.a!=='?'&&f.a!==null&&f.a!=='null')?Number(f.a):null
     const bVal=(f.b&&f.b!=='?'&&f.b!==null&&f.b!=='null')?Number(f.b):null
     const scA=aVal?(S-2*P)/(aVal+4):S-2*P
     const scB=bVal?(S-2*P)/(bVal+4):S-2*P
-    const sc=Math.min(scA,scB)*0.72
-    const A=(aVal||4)*sc,B=(bVal||4)*sc,sq=10,ox=P+10,oy=S-P
+    const sc2=Math.min(scA,scB)*0.72
+    const A=(aVal||4)*sc2,B=(bVal||4)*sc2,sq=10,ox=P+10,oy=S-P
     const aLabel=aVal?`${aVal} ${u}`:'?'
     const bLabel=bVal?`${bVal} ${u}`:'?'
     const hypLabel=(f.c&&f.c!=='null'&&f.c!==null&&f.c!=='?')?`${f.c} ${u}`:'?'
     return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox},${oy} ${ox+B},${oy} ${ox},${oy-A}"/><rect class="fig-rt" x="${ox}" y="${oy-sq}" width="${sq}" height="${sq}"/><text class="fig-lb" x="${ox+B/2}" y="${oy+16}" text-anchor="middle">${bLabel}</text><text class="fig-lb" x="${ox-18}" y="${oy-A/2+4}" text-anchor="middle">${aLabel}</text><text class="fig-lb" x="${ox+B/2+14}" y="${oy-A/2-6}" text-anchor="start">${hypLabel}</text></svg></div>`
   }
   if (f.type === 'thales') {
-    const u=f.unite||'cm'
-    const maxVal=Math.max(f.ab,f.ac,1)
-    const sc=Math.min(24, (S-2*P-20)/maxVal)
-    const ox=S/2,oy=P+20
-    const pts={
-      A:{x:ox,y:oy},
-      M:{x:ox-f.am*sc*0.6,y:oy+f.am*sc},
-      B:{x:ox-f.ab*sc*0.6,y:oy+f.ab*sc},
-      N:{x:ox+f.an*sc*0.5,y:oy+f.an*sc},
-      C:{x:ox+f.ac*sc*0.5,y:oy+f.ac*sc}
-    }
+    const u=f.unite||'cm',sc=24,ox=S/2,oy=P+14
+    const pts={A:{x:ox,y:oy},M:{x:ox-f.am*sc*0.6,y:oy+f.am*sc},B:{x:ox-f.ab*sc*0.6,y:oy+f.ab*sc},N:{x:ox+f.an*sc*0.5,y:oy+f.an*sc},C:{x:ox+f.ac*sc*0.5,y:oy+f.ac*sc}}
     const dot=(pt,cls)=>`<circle class="${cls}" cx="${pt.x}" cy="${pt.y}" r="3"/>`
     const lbl=(pt,txt,anchor,dx,dy)=>`<text class="fig-lb" x="${pt.x+dx}" y="${pt.y+dy}" text-anchor="${anchor}">${txt}</text>`
     return `<div class="q-figure">${open}<line class="fig-ln" x1="${pts.A.x}" y1="${pts.A.y}" x2="${pts.B.x}" y2="${pts.B.y}"/><line class="fig-ln" x1="${pts.A.x}" y1="${pts.A.y}" x2="${pts.C.x}" y2="${pts.C.y}"/><line class="fig-lnb" x1="${pts.M.x}" y1="${pts.M.y}" x2="${pts.N.x}" y2="${pts.N.y}"/><line class="fig-lng" x1="${pts.B.x}" y1="${pts.B.y}" x2="${pts.C.x}" y2="${pts.C.y}"/>${dot(pts.A,'fig-dot')}${dot(pts.M,'fig-dot')}${dot(pts.B,'fig-dot')}${dot(pts.N,'fig-dotg')}${dot(pts.C,'fig-dotg')}${lbl(pts.A,'A','middle',0,-7)}${lbl(pts.M,'M','end',-7,4)}${lbl(pts.B,'B','end',-7,4)}${lbl(pts.N,'N','start',7,4)}${lbl(pts.C,'C','start',7,4)}</svg></div>`
@@ -456,7 +448,7 @@ async function nouvelleRonde() {
 
 async function terminer() {
   await sb.auth.signOut()
-  window.location.href='index.html'
+  window.location.href='index-login.html'
 }
 
 function pick(qi,oi){
