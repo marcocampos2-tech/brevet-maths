@@ -99,7 +99,7 @@ async function debloquerExamen(userId, prenom) {
 
 async function init() {
   const { data } = await sb.auth.getSession()
-  if (!data.session) { window.location.href = 'index.html'; return }
+  if (!data.session) { window.location.href = 'index-login.html'; return }
   if (data.session.user.email !== PROF_EMAIL) {
     document.getElementById('content').innerHTML = '<div style="text-align:center;color:#dc2626;padding:3rem">⛔ Accès réservé au professeur.</div>'
     return
