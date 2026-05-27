@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       'difficile': 'de niveau Brevet mention Très Bien, questions complexes avec plusieurs étapes'
     }
 
-    const estGeometrie = theme === 'Géométrie' || theme === 'Mélange de tous les thèmes'
+    const estGeometrie = false
 
     const regleFigure = estGeometrie ? `
 RÈGLE 5 — FIGURES GÉOMÉTRIQUES :
