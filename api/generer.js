@@ -107,8 +107,9 @@ RÈGLE 4 — TABLEAUX :
 Si la question mentionne un tableau ou des données chiffrées, tu DOIS fournir ces données dans le champ "tableau" EXACTEMENT dans ce format :
 {"headers":["Colonne1","Colonne2","Colonne3"],"rows":[["Ligne1","valeur1","valeur2"]]}
 Pour les statistiques, les valeurs doivent être EN COLONNES (headers) et les catégories EN LIGNES (rows).
-Exemple stats notes/effectifs : {"headers":["","8","10","12","14","16"],"rows":[["Effectif","2","5","7","6","3"]]}
-Exemple stats tailles/fréquences : {"headers":["","140cm","150cm","160cm","170cm"],"rows":[["Effectif","3","8","12","5"]]}
+La première cellule de headers doit toujours avoir un label descriptif (Notes, Taille, Valeur, Score...), jamais vide.
+Exemple stats notes/effectifs : {"headers":["Notes","8","10","12","14","16"],"rows":[["Effectif","2","5","7","6","3"]]}
+Exemple stats tailles/fréquences : {"headers":["Taille","140cm","150cm","160cm","170cm"],"rows":[["Effectif","3","8","12","5"]]}
 Pour les fonctions, le tableau de valeurs doit avoir x en première ligne et f(x) en deuxième ligne.
 Exemple fonctions : {"headers":["x","-2","-1","0","1","2"],"rows":[["f(x)","-3","0","3","6","9"]]}
 N'utilise JAMAIS d'autres clés que "headers" et "rows".
