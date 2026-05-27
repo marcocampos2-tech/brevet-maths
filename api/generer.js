@@ -22,23 +22,6 @@ export default async function handler(req, res) {
       'difficile': 'de niveau Brevet mention Très Bien, questions complexes avec plusieurs étapes'
     }
 
-    const estGeometrie = false
-
-    const regleFigure = estGeometrie ? `
-RÈGLE 5 — FIGURES GÉOMÉTRIQUES :
-Pour les questions de géométrie, ajoute un champ "figure" avec un objet JSON décrivant la forme.
-Types disponibles et leurs champs :
-- triangle_rect : {"type":"triangle_rect","base":6,"hauteur":4,"unite":"cm"}
-- triangle : {"type":"triangle","base":7,"hauteur":5,"unite":"cm"}
-- rectangle : {"type":"rectangle","largeur":8,"hauteur":5,"unite":"cm"}
-- cercle : {"type":"cercle","rayon":4,"unite":"cm"}
-- trapeze : {"type":"trapeze","grande_base":10,"petite_base":6,"hauteur":5,"unite":"cm"}
-- parallelogramme : {"type":"parallelogramme","base":8,"hauteur":4,"unite":"cm"}
-- pythagore : {"type":"pythagore","a":3,"b":4,"c":5,"unite":"cm"} (a et b = les deux côtés connus, c = hypoténuse. Si c est CONNU, mets sa valeur numérique. Si c est la valeur CHERCHÉE, mets "c": "?"))
-- thales : {"type":"thales","am":4,"ab":6,"an":3,"ac":5,"unite":"cm"}
-Si la question ne concerne pas une figure 2D (ex: volume, probabilité), mets "figure": null.
-` : ''
-
     const prompt1 = `Tu es un professeur de mathématiques expert au Brevet des collèges français.
 Génère exactement 5 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
 Notions à couvrir : ${contexte[theme] || theme}.
@@ -65,9 +48,9 @@ Bon : "On isole x. 2x=6. x=6÷2=3. La réponse est x=3."
 RÈGLE 4 — TABLEAUX :
 Pour stats/fonctions avec des données : crée un objet "tableau" structuré.
 Sinon : écris "tableau": null.
-${regleFigure}
+
 Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après.
-Format : [{"q":"question claire","tableau":null,"figure":null,"opts":["A","B","C","D"],"bonne_reponse":"A","explication":"explication claire et définitive"}]`
+Format : [{"q":"question claire","tableau":null,"opts":["A","B","C","D"],"bonne_reponse":"A","explication":"explication claire et définitive"}]`
 
     const response1 = await claudeCall(prompt1)
 
@@ -93,7 +76,7 @@ Format : [{"q":"question claire","tableau":null,"figure":null,"opts":["A","B","C
       return {
         q: q.q,
         tableau: q.tableau && q.tableau.headers ? q.tableau : null,
-        figure: q.figure && q.figure.type ? q.figure : null,
+        figure: null,
         opts: q.opts,
         answer: answer !== -1 ? answer : 0,
         explication: q.explication
