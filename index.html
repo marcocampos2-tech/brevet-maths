@@ -86,6 +86,7 @@ const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const PROF_EMAIL = 'marcocampos2@gmail.com'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
 async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'index-login.html'; return }
@@ -93,15 +94,14 @@ async function init() {
   const prenom = user.user_metadata?.prenom || user.email.split('@')[0]
   document.getElementById('user-email').textContent = prenom
   document.getElementById('welcome-name').textContent = `Bonjour ${prenom} ! 👋`
-  if (user.email === PROF_EMAIL) {
+  if (user.email.toLowerCase().trim() === PROF_EMAIL.toLowerCase().trim()) {
     document.getElementById('btn-prof').style.display = 'inline-flex'
   }
 }
+
 async function logout() {
   await sb.auth.signOut()
   window.location.href = 'index-login.html'
 }
+
 init()
-</script>
-</body>
-</html>
