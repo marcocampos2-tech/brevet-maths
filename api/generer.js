@@ -46,10 +46,11 @@ Mauvais : "x=5... Attendez, non, en fait x=3."
 Bon : "On isole x. 2x=6. x=6÷2=3. La réponse est x=3."
 
 RÈGLE 4 — TABLEAUX :
-Pour stats/fonctions avec des données tabulaires, crée un objet "tableau" EXACTEMENT dans ce format :
+Si la question mentionne un tableau ou des données chiffrées, tu DOIS fournir ces données dans le champ "tableau" EXACTEMENT dans ce format :
 {"headers":["Colonne1","Colonne2"],"rows":[["valeur1","valeur2"],["valeur3","valeur4"]]}
-Exemple : {"headers":["Taille","Ventes"],"rows":[["S","12"],["M","18"],["L","9"]]}
+Exemple : {"headers":["Âge","Effectif"],"rows":[["12",3],["13",5],["14",2]]}
 N'utilise JAMAIS d'autres clés que "headers" et "rows".
+INTERDIT : mentionner "le tableau ci-dessous" sans fournir le tableau dans le champ "tableau".
 Si pas de tableau : écris "tableau": null.
 
 Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après.
