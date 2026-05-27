@@ -82,7 +82,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
       <div class="chrono-dot"></div>
       <span id="chrono-text">40:00</span>
     </div>
-    <a href="index.html" class="btn">← Accueil</a>
+    <button class="btn" onclick="retourAccueil()">← Accueil</button>
     <button class="btn" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
@@ -241,7 +241,13 @@ function getMention(pct){
   if(pct>=50)return{label:'📋 Admis',cls:'mention-admis',officiel:'Admis'}
   return{label:'📚 À retravailler',cls:'mention-insuffisant',officiel:'Non admis'}
 }
-
+  function retourAccueil() {
+  if (examEnCours && !saved) {
+    const ok = confirm('⚠️ Tu as un examen en cours. Si tu quittes, tu perdras ta progression. Continuer quand même ?')
+    if (!ok) return
+  }
+  window.location.href = 'index.html'
+}
 function renderResultats(){
   const nbOk=questions.filter((q,i)=>answers[i]===q.answer).length
   const pct=Math.round((nbOk/20)*100)
