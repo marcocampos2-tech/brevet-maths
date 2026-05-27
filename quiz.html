@@ -174,7 +174,7 @@ function debloquerConfig() {
 
 async function init() {
   const { data } = await sb.auth.getSession()
-  if (!data.session) { window.location.href = 'index-login.html'; return }
+  if (!data.session) { window.location.href = 'index.html'; return }
   user = data.session.user
   prenom = user.user_metadata?.prenom || ''
   emailParent = user.user_metadata?.email_parent || ''
@@ -223,7 +223,7 @@ async function logout() {
     await sauvegarderAbandonne()
   }
   await sb.auth.signOut()
-  window.location.href = 'index-login.html'
+  window.location.href = 'index.html'
 }
 
 function demarrerChrono() {
