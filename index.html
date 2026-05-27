@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Brevet Maths">
+<title>Brevet Maths</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
+.container { max-width: 480px; margin: 0 auto; padding: 1rem; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e8e8e4; margin-bottom: 2rem; }
+.nav-left { font-size: 18px; font-weight: 600; }
+.nav-right { display: flex; gap: 8px; align-items: center; }
+.nav-email { font-size: 12px; color: #666; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
+.btn:hover { background: #f5f5f0; }
+.welcome { text-align: center; margin-bottom: 2rem; }
+.welcome-icon { font-size: 48px; margin-bottom: 0.5rem; }
+.welcome-title { font-size: 22px; font-weight: 700; margin-bottom: 0.5rem; }
+.welcome-sub { font-size: 14px; color: #666; }
+.choice-grid { display: flex; flex-direction: column; gap: 14px; margin-bottom: 2rem; }
+.choice-card { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 1.5rem; cursor: pointer; text-decoration: none; color: #1a1a1a; transition: all 0.2s; display: block; }
+.choice-card:hover { border-color: #999; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.choice-icon { font-size: 36px; margin-bottom: 0.75rem; }
+.choice-title { font-size: 18px; font-weight: 700; margin-bottom: 0.4rem; }
+.choice-desc { font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 1rem; }
+.choice-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 11px; padding: 3px 9px; border-radius: 20px; background: #f5f5f0; color: #555; border: 1px solid #e0e0d8; }
+.tag-blue { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; }
+.tag-green { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+.tag-orange { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.card-quiz { border-left: 4px solid #3730a3; }
+.card-examen { border-left: 4px solid #16a34a; }
+.nav-links { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="container">
+  <nav>
+    <div class="nav-left">📐 Brevet Maths</div>
+    <div class="nav-right">
+      <span class="nav-email" id="user-email"></span>
+      <button class="btn" onclick="logout()">Déconnexion</button>
+    </div>
+  </nav>
+  <div class="welcome">
+    <div class="welcome-icon">👋</div>
+    <div class="welcome-title" id="welcome-name">Bonjour !</div>
+    <div class="welcome-sub">Que veux-tu faire aujourd'hui ?</div>
+  </div>
+  <div class="choice-grid">
+    <a href="quiz.html" class="choice-card card-quiz">
+      <div class="choice-icon">🎲</div>
+      <div class="choice-title">Quiz Rapide</div>
+      <div class="choice-desc">5 questions générées par IA sur le thème de ton choix. Correction immédiate après chaque réponse.</div>
+      <div class="choice-tags">
+        <span class="tag tag-blue">5 questions</span>
+        <span class="tag">~5 minutes</span>
+        <span class="tag">Correction immédiate</span>
+        <span class="tag">IA</span>
+      </div>
+    </a>
+    <a href="examen.html" class="choice-card card-examen">
+      <div class="choice-icon">📝</div>
+      <div class="choice-title">Examen Blanc</div>
+      <div class="choice-desc">20 questions inspirées des vraies annales brevet 2022-2024. Tous les thèmes. Correction à la fin seulement.</div>
+      <div class="choice-tags">
+        <span class="tag tag-green">20 questions</span>
+        <span class="tag tag-orange">40 minutes</span>
+        <span class="tag">Annales officielles</span>
+        <span class="tag">Mention brevet</span>
+      </div>
+    </a>
+  </div>
+  <div class="nav-links">
+    <a href="resultats.html" class="btn">📊 Mes résultats</a>
+    <a href="prof.html" class="btn" id="btn-prof" style="display:none">🎓 Prof</a>
+  </div>
+</div>
+<script>
+const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+const PROF_EMAIL = 'marcocampos2@gmail.com'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+async function init() {
+  const { data } = await sb.auth.getSession()
+  if (!data.session) { window.location.href = 'index-login.html'; return }
+  const user = data.session.user
+  const prenom = user.user_metadata?.prenom || user.email.split('@')[0]
+  document.getElementById('user-email').textContent = prenom
+  document.getElementById('welcome-name').textContent = `Bonjour ${prenom} ! 👋`
+  if (user.email === PROF_EMAIL) {
+    document.getElementById('btn-prof').style.display = 'inline-flex'
+  }
+}
+async function logout() {
+  await sb.auth.signOut()
+  window.location.href = 'index-login.html'
+}
+init()
+</script>
+</body>
+</html>
