@@ -310,7 +310,7 @@ function renderFigure(fig) {
   if (f.type === 'pythagore') {
     const u=f.unite||'cm',sc=Math.min((S-2*P)/(f.b+4),(S-2*P)/(f.a+4))*0.72
     const A=f.a*sc,B=f.b*sc,sq=10,ox=P+10,oy=S-P
-    const hypLabel=(f.c&&f.c!=='null'&&f.c!==null)?`${f.c} ${u}`:'?'
+    const hypLabel=(f.c&&f.c!=='null'&&f.c!==null&&f.c!=='?')?`${f.c} ${u}`:'?'
     return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox},${oy} ${ox+B},${oy} ${ox},${oy-A}"/><rect class="fig-rt" x="${ox}" y="${oy-sq}" width="${sq}" height="${sq}"/><text class="fig-lb" x="${ox+B/2}" y="${oy+16}" text-anchor="middle">${f.b} ${u}</text><text class="fig-lb" x="${ox-18}" y="${oy-A/2+4}" text-anchor="middle">${f.a} ${u}</text><text class="fig-lb" x="${ox+B/2+14}" y="${oy-A/2-6}" text-anchor="start">${hypLabel}</text></svg></div>`
   }
   if (f.type === 'thales') {
