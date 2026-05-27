@@ -34,7 +34,7 @@ Types disponibles et leurs champs :
 - cercle : {"type":"cercle","rayon":4,"unite":"cm"}
 - trapeze : {"type":"trapeze","grande_base":10,"petite_base":6,"hauteur":5,"unite":"cm"}
 - parallelogramme : {"type":"parallelogramme","base":8,"hauteur":4,"unite":"cm"}
-- pythagore : {"type":"pythagore","a":3,"b":4,"c":5,"unite":"cm"} (c = hypoténuse, mettre null si c est la valeur cherchée)
+- pythagore : {"type":"pythagore","a":3,"b":4,"c":5,"unite":"cm"} (a et b = les deux côtés connus, c = hypoténuse. Si c est CONNU, mets sa valeur numérique. Si c est la valeur CHERCHÉE, mets "c": "?"))
 - thales : {"type":"thales","am":4,"ab":6,"an":3,"ac":5,"unite":"cm"}
 Si la question ne concerne pas une figure 2D (ex: volume, probabilité), mets "figure": null.
 ` : ''
