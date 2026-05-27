@@ -46,7 +46,13 @@ Lecture et exploitation de tableaux de données et diagrammes (barres, circulair
 Proportionnalité dans les stats : fréquence relative (effectif÷effectif total).
 Probabilités : vocabulaire (univers, issue, événement impossible P=0, certain P=1, contraire P(non A)=1-P(A)), probabilité d'un événement simple en situation d'équiprobabilité (cas favorables÷cas totaux).
 Arbre des possibles : représenter et calculer des probabilités sur deux épreuves successives INDÉPENDANTES (ex: lancer un dé PUIS tirer une carte, lancer deux pièces).
+TOUJOURS mettre en situation concrète pour les probabilités.
+Bon : "Dans un sac de 10 billes, 6 sont rouges. Quelle est la probabilité de NE PAS tirer une bille rouge ?"
+Bon : "On lance un dé. La probabilité d'obtenir un 6 est 1/6. Quelle est la probabilité de NE PAS obtenir un 6 ?"
+Mauvais : "P(A)=0,6, calcule P(non A)." — INTERDIT car aucun contexte réel.
+Mauvais : "Soit A un événement tel que P(A)=0,3..." — INTERDIT car trop abstrait.
 INTERDIT ABSOLUMENT : mode (valeur la plus fréquente), espérance, probabilité conditionnelle P(A|B), tirage sans remise, P(A∩B), P(A∪B), dénombrement complexe. Ne JAMAIS poser de question sur "la valeur la plus fréquente" ou "le mode".`,
+          
 
       'Fonctions': `Vocabulaire fondamental : définition de f(x), image d'un nombre (se lit sur l'axe des ordonnées vertical), antécédent d'un nombre (se lit sur l'axe des abscisses horizontal).
 Modes de représentation : passer de formule algébrique → tableau de valeurs → graphique et inversement.
