@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Examen Blanc Brevet</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
+.container { max-width: 680px; margin: 0 auto; padding: 1rem; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e8e8e4; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px; }
+.nav-left { font-size: 18px; font-weight: 600; }
+.nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nav-email { font-size: 12px; color: #666; }
+.card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
+.btn:hover { background: #f5f5f0; }
+.btn-primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+.btn-primary:hover { background: #333; }
+.btn-green { background: #16a34a; color: white; border-color: #16a34a; font-size: 15px; padding: 14px; }
+.btn-green:hover { background: #15803d; }
+.btn-outline { background: white; color: #666; border: 1px solid #d0d0c8; font-size: 14px; padding: 12px; }
+.btn-outline:hover { background: #f5f5f0; }
+.btn-full { width: 100%; }
+.option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid #e8e8e4; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.15s; margin-bottom: 8px; }
+.option:hover { border-color: #999; background: #f9f9f7; }
+.option.selected { border-color: #3730a3; background: #eef2ff; }
+.option.correct { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
+.option.wrong { border-color: #dc2626; background: #fef2f2; color: #dc2626; }
+.letter { font-size: 12px; font-weight: 600; color: #999; min-width: 18px; }
+.option.correct .letter, .option.wrong .letter { color: inherit; }
+.explication { margin-top: 10px; padding: 10px 14px; background: #f5f5f0; border-radius: 8px; font-size: 13px; color: #555; border-left: 3px solid #3730a3; line-height: 1.6; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
+.badge-theme { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #f5f5f0; color: #666; border: 1px solid #e0e0d8; }
+.q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
+.q-num { font-size: 12px; color: #999; }
+.q-text { font-size: 15px; line-height: 1.8; margin-bottom: 10px; color: #1a1a1a; }
+.loader { text-align: center; padding: 3rem; color: #666; font-size: 14px; }
+.chrono { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #e8e8e4; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: #1a1a1a; }
+.chrono-dot { width: 8px; height: 8px; background: #dc2626; border-radius: 50%; animation: pulse 1s infinite; }
+.chrono-warning { border-color: #dc2626 !important; color: #dc2626 !important; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.progress-bar-wrap { background: #e0e0d8; border-radius: 4px; height: 8px; margin-bottom: 1.5rem; }
+.progress-bar { background: #3730a3; height: 8px; border-radius: 4px; transition: width 0.3s; }
+.progress-label { font-size: 12px; color: #666; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.intro-card { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 2rem 1.5rem; margin-bottom: 1rem; text-align: center; }
+.intro-icon { font-size: 48px; margin-bottom: 1rem; }
+.intro-title { font-size: 22px; font-weight: 700; margin-bottom: 0.5rem; }
+.intro-sub { font-size: 14px; color: #666; margin-bottom: 1.5rem; line-height: 1.6; }
+.intro-rules { background: #f5f5f0; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; text-align: left; }
+.intro-rules li { font-size: 13px; color: #555; margin-bottom: 6px; list-style: none; padding-left: 4px; }
+.results-screen { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 2rem 1.5rem; margin-bottom: 1rem; text-align: center; }
+.results-score-big { font-size: 72px; font-weight: 700; color: #1a1a1a; line-height: 1; }
+.results-pct { font-size: 28px; font-weight: 600; margin: 10px 0 6px; }
+.results-mention { font-size: 20px; margin-bottom: 0.5rem; }
+.results-temps { font-size: 12px; color: #999; margin-bottom: 0.5rem; }
+.results-mention-officielle { font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px; display: inline-block; margin-bottom: 1.5rem; }
+.mention-tb { background: #f0fdf4; color: #16a34a; border: 1px solid #16a34a; }
+.mention-b { background: #eef2ff; color: #3730a3; border: 1px solid #3730a3; }
+.mention-ab { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+.mention-admis { background: #f5f5f0; color: #555; border: 1px solid #ccc; }
+.mention-insuffisant { background: #fef2f2; color: #dc2626; border: 1px solid #dc2626; }
+.results-btns { display: flex; flex-direction: column; gap: 10px; }
+.themes-recap { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 1rem 0; }
+.theme-score { background: #f5f5f0; border-radius: 8px; padding: 10px; text-align: center; font-size: 12px; }
+.theme-score-num { font-size: 20px; font-weight: 700; }
+.theme-score-label { color: #666; margin-top: 2px; font-size: 11px; }
+.annee-badge { font-size: 10px; color: #999; background: #f5f5f0; border-radius: 10px; padding: 2px 6px; }
+.sticky-btn { position: sticky; bottom: 1rem; padding: 0.5rem 0; }
+</style>
+</head>
+<body>
+<div class="container">
+<nav>
+  <div class="nav-left">📐 Brevet Maths</div>
+  <div class="nav-right">
+    <span class="nav-email" id="user-email"></span>
+    <div class="chrono" id="chrono" style="display:none">
+      <div class="chrono-dot"></div>
+      <span id="chrono-text">40:00</span>
+    </div>
+    <a href="index.html" class="btn">← Accueil</a>
+    <button class="btn" onclick="logout()">Déconnexion</button>
+  </div>
+</nav>
+<div id="main-area"></div>
+</div>
+<script>
+const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+let user=null, prenom='', emailParent=''
+let questions=[], answers={}, saved=false
+let chronoInterval=null, chronoSecondes=40*60
+let examEnCours=false
+
+window.addEventListener('beforeunload', function(e) {
+  if(examEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Examen en cours !';sauvegarderAbandonne()}
+})
+
+async function init() {
+  const {data} = await sb.auth.getSession()
+  if(!data.session){window.location.href='index-login.html';return}
+  user=data.session.user
+  prenom=user.user_metadata?.prenom||''
+  emailParent=user.user_metadata?.email_parent||''
+  if(!prenom||!emailParent){
+    const {data:derniere}=await sb.from('resultats').select('prenom,email_parent').eq('user_id',user.id).order('created_at',{ascending:false}).limit(1)
+    if(derniere&&derniere.length>0){prenom=prenom||derniere[0].prenom||'';emailParent=emailParent||derniere[0].email_parent||''}
+  }
+  document.getElementById('user-email').textContent=prenom||user.email
+  renderIntro()
+}
+
+function renderIntro() {
+  document.getElementById('main-area').innerHTML=`
+    <div class="intro-card">
+      <div class="intro-icon">📝</div>
+      <div class="intro-title">Examen Blanc Brevet</div>
+      <div class="intro-sub">20 questions inspirées des annales officielles 2022, 2023 et 2024.<br>Tous les thèmes du programme de 3ème.</div>
+      <div class="intro-rules">
+        <li>⏱️ <strong>40 minutes</strong> — comme le vrai brevet</li>
+        <li>📋 <strong>20 questions</strong> sur tous les thèmes</li>
+        <li>🔕 <strong>Pas de correction</strong> pendant l'examen</li>
+        <li>📊 <strong>Résultats détaillés</strong> par thème à la fin</li>
+        <li>📧 <strong>Email envoyé</strong> à tes parents automatiquement</li>
+      </div>
+      <button class="btn btn-primary btn-full" style="font-size:16px;padding:14px" onclick="demarrerExamen()">
+        🚀 Commencer l'examen
+      </button>
+    </div>`
+}
+
+async function demarrerExamen() {
+  document.getElementById('main-area').innerHTML='<div class="loader">⏳ Chargement des questions…</div>'
+  try {
+    const {data,error}=await sb.from('examen_questions').select('*').order('numero',{ascending:true})
+    if(error||!data||data.length===0) throw new Error('Questions introuvables')
+    questions=data.map(q=>({
+      q:q.question,
+      opts:typeof q.opts==='string'?JSON.parse(q.opts):q.opts,
+      answer:q.answer,
+      explication:q.explication,
+      theme:q.theme,
+      annee:q.annee
+    }))
+    answers={}; saved=false; examEnCours=true
+    demarrerChrono()
+    renderExamen()
+  } catch(e) {
+    document.getElementById('main-area').innerHTML=`<div class="loader">❌ ${e.message}</div>`
+  }
+}
+
+function demarrerChrono() {
+  chronoSecondes=40*60
+  document.getElementById('chrono').style.display='flex'
+  chronoInterval=setInterval(()=>{
+    chronoSecondes--
+    const m=Math.floor(chronoSecondes/60).toString().padStart(2,'0')
+    const s=(chronoSecondes%60).toString().padStart(2,'0')
+    document.getElementById('chrono-text').textContent=`${m}:${s}`
+    if(chronoSecondes<=300) document.getElementById('chrono').classList.add('chrono-warning')
+    if(chronoSecondes<=0){clearInterval(chronoInterval);terminerExamen()}
+  },1000)
+}
+
+function arreterChrono(){clearInterval(chronoInterval)}
+
+function formatTemps(s){
+  const m=Math.floor(s/60); const sec=s%60
+  return `${m} min ${sec} sec`
+}
+
+function renderExamen() {
+  const nbRepondues=Object.keys(answers).length
+  const pct=Math.round((nbRepondues/questions.length)*100)
+  let html=''
+  html+=`<div class="progress-label"><span>${nbRepondues}/20 questions répondues</span><span>${pct}%</span></div>`
+  html+=`<div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>`
+  const letters=['A','B','C','D']
+  questions.forEach((q,i)=>{
+    const sel=answers[i]
+    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/20</span><span class="badge-theme">${q.theme}</span><span class="annee-badge">Annale ${q.annee}</span></div><p class="q-text">${q.q}</p>`
+    q.opts.forEach((opt,j)=>{
+      const cls=j===sel?'option selected':'option'
+      html+=`<div class="${cls}" onclick="pick(${i},${j})"><span class="letter">${letters[j]}</span>${opt}</div>`
+    })
+    html+='</div>'
+  })
+  html+=`<div class="sticky-btn"><button class="btn btn-green btn-full" onclick="terminerExamen()">✅ Terminer l'examen (${nbRepondues}/20 répondues)</button>${nbRepondues<20?'<p style="text-align:center;font-size:12px;color:#999;margin-top:6px">Tu peux terminer même sans tout répondre</p>':''}</div>`
+  document.getElementById('main-area').innerHTML=html
+}
+
+function pick(qi,oi){
+  answers[qi]=oi
+  renderExamen()
+  setTimeout(()=>{
+    const cards=document.querySelectorAll('.card')
+    if(cards[qi+1])cards[qi+1].scrollIntoView({behavior:'smooth',block:'start'})
+  },200)
+}
+
+function terminerExamen(){
+  arreterChrono(); examEnCours=false
+  document.getElementById('chrono').style.display='none'
+  sauvegarder()
+  renderResultats()
+}
+
+async function sauvegarderAbandonne(){
+  if(saved||!user)return
+  try{await sb.from('examens_blancs').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',score:0,total:20,temps_secondes:40*60-chronoSecondes,abandonne:true});saved=true}catch(e){console.log(e.message)}
+}
+
+async function sauvegarder(){
+  if(saved||!user)return
+  const nbOk=questions.filter((q,i)=>answers[i]===q.answer).length
+  const tempsSecondes=40*60-chronoSecondes
+  const themes={}
+  questions.forEach((q,i)=>{
+    if(!themes[q.theme])themes[q.theme]={ok:0,total:0}
+    themes[q.theme].total++
+    if(answers[i]===q.answer)themes[q.theme].ok++
+  })
+  const questionsRatees=questions.filter((q,i)=>answers[i]!==undefined&&answers[i]!==q.answer).map(q=>q.q)
+  try{
+    await sb.from('examens_blancs').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',score:nbOk,total:20,temps_secondes:tempsSecondes,scores_themes:themes,questions_ratees:questionsRatees,abandonne:false})
+    if(emailParent){fetch('/api/email-examen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emailParent,emailEleve:user.email,prenom:prenom||user.email,score:nbOk,total:20,pct:Math.round((nbOk/20)*100),scoresThemes:themes,tempsSecondes})}).catch(e=>console.log(e.message))}
+    saved=true
+  }catch(e){console.log('Erreur sauvegarde:',e.message)}
+}
+
+function getMention(pct){
+  if(pct>=80)return{label:'🌟 Très Bien',cls:'mention-tb',officiel:'Mention Très Bien'}
+  if(pct>=70)return{label:'👍 Bien',cls:'mention-b',officiel:'Mention Bien'}
+  if(pct>=60)return{label:'✅ Assez Bien',cls:'mention-ab',officiel:'Mention Assez Bien'}
+  if(pct>=50)return{label:'📋 Admis',cls:'mention-admis',officiel:'Admis'}
+  return{label:'📚 À retravailler',cls:'mention-insuffisant',officiel:'Non admis'}
+}
+
+function renderResultats(){
+  const nbOk=questions.filter((q,i)=>answers[i]===q.answer).length
+  const pct=Math.round((nbOk/20)*100)
+  const mention=getMention(pct)
+  const tempsSecondes=40*60-chronoSecondes
+  const themes={}
+  questions.forEach((q,i)=>{
+    if(!themes[q.theme])themes[q.theme]={ok:0,total:0}
+    themes[q.theme].total++
+    if(answers[i]===q.answer)themes[q.theme].ok++
+  })
+  let html=`<div class="results-screen">
+    <div class="results-score-big">${nbOk}/20</div>
+    <div class="results-pct" style="color:${pct>=50?'#16a34a':'#dc2626'}">${pct}%</div>
+    <div class="results-mention">${mention.label}</div>
+    <div class="results-temps">⏱️ ${formatTemps(tempsSecondes)}</div>
+    <div class="results-mention-officielle ${mention.cls}">${mention.officiel}</div>
+    <div class="themes-recap">`
+  Object.entries(themes).forEach(([theme,s])=>{
+    const tpct=Math.round((s.ok/s.total)*100)
+    html+=`<div class="theme-score"><div class="theme-score-num" style="color:${tpct>=50?'#16a34a':'#dc2626'}">${s.ok}/${s.total}</div><div class="theme-score-label">${theme.split(' ')[0]}</div></div>`
+  })
+  html+=`</div><div style="font-size:12px;color:#16a34a;margin-bottom:1.5rem">✅ Résultats enregistrés et envoyés aux parents</div>
+    <div class="results-btns">
+      <button class="btn btn-primary btn-full" onclick="voirCorrection()">📋 Voir la correction complète</button>
+      <a href="index.html" class="btn btn-outline btn-full">← Retour à l'accueil</a>
+    </div></div>`
+  document.getElementById('main-area').innerHTML=html
+  window.scrollTo({top:0,behavior:'smooth'})
+}
+
+function voirCorrection(){
+  const letters=['A','B','C','D']
+  let html=`<div style="margin-bottom:1rem"><button class="btn btn-outline" onclick="renderResultats()">← Retour aux résultats</button></div>`
+  questions.forEach((q,i)=>{
+    const sel=answers[i], correct=sel===q.answer
+    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/20</span><span class="badge" style="${correct?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626'}">${correct?'✅ Correct':'❌ Raté'}</span><span class="badge-theme">${q.theme}</span></div><p class="q-text">${q.q}</p>`
+    q.opts.forEach((opt,j)=>{
+      let cls='option'
+      if(j===q.answer)cls+=' correct';else if(j===sel&&sel!==q.answer)cls+=' wrong'
+      html+=`<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`
+    })
+    html+=`<div class="explication"><strong>${correct?'✓ Bravo !':'✗ Pas tout à fait.'}</strong><br><br>${q.explication}</div></div>`
+  })
+  html+=`<a href="index.html" class="btn btn-outline btn-full" style="margin-bottom:2rem">← Retour à l'accueil</a>`
+  document.getElementById('main-area').innerHTML=html
+  window.scrollTo({top:0,behavior:'smooth'})
+}
+
+async function logout(){
+  if(examEnCours&&!saved){const ok=confirm('⚠️ Examen en cours. Tes résultats seront perdus. Continuer ?');if(!ok)return}
+  await sb.auth.signOut()
+  window.location.href='index-login.html'
+}
+
+init()
+</script>
+</body>
+</html>
