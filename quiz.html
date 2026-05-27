@@ -314,7 +314,10 @@ function renderFigure(fig) {
     return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox},${oy} ${ox+B},${oy} ${ox},${oy-A}"/><rect class="fig-rt" x="${ox}" y="${oy-sq}" width="${sq}" height="${sq}"/><text class="fig-lb" x="${ox+B/2}" y="${oy+16}" text-anchor="middle">${f.b} ${u}</text><text class="fig-lb" x="${ox-18}" y="${oy-A/2+4}" text-anchor="middle">${f.a} ${u}</text><text class="fig-lb" x="${ox+B/2+14}" y="${oy-A/2-6}" text-anchor="start">${hypLabel}</text></svg></div>`
   }
   if (f.type === 'thales') {
-    const u=f.unite||'cm',sc=24,ox=S/2,oy=P+14
+    const u=f.unite||'cm'
+    const maxVal=Math.max(f.ab,f.ac,1)
+    const sc=Math.min(24, (S-2*P-20)/maxVal)
+    const ox=S/2,oy=P+20
     const pts={
       A:{x:ox,y:oy},
       M:{x:ox-f.am*sc*0.6,y:oy+f.am*sc},
