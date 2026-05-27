@@ -307,11 +307,18 @@ function renderFigure(fig) {
     const W=f.base*sc,H=f.hauteur*sc,sh=H*0.5,ox=P,oy=S-P
     return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox+sh},${oy-H} ${ox+sh+W},${oy-H} ${ox+W},${oy} ${ox},${oy}"/><line class="fig-dm" x1="${ox+W*0.3+sh}" y1="${oy-H}" x2="${ox+W*0.3}" y2="${oy}"/><text class="fig-lb" x="${ox+sh/2+W/2}" y="${oy+16}" text-anchor="middle">${f.base} ${u}</text><text class="fig-lb" x="${ox+W*0.3+sh/2+9}" y="${oy-H/2+4}" text-anchor="start">${f.hauteur} ${u}</text></svg></div>`
   }
-  if (f.type === 'pythagore') {
-    const u=f.unite||'cm',sc=Math.min((S-2*P)/(f.b+4),(S-2*P)/(f.a+4))*0.72
-    const A=f.a*sc,B=f.b*sc,sq=10,ox=P+10,oy=S-P
+ if (f.type === 'pythagore') {
+    const u=f.unite||'cm'
+    const aVal=(f.a&&f.a!=='?'&&f.a!==null&&f.a!=='null')?Number(f.a):null
+    const bVal=(f.b&&f.b!=='?'&&f.b!==null&&f.b!=='null')?Number(f.b):null
+    const scA=aVal?(S-2*P)/(aVal+4):S-2*P
+    const scB=bVal?(S-2*P)/(bVal+4):S-2*P
+    const sc=Math.min(scA,scB)*0.72
+    const A=(aVal||4)*sc,B=(bVal||4)*sc,sq=10,ox=P+10,oy=S-P
+    const aLabel=aVal?`${aVal} ${u}`:'?'
+    const bLabel=bVal?`${bVal} ${u}`:'?'
     const hypLabel=(f.c&&f.c!=='null'&&f.c!==null&&f.c!=='?')?`${f.c} ${u}`:'?'
-    return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox},${oy} ${ox+B},${oy} ${ox},${oy-A}"/><rect class="fig-rt" x="${ox}" y="${oy-sq}" width="${sq}" height="${sq}"/><text class="fig-lb" x="${ox+B/2}" y="${oy+16}" text-anchor="middle">${f.b} ${u}</text><text class="fig-lb" x="${ox-18}" y="${oy-A/2+4}" text-anchor="middle">${f.a} ${u}</text><text class="fig-lb" x="${ox+B/2+14}" y="${oy-A/2-6}" text-anchor="start">${hypLabel}</text></svg></div>`
+    return `<div class="q-figure">${open}<polygon class="fig-sh" points="${ox},${oy} ${ox+B},${oy} ${ox},${oy-A}"/><rect class="fig-rt" x="${ox}" y="${oy-sq}" width="${sq}" height="${sq}"/><text class="fig-lb" x="${ox+B/2}" y="${oy+16}" text-anchor="middle">${bLabel}</text><text class="fig-lb" x="${ox-18}" y="${oy-A/2+4}" text-anchor="middle">${aLabel}</text><text class="fig-lb" x="${ox+B/2+14}" y="${oy-A/2-6}" text-anchor="start">${hypLabel}</text></svg></div>`
   }
   if (f.type === 'thales') {
     const u=f.unite||'cm'
