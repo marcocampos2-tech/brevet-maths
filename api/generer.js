@@ -7,116 +7,101 @@ export default async function handler(req, res) {
   try {
     const { theme, difficulte } = req.body
 
-    const contexte = {
-      'Nombres et calculs': `Types de nombres : entiers, décimaux, relatifs (positifs/négatifs), rationnels (fractions). Règles des signes (ex: -3×(-4)=+12 ; -5+(-2)=-7).
-Opérations sur fractions : addition/soustraction (même dénominateur), multiplication (num×num/den×den), division (multiplier par l'inverse). Fractions de référence : 1/2=0,5 ; 1/4=0,25 ; 3/4=0,75 ; 1/10=0,1 ; 1/100=0,01.
-Priorités opératoires : parenthèses > puissances > ×÷ > +-.
-Nombres premiers (liste : 2,3,5,7,11,13,17,19,23), décomposition en facteurs premiers (ex: 120=2³×3×5), critères de divisibilité par 2/3/5/9/10, fractions irréductibles.
-Puissances : règles (aⁿ×aᵐ=aⁿ⁺ᵐ), carrés de 1 à 12 (1²=1...12²=144), puissances de 10 (10³=1000 ; 10⁻²=0,01), écriture scientifique (a×10ⁿ avec 1≤a<10), racines carrées parfaites (√4=2...√144=12).
-Calcul littéral : vocabulaire (double=2x, triple=3x, moitié=x/2, carré=x², successeur=x+1), réduction (3x+2x²-5+4x=2x²+7x-5).
-Développement : simple distributivité k(a+b)=ka+kb, double distributivité (a+b)(c+d)=ac+ad+bc+bd, identités remarquables pour développer : (a+b)²=a²+2ab+b², (a-b)²=a²-2ab+b², (a+b)(a-b)=a²-b².
-Factorisation : par facteur commun évident (ex: 5x²+3x=x(5x+3)), différence de carrés pour équation produit nul (ex: x²-9=0 → (x+3)(x-3)=0).
-Équations : ax+b=c, ax+b=cx+d, équation-produit nul (ax+b)(cx+d)=0.
-Proportionnalité : quatrième proportionnelle (produit en croix), pourcentages (taux augmentation/diminution : -20%→×0,80), ratios, vitesse v=d/t, conversions km/h en m/s.
-INTERDIT : factoriser avec (a+b)² ou (a-b)², discriminant, systèmes d'équations.`,
+    const exemples = {
+      'Nombres et calculs': `
+Exemples de BONNES questions pour ce thème :
+- "Une pizza coûte 12€. Le restaurant offre une réduction de 25%. Quel est le nouveau prix ?"
+- "Un train roule à 180 km/h. Combien de temps met-il pour parcourir 270 km ?"
+- "Écris 0,000045 en notation scientifique."
+- "Simplifie la fraction 36/48."
+- "Développe et réduis : 3(2x+5) - 2(x-1)"
+- "Décompose 84 en produit de facteurs premiers."
+- "Calcule : 2³ × 2⁴"
+- "Un article coûte 80€. Son prix augmente de 15%. Quel est le nouveau prix ?"`,
 
-      'Géométrie': `Pythagore : sens direct (calculer un côté dans un triangle rectangle), réciproque/contraposée (prouver si un triangle est rectangle en comparant le carré du plus grand côté avec la somme des deux autres).
-Thalès : sens direct (configuration triangle imbriqué ou papillon, calculer une longueur), réciproque/contraposée (prouver si deux droites sont parallèles en vérifiant l'égalité des rapports).
-Trigonométrie dans le triangle rectangle UNIQUEMENT : SOH CAH TOA (sin=Opposé/Hypoténuse, cos=Adjacent/Hypoténuse, tan=Opposé/Adjacent), calculer une longueur ou un angle en degrés avec la calculatrice (arcsin, arccos, arctan).
-Transformations : symétrie axiale (effet miroir par rapport à une droite), symétrie centrale (demi-tour autour d'un point), translation (glissement selon un vecteur), rotation (centre+angle+sens horaire/anti-horaire), homothétie (agrandissement/réduction avec rapport k positif ou négatif).
-Repérage : coordonnées (x;y) dans un repère orthogonal, lire et placer des points.
-Solides : reconnaître cube, pavé droit, prisme, cylindre, pyramide, cône, sphère.
-Aires : carré (c²), rectangle (L×l), triangle (b×h/2), disque (π×r²), périmètre cercle (2πr).
-Volumes : cylindre (π×r²×h), cône (π×r²×h/3), pyramide (base×h/3), sphère (4/3×π×r³), cube (c³), pavé droit (L×l×h) — formules données dans l'énoncé.
-Conversions : longueurs (m,cm,mm), aires (m²,cm²), volumes (m³,dm³,cm³), équivalence 1dm³=1L.
-Effets agrandissements : longueurs ×k → aires ×k², volumes ×k³.
-INTERDIT : démonstrations complexes, géométrie dans l'espace avancée.`,
+      'Géométrie': `
+Exemples de BONNES questions pour ce thème :
+- "Une échelle de 5m est appuyée contre un mur. Son pied est à 2m du mur. À quelle hauteur touche-t-elle le mur ?"
+- "Un triangle a les côtés 6cm, 8cm et 10cm. Est-il rectangle ?"
+- "Dans un triangle ABC, MN est parallèle à BC. AM=4cm, AB=6cm, AN=3cm. Calcule AC."
+- "Un jardin circulaire a un rayon de 5m. Calcule son aire. (π≈3,14)"
+- "Un rectangle mesure 8cm sur 6cm. Quelle est la longueur de sa diagonale ?"
+- "Dans un triangle rectangle, l'angle A vaut 35° et l'hypoténuse mesure 10cm. Calcule le côté opposé à A."`,
 
-      'Algèbre et équations': `Développement : simple distributivité k(a+b)=ka+kb, double distributivité (a+b)(c+d)=ac+ad+bc+bd.
-Identités remarquables pour développer UNIQUEMENT : (a+b)²=a²+2ab+b², (a-b)²=a²-2ab+b², (a+b)(a-b)=a²-b².
-Factorisation : par facteur commun évident (ex: 5x²+3x=x(5x+3)), différence de carrés pour résoudre équation produit nul (ex: x²-9=0 → (x+3)(x-3)=0).
-Réduction d'expressions littérales (ex: 3x+2x²-5+4x=2x²+7x-5).
-Équations : ax+b=c, ax+b=cx+d, équation-produit nul (ax+b)(cx+d)=0.
-Inéquations simples du premier degré (ax+b > c).
-Vocabulaire : double (2x), moitié (x/2), carré (x²), successeur (x+1), prédécesseur (x-1).
-INTERDIT : factoriser avec (a+b)² ou (a-b)², discriminant, systèmes d'équations complexes.`,
+      'Algèbre et équations': `
+Exemples de BONNES questions pour ce thème :
+- "Lucas pense à un nombre. Il le multiplie par 3 puis ajoute 7. Il obtient 28. Quel est ce nombre ?"
+- "Développe et réduis : (2x+3)(x-4)"
+- "Résous : 5x - 3 = 2x + 9"
+- "Factorise : 6x² + 9x"
+- "Résous : (x-2)(3x+6) = 0"
+- "Développe : (x+5)² "
+- "Une piscine rectangulaire a un périmètre de 36m. Sa longueur est le double de sa largeur. Quelles sont ses dimensions ?"
+- "Factorise : x² - 16"`,
 
-     'Statistiques et probabilités': `Notions autorisées UNIQUEMENT : moyenne simple, moyenne pondérée, médiane, étendue, fréquence relative, probabilité d'un événement simple, événement contraire P(non A)=1-P(A), arbre des possibles sur deux épreuves indépendantes.
-Chaque question DOIT avoir un contexte réel (notes d'élèves, météo, sport, jeux de société, tirage de cartes ou billes).
-Pour la moyenne pondérée : utilise un tableau avec les matières, notes et coefficients.
-Pour les probabilités : toujours partir d'une situation concrète (sac de billes, dé, pièce, cartes).
-INTERDIT : mode, classe modale, valeur la plus fréquente, espérance, probabilité conditionnelle, tirage sans remise, notation abstraite P(A)=0,6 sans contexte, P(A∩B), P(A∪B).`,     
+      'Statistiques et probabilités': `
+Exemples de BONNES questions pour ce thème :
+- "Les notes d'un élève sont 8, 12, 15, 10, 14, 11. Calcule la moyenne."
+- "Voici les températures de la semaine : 12°, 18°, 15°, 20°, 9°, 16°, 14°. Quelle est la médiane ?"
+- "Les températures min et max ce mois sont 5° et 28°. Quelle est l'étendue ?"
+- "Un sac contient 3 billes rouges, 5 bleues et 2 vertes. On tire une bille au hasard. Quelle est la probabilité de tirer une bille bleue ?"
+- "On lance un dé équilibré. Quelle est la probabilité de NE PAS obtenir un 6 ?"
+- "On lance une pièce puis un dé. Quelle est la probabilité d'obtenir pile ET un nombre impair ?"
+- "Dans une classe de 25 élèves, 10 ont eu plus de 12. Quelle est la fréquence relative ?"
 
-      'Fonctions': `Vocabulaire fondamental : définition de f(x), image d'un nombre (se lit sur l'axe des ordonnées vertical), antécédent d'un nombre (se lit sur l'axe des abscisses horizontal).
-Modes de représentation : passer de formule algébrique → tableau de valeurs → graphique et inversement.
-Fonction linéaire : f(x)=ax, droite passant par l'origine (0;0), modélise la proportionnalité, déterminer le coefficient a depuis un graphique ou une situation.
-Fonction affine : f(x)=ax+b, coefficient directeur a (pente de la droite), ordonnée à l'origine b, identifier a et b depuis un graphique ou par le calcul avec deux points.
-Taux de variation entre deux valeurs, fonctions croissantes (a>0) et décroissantes (a<0).
-Intersection de deux droites : résoudre f(x)=g(x).
-INTERDIT : fonctions du second degré, parabole, discriminant, fonctions trigonométriques.`,
+INTERDITS ABSOLUS : mode, classe modale, système d'équations à deux inconnues, P(A∩B), P(A∪B), probabilité conditionnelle, tirage sans remise, notation abstraite sans contexte (ex: "P(A)=0,6").`,
 
-      'Algorithmique': `Lecture et analyse d'un script Scratch pour déterminer le résultat final ou la figure tracée.
-Boucles : comprendre "Répéter N fois" — ex: dessiner un carré = répéter 4 fois (avancer 100 + tourner 90°), hexagone = répéter 6 fois (avancer + tourner 60°), triangle équilatéral = répéter 3 fois (avancer + tourner 120°).
-Variables : suivre pas à pas la valeur d'une variable qui change (ex: "Mettre x à 5" puis "Ajouter 3 à x" → x vaut 8, puis "Multiplier x par 2" → x vaut 16).
-Instructions conditionnelles : suivre le chemin logique "Si [condition] alors [instructions] sinon [autres instructions]".
-Programmes de calcul : "Choisir un nombre, multiplier par 2, ajouter 5, soustraire le nombre de départ" → trouver le résultat pour une valeur donnée ou montrer que le résultat est toujours le même.
-Événements : comprendre "Quand le drapeau vert est cliqué", "Quand la touche X est pressée".
-Questions typiques brevet : "Si on choisit le nombre 4 au départ, quel résultat affiche le programme ?", "Combien de fois le lutin avance-t-il ?", "Quelle figure est dessinée ?".`,
+      'Fonctions': `
+Exemples de BONNES questions pour ce thème :
+- "Un plombier facture 50€ de déplacement plus 30€ par heure. Exprime le prix p(x) en fonction du nombre d'heures x."
+- "La fonction f est définie par f(x) = 3x - 5. Calcule f(4)."
+- "Une fonction affine passe par A(0;2) et B(3;8). Quelle est son expression ?"
+- "La fonction f(x) = 2x + 1 est-elle croissante ou décroissante ?"
+- "Quel est l'antécédent de 7 par la fonction f(x) = 2x - 1 ?"
+- "Un taxi facture 2€ par km plus 5€ de prise en charge. Quelle est la fonction donnant le prix en fonction des km ?"
 
-      'Mélange de tous les thèmes': `Mélange équilibré de toutes les notions du brevet DNB :
-Nombres : fractions, puissances, écriture scientifique, racines carrées, priorités opératoires, pourcentages, proportionnalité, vitesse.
-Algèbre : développement (distributivité + identités remarquables), factorisation (facteur commun + différence de carrés), équations, équation-produit nul.
-Géométrie : Pythagore, Thalès, trigonométrie SOH CAH TOA, transformations, aires, volumes, conversions, effets agrandissements.
-Stats/Probas : moyenne, médiane, étendue, probabilité simple, arbre des possibles.
-Fonctions : fonctions linéaires et affines, image, antécédent, tableau de valeurs, graphique.
-Algorithmique : Scratch, boucles, variables, instructions conditionnelles.
-INTERDIT : mode, espérance, probabilité conditionnelle, discriminant, factoriser avec (a+b)² ou (a-b)².`
+INTERDITS ABSOLUS : composition de fonctions g(x)=f(f(x)), fonctions du second degré, discriminant, systèmes d'équations.`,
+
+      'Algorithmique': `
+Exemples de BONNES questions pour ce thème :
+- "Un programme Scratch répète 4 fois : avancer de 100 pas, tourner de 90°. Quelle figure est tracée ?"
+- "Un programme met x à 3, puis ajoute 5 à x, puis multiplie x par 2. Quelle est la valeur finale de x ?"
+- "Un programme répète 6 fois : avancer de 50 pas, tourner de 60°. Quelle figure est tracée ?"
+- "Un programme : mettre n à 10, répéter 3 fois (ajouter 4 à n). Quelle est la valeur finale de n ?"
+- "Un programme affiche les nombres de 1 à 5 en ajoutant 1 à chaque répétition. Combien de fois la boucle s'exécute-t-elle ?"`,
+
+      'Mélange de tous les thèmes': `
+Génère 5 questions variées, UNE par thème parmi : Nombres et calculs, Géométrie, Algèbre, Statistiques, Fonctions.
+Chaque question doit être dans le style des exemples suivants :
+- Nombres : "Un article coûte 80€ soldé à 30%. Quel est le prix final ?"
+- Géométrie : "Une échelle de 5m a son pied à 2m du mur. À quelle hauteur touche-t-elle le mur ?"
+- Algèbre : "Résous : 3x + 5 = 2x + 12"
+- Stats : "Un sac a 4 billes rouges et 6 bleues. Probabilité de tirer une rouge ?"
+- Fonctions : "f(x) = 2x + 3. Calcule f(5)."
+
+INTERDITS : mode, classe modale, composition de fonctions, systèmes d'équations, probabilité conditionnelle, notation abstraite.`
     }
 
     const niveaux = {
-      'facile': 'de niveau 3ème début année, questions directes avec des situations concrètes du quotidien',
-      'moyen': 'de niveau examen Brevet DNB, avec des situations réalistes',
-      'difficile': 'de niveau Brevet mention Très Bien, questions complexes avec plusieurs étapes'
+      'facile': 'de niveau 3ème début année, questions directes et simples',
+      'moyen': 'de niveau examen Brevet DNB, situations réalistes',
+      'difficile': 'de niveau Brevet mention Très Bien, plusieurs étapes'
     }
 
     const prompt1 = `Tu es un professeur de mathématiques expert au Brevet des collèges français.
 Génère exactement 5 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
-Notions à couvrir : ${contexte[theme] || theme}.
 
-RÈGLE 1 — CONTEXTE CONCRET :
-Chaque question doit être ancrée dans une situation réelle du quotidien.
-Exemples : recettes, sport, météo, voyages, argent, construction, jeux...
-Mauvais : "Calcule P(A∪B) avec P(A)=0,4"
-Bon : "Dans une classe, 40% font du sport et 50% de la musique, 20% font les deux. Calcule la probabilité qu'un élève fasse l'un ou l'autre."
+${exemples[theme] || exemples['Mélange de tous les thèmes']}
 
-RÈGLE 2 — QUESTION CLAIRE :
-Chaque question doit clairement indiquer ce qu'on cherche.
-La question doit commencer ou se terminer par un verbe d'action : Calcule, Trouve, Quelle est, Détermine, Résous...
-Mauvais : "Un triangle a des côtés 3, 4 et 5."
-Bon : "Un triangle a des côtés 3cm, 4cm et 5cm. Calcule l'aire de ce triangle."
-
-RÈGLE 3 — EXPLICATION CLAIRE ET DÉFINITIVE :
-L'explication doit être pédagogique, étape par étape, et ne JAMAIS se contredire.
-INTERDIT absolument : "Attendez...", "Non erreur...", "Révision...", "En fait...", "Correction..."
-L'explication doit aller dans un seul sens et se terminer par la réponse finale.
-Mauvais : "x=5... Attendez, non, en fait x=3."
-Bon : "On isole x. 2x=6. x=6÷2=3. La réponse est x=3."
-
-RÈGLE 4 — TABLEAUX :
-Si la question mentionne un tableau ou des données chiffrées, tu DOIS fournir ces données dans le champ "tableau" EXACTEMENT dans ce format :
-{"headers":["Colonne1","Colonne2","Colonne3"],"rows":[["Ligne1","valeur1","valeur2"]]}
-Pour les statistiques, les valeurs doivent être EN COLONNES (headers) et les catégories EN LIGNES (rows).
-La première cellule de headers doit toujours avoir un label descriptif (Notes, Taille, Valeur, Score...), jamais vide.
-Exemple stats notes/effectifs : {"headers":["Notes","8","10","12","14","16"],"rows":[["Effectif","2","5","7","6","3"]]}
-Exemple stats tailles/fréquences : {"headers":["Taille","140cm","150cm","160cm","170cm"],"rows":[["Effectif","3","8","12","5"]]}
-Pour les fonctions, le tableau de valeurs doit avoir x en première ligne et f(x) en deuxième ligne.
-Exemple fonctions : {"headers":["x","-2","-1","0","1","2"],"rows":[["f(x)","-3","0","3","6","9"]]}
-N'utilise JAMAIS d'autres clés que "headers" et "rows".
-INTERDIT : mentionner "le tableau ci-dessous" sans fournir le tableau dans le champ "tableau".
-Si pas de tableau : écris "tableau": null.
+RÈGLES OBLIGATOIRES :
+1. Chaque question DOIT être ancrée dans une situation concrète du quotidien (sport, argent, cuisine, construction, voyages).
+2. Les 4 options de réponse doivent être plausibles — pas trop faciles à éliminer.
+3. L'explication doit être claire, étape par étape, sans contradiction.
+4. Si la question nécessite un tableau de données, fournis-le dans le champ "tableau" : {"headers":["Notes","8","10","12","14"],"rows":[["Effectif","3","5","8","4"]]}
+5. Pour les fonctions : tableau de valeurs dans "tableau" si nécessaire : {"headers":["x","-2","0","2","4"],"rows":[["f(x)","-1","3","7","11"]]}
 
 Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après.
-Format : [{"q":"question claire","tableau":null,"opts":["A","B","C","D"],"bonne_reponse":"A","explication":"explication claire et définitive"}]`
+Format : [{"q":"question","tableau":null,"opts":["A","B","C","D"],"bonne_reponse":"A","explication":"explication étape par étape"}]`
 
     const response1 = await claudeCall(prompt1)
 
