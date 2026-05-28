@@ -355,7 +355,29 @@ function renderQuiz() {
   const area = document.getElementById('quiz-area')
   const nbDone = Object.keys(submitted).length
   const toutFini = nbDone === questions.length && questions.length > 0
-  if (toutFini) { return }
+  if (toutFini) { 
+  // Afficher quand même la dernière correction
+  let html = ''
+  const letters = ['A','B','C','D']
+  const i = questions.length - 1
+  const q = questions[i]
+  const sel = answers[i], estAucune = submitted[i]==='aucune'
+  html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>${renderTableau(q.tableau)}${renderFigure(q.figure)}`
+  q.opts.forEach((opt,j) => {
+    let cls='option'
+    if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong'
+    html += `<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`
+  })
+  if(estAucune){
+    html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
+    html += `<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
+  } else {
+    html += `<div class="explication">${submitted[i]==='correct'?'<strong style="color:#16a34a">✓ Bravo !</strong>':`<strong style="color:#dc2626">✗ Pas tout à fait —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`
+  }
+  html += '</div>'
+  document.getElementById('quiz-area').innerHTML = html
+  return 
+}
   let html = ''
   html += `<div class="quiz-en-cours">⚠️ Quiz en cours — Ne quitte pas la page !</div>`
   if (sourceQuestions === 'banque') {
