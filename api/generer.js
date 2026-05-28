@@ -35,21 +35,21 @@ Exemples de BONNES questions pour ce thème :
 - "Résous : 5x - 3 = 2x + 9"
 - "Factorise : 6x² + 9x"
 - "Résous : (x-2)(3x+6) = 0"
-- "Développe : (x+5)² "
+- "Développe : (x+5)²"
 - "Une piscine rectangulaire a un périmètre de 36m. Sa longueur est le double de sa largeur. Quelles sont ses dimensions ?"
 - "Factorise : x² - 16"`,
 
       'Statistiques et probabilités': `
 Exemples de BONNES questions pour ce thème :
 - "Les notes d'un élève sont 8, 12, 15, 10, 14, 11. Calcule la moyenne."
-- "Voici les températures de la semaine : 12°, 18°, 15°, 20°, 9°, 16°, 14°. Quelle est la médiane ?"
+- "Voici 7 notes classées : 8, 10, 11, 12, 13, 14, 16. Quelle est la médiane ?"
 - "Les températures min et max ce mois sont 5° et 28°. Quelle est l'étendue ?"
-- "Un sac contient 3 billes rouges, 5 bleues et 2 vertes. On tire une bille au hasard. Quelle est la probabilité de tirer une bille bleue ?"
+- "Un sac contient 3 billes rouges et 5 bleues. On tire une bille au hasard. Quelle est la probabilité de tirer une bille bleue ?"
 - "On lance un dé équilibré. Quelle est la probabilité de NE PAS obtenir un 6 ?"
 - "On lance une pièce puis un dé. Quelle est la probabilité d'obtenir pile ET un nombre impair ?"
 - "Dans une classe de 25 élèves, 10 ont eu plus de 12. Quelle est la fréquence relative ?"
 
-INTERDITS ABSOLUS : mode, classe modale, système d'équations à deux inconnues, P(A∩B), P(A∪B), probabilité conditionnelle, tirage sans remise, notation abstraite sans contexte (ex: "P(A)=0,6").`,
+INTERDITS ABSOLUS : mode, classe modale, système d'équations, P(A∩B), P(A∪B), probabilité conditionnelle, tirage sans remise, notation abstraite sans contexte.`,
 
       'Fonctions': `
 Exemples de BONNES questions pour ce thème :
@@ -99,6 +99,7 @@ RÈGLES OBLIGATOIRES :
 3. L'explication doit être claire, étape par étape, sans contradiction.
 4. Si la question nécessite un tableau de données, fournis-le dans le champ "tableau" : {"headers":["Notes","8","10","12","14"],"rows":[["Effectif","3","5","8","4"]]}
 5. Pour les fonctions : tableau de valeurs dans "tableau" si nécessaire : {"headers":["x","-2","0","2","4"],"rows":[["f(x)","-1","3","7","11"]]}
+6. La bonne réponse ne doit PAS toujours être en position A — varie les positions (A, B, C ou D).
 
 Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après.
 Format : [{"q":"question","tableau":null,"opts":["A","B","C","D"],"bonne_reponse":"A","explication":"explication étape par étape"}]`
@@ -172,15 +173,26 @@ async function getBanqueSupabase(theme, difficulte) {
     })
     const data = await res.json()
     if (!Array.isArray(data) || data.length === 0) return []
+
     const shuffled = data.sort(() => Math.random() - 0.5).slice(0, 5)
-    return shuffled.map(q => ({
-      q: q.question,
-      opts: typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts,
-      answer: q.answer,
-      explication: q.explication,
-      tableau: q.tableau ? (typeof q.tableau === 'string' ? JSON.parse(q.tableau) : q.tableau) : null,
-      figure: q.figure ? (typeof q.figure === 'string' ? JSON.parse(q.figure) : q.figure) : null
-    }))
+
+    return shuffled.map(q => {
+      const opts = typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts
+      const correcte = opts[q.answer]
+
+      // Mélanger les options
+      const shuffledOpts = [...opts].sort(() => Math.random() - 0.5)
+      const newAnswer = shuffledOpts.indexOf(correcte)
+
+      return {
+        q: q.question,
+        opts: shuffledOpts,
+        answer: newAnswer,
+        explication: q.explication,
+        tableau: q.tableau ? (typeof q.tableau === 'string' ? JSON.parse(q.tableau) : q.tableau) : null,
+        figure: q.figure ? (typeof q.figure === 'string' ? JSON.parse(q.figure) : q.figure) : null
+      }
+    })
   } catch(e) {
     console.log('Erreur Supabase:', e.message)
     return []
