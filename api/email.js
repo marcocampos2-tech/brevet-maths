@@ -71,9 +71,9 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        from: 'onboarding@resend.dev',
-        to: 'marcocampos2@gmail.com',
-        subject: `📐 [A transférer à ${emailParent}] ${prenom} a obtenu ${score}/${total} en ${theme} — ${tempsFormat}`,
+        from: 'noreply@academika.fr',
+        to: emailParent,
+        subject: `📊 ${prenom} a obtenu ${score}/${total} en ${theme} — ACADEMIKA`,
         html
       })
     })
