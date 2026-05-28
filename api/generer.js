@@ -100,6 +100,7 @@ RÈGLES OBLIGATOIRES :
 4. Si la question nécessite un tableau de données, fournis-le dans le champ "tableau" : {"headers":["Notes","8","10","12","14"],"rows":[["Effectif","3","5","8","4"]]}
 5. Pour les fonctions : tableau de valeurs dans "tableau" si nécessaire : {"headers":["x","-2","0","2","4"],"rows":[["f(x)","-1","3","7","11"]]}
 6. La bonne réponse ne doit PAS toujours être en position A — varie les positions (A, B, C ou D).
+7. L'explication DOIT correspondre exactement à la bonne réponse indiquée dans "bonne_reponse".
 
 Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après.
 Format : [{"q":"question","tableau":null,"opts":["A","B","C","D"],"bonne_reponse":"A","explication":"explication étape par étape"}]`
@@ -134,6 +135,26 @@ Format : [{"q":"question","tableau":null,"opts":["A","B","C","D"],"bonne_reponse
         explication: q.explication
       }
     })
+
+    // Vérification en un seul appel groupé
+    const prompt2 = `Vérifie ces 5 questions de mathématiques et donne le numéro correct de la bonne réponse pour chacune (0=A, 1=B, 2=C, 3=D).
+${questions.map((q,i) => `Question ${i+1}: ${q.q}\n${q.tableau ? `Tableau: ${JSON.stringify(q.tableau)}\n` : ''}Options:\n${q.opts.map((o,j) => `${j}: ${o}`).join('\n')}`).join('\n\n')}
+Réponds UNIQUEMENT avec un tableau JSON de 5 chiffres : [0, 2, 1, 3, 0]`
+
+    const response2 = await claudeCall(prompt2)
+    if (!response2.error) {
+      const matchArray = response2.text.match(/\[[\s\S]*?\]/)
+      if (matchArray) {
+        try {
+          const indices = JSON.parse(matchArray[0])
+          indices.forEach((idx, i) => {
+            if (typeof idx === 'number' && idx >= 0 && idx <= 3 && i < questions.length) {
+              questions[i].answer = idx
+            }
+          })
+        } catch(e) { console.log('Erreur vérification:', e.message) }
+      }
+    }
 
     res.status(200).json({ questions, source: 'ia' })
 
