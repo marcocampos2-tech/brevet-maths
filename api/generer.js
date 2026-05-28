@@ -135,19 +135,6 @@ Format : [{"q":"question","tableau":null,"opts":["A","B","C","D"],"bonne_reponse
       }
     })
 
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i]
-      const prompt2 = `Résous cette question. Donne UNIQUEMENT le numéro de la bonne réponse (0, 1, 2 ou 3).\nQuestion : ${q.q}\n${q.tableau ? `Tableau : ${JSON.stringify(q.tableau)}` : ''}\nOptions :\n${q.opts.map((o, j) => `${j} : ${o}`).join('\n')}`
-      const response2 = await claudeCall(prompt2)
-      if (!response2.error) {
-        const matchChiffre = response2.text.trim().match(/^[0-3]/)
-        if (matchChiffre) {
-          const verifIndex = parseInt(matchChiffre[0], 10)
-          if (verifIndex !== q.answer) questions[i].answer = verifIndex
-        }
-      }
-    }
-
     res.status(200).json({ questions, source: 'ia' })
 
   } catch(e) {
@@ -179,11 +166,8 @@ async function getBanqueSupabase(theme, difficulte) {
     return shuffled.map(q => {
       const opts = typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts
       const correcte = opts[q.answer]
-
-      // Mélanger les options
       const shuffledOpts = [...opts].sort(() => Math.random() - 0.5)
       const newAnswer = shuffledOpts.indexOf(correcte)
-
       return {
         q: q.question,
         opts: shuffledOpts,
