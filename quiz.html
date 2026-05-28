@@ -195,7 +195,7 @@ async function init() {
     }
   }
   document.getElementById('user-email').textContent = prenom || user.email
-  if (user.email === PROF_EMAIL) {
+  if (user.user_metadata?.email_parent === PROF_EMAIL || emailParent === PROF_EMAIL) {
     document.getElementById('btn-prof').style.display = 'inline-flex'
   }
   renderThemes()
