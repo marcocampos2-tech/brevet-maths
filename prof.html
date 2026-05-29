@@ -212,6 +212,9 @@ function fermerFiche() {
 }
 
 async function envoyerBilan(userId) {
+  console.log('userId:', userId)
+  console.log('elevesData:', elevesData)
+  console.log('eleve trouvé:', elevesData[userId])
   const e = elevesData[userId]
   if (!e || !e.email_parent || e.email_parent === '—') {
     alert('Pas d\'email parent pour cet élève.')
