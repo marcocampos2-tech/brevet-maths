@@ -81,7 +81,6 @@ tr:last-child td { border-bottom: none; }
   <div id="content"><div class="loader">Chargement…</div></div>
 </div>
 
-<!-- FICHE ÉLÈVE -->
 <div class="fiche-overlay" id="fiche-overlay">
   <div class="fiche-modal">
     <div class="fiche-header">
@@ -98,6 +97,7 @@ const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const PROF_EMAIL = 'marcocampos2@gmail.com'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 let allRows = []
+let elevesData = {}
 
 async function logout() { await sb.auth.signOut(); window.location.href = 'index.html' }
 
@@ -123,12 +123,20 @@ function getCouleur(pct) {
   return '#dc2626'
 }
 
-async function debloquerExamen(userId, prenom) {
+async function debloquerExamen(userId) {
+  const e = elevesData[userId]
+  const prenom = e ? e.prenom : 'cet élève'
   if (!confirm(`Débloquer l'examen blanc pour ${prenom} ? Il pourra le repasser.`)) return
   const { error } = await sb.from('examens_blancs').delete().eq('user_id', userId)
   if (error) { alert('Erreur : ' + error.message); return }
   alert(`✅ Examen débloqué pour ${prenom} !`)
   init()
+}
+
+function ouvrirFicheById(userId) {
+  const e = elevesData[userId]
+  if (!e) return
+  ouvrirFiche(userId, e.prenom, e.nom, e.email_parent)
 }
 
 function ouvrirFiche(userId, prenom, nom, emailParent) {
@@ -141,7 +149,6 @@ function ouvrirFiche(userId, prenom, nom, emailParent) {
   const h = Math.floor(tempsTotal/3600), m = Math.floor((tempsTotal%3600)/60)
   const tempsFormat = h > 0 ? `${h}h ${m}min` : `${m} min`
 
-  // Stats par thème
   const themes = rows.reduce((acc,r) => {
     if (!acc[r.theme]) acc[r.theme] = { ok:0, tot:0, n:0 }
     acc[r.theme].ok += r.score
@@ -150,23 +157,11 @@ function ouvrirFiche(userId, prenom, nom, emailParent) {
     return acc
   }, {})
 
-  // Progression dans le temps (par semaine)
-  const parSemaine = rows.reduce((acc,r) => {
-    const date = new Date(r.created_at)
-    const semaine = `${date.getFullYear()}-S${Math.ceil(date.getDate()/7)}-${date.getMonth()+1}`
-    if (!acc[semaine]) acc[semaine] = { ok:0, tot:0, date }
-    acc[semaine].ok += r.score
-    acc[semaine].tot += r.total
-    return acc
-  }, {})
-
-  // Questions les plus ratées
   const rateeMap = rows.flatMap(r => r.questions_ratees||[])
     .reduce((acc,q) => { acc[q]=(acc[q]||0)+1; return acc }, {})
   const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,3)
 
   document.getElementById('fiche-titre').textContent = `📊 ${prenom} ${nom||''}`
-
   document.getElementById('fiche-content').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1.5rem">
       <div style="background:#f5f5f0;border-radius:10px;padding:12px;text-align:center">
@@ -178,7 +173,7 @@ function ouvrirFiche(userId, prenom, nom, emailParent) {
         <div style="font-size:11px;color:#666;margin-top:4px">Sessions</div>
       </div>
       <div style="background:#f5f5f0;border-radius:10px;padding:12px;text-align:center">
-        <div style="font-size:28px;font-weight:700;color:#1a1a1a">${tempsFormat}</div>
+        <div style="font-size:20px;font-weight:700;color:#1a1a1a">${tempsFormat}</div>
         <div style="font-size:11px;color:#666;margin-top:4px">Temps total</div>
       </div>
     </div>
@@ -190,7 +185,7 @@ function ouvrirFiche(userId, prenom, nom, emailParent) {
         <div class="theme-bar-label">${theme.split(' ')[0]}</div>
         <div class="theme-bar-track"><div class="theme-bar-fill" style="width:${pct}%;background:${getCouleur(pct)}"></div></div>
         <div class="theme-bar-pct" style="color:${getCouleur(pct)}">${pct}%</div>
-        <div style="font-size:11px;color:#999;margin-left:4px">(${s.n} sessions)</div>
+        <div style="font-size:11px;color:#999;margin-left:4px">(${s.n})</div>
       </div>`
     }).join('')}
 
@@ -203,7 +198,7 @@ function ouvrirFiche(userId, prenom, nom, emailParent) {
       </div>`).join('')}` : ''}
 
     <div style="margin-top:1.5rem;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-green" onclick="envoyerBilan('${userId}','${prenom}','${nom||''}','${emailParent}')">
+      <button class="btn btn-green" id="btn-bilan-${userId}" onclick="envoyerBilan('${userId}')">
         📧 Envoyer bilan aux parents
       </button>
       <button class="btn" onclick="fermerFiche()">Fermer</button>
@@ -216,14 +211,18 @@ function fermerFiche() {
   document.getElementById('fiche-overlay').classList.remove('active')
 }
 
-async function envoyerBilan(userId, prenom, nom, emailParent) {
-  const rows = allRows.filter(r => r.user_id === userId)
-  if (!emailParent || emailParent === '—') { alert('Pas d\'email parent pour cet élève.'); return }
+async function envoyerBilan(userId) {
+  const e = elevesData[userId]
+  if (!e || !e.email_parent || e.email_parent === '—') {
+    alert('Pas d\'email parent pour cet élève.')
+    return
+  }
 
-  const btn = event.target
+  const btn = document.getElementById('btn-bilan-' + userId)
   btn.disabled = true
   btn.textContent = '⏳ Envoi...'
 
+  const rows = allRows.filter(r => r.user_id === userId)
   const moyGlobale = Math.round((rows.reduce((a,r) => a+r.score/r.total,0)/rows.length)*100)
   const totalSessions = rows.length
   const tempsTotal = rows.reduce((a,r) => a+(r.temps_secondes||0), 0)
@@ -245,9 +244,14 @@ async function envoyerBilan(userId, prenom, nom, emailParent) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        emailParent, prenom, nom,
-        moyGlobale, totalSessions, tempsTotal,
-        themes, topRatees
+        emailParent: e.email_parent,
+        prenom: e.prenom,
+        nom: e.nom,
+        moyGlobale,
+        totalSessions,
+        tempsTotal,
+        themes,
+        topRatees
       })
     })
     const data = await res.json()
@@ -317,6 +321,9 @@ async function init() {
     return acc
   }, {}))
 
+  // Stocker dans elevesData pour accès sans paramètres inline
+  elevesUniques.forEach(e => { elevesData[e.user_id] = e })
+
   const examensMap = (examens || []).reduce((acc, e) => {
     if (!e.abandonne) acc[e.user_id] = e
     return acc
@@ -355,8 +362,8 @@ async function init() {
             <td><strong style="color:${getCouleur(pctMoy)}">${pctMoy}%</strong></td>
             <td>${examCell}</td>
             <td style="display:flex;gap:4px;flex-wrap:wrap">
-              <button class="btn btn-blue" onclick="ouvrirFiche('${e.user_id}','${e.prenom}','${e.nom}','${e.email_parent}')">📊 Fiche</button>
-              ${examen ? `<button class="btn btn-red" onclick="debloquerExamen('${e.user_id}','${e.prenom}')">🔓</button>` : ''}
+              <button class="btn btn-blue" onclick="ouvrirFicheById('${e.user_id}')">📊 Fiche</button>
+              ${examen ? `<button class="btn btn-red" onclick="debloquerExamen('${e.user_id}')">🔓</button>` : ''}
             </td></tr>`
         }).join('')}</tbody></table>
       </div>
@@ -383,7 +390,7 @@ async function init() {
             <td style="text-align:center;font-size:12px">${score('algèbre')}</td>
             <td style="text-align:center;font-size:12px">${score('stat')}</td>
             <td style="text-align:center;font-size:12px">${score('fonction')}</td>
-            <td><button class="btn btn-red" onclick="debloquerExamen('${e.user_id}','${nom}')">🔓 Débloquer</button></td>
+            <td><button class="btn btn-red" onclick="debloquerExamen('${e.user_id}')">🔓 Débloquer</button></td>
           </tr>`
         }).join('')}</tbody></table>`}
       </div>
