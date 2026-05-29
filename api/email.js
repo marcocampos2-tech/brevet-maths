@@ -55,7 +55,7 @@ export default async function handler(req, res) {
           <tr><td style="padding:8px;color:#666;border-bottom:1px solid #f0f0ec">Thème</td><td style="padding:8px;font-weight:500;border-bottom:1px solid #f0f0ec">${theme}</td></tr>
           <tr><td style="padding:8px;color:#666;border-bottom:1px solid #f0f0ec">Niveau</td><td style="padding:8px;font-weight:500;border-bottom:1px solid #f0f0ec">${difficulte}</td></tr>
           <tr><td style="padding:8px;color:#666;border-bottom:1px solid #f0f0ec">Temps de révision</td><td style="padding:8px;font-weight:500;border-bottom:1px solid #f0f0ec">⏱️ ${tempsFormat}</td></tr>
-          <tr><td style="padding:8px;color:#666">Aucune idée 😅</td><td style="padding:8px;font-weight:500">${aucuneIdee} question(s) <span style="color:#666;font-size:12px">— questions où votre enfant a déclaré ne pas connaître la réponse. Ces notions sont prioritaires à retravailler.</span></td></tr>
+          <tr><td style="padding:8px;color:#666">Aucune idée 😅</td><td style="padding:8px;font-weight:500">${aucuneIdee} question(s) <span style="color:#666;font-size:12px">— questions où votre enfant a déclaré ne pas connaître le sujet. Ces notions sont prioritaires à retravailler.</span></td></tr>
           
         </table>
 
