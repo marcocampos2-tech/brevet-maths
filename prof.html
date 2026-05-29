@@ -198,7 +198,7 @@ function ouvrirFiche(userId, prenom, nom, emailParent) {
       </div>`).join('')}` : ''}
 
     <div style="margin-top:1.5rem;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-green" id="btn-bilan-${userId}" onclick="envoyerBilan('${userId}')">
+      <button class="btn btn-green" id="btn-bilan" data-userid="${userId}" onclick="envoyerBilan(this.dataset.userid)">
         📧 Envoyer bilan aux parents
       </button>
       <button class="btn" onclick="fermerFiche()">Fermer</button>
@@ -218,7 +218,7 @@ async function envoyerBilan(userId) {
     return
   }
 
-  const btn = document.getElementById('btn-bilan-' + userId)
+  const btn = document.querySelector('[data-userid="' + userId + '"]')
   btn.disabled = true
   btn.textContent = '⏳ Envoi...'
 
