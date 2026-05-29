@@ -48,7 +48,6 @@ Exemples de BONNES questions pour ce thème :
 - "On lance un dé équilibré. Quelle est la probabilité de NE PAS obtenir un 6 ?"
 - "On lance une pièce puis un dé. Quelle est la probabilité d'obtenir pile ET un nombre impair ?"
 - "Dans une classe de 25 élèves, 10 ont eu plus de 12. Quelle est la fréquence relative ?"
-
 INTERDITS ABSOLUS : mode, classe modale, système d'équations, P(A∩B), P(A∪B), probabilité conditionnelle, tirage sans remise, notation abstraite sans contexte.`,
 
       'Fonctions': `
@@ -59,7 +58,6 @@ Exemples de BONNES questions pour ce thème :
 - "La fonction f(x) = 2x + 1 est-elle croissante ou décroissante ?"
 - "Quel est l'antécédent de 7 par la fonction f(x) = 2x - 1 ?"
 - "Un taxi facture 2€ par km plus 5€ de prise en charge. Quelle est la fonction donnant le prix en fonction des km ?"
-
 INTERDITS ABSOLUS : composition de fonctions g(x)=f(f(x)), fonctions du second degré, discriminant, systèmes d'équations.`,
 
       'Algorithmique': `
@@ -78,7 +76,6 @@ Chaque question doit être dans le style des exemples suivants :
 - Algèbre : "Résous : 3x + 5 = 2x + 12"
 - Stats : "Un sac a 4 billes rouges et 6 bleues. Probabilité de tirer une rouge ?"
 - Fonctions : "f(x) = 2x + 3. Calcule f(5)."
-
 INTERDITS : mode, classe modale, composition de fonctions, systèmes d'équations, probabilité conditionnelle, notation abstraite.`
     }
 
@@ -101,9 +98,17 @@ RÈGLES OBLIGATOIRES :
 5. Pour les fonctions : tableau de valeurs dans "tableau" si nécessaire : {"headers":["x","-2","0","2","4"],"rows":[["f(x)","-1","3","7","11"]]}
 6. La bonne réponse ne doit PAS toujours être en position A — varie les positions (A, B, C ou D).
 7. L'explication DOIT correspondre exactement à la bonne réponse indiquée dans "bonne_reponse".
+8. Pour le champ "chapitre", utilise UNIQUEMENT un de ces chapitres selon le thème :
+   - Nombres et calculs : "Fractions", "Puissances", "Écriture scientifique", "Pourcentages", "Proportionnalité", "Vitesse", "Nombres premiers", "PGCD"
+   - Géométrie : "Théorème de Pythagore", "Théorème de Thalès", "Trigonométrie", "Aires et périmètres", "Volumes", "Transformations", "Agrandissements"
+   - Algèbre et équations : "Développement", "Factorisation", "Équations", "Inéquations", "Identités remarquables"
+   - Statistiques et probabilités : "Moyenne", "Médiane", "Étendue", "Probabilités simples", "Événement contraire", "Arbre des possibles"
+   - Fonctions : "Fonction affine", "Fonction linéaire", "Image et antécédent", "Tableau de valeurs", "Graphique"
+   - Algorithmique : "Boucles", "Variables", "Instructions conditionnelles", "Programmes de calcul"
+   - Mélange de tous les thèmes : utilise le chapitre correspondant au thème de la question
 
 Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après.
-Format : [{"q":"question","tableau":null,"opts":["A","B","C","D"],"bonne_reponse":"A","explication":"explication étape par étape"}]`
+Format : [{"q":"question","chapitre":"Théorème de Thalès","tableau":null,"opts":["A","B","C","D"],"bonne_reponse":"A","explication":"explication étape par étape"}]`
 
     const response1 = await claudeCall(prompt1)
 
@@ -128,6 +133,7 @@ Format : [{"q":"question","tableau":null,"opts":["A","B","C","D"],"bonne_reponse
       let answer = q.opts.findIndex(opt => cleanString(opt) === bonneReponseNettoyee)
       return {
         q: q.q,
+        chapitre: q.chapitre || '',
         tableau: q.tableau && q.tableau.headers ? q.tableau : null,
         figure: null,
         opts: q.opts,
@@ -191,6 +197,7 @@ async function getBanqueSupabase(theme, difficulte) {
       const newAnswer = shuffledOpts.indexOf(correcte)
       return {
         q: q.question,
+        chapitre: q.chapitre || '',
         opts: shuffledOpts,
         answer: newAnswer,
         explication: q.explication,
