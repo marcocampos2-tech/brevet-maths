@@ -454,8 +454,8 @@ async function sauvegarder() {
   if(saved||!user||questions.length===0)return
   const nbOk=Object.values(submitted).filter(v=>v==='correct').length
   const nbAucune=Object.values(submitted).filter(v=>v==='aucune').length
-  const ratees=questions.filter((_,i)=>submitted[i]==='wrong').map(q=>q.q)
-  const inconnues=questions.filter((_,i)=>submitted[i]==='aucune').map(q=>q.q)
+  const ratees=questions.filter((_,i)=>submitted[i]==='wrong').map(q=>`${theme} — ${q.chapitre||q.q.substring(0,40)}`)
+  const inconnues=questions.filter((_,i)=>submitted[i]==='aucune').map(q=>`${theme} — ${q.chapitre||q.q.substring(0,40)}`)  
   try {
     await sb.from('resultats').insert({
       user_id:user.id,email:user.email,
