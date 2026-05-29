@@ -467,7 +467,7 @@ async function sauvegarder() {
       source_questions:sourceQuestions
     })
     if(emailParent){
-      fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emailParent,emailEleve:user.email,prenom:prenom||user.email,theme,difficulte:diff,score:nbOk,total:questions.length,questionsRatees:ratees,questionsInconnues:inconnues,tempsSecondes:chronoSecondes,aucuneIdee:nbAucune})}).catch(e=>console.log('Erreur email:',e.message))
+      fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emailParent,prenom:prenom||'',nom:user.user_metadata?.nom||'',theme,difficulte:diff,score:nbOk,total:questions.length,questionsRatees:ratees,questionsInconnues:inconnues,tempsSecondes:chronoSecondes,aucuneIdee:nbAucune})})
     }
     saved=true
   } catch(e){console.log('Erreur sauvegarde:',e.message)}
