@@ -268,11 +268,12 @@ async function sauvegarder(){
       abandonne:false
     })
     if(emailParent){
-      fetch('/api/email-examen',{
+      fetch('/api/email-brevet-blanc',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({emailParent,emailEleve:user.email,prenom:prenom||user.email,score:nbOk,total:20,pct:Math.round((nbOk/20)*100),scoresThemes:themes,tempsSecondes})
+        body:JSON.stringify({emailParent,prenom:prenom||'',nom:user.user_metadata?.nom||'',score:nbOk,total:20,pct:Math.round((nbOk/20)*100),scoresThemes:themes,tempsSecondes})
       }).catch(e=>console.log(e.message))
+          
     }
     saved=true
   }catch(e){console.log('Erreur sauvegarde:',e.message)}
