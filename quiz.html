@@ -184,16 +184,16 @@ async function init() {
   prenom = user.user_metadata?.prenom || ''
   emailParent = user.user_metadata?.email_parent || ''
   if (!prenom || !emailParent) {
-    const { data: derniere } = await sb.from('resultats')
-      .select('prenom, email_parent')
+    const { data: profil } = await sb.from('profils')
+      .select('prenom_affiche, email_parent')
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
       .limit(1)
-    if (derniere && derniere.length > 0) {
-      prenom = prenom || derniere[0].prenom || ''
-      emailParent = emailParent || derniere[0].email_parent || ''
+    if (profil && profil.length > 0) {
+      prenom = prenom || profil[0].prenom_affiche || ''
+      emailParent = emailParent || profil[0].email_parent || ''
     }
   }
+    
   document.getElementById('user-email').textContent = prenom || user.email
   if (user.user_metadata?.email_parent === PROF_EMAIL || emailParent === PROF_EMAIL) {
     document.getElementById('btn-prof').style.display = 'inline-flex'
