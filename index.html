@@ -198,6 +198,7 @@ async function soumettre() {
       afficherMsg('Erreur : ' + error.message, 'error')
     } else {
       // Sauvegarder dans la table profils
+
       await sb.from('profils').insert({
         user_id: signUpData.user.id,
         prenom: prenom.toLowerCase(),
@@ -207,8 +208,14 @@ async function soumettre() {
         email_parent: emailParent,
         faux_email: fauxEmail
       })
+      fetch('/api/email-inscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prenom, nom, emailParent })
+      }).catch(e => console.log(e.message))
       afficherMsg('✅ Compte créé ! Tu peux maintenant te connecter.', 'success')
       setTimeout(() => setMode('login'), 2000)
+        
     }
   }
   btn.disabled = false
