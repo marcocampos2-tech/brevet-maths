@@ -466,6 +466,7 @@ async function sauvegarder() {
       temps_secondes:chronoSecondes,aucune_idee:nbAucune,
       source_questions:sourceQuestions
     })
+    console.log('emailParent avant envoi:', emailParent)
     if(emailParent){
       fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emailParent,prenom:prenom||'',nom:user.user_metadata?.nom||'',theme,difficulte:diff,score:nbOk,total:questions.length,questionsRatees:ratees,questionsInconnues:inconnues,tempsSecondes:chronoSecondes,aucuneIdee:nbAucune})})
     }
