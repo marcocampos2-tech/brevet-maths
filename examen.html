@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#1a1a1a">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Examen Blanc Brevet</title>
+<title>Examen Blanc — ACADEMIKA</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,6 +35,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .option.correct .letter, .option.wrong .letter { color: inherit; }
 .explication { margin-top: 10px; padding: 10px 14px; background: #f5f5f0; border-radius: 8px; font-size: 13px; color: #555; border-left: 3px solid #3730a3; line-height: 1.6; }
 .badge-theme { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #f5f5f0; color: #666; border: 1px solid #e0e0d8; }
+.badge-partie { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; border: 1px solid #3730a3; }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
 .q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
 .q-num { font-size: 12px; color: #999; }
@@ -50,8 +52,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .intro-icon { font-size: 48px; margin-bottom: 1rem; }
 .intro-title { font-size: 22px; font-weight: 700; margin-bottom: 0.5rem; }
 .intro-sub { font-size: 14px; color: #666; margin-bottom: 1.5rem; line-height: 1.6; }
-.intro-rules { background: #f5f5f0; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; text-align: left; }
+.intro-rules { background: #f5f5f0; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; text-align: left; }
 .intro-rules li { font-size: 13px; color: #555; margin-bottom: 6px; list-style: none; padding-left: 4px; }
+.intro-deroulement { background: #eef2ff; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; text-align: left; border-left: 3px solid #3730a3; }
+.intro-deroulement p { font-size: 13px; color: #3730a3; line-height: 1.7; }
 .results-screen { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 2rem 1.5rem; margin-bottom: 1rem; text-align: center; }
 .results-score-big { font-size: 72px; font-weight: 700; color: #1a1a1a; line-height: 1; }
 .results-pct { font-size: 28px; font-weight: 600; margin: 10px 0 6px; }
@@ -64,12 +68,12 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .mention-admis { background: #f5f5f0; color: #555; border: 1px solid #ccc; }
 .mention-insuffisant { background: #fef2f2; color: #dc2626; border: 1px solid #dc2626; }
 .results-btns { display: flex; flex-direction: column; gap: 10px; }
-.themes-recap { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 1rem 0; }
+.themes-recap { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 1rem 0; }
 .theme-score { background: #f5f5f0; border-radius: 8px; padding: 10px; text-align: center; font-size: 12px; }
 .theme-score-num { font-size: 20px; font-weight: 700; }
 .theme-score-label { color: #666; margin-top: 2px; font-size: 11px; }
-.annee-badge { font-size: 10px; color: #999; background: #f5f5f0; border-radius: 10px; padding: 2px 6px; }
 .sticky-btn { position: sticky; bottom: 1rem; padding: 0.5rem 0; }
+.historique-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0ec; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -80,7 +84,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <span class="nav-email" id="user-email"></span>
     <div class="chrono" id="chrono" style="display:none">
       <div class="chrono-dot"></div>
-      <span id="chrono-text">40:00</span>
+      <span id="chrono-text">30:00</span>
     </div>
     <button class="btn" onclick="retourAccueil()">← Accueil</button>
     <button class="btn" onclick="logout()">Déconnexion</button>
@@ -92,9 +96,9 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-let user=null, prenom='', emailParent=''
+let user=null, prenom='', nom='', emailParent=''
 let questions=[], answers={}, saved=false
-let chronoInterval=null, chronoSecondes=40*60
+let chronoInterval=null, chronoSecondes=30*60
 let examEnCours=false
 
 window.addEventListener('beforeunload', function(e) {
@@ -106,7 +110,7 @@ function retourAccueil() {
     const ok=confirm('⚠️ Examen en cours. Si tu quittes, tu perdras ta progression. Continuer quand même ?')
     if(!ok)return
   }
-  window.location.href='index.html'
+  window.location.href='quiz.html'
 }
 
 async function init() {
@@ -114,10 +118,15 @@ async function init() {
   if(!data.session){window.location.href='index.html';return}
   user=data.session.user
   prenom=user.user_metadata?.prenom||''
+  nom=user.user_metadata?.nom||''
   emailParent=user.user_metadata?.email_parent||''
   if(!prenom||!emailParent){
-    const {data:derniere}=await sb.from('resultats').select('prenom,email_parent').eq('user_id',user.id).order('created_at',{ascending:false}).limit(1)
-    if(derniere&&derniere.length>0){prenom=prenom||derniere[0].prenom||'';emailParent=emailParent||derniere[0].email_parent||''}
+    const {data:profil}=await sb.from('profils').select('prenom_affiche,nom_affiche,email_parent').eq('user_id',user.id).limit(1)
+    if(profil&&profil.length>0){
+      prenom=prenom||profil[0].prenom_affiche||''
+      nom=nom||profil[0].nom_affiche||''
+      emailParent=emailParent||profil[0].email_parent||''
+    }
   }
   document.getElementById('user-email').textContent=prenom||user.email
   await renderIntro()
@@ -131,37 +140,55 @@ function getMention(pct){
   return{label:'📚 À retravailler',cls:'mention-insuffisant',officiel:'Non admis'}
 }
 
+function formatTemps(s){
+  const m=Math.floor(s/60);const sec=s%60
+  return `${m} min ${sec} sec`
+}
+
 async function renderIntro() {
-  const {data}=await sb.from('examens_blancs').select('*').eq('user_id',user.id).eq('abandonne',false).limit(1)
-  if(data&&data.length>0){
-    const r=data[0]
-    const pct=Math.round((r.score/r.total)*100)
-    const mention=getMention(pct)
-    document.getElementById('main-area').innerHTML=`
-      <div class="intro-card">
-        <div class="intro-icon">📋</div>
-        <div class="intro-title">Examen déjà passé</div>
-        <div class="intro-sub">Tu as déjà passé l'examen blanc.</div>
-        <div style="font-size:64px;font-weight:700;margin:1rem 0">${r.score}/20</div>
-        <div style="font-size:24px;font-weight:600;color:${pct>=50?'#16a34a':'#dc2626'};margin-bottom:0.5rem">${pct}%</div>
-        <div class="results-mention-officielle ${mention.cls}" style="margin-bottom:1.5rem">${mention.officiel}</div>
-        <p style="font-size:13px;color:#666;margin-bottom:1.5rem">Demande à ton professeur de débloquer un nouvel accès.</p>
-        <a href="index.html" class="btn btn-outline btn-full">← Retour à l'accueil</a>
+  const {data:historique}=await sb.from('examens_blancs')
+    .select('*')
+    .eq('user_id',user.id)
+    .eq('abandonne',false)
+    .order('created_at',{ascending:false})
+    .limit(5)
+
+  const historiqueHTML = historique && historique.length > 0
+    ? `<div style="margin-bottom:1.5rem;text-align:left">
+        <p style="font-size:13px;font-weight:600;margin-bottom:8px;color:#1a1a1a">📊 Mes derniers examens :</p>
+        ${historique.map(e => {
+          const pct=Math.round((e.score/e.total)*100)
+          const mention=getMention(pct)
+          const date=new Date(e.created_at).toLocaleDateString('fr-FR')
+          return `<div class="historique-item">
+            <span>${date}</span>
+            <span><strong>${e.score}/20</strong> — ${pct}%</span>
+            <span class="results-mention-officielle ${mention.cls}" style="font-size:11px;padding:2px 8px">${mention.officiel}</span>
+          </div>`
+        }).join('')}
       </div>`
-    return
-  }
+    : ''
+
   document.getElementById('main-area').innerHTML=`
     <div class="intro-card">
       <div class="intro-icon">📝</div>
       <div class="intro-title">Examen Blanc Brevet</div>
-      <div class="intro-sub">20 questions inspirées des annales officielles 2022, 2023 et 2024.<br>Tous les thèmes du programme de 3ème.</div>
+      <div class="intro-sub">Teste-toi dans les conditions du vrai brevet !<br>20 questions tirées aléatoirement sur tous les thèmes du programme.</div>
+
+      <div class="intro-deroulement">
+        <p>📋 <strong>Déroulement :</strong> Tu vas répondre à 20 questions QCM réparties sur les 4 parties du programme (Nombres, Données & Fonctions, Géométrie, Grandeurs & Algorithmique). Tu as <strong>30 minutes</strong> pour tout répondre. La correction complète s'affiche à la fin. Tes résultats sont envoyés automatiquement à tes parents. Tu peux repasser cet examen autant de fois que tu veux — les questions changent à chaque fois !</p>
+      </div>
+
       <div class="intro-rules">
-        <li>⏱️ <strong>40 minutes</strong> — comme le vrai brevet</li>
-        <li>📋 <strong>20 questions</strong> sur tous les thèmes</li>
+        <li>⏱️ <strong>30 minutes</strong> — chrono réaliste pour un QCM</li>
+        <li>📋 <strong>20 questions</strong> sur les 4 parties du programme</li>
+        <li>🔀 <strong>Questions différentes</strong> à chaque passage</li>
         <li>🔕 <strong>Pas de correction</strong> pendant l'examen</li>
-        <li>📊 <strong>Résultats détaillés</strong> par thème à la fin</li>
         <li>📧 <strong>Email envoyé</strong> à tes parents automatiquement</li>
       </div>
+
+      ${historiqueHTML}
+
       <button class="btn btn-primary btn-full" style="font-size:16px;padding:14px" onclick="demarrerExamen()">
         🚀 Commencer l'examen
       </button>
@@ -169,17 +196,24 @@ async function renderIntro() {
 }
 
 async function demarrerExamen() {
-  document.getElementById('main-area').innerHTML='<div class="loader">⏳ Chargement des questions…</div>'
+  document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de votre examen…</div>'
   try {
-    const {data,error}=await sb.from('examen_questions').select('*').order('numero',{ascending:true})
-    if(error||!data||data.length===0)throw new Error('Questions introuvables')
-    questions=data.map(q=>({
-      q:q.question,
-      opts:typeof q.opts==='string'?JSON.parse(q.opts):q.opts,
-      answer:q.answer,
-      explication:q.explication,
-      theme:q.theme,
-      annee:q.annee
+    const parties = [1, 2, 3, 4]
+    let toutesLesQuestions = []
+    for (const partie of parties) {
+      const {data, error} = await sb.from('examen_questions').select('*').eq('partie', partie)
+      if (error || !data || data.length === 0) throw new Error(`Questions partie ${partie} introuvables`)
+      const melangees = data.sort(() => Math.random() - 0.5).slice(0, 5)
+      toutesLesQuestions = [...toutesLesQuestions, ...melangees]
+    }
+    questions = toutesLesQuestions.map(q => ({
+      q: q.question,
+      opts: typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts,
+      answer: q.answer,
+      explication: q.explication,
+      theme: q.theme,
+      chapitre: q.chapitre,
+      partie: q.partie
     }))
     answers={}; saved=false; examEnCours=true
     demarrerChrono()
@@ -190,7 +224,7 @@ async function demarrerExamen() {
 }
 
 function demarrerChrono() {
-  chronoSecondes=40*60
+  chronoSecondes=30*60
   document.getElementById('chrono').style.display='flex'
   document.getElementById('chrono').classList.remove('chrono-warning')
   chronoInterval=setInterval(()=>{
@@ -205,11 +239,6 @@ function demarrerChrono() {
 
 function arreterChrono(){clearInterval(chronoInterval)}
 
-function formatTemps(s){
-  const m=Math.floor(s/60);const sec=s%60
-  return `${m} min ${sec} sec`
-}
-
 function renderExamen() {
   const nbRepondues=Object.keys(answers).length
   const pct=Math.round((nbRepondues/questions.length)*100)
@@ -219,7 +248,7 @@ function renderExamen() {
   const letters=['A','B','C','D']
   questions.forEach((q,i)=>{
     const sel=answers[i]
-    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/20</span><span class="badge-theme">${q.theme}</span><span class="annee-badge">Annale ${q.annee}</span></div><p class="q-text">${q.q}</p>`
+    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/20</span><span class="badge-partie">Partie ${q.partie}</span><span class="badge-theme">${q.chapitre||q.theme}</span></div><p class="q-text">${q.q}</p>`
     q.opts.forEach((opt,j)=>{
       const cls=j===sel?'option selected':'option'
       html+=`<div class="${cls}" onclick="pick(${i},${j})"><span class="letter">${letters[j]}</span>${opt}</div>`
@@ -249,19 +278,25 @@ function terminerExamen(){
 async function sauvegarder(){
   if(saved||!user)return
   const nbOk=questions.filter((q,i)=>answers[i]===q.answer).length
-  const tempsSecondes=40*60-chronoSecondes
+  const tempsSecondes=30*60-chronoSecondes
   const themes={}
   questions.forEach((q,i)=>{
-    if(!themes[q.theme])themes[q.theme]={ok:0,total:0}
-    themes[q.theme].total++
-    if(answers[i]===q.answer)themes[q.theme].ok++
+    const key=q.theme||`Partie ${q.partie}`
+    if(!themes[key])themes[key]={ok:0,total:0}
+    themes[key].total++
+    if(answers[i]===q.answer)themes[key].ok++
   })
-  const questionsRatees=questions.filter((q,i)=>answers[i]!==undefined&&answers[i]!==q.answer).map(q=>q.q)
+  const questionsRatees=questions
+    .filter((q,i)=>answers[i]!==undefined&&answers[i]!==q.answer)
+    .map(q=>`${q.theme} — ${q.chapitre||''}`)
   try{
     await sb.from('examens_blancs').insert({
-      user_id:user.id,email:user.email,
-      prenom:prenom||'',email_parent:emailParent||'',
-      score:nbOk,total:20,
+      user_id:user.id,
+      email:user.email,
+      prenom:prenom||'',
+      email_parent:emailParent||'',
+      score:nbOk,
+      total:20,
       temps_secondes:tempsSecondes,
       scores_themes:themes,
       questions_ratees:questionsRatees,
@@ -271,9 +306,17 @@ async function sauvegarder(){
       fetch('/api/email-brevet-blanc',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({emailParent,prenom:prenom||'',nom:user.user_metadata?.nom||'',score:nbOk,total:20,pct:Math.round((nbOk/20)*100),scoresThemes:themes,tempsSecondes})
+        body:JSON.stringify({
+          emailParent,
+          prenom:prenom||'',
+          nom:nom||'',
+          score:nbOk,
+          total:20,
+          pct:Math.round((nbOk/20)*100),
+          scoresThemes:themes,
+          tempsSecondes
+        })
       }).catch(e=>console.log(e.message))
-          
     }
     saved=true
   }catch(e){console.log('Erreur sauvegarde:',e.message)}
@@ -283,12 +326,13 @@ function renderResultats(){
   const nbOk=questions.filter((q,i)=>answers[i]===q.answer).length
   const pct=Math.round((nbOk/20)*100)
   const mention=getMention(pct)
-  const tempsSecondes=40*60-chronoSecondes
+  const tempsSecondes=30*60-chronoSecondes
   const themes={}
   questions.forEach((q,i)=>{
-    if(!themes[q.theme])themes[q.theme]={ok:0,total:0}
-    themes[q.theme].total++
-    if(answers[i]===q.answer)themes[q.theme].ok++
+    const key=q.theme||`Partie ${q.partie}`
+    if(!themes[key])themes[key]={ok:0,total:0}
+    themes[key].total++
+    if(answers[i]===q.answer)themes[key].ok++
   })
   let html=`<div class="results-screen">
     <div class="results-score-big">${nbOk}/20</div>
@@ -301,10 +345,12 @@ function renderResultats(){
     const tpct=Math.round((s.ok/s.total)*100)
     html+=`<div class="theme-score"><div class="theme-score-num" style="color:${tpct>=50?'#16a34a':'#dc2626'}">${s.ok}/${s.total}</div><div class="theme-score-label">${theme.split(' ')[0]}</div></div>`
   })
-  html+=`</div><div style="font-size:12px;color:#16a34a;margin-bottom:1.5rem">✅ Résultats enregistrés et envoyés aux parents</div>
+  html+=`</div>
+    <div style="font-size:12px;color:#16a34a;margin-bottom:1.5rem">✅ Résultats enregistrés et envoyés aux parents</div>
     <div class="results-btns">
       <button class="btn btn-primary btn-full" onclick="voirCorrection()">📋 Voir la correction complète</button>
-      <a href="index.html" class="btn btn-outline btn-full">← Retour à l'accueil</a>
+      <button class="btn btn-green btn-full" onclick="demarrerExamen()">🔄 Recommencer un nouvel examen</button>
+      <a href="quiz.html" class="btn btn-outline btn-full">← Retour à l'accueil</a>
     </div></div>`
   document.getElementById('main-area').innerHTML=html
   window.scrollTo({top:0,behavior:'smooth'})
@@ -315,7 +361,7 @@ function voirCorrection(){
   let html=`<div style="margin-bottom:1rem"><button class="btn btn-outline" onclick="renderResultats()">← Retour aux résultats</button></div>`
   questions.forEach((q,i)=>{
     const sel=answers[i],correct=sel===q.answer
-    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/20</span><span class="badge" style="${correct?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626'}">${correct?'✅ Correct':'❌ Raté'}</span><span class="badge-theme">${q.theme}</span></div><p class="q-text">${q.q}</p>`
+    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/20</span><span class="badge" style="${correct?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626'}">${correct?'✅ Correct':'❌ Raté'}</span><span class="badge-theme">${q.chapitre||q.theme}</span></div><p class="q-text">${q.q}</p>`
     q.opts.forEach((opt,j)=>{
       let cls='option'
       if(j===q.answer)cls+=' correct';else if(j===sel&&sel!==q.answer)cls+=' wrong'
@@ -323,7 +369,7 @@ function voirCorrection(){
     })
     html+=`<div class="explication"><strong>${correct?'✓ Bravo !':'✗ Pas tout à fait.'}</strong><br><br>${q.explication}</div></div>`
   })
-  html+=`<a href="index.html" class="btn btn-outline btn-full" style="margin-bottom:2rem">← Retour à l'accueil</a>`
+  html+=`<a href="quiz.html" class="btn btn-outline btn-full" style="margin-bottom:2rem">← Retour à l'accueil</a>`
   document.getElementById('main-area').innerHTML=html
   window.scrollTo({top:0,behavior:'smooth'})
 }
