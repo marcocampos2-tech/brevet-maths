@@ -307,22 +307,26 @@ async function init() {
     .reduce((acc,q) => { acc[q]=(acc[q]||0)+1; return acc }, {})
   const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
 
-  const elevesUniques = Object.values(rows.reduce((acc, r) => {
-    if (!acc[r.user_id]) {
-      const profil = profilsMap[r.user_id]
-      acc[r.user_id] = {
-        user_id: r.user_id,
-        prenom: profil?.prenom_affiche || r.prenom || '—',
-        nom: profil?.nom_affiche || '',
-        email_parent: profil?.email_parent || r.email_parent || '—',
-        sessions: 0, totalScore: 0, totalQ: 0
-      }
-    }
-    acc[r.user_id].sessions++
-    acc[r.user_id].totalScore += r.score
-    acc[r.user_id].totalQ += r.total
-    return acc
-  }, {}))
+  // Tous les élèves depuis profils
+const tousLesEleves = (profils||[]).map(p => ({
+  user_id: p.user_id,
+  prenom: p.prenom_affiche || '—',
+  nom: p.nom_affiche || '',
+  email_parent: p.email_parent || '—',
+  sessions: 0, totalScore: 0, totalQ: 0
+}))
+
+// Ajouter les stats depuis resultats
+rows.forEach(r => {
+  const eleve = tousLesEleves.find(e => e.user_id === r.user_id)
+  if (eleve) {
+    eleve.sessions++
+    eleve.totalScore += r.score
+    eleve.totalQ += r.total
+  }
+})
+
+const elevesUniques = tousLesEleves
 
   // Stocker dans elevesData pour accès sans paramètres inline
   elevesUniques.forEach(e => { elevesData[e.user_id] = e })
