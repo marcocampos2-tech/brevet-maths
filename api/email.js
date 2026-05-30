@@ -8,8 +8,16 @@ export default async function handler(req, res) {
     const { emailParent, prenom, nom, theme, difficulte, score, total, questionsRatees, questionsInconnues, tempsSecondes, aucuneIdee } = req.body
 
     const pct = Math.round((score / total) * 100)
-    const mention = pct >= 80 ? '🌟 Excellent !' : pct >= 60 ? '👍 Bien !' : pct >= 40 ? '💪 Continue !' : '📚 À retravailler'
     const couleurScore = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
+    const mention = pct >= 80 ? '🌟 Excellent !' : pct >= 60 ? '👍 Bien !' : pct >= 40 ? '💪 Continue !' : '📚 À retravailler'
+
+    const messageMotivation = pct >= 80
+      ? `Excellent travail ! <strong>${prenom}</strong> maîtrise très bien ce thème. Encouragez-le à continuer !`
+      : pct >= 60
+      ? `Bon travail ! <strong>${prenom}</strong> progresse bien. Quelques notions restent à consolider.`
+      : pct >= 40
+      ? `<strong>${prenom}</strong> fait des efforts mais ce thème nécessite encore du travail. Encouragez-le à s'entraîner davantage.`
+      : `Ce thème est difficile pour <strong>${prenom}</strong> en ce moment. Il est important de retravailler ces notions régulièrement.`
 
     const m = Math.floor(tempsSecondes / 60)
     const s = tempsSecondes % 60
@@ -46,12 +54,16 @@ export default async function handler(req, res) {
           <div style="font-size:13px;color:#666;margin-top:8px">⏱️ ${tempsFormat} · ${theme} · ${difficulte}</div>
         </div>
 
-        <p style="color:#444;margin-bottom:16px;">
-          Bonne nouvelle : <strong>${prenom} progresse !</strong><br>
-          Encouragez-le à continuer sur les thèmes à améliorer.
-        </p>
+        <p style="color:#444;margin-bottom:16px;">${messageMotivation}</p>
 
         ${pointsHTML}
+
+        ${aucuneIdee > 0 ? `
+        <div style="margin-top:16px;padding:12px;background:#fffbeb;border-radius:8px;border-left:3px solid #f59e0b">
+          <p style="color:#92400e;font-size:13px;">
+            😅 <strong>${aucuneIdee} question(s)</strong> sans réponse — ces notions sont prioritaires à retravailler.
+          </p>
+        </div>` : ''}
 
         <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
           <p style="color:#444;font-size:13px;margin-bottom:16px;">
