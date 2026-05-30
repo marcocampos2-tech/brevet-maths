@@ -5,51 +5,62 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
   try {
-    const { emailParent, prenom, email, note, noteMax, commentaire, qcmMoyenne } = req.body
+    const { emailParent, prenom, nom, score, total, pct, scoresThemes, tempsSecondes } = req.body
 
-    const pct = Math.round((note / noteMax) * 100)
-    const mention = pct >= 80 ? '🌟 Très Bien' : pct >= 70 ? '👍 Bien' : pct >= 60 ? '✅ Assez Bien' : pct >= 50 ? '📚 Admis' : '💪 À retravailler'
+    const mention = pct >= 80 ? '🌟 Très Bien' : pct >= 70 ? '👍 Bien' : pct >= 60 ? '✅ Assez Bien' : pct >= 50 ? '📚 Admis' : '💪 Non admis'
+    const couleur = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
 
-    const comparatifHTML = qcmMoyenne ? `
-      <div style="background:#f5f5f0;border-radius:8px;padding:12px;margin-top:16px">
-        <h3 style="font-size:14px;color:#1a1a1a;margin-bottom:8px">📊 Comparatif app vs Brevet Blanc</h3>
-        <table style="width:100%;border-collapse:collapse;font-size:13px">
-          <tr><td style="padding:6px;color:#666">Brevet Blanc</td><td style="padding:6px;font-weight:600">${note}/${noteMax} (${pct}%)</td></tr>
-          <tr style="background:#eef2ff"><td style="padding:6px;color:#666">Moyenne QCM app</td><td style="padding:6px;font-weight:600">${qcmMoyenne}%</td></tr>
-          <tr><td style="padding:6px;color:#666">Écart</td><td style="padding:6px;font-weight:600;color:${pct >= qcmMoyenne ? '#16a34a' : '#dc2626'}">${pct >= qcmMoyenne ? '+' : ''}${pct - qcmMoyenne}%</td></tr>
-        </table>
-      </div>` : ''
+    const m = Math.floor(tempsSecondes/60)
+    const s = tempsSecondes%60
+    const tempsFormat = `${m} min ${s} sec`
+
+    const themesHTML = scoresThemes ? Object.entries(scoresThemes).map(([theme, s]) => {
+      const tpct = Math.round((s.ok/s.total)*100)
+      const tc = tpct >= 80 ? '#16a34a' : tpct >= 60 ? '#3730a3' : tpct >= 40 ? '#f59e0b' : '#dc2626'
+      return `<tr>
+        <td style="padding:8px;color:#555;border-bottom:1px solid #f0f0ec">${theme}</td>
+        <td style="padding:8px;font-weight:600;color:${tc};border-bottom:1px solid #f0f0ec">${s.ok}/${s.total} (${tpct}%)</td>
+      </tr>`
+    }).join('') : ''
 
     const html = `
-      <div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:20px">
-        <h1 style="color:#1a1a1a;border-bottom:2px solid #e8e8e4;padding-bottom:10px">
-          📝 Brevet Blanc — Résultat de ${prenom}
-        </h1>
-        <p style="color:#666">Bonjour,</p>
-        <p style="color:#e65100;font-weight:500;margin-bottom:8px">⚠️ À transférer aux parents de ${prenom} : <strong>${emailParent}</strong></p>
-        <p style="color:#666"><strong>${prenom}</strong> vient de passer un Brevet Blanc de mathématiques !</p>
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
 
-        <div style="background:#f5f5f0;border-radius:10px;padding:20px;margin:20px 0;text-align:center">
-          <div style="font-size:52px;font-weight:700;color:#1a1a1a">${note}/${noteMax}</div>
-          <div style="font-size:22px;color:#3730a3;margin-top:4px">${pct}%</div>
-          <div style="font-size:18px;margin-top:8px">${mention}</div>
+        <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+          <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+          <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Résultat Examen Blanc</div>
         </div>
 
-        ${commentaire ? `
-        <div style="background:#eef2ff;border-radius:8px;padding:12px;margin-bottom:16px;border-left:3px solid #3730a3">
-          <strong style="font-size:13px;color:#3730a3">💬 Commentaire du professeur :</strong>
-          <p style="color:#555;font-size:13px;margin-top:4px">${commentaire}</p>
-        </div>` : ''}
-
-        ${comparatifHTML}
-
-        <div style="background:#f0fdf4;border-radius:8px;padding:12px;margin-top:16px;font-size:13px;color:#15803d">
-          <strong>📋 Format du Brevet Blanc :</strong> Conditions réelles — 2h, 40 points, sans aide.
-        </div>
-
-        <p style="color:#999;font-size:12px;margin-top:30px;border-top:1px solid #e8e8e4;padding-top:10px">
-          Cet email a été envoyé automatiquement par Brevet Maths.
+        <p style="margin-bottom:6px;">Bonjour Madame, Monsieur,</p>
+        <p style="margin-bottom:20px;color:#444;">
+          Votre enfant <strong>${prenom}${nom ? ' ' + nom : ''}</strong> vient de passer 
+          l'Examen Blanc Brevet Maths sur ACADEMIKA.
         </p>
+
+        <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
+          <div style="font-size:56px;font-weight:700;color:${couleur}">${score}/20</div>
+          <div style="font-size:24px;font-weight:600;color:${couleur};margin-top:4px">${pct}%</div>
+          <div style="font-size:18px;margin-top:8px">${mention}</div>
+          <div style="font-size:13px;color:#666;margin-top:8px">⏱️ ${tempsFormat}</div>
+        </div>
+
+        <p style="color:#444;margin-bottom:16px;">
+          Bonne nouvelle : <strong>${prenom} progresse !</strong><br>
+          Encouragez-le à continuer sur les thèmes à améliorer.
+        </p>
+
+        ${themesHTML ? `
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">📊 Résultats par thème :</h3>
+        <table style="width:100%;border-collapse:collapse">${themesHTML}</table>` : ''}
+
+        <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+          <p style="color:#444;font-size:13px;margin-bottom:16px;">
+            Pour toute question, contactez-nous : 
+            <a href="mailto:marcocampos2@gmail.com" style="color:#3730a3;text-decoration:none;font-weight:500">marcocampos2@gmail.com</a>
+          </p>
+          <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
+        </div>
+
       </div>`
 
     const response = await fetch('https://api.resend.com/emails', {
@@ -59,9 +70,9 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        from: 'onboarding@resend.dev',
-        to: 'marcocampos2@gmail.com',
-        subject: `📝 [À transférer à ${emailParent}] Brevet Blanc ${prenom} — ${note}/40 (${pct}%)`,
+        from: 'noreply@academika.fr',
+        to: emailParent,
+        subject: `📝 ${prenom} a obtenu ${score}/20 à l'Examen Blanc — ACADEMIKA`,
         html
       })
     })
