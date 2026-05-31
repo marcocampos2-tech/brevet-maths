@@ -45,10 +45,12 @@ export default async function handler(req, res) {
         </div>
 
         <p style="color:#444;margin-bottom:16px;">
-          Bonne nouvelle : <strong>${prenom} progresse !</strong><br>
-          Encouragez-le à continuer sur les thèmes à améliorer.
-        </p>
-
+        ${pct >= 50
+        ? `Bonne nouvelle : <strong>${prenom} a réussi son examen blanc !</strong><br>Encouragez-le à continuer sur les thèmes à améliorer.`
+        : `<strong>${prenom}</strong> a besoin de retravailler certains thèmes.<br>Encouragez-le à continuer les révisions sur ACADEMIKA !`
+        }
+        </p>        
+        
         ${themesHTML ? `
         <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">📊 Résultats par thème :</h3>
         <table style="width:100%;border-collapse:collapse">${themesHTML}</table>` : ''}
