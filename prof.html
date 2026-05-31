@@ -275,6 +275,8 @@ async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'index.html'; return }
   if (data.session.user.user_metadata?.email_parent !== PROF_EMAIL) {
+    console.log('rows:', rows.length)
+    console.log('première row:', JSON.stringify(rows[0]))
     document.getElementById('content').innerHTML = '<div style="text-align:center;color:#dc2626;padding:3rem">⛔ Accès réservé au professeur.</div>'
     return
   }
