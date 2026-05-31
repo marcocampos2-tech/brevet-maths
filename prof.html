@@ -212,9 +212,6 @@ function fermerFiche() {
 }
 
 async function envoyerBilan(userId) {
-  console.log('userId:', userId)
-  console.log('elevesData:', elevesData)
-  console.log('eleve trouvé:', elevesData[userId])
   const e = elevesData[userId]
   if (!e || !e.email_parent || e.email_parent === '—') {
     alert('Pas d\'email parent pour cet élève.')
@@ -275,8 +272,6 @@ async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'index.html'; return }
   if (data.session.user.user_metadata?.email_parent !== PROF_EMAIL) {
-    console.log('rows:', rows.length)
-    console.log('première row:', JSON.stringify(rows[0]))
     document.getElementById('content').innerHTML = '<div style="text-align:center;color:#dc2626;padding:3rem">⛔ Accès réservé au professeur.</div>'
     return
   }
@@ -291,7 +286,6 @@ async function init() {
   allRows = rows
 
   const profilsMap = (profils||[]).reduce((acc,p) => { acc[p.user_id] = p; return acc }, {})
-
   const nbEleves = [...new Set(rows.map(r => r.user_id))].length
   const moy = rows.length ? Math.round((rows.reduce((a,r) => a+r.score/r.total,0)/rows.length)*100) : 0
   const nbIA = rows.filter(r => !r.source_questions || r.source_questions === 'ia').length
@@ -309,28 +303,24 @@ async function init() {
     .reduce((acc,q) => { acc[q]=(acc[q]||0)+1; return acc }, {})
   const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
 
-  // Tous les élèves depuis profils
-const tousLesEleves = (profils||[]).map(p => ({
-  user_id: p.user_id,
-  prenom: p.prenom_affiche || '—',
-  nom: p.nom_affiche || '',
-  email_parent: p.email_parent || '—',
-  sessions: 0, totalScore: 0, totalQ: 0
-}))
+  const tousLesEleves = (profils||[]).map(p => ({
+    user_id: p.user_id,
+    prenom: p.prenom_affiche || '—',
+    nom: p.nom_affiche || '',
+    email_parent: p.email_parent || '—',
+    sessions: 0, totalScore: 0, totalQ: 0
+  }))
 
-// Ajouter les stats depuis resultats
-rows.forEach(r => {
-  const eleve = tousLesEleves.find(e => e.user_id === r.user_id)
-  if (eleve) {
-    eleve.sessions++
-    eleve.totalScore += r.score
-    eleve.totalQ += r.total
-  }
-})
+  rows.forEach(r => {
+    const eleve = tousLesEleves.find(e => e.user_id === r.user_id)
+    if (eleve) {
+      eleve.sessions++
+      eleve.totalScore += r.score
+      eleve.totalQ += r.total
+    }
+  })
 
-const elevesUniques = tousLesEleves
-
-  // Stocker dans elevesData pour accès sans paramètres inline
+  const elevesUniques = tousLesEleves
   elevesUniques.forEach(e => { elevesData[e.user_id] = e })
 
   const examensMap = (examens || []).reduce((acc, e) => {
@@ -409,6 +399,7 @@ const elevesUniques = tousLesEleves
       <div class="card"><h2>Résultats par thème</h2>
         <table><thead><tr><th>Thème</th><th>Sessions</th><th>Moyenne</th></tr></thead>
         <tbody>${Object.entries(themeStats).map(([t,s])=>`<tr><td>${t}</td><td>${s.n}</td><td><strong style="color:${getCouleur(Math.round((s.ok/s.tot)*100))}">${Math.round((s.ok/s.tot)*100)}%</strong></td></tr>`).join('')}</tbody>
+        </table>
       </div>
     </div>
 
@@ -429,8 +420,6 @@ const elevesUniques = tousLesEleves
         }).join('')}</tbody></table>
       </div>
     </div>
-
-   
 
     <div class="section" id="section-ratees">
       <div class="card"><h2>Questions les plus ratées</h2>
