@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a1a1a">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ACADEMIKA">
 <title>Tableau de bord Prof — ACADEMIKA</title>
@@ -56,7 +57,7 @@ tr:last-child td { border-bottom: none; }
 .section { display: none; }
 .section.active { display: block; }
 .progress-bar { height: 8px; background: #e0e0d8; border-radius: 4px; overflow: hidden; margin-top: 6px; }
-.progress-ia { height: 100%; background: #16a34a; border-radius: 4px; }
+.progress-fill { height: 100%; background: #16a34a; border-radius: 4px; }
 .mention-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; display: inline-block; }
 .theme-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .theme-bar-label { font-size: 12px; width: 120px; color: #555; }
@@ -73,19 +74,17 @@ tr:last-child td { border-bottom: none; }
 <body>
 <div class="container">
   <nav>
-    <div class="btn" style="font-size:14px; font-weight:600; cursor: default;">∑ ACADEMIKA — Tableau de bord</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" onclick="logout()">Déconnexion</button>
-    </div>
+    <div class="btn" style="font-size:14px;font-weight:600;cursor:default;">ACADEMIKA — Tableau de bord</div>
+    <button class="btn" onclick="logout()">Déconnexion</button>
   </nav>
-  <div id="content"><div class="loader">Chargement…</div></div>
+  <div id="content"><div class="loader">Chargement...</div></div>
 </div>
 
 <div class="fiche-overlay" id="fiche-overlay">
   <div class="fiche-modal">
     <div class="fiche-header">
       <h2 id="fiche-titre">Fiche élève</h2>
-      <button class="fiche-close" onclick="fermerFiche()">✕</button>
+      <button class="fiche-close" onclick="fermerFiche()">X</button>
     </div>
     <div id="fiche-content"></div>
   </div>
@@ -109,11 +108,11 @@ function setTab(tab) {
 }
 
 function getMentionBadge(pct) {
-  if (pct >= 80) return `<span class="mention-badge badge-tb">Très Bien</span>`
-  if (pct >= 70) return `<span class="mention-badge badge-b">Bien</span>`
-  if (pct >= 60) return `<span class="mention-badge badge-ab">Assez Bien</span>`
-  if (pct >= 50) return `<span class="mention-badge badge-admis">Admis</span>`
-  return `<span class="mention-badge badge-insuf">Non admis</span>`
+  if (pct >= 80) return '<span class="mention-badge badge-tb">Tres Bien</span>'
+  if (pct >= 70) return '<span class="mention-badge badge-b">Bien</span>'
+  if (pct >= 60) return '<span class="mention-badge badge-ab">Assez Bien</span>'
+  if (pct >= 50) return '<span class="mention-badge badge-admis">Admis</span>'
+  return '<span class="mention-badge badge-insuf">Non admis</span>'
 }
 
 function getCouleur(pct) {
@@ -125,11 +124,11 @@ function getCouleur(pct) {
 
 async function debloquerExamen(userId) {
   const e = elevesData[userId]
-  const prenom = e ? e.prenom : 'cet élève'
-  if (!confirm(`Débloquer l'examen blanc pour ${prenom} ? Il pourra le repasser.`)) return
+  const prenom = e ? e.prenom : 'cet eleve'
+  if (!confirm('Debloquer examen pour ' + prenom + ' ?')) return
   const { error } = await sb.from('examens_blancs').delete().eq('user_id', userId)
   if (error) { alert('Erreur : ' + error.message); return }
-  alert(`✅ Examen débloqué pour ${prenom} !`)
+  alert('Examen debloque !')
   init()
 }
 
@@ -141,13 +140,13 @@ function ouvrirFicheById(userId) {
 
 function ouvrirFiche(userId, prenom, nom, emailParent) {
   const rows = allRows.filter(r => r.user_id === userId)
-  if (rows.length === 0) { alert('Pas encore de données pour cet élève.'); return }
+  if (rows.length === 0) { alert('Pas encore de donnees pour cet eleve.'); return }
 
   const totalSessions = rows.length
   const moyGlobale = Math.round((rows.reduce((a,r) => a+r.score/r.total,0)/rows.length)*100)
   const tempsTotal = rows.reduce((a,r) => a+(r.temps_secondes||0), 0)
   const h = Math.floor(tempsTotal/3600), m = Math.floor((tempsTotal%3600)/60)
-  const tempsFormat = h > 0 ? `${h}h ${m}min` : `${m} min`
+  const tempsFormat = h > 0 ? (h + 'h ' + m + 'min') : (m + ' min')
 
   const themes = rows.reduce((acc,r) => {
     if (!acc[r.theme]) acc[r.theme] = { ok:0, tot:0, n:0 }
@@ -161,49 +160,44 @@ function ouvrirFiche(userId, prenom, nom, emailParent) {
     .reduce((acc,q) => { acc[q]=(acc[q]||0)+1; return acc }, {})
   const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,3)
 
-  document.getElementById('fiche-titre').textContent = `📊 ${prenom} ${nom||''}`
-  document.getElementById('fiche-content').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1.5rem">
-      <div style="background:#f5f5f0;border-radius:10px;padding:12px;text-align:center">
-        <div style="font-size:28px;font-weight:700;color:${getCouleur(moyGlobale)}">${moyGlobale}%</div>
-        <div style="font-size:11px;color:#666;margin-top:4px">Moyenne globale</div>
-      </div>
-      <div style="background:#f5f5f0;border-radius:10px;padding:12px;text-align:center">
-        <div style="font-size:28px;font-weight:700;color:#1a1a1a">${totalSessions}</div>
-        <div style="font-size:11px;color:#666;margin-top:4px">Sessions</div>
-      </div>
-      <div style="background:#f5f5f0;border-radius:10px;padding:12px;text-align:center">
-        <div style="font-size:20px;font-weight:700;color:#1a1a1a">${tempsFormat}</div>
-        <div style="font-size:11px;color:#666;margin-top:4px">Temps total</div>
-      </div>
-    </div>
+  document.getElementById('fiche-titre').textContent = 'Fiche - ' + prenom + ' ' + (nom||'')
 
-    <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">📚 Résultats par thème</h3>
-    ${Object.entries(themes).map(([theme, s]) => {
-      const pct = Math.round((s.ok/s.tot)*100)
-      return `<div class="theme-bar">
-        <div class="theme-bar-label">${theme.split(' ')[0]}</div>
-        <div class="theme-bar-track"><div class="theme-bar-fill" style="width:${pct}%;background:${getCouleur(pct)}"></div></div>
-        <div class="theme-bar-pct" style="color:${getCouleur(pct)}">${pct}%</div>
-        <div style="font-size:11px;color:#999;margin-left:4px">(${s.n})</div>
-      </div>`
-    }).join('')}
+  let html = ''
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1.5rem">'
+  html += '<div style="background:#f5f5f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:28px;font-weight:700;color:' + getCouleur(moyGlobale) + '">' + moyGlobale + '%</div><div style="font-size:11px;color:#666;margin-top:4px">Moyenne globale</div></div>'
+  html += '<div style="background:#f5f5f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:28px;font-weight:700;color:#1a1a1a">' + totalSessions + '</div><div style="font-size:11px;color:#666;margin-top:4px">Sessions</div></div>'
+  html += '<div style="background:#f5f5f0;border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:700;color:#1a1a1a">' + tempsFormat + '</div><div style="font-size:11px;color:#666;margin-top:4px">Temps total</div></div>'
+  html += '</div>'
 
-    ${topRatees.length > 0 ? `
-    <h3 style="font-size:14px;font-weight:600;margin:1.2rem 0 12px">❌ Questions les plus ratées</h3>
-    ${topRatees.map(([q,n]) => `
-      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0ec;font-size:12px">
-        <span style="color:#555">${q.substring(0,60)}${q.length>60?'...':''}</span>
-        <span style="color:#dc2626;font-weight:600;margin-left:8px">${n}×</span>
-      </div>`).join('')}` : ''}
+  html += '<h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Resultats par theme</h3>'
+  Object.entries(themes).forEach(function(entry) {
+    var theme = entry[0], s = entry[1]
+    var pct = Math.round((s.ok/s.tot)*100)
+    html += '<div class="theme-bar">'
+    html += '<div class="theme-bar-label">' + theme.split(' ')[0] + '</div>'
+    html += '<div class="theme-bar-track"><div class="theme-bar-fill" style="width:' + pct + '%;background:' + getCouleur(pct) + '"></div></div>'
+    html += '<div class="theme-bar-pct" style="color:' + getCouleur(pct) + '">' + pct + '%</div>'
+    html += '<div style="font-size:11px;color:#999;margin-left:4px">(' + s.n + ')</div>'
+    html += '</div>'
+  })
 
-    <div style="margin-top:1.5rem;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-green" id="btn-bilan" data-userid="${userId}" onclick="envoyerBilan(this.dataset.userid)">
-        📧 Envoyer bilan aux parents
-      </button>
-      <button class="btn" onclick="fermerFiche()">Fermer</button>
-    </div>`
+  if (topRatees.length > 0) {
+    html += '<h3 style="font-size:14px;font-weight:600;margin:1.2rem 0 12px">Questions les plus ratees</h3>'
+    topRatees.forEach(function(entry) {
+      var q = entry[0], n = entry[1]
+      html += '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0ec;font-size:12px">'
+      html += '<span style="color:#555">' + q.substring(0,60) + (q.length>60?'...':'') + '</span>'
+      html += '<span style="color:#dc2626;font-weight:600;margin-left:8px">' + n + 'x</span>'
+      html += '</div>'
+    })
+  }
 
+  html += '<div style="margin-top:1.5rem;display:flex;gap:8px;flex-wrap:wrap">'
+  html += '<button class="btn btn-green" id="btn-bilan" data-userid="' + userId + '" onclick="envoyerBilan(this.dataset.userid)">Envoyer bilan aux parents</button>'
+  html += '<button class="btn" onclick="fermerFiche()">Fermer</button>'
+  html += '</div>'
+
+  document.getElementById('fiche-content').innerHTML = html
   document.getElementById('fiche-overlay').classList.add('active')
 }
 
@@ -213,20 +207,17 @@ function fermerFiche() {
 
 async function envoyerBilan(userId) {
   const e = elevesData[userId]
-  if (!e || !e.email_parent || e.email_parent === '—') {
-    alert('Pas d\'email parent pour cet élève.')
+  if (!e || !e.email_parent || e.email_parent === '-') {
+    alert('Pas email parent pour cet eleve.')
     return
   }
-
   const btn = document.querySelector('[data-userid="' + userId + '"]')
   btn.disabled = true
-  btn.textContent = '⏳ Envoi...'
-
+  btn.textContent = 'Envoi...'
   const rows = allRows.filter(r => r.user_id === userId)
   const moyGlobale = Math.round((rows.reduce((a,r) => a+r.score/r.total,0)/rows.length)*100)
   const totalSessions = rows.length
   const tempsTotal = rows.reduce((a,r) => a+(r.temps_secondes||0), 0)
-
   const themes = rows.reduce((acc,r) => {
     if (!acc[r.theme]) acc[r.theme] = { ok:0, tot:0, n:0 }
     acc[r.theme].ok += r.score
@@ -234,199 +225,195 @@ async function envoyerBilan(userId) {
     acc[r.theme].n++
     return acc
   }, {})
-
   const rateeMap = rows.flatMap(r => r.questions_ratees||[])
     .reduce((acc,q) => { acc[q]=(acc[q]||0)+1; return acc }, {})
   const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
-
   try {
     const res = await fetch('/api/email-bilan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        emailParent: e.email_parent,
-        prenom: e.prenom,
-        nom: e.nom,
-        moyGlobale,
-        totalSessions,
-        tempsTotal,
-        themes,
-        topRatees
-      })
+      body: JSON.stringify({ emailParent: e.email_parent, prenom: e.prenom, nom: e.nom, moyGlobale: moyGlobale, totalSessions: totalSessions, tempsTotal: tempsTotal, themes: themes, topRatees: topRatees })
     })
     const data = await res.json()
     if (data.success) {
-      btn.textContent = '✅ Envoyé !'
-      setTimeout(() => { btn.disabled = false; btn.textContent = '📧 Envoyer bilan aux parents' }, 3000)
-    } else {
-      throw new Error(data.error)
-    }
-  } catch(e) {
-    alert('Erreur : ' + e.message)
+      btn.textContent = 'Envoye !'
+      setTimeout(function() { btn.disabled = false; btn.textContent = 'Envoyer bilan aux parents' }, 3000)
+    } else { throw new Error(data.error) }
+  } catch(err) {
+    alert('Erreur : ' + err.message)
     btn.disabled = false
-    btn.textContent = '📧 Envoyer bilan aux parents'
+    btn.textContent = 'Envoyer bilan aux parents'
   }
 }
 
 async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'index.html'; return }
-  if (data.session.user.user_metadata?.email_parent !== PROF_EMAIL) {
-    document.getElementById('content').innerHTML = '<div style="text-align:center;color:#dc2626;padding:3rem">⛔ Accès réservé au professeur.</div>'
+  if (data.session.user.user_metadata && data.session.user.user_metadata.email_parent !== PROF_EMAIL) {
+    document.getElementById('content').innerHTML = '<div style="text-align:center;color:#dc2626;padding:3rem">Acces reserve au professeur.</div>'
     return
   }
 
-  const [{ data: rows }, { data: examens }, { data: profils }] = await Promise.all([
-    sb.from('resultats').select('*').order('created_at', { ascending: false }),
-    sb.from('examens_blancs').select('*').order('created_at', { ascending: false }),
-    sb.from('profils').select('*')
-  ])
+  const res1 = await sb.from('resultats').select('*').order('created_at', { ascending: false })
+  const res2 = await sb.from('examens_blancs').select('*').order('created_at', { ascending: false })
+  const res3 = await sb.from('profils').select('*')
 
-  if (!rows) return
+  const rows = res1.data || []
+  const examens = res2.data || []
+  const profils = res3.data || []
   allRows = rows
 
-  const profilsMap = (profils||[]).reduce((acc,p) => { acc[p.user_id] = p; return acc }, {})
-  const nbEleves = [...new Set(rows.map(r => r.user_id))].length
-  const moy = rows.length ? Math.round((rows.reduce((a,r) => a+r.score/r.total,0)/rows.length)*100) : 0
-  const nbIA = rows.filter(r => !r.source_questions || r.source_questions === 'ia').length
-  const nbBanque = rows.filter(r => r.source_questions === 'banque').length
+  const profilsMap = {}
+  profils.forEach(function(p) { profilsMap[p.user_id] = p })
+
+  const userIds = []
+  rows.forEach(function(r) { if (userIds.indexOf(r.user_id) === -1) userIds.push(r.user_id) })
+  const nbEleves = userIds.length
+
+  const moy = rows.length ? Math.round((rows.reduce(function(a,r) { return a+r.score/r.total }, 0)/rows.length)*100) : 0
+  const nbIA = rows.filter(function(r) { return !r.source_questions || r.source_questions === 'ia' }).length
+  const nbBanque = rows.filter(function(r) { return r.source_questions === 'banque' }).length
   const pctIA = rows.length ? Math.round((nbIA/rows.length)*100) : 0
-  const nbExamens = examens ? examens.filter(e => !e.abandonne).length : 0
+  const nbExamens = examens.filter(function(e) { return !e.abandonne }).length
 
-  const themeStats = rows.reduce((acc,r) => {
-    if (!acc[r.theme]) acc[r.theme] = { ok:0, tot:0, n:0 }
-    acc[r.theme].ok += r.score; acc[r.theme].tot += r.total; acc[r.theme].n++
-    return acc
-  }, {})
-
-  const rateeMap = rows.flatMap(r => r.questions_ratees||[])
-    .reduce((acc,q) => { acc[q]=(acc[q]||0)+1; return acc }, {})
-  const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
-
-  const tousLesEleves = (profils||[]).map(p => ({
-    user_id: p.user_id,
-    prenom: p.prenom_affiche || '—',
-    nom: p.nom_affiche || '',
-    email_parent: p.email_parent || '—',
-    sessions: 0, totalScore: 0, totalQ: 0
-  }))
-
-  rows.forEach(r => {
-    const eleve = tousLesEleves.find(e => e.user_id === r.user_id)
-    if (eleve) {
-      eleve.sessions++
-      eleve.totalScore += r.score
-      eleve.totalQ += r.total
-    }
+  const themeStats = {}
+  rows.forEach(function(r) {
+    if (!themeStats[r.theme]) themeStats[r.theme] = { ok:0, tot:0, n:0 }
+    themeStats[r.theme].ok += r.score
+    themeStats[r.theme].tot += r.total
+    themeStats[r.theme].n++
   })
 
-  const elevesUniques = tousLesEleves
-  elevesUniques.forEach(e => { elevesData[e.user_id] = e })
+  const rateeMap = {}
+  rows.forEach(function(r) {
+    (r.questions_ratees||[]).forEach(function(q) { rateeMap[q] = (rateeMap[q]||0) + 1 })
+  })
+  const topRatees = Object.entries(rateeMap).sort(function(a,b) { return b[1]-a[1] }).slice(0,5)
 
-  const examensMap = (examens || []).reduce((acc, e) => {
-    if (!e.abandonne) acc[e.user_id] = e
-    return acc
-  }, {})
+  const tousLesEleves = profils.map(function(p) {
+    return { user_id: p.user_id, prenom: p.prenom_affiche || '-', nom: p.nom_affiche || '', email_parent: p.email_parent || '-', sessions: 0, totalScore: 0, totalQ: 0 }
+  })
 
-  document.getElementById('content').innerHTML = `
-    <div class="stats-grid">
-      <div class="stat"><div class="stat-val">${nbEleves}</div><div class="stat-label">Élèves actifs</div></div>
-      <div class="stat"><div class="stat-val">${rows.length}</div><div class="stat-label">Sessions quiz</div></div>
-      <div class="stat"><div class="stat-val">${moy}%</div><div class="stat-label">Moyenne générale</div></div>
-      <div class="stat stat-examen"><div class="stat-val">📝 ${nbExamens}</div><div class="stat-label">Examens blancs</div></div>
-      <div class="stat stat-ia"><div class="stat-val">✨ ${nbIA}</div><div class="stat-label">Sessions IA (${pctIA}%)</div><div class="progress-bar"><div class="progress-ia" style="width:${pctIA}%"></div></div></div>
-      <div class="stat stat-banque"><div class="stat-val">⚡ ${nbBanque}</div><div class="stat-label">Sessions banque (${100-pctIA}%)</div><div class="progress-bar"><div class="progress-ia" style="width:${100-pctIA}%;background:#f59e0b"></div></div></div>
-    </div>
-    <div class="tabs">
-      <button class="tab active" id="tab-eleves" onclick="setTab('eleves')">👥 Élèves</button>
-      <button class="tab" id="tab-examens" onclick="setTab('examens')">📝 Examens Blancs</button>
-      <button class="tab" id="tab-themes" onclick="setTab('themes')">📊 Thèmes</button>
-      <button class="tab" id="tab-sessions" onclick="setTab('sessions')">📋 Sessions</button>
-      <button class="tab" id="tab-ratees" onclick="setTab('ratees')">❌ Questions ratées</button>
-    </div>
+  rows.forEach(function(r) {
+    const eleve = tousLesEleves.find(function(e) { return e.user_id === r.user_id })
+    if (eleve) { eleve.sessions++; eleve.totalScore += r.score; eleve.totalQ += r.total }
+  })
 
-    <div class="section active" id="section-eleves">
-      <div class="card"><h2>Liste des élèves</h2>
-        <table><thead><tr><th>Élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th><th>Examen Blanc</th><th>Actions</th></tr></thead>
-        <tbody>${elevesUniques.map(e => {
-          const examen = examensMap[e.user_id]
-          const pctMoy = e.totalQ > 0 ? Math.round((e.totalScore/e.totalQ)*100) : 0
-          const examCell = examen
-            ? `<div>${getMentionBadge(Math.round((examen.score/examen.total)*100))} ${examen.score}/20</div>`
-            : `<span style="color:#999;font-size:12px">Pas encore passé</span>`
-          return `<tr>
-            <td><strong>${e.prenom} ${e.nom}</strong></td>
-            <td style="color:#3730a3;font-size:12px">${e.email_parent}</td>
-            <td>${e.sessions}</td>
-            <td><strong style="color:${getCouleur(pctMoy)}">${pctMoy}%</strong></td>
-            <td>${examCell}</td>
-            <td style="display:flex;gap:4px;flex-wrap:wrap">
-              <button class="btn btn-blue" onclick="ouvrirFicheById('${e.user_id}')">📊 Fiche</button>
-              ${examen ? `<button class="btn btn-red" onclick="debloquerExamen('${e.user_id}')">🔓</button>` : ''}
-            </td></tr>`
-        }).join('')}</tbody></table>
-      </div>
-    </div>
+  tousLesEleves.forEach(function(e) { elevesData[e.user_id] = e })
 
-    <div class="section" id="section-examens">
-      <div class="card"><h2>Résultats Examens Blancs</h2>
-        ${nbExamens === 0 ? '<p style="color:#666;font-size:13px">Aucun examen passé pour l\'instant.</p>' : `
-        <table><thead><tr><th>Élève</th><th>Score</th><th>Mention</th><th>Temps</th><th>Nombres</th><th>Géométrie</th><th>Algèbre</th><th>Stats</th><th>Fonctions</th><th>Action</th></tr></thead>
-        <tbody>${(examens||[]).filter(e=>!e.abandonne).map(e => {
-          const pct = Math.round((e.score/e.total)*100)
-          const th = e.scores_themes || {}
-          const score = (key) => { const k = Object.keys(th).find(k => k.toLowerCase().includes(key)); return k ? th[k].ok+'/'+th[k].total : '—' }
-          const m = Math.floor(e.temps_secondes/60), s = e.temps_secondes%60
-          const profil = profilsMap[e.user_id]
-          const nom = profil ? `${profil.prenom_affiche} ${profil.nom_affiche}` : e.prenom || '—'
-          return `<tr>
-            <td><strong>${nom}</strong></td>
-            <td><strong>${e.score}/20</strong><br><span style="font-size:11px;color:${pct>=50?'#16a34a':'#dc2626'}">${pct}%</span></td>
-            <td>${getMentionBadge(pct)}</td>
-            <td style="font-size:12px">${m}min ${s}s</td>
-            <td style="text-align:center;font-size:12px">${score('nombre')}</td>
-            <td style="text-align:center;font-size:12px">${score('géom')}</td>
-            <td style="text-align:center;font-size:12px">${score('algèbre')}</td>
-            <td style="text-align:center;font-size:12px">${score('stat')}</td>
-            <td style="text-align:center;font-size:12px">${score('fonction')}</td>
-            <td><button class="btn btn-red" onclick="debloquerExamen('${e.user_id}')">🔓 Débloquer</button></td>
-          </tr>`
-        }).join('')}</tbody></table>`}
-      </div>
-    </div>
+  const examensMap = {}
+  examens.forEach(function(e) { if (!e.abandonne) examensMap[e.user_id] = e })
 
-    <div class="section" id="section-themes">
-      <div class="card"><h2>Résultats par thème</h2>
-        <table><thead><tr><th>Thème</th><th>Sessions</th><th>Moyenne</th></tr></thead>
-        <tbody>${Object.entries(themeStats).map(([t,s])=>`<tr><td>${t}</td><td>${s.n}</td><td><strong style="color:${getCouleur(Math.round((s.ok/s.tot)*100))}">${Math.round((s.ok/s.tot)*100)}%</strong></td></tr>`).join('')}</tbody>
-        </table>
-      </div>
-    </div>
+  let html = ''
 
-    <div class="section" id="section-sessions">
-      <div class="card"><h2>Dernières sessions</h2>
-        <table><thead><tr><th>Élève</th><th>Thème</th><th>Niveau</th><th>Score</th><th>Source</th><th>Date</th></tr></thead>
-        <tbody>${rows.slice(0,30).map(r=>{
-          const profil = profilsMap[r.user_id]
-          const nom = profil ? `${profil.prenom_affiche} ${profil.nom_affiche}` : r.prenom || '—'
-          return `<tr>
-            <td><strong>${nom}</strong></td>
-            <td style="font-size:12px">${r.theme}</td>
-            <td><span class="badge">${r.difficulte}</span></td>
-            <td><strong style="color:${getCouleur(Math.round(r.score/r.total*100))}">${r.score}/${r.total}</strong></td>
-            <td>${!r.source_questions||r.source_questions==='ia'?'<span class="badge badge-ia">✨ IA</span>':'<span class="badge badge-banque">⚡ Banque</span>'}</td>
-            <td style="font-size:12px;color:#999">${new Date(r.created_at).toLocaleDateString('fr-FR')}</td>
-          </tr>`
-        }).join('')}</tbody></table>
-      </div>
-    </div>
+  html += '<div class="stats-grid">'
+  html += '<div class="stat"><div class="stat-val">' + nbEleves + '</div><div class="stat-label">Eleves actifs</div></div>'
+  html += '<div class="stat"><div class="stat-val">' + rows.length + '</div><div class="stat-label">Sessions quiz</div></div>'
+  html += '<div class="stat"><div class="stat-val">' + moy + '%</div><div class="stat-label">Moyenne generale</div></div>'
+  html += '<div class="stat stat-examen"><div class="stat-val">' + nbExamens + '</div><div class="stat-label">Examens blancs</div></div>'
+  html += '<div class="stat stat-ia"><div class="stat-val">' + nbIA + '</div><div class="stat-label">Sessions IA (' + pctIA + '%)</div><div class="progress-bar"><div class="progress-fill" style="width:' + pctIA + '%"></div></div></div>'
+  html += '<div class="stat stat-banque"><div class="stat-val">' + nbBanque + '</div><div class="stat-label">Sessions banque (' + (100-pctIA) + '%)</div><div class="progress-bar"><div class="progress-fill" style="width:' + (100-pctIA) + '%;background:#f59e0b"></div></div></div>'
+  html += '</div>'
 
-    <div class="section" id="section-ratees">
-      <div class="card"><h2>Questions les plus ratées</h2>
-        ${topRatees.length ? topRatees.map(([q,n])=>`<div class="ratee-item"><span style="font-size:12px">${q}</span><span class="ratee-count">${n}× ratée</span></div>`).join('') : '<p style="color:#666;font-size:13px">Pas encore de données.</p>'}
-      </div>
-    </div>`
+  html += '<div class="tabs">'
+  html += '<button class="tab active" id="tab-eleves" onclick="setTab(\'eleves\')">Eleves</button>'
+  html += '<button class="tab" id="tab-examens" onclick="setTab(\'examens\')">Examens Blancs</button>'
+  html += '<button class="tab" id="tab-themes" onclick="setTab(\'themes\')">Themes</button>'
+  html += '<button class="tab" id="tab-sessions" onclick="setTab(\'sessions\')">Sessions</button>'
+  html += '<button class="tab" id="tab-ratees" onclick="setTab(\'ratees\')">Questions ratees</button>'
+  html += '</div>'
+
+  html += '<div class="section active" id="section-eleves"><div class="card"><h2>Liste des eleves</h2>'
+  html += '<table><thead><tr><th>Eleve</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th><th>Examen Blanc</th><th>Actions</th></tr></thead><tbody>'
+  tousLesEleves.forEach(function(e) {
+    const examen = examensMap[e.user_id]
+    const pctMoy = e.totalQ > 0 ? Math.round((e.totalScore/e.totalQ)*100) : 0
+    let examCell = '<span style="color:#999;font-size:12px">Pas encore passe</span>'
+    if (examen) examCell = getMentionBadge(Math.round((examen.score/examen.total)*100)) + ' ' + examen.score + '/20'
+    html += '<tr>'
+    html += '<td><strong>' + e.prenom + ' ' + e.nom + '</strong></td>'
+    html += '<td style="color:#3730a3;font-size:12px">' + e.email_parent + '</td>'
+    html += '<td>' + e.sessions + '</td>'
+    html += '<td><strong style="color:' + getCouleur(pctMoy) + '">' + pctMoy + '%</strong></td>'
+    html += '<td>' + examCell + '</td>'
+    html += '<td style="display:flex;gap:4px;flex-wrap:wrap">'
+    html += '<button class="btn btn-blue" onclick="ouvrirFicheById(\'' + e.user_id + '\')">Fiche</button>'
+    if (examen) html += '<button class="btn btn-red" onclick="debloquerExamen(\'' + e.user_id + '\')">Debloquer</button>'
+    html += '</td></tr>'
+  })
+  html += '</tbody></table></div></div>'
+
+  html += '<div class="section" id="section-examens"><div class="card"><h2>Resultats Examens Blancs</h2>'
+  if (nbExamens === 0) {
+    html += '<p style="color:#666;font-size:13px">Aucun examen passe.</p>'
+  } else {
+    html += '<table><thead><tr><th>Eleve</th><th>Score</th><th>Mention</th><th>Temps</th><th>Nombres</th><th>Geometrie</th><th>Algebre</th><th>Stats</th><th>Fonctions</th><th>Action</th></tr></thead><tbody>'
+    examens.filter(function(e) { return !e.abandonne }).forEach(function(e) {
+      const pct = Math.round((e.score/e.total)*100)
+      const th = e.scores_themes || {}
+      function score(key) {
+        const k = Object.keys(th).find(function(k) { return k.toLowerCase().indexOf(key) !== -1 })
+        return k ? th[k].ok + '/' + th[k].total : '-'
+      }
+      const m = Math.floor(e.temps_secondes/60), s = e.temps_secondes%60
+      const profil = profilsMap[e.user_id]
+      const nom = profil ? profil.prenom_affiche + ' ' + profil.nom_affiche : e.prenom || '-'
+      html += '<tr>'
+      html += '<td><strong>' + nom + '</strong></td>'
+      html += '<td><strong>' + e.score + '/20</strong><br><span style="font-size:11px;color:' + (pct>=50?'#16a34a':'#dc2626') + '">' + pct + '%</span></td>'
+      html += '<td>' + getMentionBadge(pct) + '</td>'
+      html += '<td style="font-size:12px">' + m + 'min ' + s + 's</td>'
+      html += '<td style="text-align:center;font-size:12px">' + score('nombre') + '</td>'
+      html += '<td style="text-align:center;font-size:12px">' + score('geom') + '</td>'
+      html += '<td style="text-align:center;font-size:12px">' + score('algebre') + '</td>'
+      html += '<td style="text-align:center;font-size:12px">' + score('stat') + '</td>'
+      html += '<td style="text-align:center;font-size:12px">' + score('fonction') + '</td>'
+      html += '<td><button class="btn btn-red" onclick="debloquerExamen(\'' + e.user_id + '\')">Debloquer</button></td>'
+      html += '</tr>'
+    })
+    html += '</tbody></table>'
+  }
+  html += '</div></div>'
+
+  html += '<div class="section" id="section-themes"><div class="card"><h2>Resultats par theme</h2>'
+  html += '<table><thead><tr><th>Theme</th><th>Sessions</th><th>Moyenne</th></tr></thead><tbody>'
+  Object.entries(themeStats).forEach(function(entry) {
+    const t = entry[0], s = entry[1]
+    const pct = Math.round((s.ok/s.tot)*100)
+    html += '<tr><td>' + t + '</td><td>' + s.n + '</td><td><strong style="color:' + getCouleur(pct) + '">' + pct + '%</strong></td></tr>'
+  })
+  html += '</tbody></table></div></div>'
+
+  html += '<div class="section" id="section-sessions"><div class="card"><h2>Dernieres sessions</h2>'
+  html += '<table><thead><tr><th>Eleve</th><th>Theme</th><th>Niveau</th><th>Score</th><th>Source</th><th>Date</th></tr></thead><tbody>'
+  rows.slice(0,30).forEach(function(r) {
+    const profil = profilsMap[r.user_id]
+    const nom = profil ? profil.prenom_affiche + ' ' + profil.nom_affiche : r.prenom || '-'
+    const source = (!r.source_questions || r.source_questions === 'ia') ? '<span class="badge badge-ia">IA</span>' : '<span class="badge badge-banque">Banque</span>'
+    html += '<tr>'
+    html += '<td><strong>' + nom + '</strong></td>'
+    html += '<td style="font-size:12px">' + r.theme + '</td>'
+    html += '<td><span class="badge">' + r.difficulte + '</span></td>'
+    html += '<td><strong style="color:' + getCouleur(Math.round(r.score/r.total*100)) + '">' + r.score + '/' + r.total + '</strong></td>'
+    html += '<td>' + source + '</td>'
+    html += '<td style="font-size:12px;color:#999">' + new Date(r.created_at).toLocaleDateString('fr-FR') + '</td>'
+    html += '</tr>'
+  })
+  html += '</tbody></table></div></div>'
+
+  html += '<div class="section" id="section-ratees"><div class="card"><h2>Questions les plus ratees</h2>'
+  if (topRatees.length) {
+    topRatees.forEach(function(entry) {
+      html += '<div class="ratee-item"><span style="font-size:12px">' + entry[0] + '</span><span class="ratee-count">' + entry[1] + 'x ratee</span></div>'
+    })
+  } else {
+    html += '<p style="color:#666;font-size:13px">Pas encore de donnees.</p>'
+  }
+  html += '</div></div>'
+
+  document.getElementById('content').innerHTML = html
 }
+
 init()
 </script>
 </body>
