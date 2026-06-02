@@ -146,6 +146,21 @@ body {
 }
 .hero-free strong { color: #4ade80; }
 
+.hero-login {
+  display: inline-block;
+  margin-top: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,0.3);
+  padding-bottom: 1px;
+  position: relative;
+  z-index: 1;
+  transition: color 0.15s;
+}
+.hero-login:hover { color: white; border-color: white; }
+
 /* SECTION GÉNÉRIQUE */
 .section {
   padding: 2rem 1.5rem;
@@ -386,8 +401,9 @@ input:focus { outline: none; border-color: var(--navy); }
     Révise avec des <span>QCM en ligne</span><br>et réussis ton brevet
   </h1>
   <p class="hero-sub">5 exercices par jour · Corrigés immédiats · Résultats aux parents</p>
-  <a href="#form-section" class="hero-cta">Créer mon compte gratuit →</a>
+  <a href="#form-section" class="hero-cta" onclick="setModeAfterScroll('register')">Créer mon compte gratuit →</a>
   <p class="hero-free"><strong>100% gratuit</strong> · Sans carte bancaire · Sans engagement</p>
+  <a href="#form-section" class="hero-login" onclick="setModeAfterScroll('login')">Déjà inscrit ? Se connecter →</a>
 </section>
 
 <!-- ══ COMMENT ÇA MARCHE ══════════════════════ -->
@@ -561,8 +577,14 @@ input:focus { outline: none; border-color: var(--navy); }
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true }
+})
 let mode = 'login'
+
+function setModeAfterScroll(m) {
+  setTimeout(() => setMode(m), 400)
+}
 
 async function init() {
   const hash = window.location.hash
