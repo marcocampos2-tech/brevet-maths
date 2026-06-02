@@ -114,7 +114,8 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
     <button class="diff-btn" onclick="setDiff(this,'facile')">Facile</button>
     <button class="diff-btn active" onclick="setDiff(this,'moyen')">Moyen</button>
     <button class="diff-btn" onclick="setDiff(this,'difficile')">Difficile</button>
-  </div>  <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:0.5rem">🎲 Générer 5 questions</button>
+  </div>
+  <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:0.5rem">🎲 Générer 5 questions</button>
 </div>
 <div id="quiz-area"></div>
 </div>
@@ -183,17 +184,17 @@ async function init() {
   user = data.session.user
   prenom = user.user_metadata?.prenom || ''
   emailParent = user.user_metadata?.email_parent || ''
-  if (!prenom || !emailParent) {
-    const { data: profil } = await sb.from('profils')
-      .select('prenom_affiche, email_parent')
-      .eq('user_id', user.id)
-      .limit(1)
-    if (profil && profil.length > 0) {
-      prenom = prenom || profil[0].prenom_affiche || ''
-      emailParent = emailParent || profil[0].email_parent || ''
-    }
+
+  // Toujours récupérer depuis la BDD pour être sûr
+  const { data: profil } = await sb.from('profils')
+    .select('prenom_affiche, email_parent')
+    .eq('user_id', user.id)
+    .limit(1)
+  if (profil && profil.length > 0) {
+    prenom = prenom || profil[0].prenom_affiche || ''
+    emailParent = emailParent || profil[0].email_parent || ''
   }
-    
+
   document.getElementById('user-email').textContent = prenom || user.email
   if (user.user_metadata?.email_parent === PROF_EMAIL || emailParent === PROF_EMAIL) {
     document.getElementById('btn-prof').style.display = 'inline-flex'
@@ -357,29 +358,28 @@ function renderQuiz() {
   const area = document.getElementById('quiz-area')
   const nbDone = Object.keys(submitted).length
   const toutFini = nbDone === questions.length && questions.length > 0
-  if (toutFini) { 
-  // Afficher quand même la dernière correction
-  let html = ''
-  const letters = ['A','B','C','D']
-  const i = questions.length - 1
-  const q = questions[i]
-  const sel = answers[i], estAucune = submitted[i]==='aucune'
-  html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>${renderTableau(q.tableau)}${renderFigure(q.figure)}`
-  q.opts.forEach((opt,j) => {
-    let cls='option'
-    if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong'
-    html += `<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`
-  })
-  if(estAucune){
-    html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
-    html += `<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
-  } else {
-    html += `<div class="explication">${submitted[i]==='correct'?'<strong style="color:#16a34a">✓ Bravo !</strong>':`<strong style="color:#dc2626">✗ Pas tout à fait —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`
+  if (toutFini) {
+    let html = ''
+    const letters = ['A','B','C','D']
+    const i = questions.length - 1
+    const q = questions[i]
+    const sel = answers[i], estAucune = submitted[i]==='aucune'
+    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>${renderTableau(q.tableau)}${renderFigure(q.figure)}`
+    q.opts.forEach((opt,j) => {
+      let cls='option'
+      if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong'
+      html += `<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`
+    })
+    if(estAucune){
+      html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
+      html += `<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
+    } else {
+      html += `<div class="explication">${submitted[i]==='correct'?'<strong style="color:#16a34a">✓ Bravo !</strong>':`<strong style="color:#dc2626">✗ Pas tout à fait —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`
+    }
+    html += '</div>'
+    document.getElementById('quiz-area').innerHTML = html
+    return
   }
-  html += '</div>'
-  document.getElementById('quiz-area').innerHTML = html
-  return 
-}
   let html = ''
   html += `<div class="quiz-en-cours">⚠️ Quiz en cours — Ne quitte pas la page !</div>`
   if (sourceQuestions === 'banque') {
@@ -451,27 +451,66 @@ function renderResultats() {
 }
 
 async function sauvegarder() {
-  if(saved||!user||questions.length===0)return
-  const nbOk=Object.values(submitted).filter(v=>v==='correct').length
-  const nbAucune=Object.values(submitted).filter(v=>v==='aucune').length
-  const ratees=questions.filter((_,i)=>submitted[i]==='wrong').map(q=>`${theme} — ${q.chapitre||q.q.substring(0,40)}`)
-  const inconnues=questions.filter((_,i)=>submitted[i]==='aucune').map(q=>`${theme} — ${q.chapitre||q.q.substring(0,40)}`)  
+  if (saved || !user || questions.length === 0) return
+  const nbOk = Object.values(submitted).filter(v => v === 'correct').length
+  const nbAucune = Object.values(submitted).filter(v => v === 'aucune').length
+  const ratees = questions.filter((_,i) => submitted[i] === 'wrong').map(q => `${theme} — ${q.chapitre || q.q.substring(0,40)}`)
+  const inconnues = questions.filter((_,i) => submitted[i] === 'aucune').map(q => `${theme} — ${q.chapitre || q.q.substring(0,40)}`)
   try {
-    await sb.from('resultats').insert({
-      user_id:user.id,email:user.email,
-      prenom:prenom||'',email_parent:emailParent||'',
-      theme,difficulte:diff,
-      score:nbOk,total:questions.length,
-      questions_ratees:[...ratees,...inconnues.map(q=>`[Aucune idée] ${q}`)],
-      temps_secondes:chronoSecondes,aucune_idee:nbAucune,
-      source_questions:sourceQuestions
-    })
-    console.log('emailParent avant envoi:', emailParent)
-    if(emailParent){
-      fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emailParent,prenom:prenom||'',nom:user.user_metadata?.nom||'',theme,difficulte:diff,score:nbOk,total:questions.length,questionsRatees:ratees,questionsInconnues:inconnues,tempsSecondes:chronoSecondes,aucuneIdee:nbAucune})})
+    let emailFinal = emailParent
+    if (!emailFinal) {
+      const { data: profil } = await sb.from('profils')
+        .select('email_parent')
+        .eq('user_id', user.id)
+        .limit(1)
+      if (profil && profil.length > 0) {
+        emailFinal = profil[0].email_parent
+        emailParent = emailFinal
+      }
     }
-    saved=true
-  } catch(e){console.log('Erreur sauvegarde:',e.message)}
+    await sb.from('resultats').insert({
+      user_id: user.id, email: user.email,
+      prenom: prenom || '', email_parent: emailFinal || '',
+      theme, difficulte: diff,
+      score: nbOk, total: questions.length,
+      questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
+      temps_secondes: chronoSecondes, aucune_idee: nbAucune,
+      source_questions: sourceQuestions
+    })
+    if (emailFinal) {
+      console.log('Envoi email à:', emailFinal)
+      try {
+        const emailRes = await fetch('/api/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            emailParent: emailFinal,
+            prenom: prenom || '',
+            nom: user.user_metadata?.nom || '',
+            theme, difficulte: diff,
+            score: nbOk, total: questions.length,
+            questionsRatees: ratees,
+            questionsInconnues: inconnues,
+            tempsSecondes: chronoSecondes,
+            aucuneIdee: nbAucune
+          })
+        })
+        const emailData = await emailRes.json()
+        if (!emailRes.ok) {
+          console.error('Erreur email:', emailData)
+        } else {
+          console.log('✅ Email envoyé avec succès')
+        }
+      } catch(emailErr) {
+        console.error('Erreur fetch email:', emailErr.message)
+      }
+    } else {
+      console.warn('⚠️ emailParent introuvable — email non envoyé')
+    }
+    saved = true
+  } catch(e) {
+    console.log('Erreur sauvegarde:', e.message)
+  }
 }
 
 async function nouvelleRonde() {
@@ -518,7 +557,7 @@ function valider(qi){
     },300)
   }
 }
-  
+
 init()
 </script>
 </body>
