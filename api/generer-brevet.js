@@ -1,7 +1,7 @@
 // /api/generer-brevet.js
 // Génère 60 nouvelles questions pour l'examen blanc (brevet DNB)
 // et les insère dans examen_questions
-// Appel : POST /api/generer-brevet { "secret": "academika2025" }
+// Appel : POST /api/generer-brevet { "secret": "academika2026" }
 
 export default async function handler(req, res) {
 
@@ -128,7 +128,7 @@ INTERDITS ABSOLUS :
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: 'claude-opus-4-5',
           max_tokens: 8000,
           messages: [{ role: 'user', content: prompt(partie) }]
         })
