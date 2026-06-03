@@ -141,214 +141,128 @@ function getMention(pct){
 }
 
 function formatTemps(s){
-  const m=Math.floor(s/60);const sec=s%60
-  return `${m} min ${sec} sec`
+  const m=Math.floor(s/60)
+  const sec=s%60
+  return m+' min '+sec+' sec'
 }
 
 async function renderIntro() {
   const {data:historique}=await sb.from('examens_blancs')
-    .select('*')
-    .eq('user_id',user.id)
-    .eq('abandonne',false)
-    .order('created_at',{ascending:false})
-    .limit(5)
+    .select('*').eq('user_id',user.id).eq('abandonne',false)
+    .order('created_at',{ascending:false}).limit(5)
 
-  const historiqueHTML = historique && historique.length > 0
-    ? `<div style="margin-bottom:1.5rem;text-align:left">
-        <p style="font-size:13px;font-weight:600;margin-bottom:8px;color:#1a1a1a">📊 Mes derniers examens :</p>
-        ${historique.map(e => {
-          const pct=Math.round((e.score/e.total)*100)
-          const mention=getMention(pct)
-          const date=new Date(e.created_at).toLocaleDateString('fr-FR')
-          return `<div class="historique-item">
-            <span>${date}</span>
-            <span><strong>${e.score}/20</strong> — ${pct}%</span>
-            <span class="results-mention-officielle ${mention.cls}" style="font-size:11px;padding:2px 8px">${mention.officiel}</span>
-          </div>`
-        }).join('')}
-      </div>`
-    : ''
+  let historiqueHTML=''
+  if(historique&&historique.length>0){
+    let items=''
+    historique.forEach(function(e){
+      const pct=Math.round((e.score/e.total)*100)
+      const mention=getMention(pct)
+      const date=new Date(e.created_at).toLocaleDateString('fr-FR')
+      items+='<div class="historique-item"><span>'+date+'</span><span><strong>'+e.score+'/20</strong> — '+pct+'%</span><span class="results-mention-officielle '+mention.cls+'" style="font-size:11px;padding:2px 8px">'+mention.officiel+'</span></div>'
+    })
+    historiqueHTML='<div style="margin-bottom:1.5rem;text-align:left"><p style="font-size:13px;font-weight:600;margin-bottom:8px;color:#1a1a1a">📊 Mes derniers examens :</p>'+items+'</div>'
+  }
 
-  document.getElementById('main-area').innerHTML=`
-    <div class="intro-card">
-      <div class="intro-icon">📝</div>
-      <div class="intro-title">Examen Blanc Brevet</div>
-      <div class="intro-sub">Teste-toi dans les conditions du vrai brevet !<br>20 questions tirées aléatoirement sur tous les thèmes du programme.</div>
-
-      <div class="intro-deroulement">
-        <p>📋 <strong>Déroulement :</strong> Tu vas répondre à 20 questions QCM réparties sur les 4 parties du programme (Nombres, Données & Fonctions, Géométrie, Grandeurs & Algorithmique). Tu as <strong>30 minutes</strong> pour tout répondre. La correction complète s'affiche à la fin. Tu peux repasser cet examen autant de fois que tu veux — les questions changent à chaque fois !</p>
-      </div>
-
-      <div class="intro-rules">
-        <li>⏱️ <strong>30 minutes</strong> — chrono réaliste pour un QCM</li>
-        <li>📋 <strong>20 questions</strong> sur les 4 parties du programme</li>
-        <li>🔀 <strong>Questions différentes</strong> à chaque passage</li>
-        <li>🔕 <strong>Pas de correction</strong> pendant l'examen</li>
-        
-      </div>
-
-      ${historiqueHTML}
-
-      <button class="btn btn-primary btn-full" style="font-size:16px;padding:14px" onclick="demarrerExamen()">
-        🚀 Commencer l'examen
-      </button>
-    </div>`
+  document.getElementById('main-area').innerHTML=
+    '<div class="intro-card">'+
+    '<div class="intro-icon">📝</div>'+
+    '<div class="intro-title">Examen Blanc Brevet</div>'+
+    '<div class="intro-sub">Teste-toi dans les conditions du vrai brevet !<br>20 questions tirées aléatoirement sur tous les thèmes du programme.</div>'+
+    '<div class="intro-deroulement"><p>📋 <strong>Déroulement :</strong> Tu vas répondre à 20 questions QCM réparties sur les 4 parties du programme. Tu as <strong>30 minutes</strong> pour tout répondre. La correction complète s\'affiche à la fin. Les questions changent à chaque passage !</p></div>'+
+    '<div class="intro-rules">'+
+    '<li>⏱️ <strong>30 minutes</strong> — chrono réaliste</li>'+
+    '<li>📋 <strong>20 questions</strong> sur les 4 parties</li>'+
+    '<li>🔀 <strong>Questions différentes</strong> à chaque passage</li>'+
+    '<li>🔕 <strong>Pas de correction</strong> pendant l\'examen</li>'+
+    '</div>'+
+    historiqueHTML+
+    '<button class="btn btn-primary btn-full" style="font-size:16px;padding:14px" onclick="demarrerExamen()">🚀 Commencer l\'examen</button>'+
+    '</div>'
 }
 
 async function demarrerExamen() {
   document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de votre examen…</div>'
   try {
-    const parties = [1, 2, 3, 4]
-    let toutesLesQuestions = []
-
-    for (const partie of parties) {
-      const {data, error} = await sb.from('examen_questions')
-        .select('*')
-        .eq('partie', partie)
-      if (error || !data || data.length === 0) throw new Error(`Questions partie ${partie} introuvables`)
-
-      // Répartition par position dans la partie (1-5=accessible, 6-10=standard, 11-15=difficile)
-      // On utilise le numéro local dans la partie pour déterminer la difficulté
-      const total = data.length // 45 questions par partie
-      const tiers = Math.floor(total / 3)
-
-      // Trier aléatoirement dans chaque tiers
-      const shuffled = data.sort(() => Math.random() - 0.5)
-      
-      // Accessible = premier tiers, Standard = deuxième tiers, Expert = troisième tiers
-      const accessibles = shuffled.slice(0, tiers)
-      const standards   = shuffled.slice(tiers, tiers * 2)
-      const experts     = shuffled.slice(tiers * 2)
-
-      // Tirer 2 accessibles + 2 standard + 1 expert
-      const selection = [
-        ...accessibles.sort(() => Math.random() - 0.5).slice(0, 2),
-        ...standards.sort(() => Math.random() - 0.5).slice(0, 2),
-        ...experts.sort(() => Math.random() - 0.5).slice(0, 1)
-      ]
-
-      toutesLesQuestions = [...toutesLesQuestions, ...selection]
+    const parties=[1,2,3,4]
+    let toutesLesQuestions=[]
+    for(let p=0;p<parties.length;p++){
+      const partie=parties[p]
+      const res=await sb.from('examen_questions').select('*').eq('partie',partie)
+      if(res.error||!res.data||res.data.length===0) throw new Error('Questions partie '+partie+' introuvables')
+      const total=res.data.length
+      const tiers=Math.floor(total/3)
+      const shuffled=res.data.sort(function(){return Math.random()-0.5})
+      const acc=shuffled.slice(0,tiers).sort(function(){return Math.random()-0.5}).slice(0,2)
+      const std=shuffled.slice(tiers,tiers*2).sort(function(){return Math.random()-0.5}).slice(0,2)
+      const exp=shuffled.slice(tiers*2).sort(function(){return Math.random()-0.5}).slice(0,1)
+      toutesLesQuestions=toutesLesQuestions.concat(acc).concat(std).concat(exp)
     }
-
-    // Mélanger l'ordre final pour que ce ne soit pas toujours partie 1 puis 2 puis 3 puis 4
-    questions = toutesLesQuestions
-      .sort(() => Math.random() - 0.5)
-      .map(q => ({
-        q: q.question,
-        opts: typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts,
-        answer: q.answer,
-        explication: q.explication,
-        theme: q.theme,
-        chapitre: q.chapitre,
-        partie: q.partie
-      }))
-
-    answers={}; saved=false; examEnCours=true
+    questions=toutesLesQuestions.sort(function(){return Math.random()-0.5}).map(function(q){
+      return {
+        q:q.question,
+        opts:typeof q.opts==='string'?JSON.parse(q.opts):q.opts,
+        answer:q.answer,
+        explication:q.explication,
+        theme:q.theme,
+        chapitre:q.chapitre,
+        partie:q.partie
+      }
+    })
+    answers={};saved=false;examEnCours=true
     demarrerChrono()
     renderExamen()
-  } catch(e) {
-    document.getElementById('main-area').innerHTML=`<div class="loader">❌ ${e.message}</div>`
+  } catch(e){
+    document.getElementById('main-area').innerHTML='<div class="loader">❌ '+e.message+'</div>'
   }
 }
 
-async function demarrerExamen() {
-  document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de votre examen…</div>'
-  try {
-    const parties = [1, 2, 3, 4]
-    let toutesLesQuestions = []
-
-    for (const partie of parties) {
-      const {data, error} = await sb.from('examen_questions')
-        .select('*')
-        .eq('partie', partie)
-      if (error || !data || data.length === 0) throw new Error(`Questions partie ${partie} introuvables`)
-
-      // Répartition par position dans la partie (1-5=accessible, 6-10=standard, 11-15=difficile)
-      // On utilise le numéro local dans la partie pour déterminer la difficulté
-      const total = data.length // 45 questions par partie
-      const tiers = Math.floor(total / 3)
-
-      // Trier aléatoirement dans chaque tiers
-      const shuffled = data.sort(() => Math.random() - 0.5)
-      
-      // Accessible = premier tiers, Standard = deuxième tiers, Expert = troisième tiers
-      const accessibles = shuffled.slice(0, tiers)
-      const standards   = shuffled.slice(tiers, tiers * 2)
-      const experts     = shuffled.slice(tiers * 2)
-
-      // Tirer 2 accessibles + 2 standard + 1 expert
-      const selection = [
-        ...accessibles.sort(() => Math.random() - 0.5).slice(0, 2),
-        ...standards.sort(() => Math.random() - 0.5).slice(0, 2),
-        ...experts.sort(() => Math.random() - 0.5).slice(0, 1)
-      ]
-
-      toutesLesQuestions = [...toutesLesQuestions, ...selection]
-    }
-
-    // Mélanger l'ordre final pour que ce ne soit pas toujours partie 1 puis 2 puis 3 puis 4
-    questions = toutesLesQuestions
-      .sort(() => Math.random() - 0.5)
-      .map(q => ({
-        q: q.question,
-        opts: typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts,
-        answer: q.answer,
-        explication: q.explication,
-        theme: q.theme,
-        chapitre: q.chapitre,
-        partie: q.partie
-      }))
-
-    answers={}; saved=false; examEnCours=true
-    demarrerChrono()
-    renderExamen()
-  } catch(e) {
-    document.getElementById('main-area').innerHTML=`<div class="loader">❌ ${e.message}</div>`
-  }
-}
-
-function demarrerChrono() {
+function demarrerChrono(){
   chronoSecondes=30*60
   document.getElementById('chrono').style.display='flex'
   document.getElementById('chrono').classList.remove('chrono-warning')
-  chronoInterval=setInterval(()=>{
+  chronoInterval=setInterval(function(){
     chronoSecondes--
     const m=Math.floor(chronoSecondes/60).toString().padStart(2,'0')
     const s=(chronoSecondes%60).toString().padStart(2,'0')
-    document.getElementById('chrono-text').textContent=`${m}:${s}`
-    if(chronoSecondes<=300)document.getElementById('chrono').classList.add('chrono-warning')
+    document.getElementById('chrono-text').textContent=m+':'+s
+    if(chronoSecondes<=300) document.getElementById('chrono').classList.add('chrono-warning')
     if(chronoSecondes<=0){clearInterval(chronoInterval);terminerExamen()}
   },1000)
 }
 
 function arreterChrono(){clearInterval(chronoInterval)}
 
-function renderExamen() {
+function renderExamen(){
   const nbRepondues=Object.keys(answers).length
   const pct=Math.round((nbRepondues/questions.length)*100)
-  let html=''
-  html+=`<div class="progress-label"><span>${nbRepondues}/20 questions répondues</span><span>${pct}%</span></div>`
-  html+=`<div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>`
   const letters=['A','B','C','D']
-  questions.forEach((q,i)=>{
+  let html=''
+  html+='<div class="progress-label"><span>'+nbRepondues+'/20 questions répondues</span><span>'+pct+'%</span></div>'
+  html+='<div class="progress-bar-wrap"><div class="progress-bar" style="width:'+pct+'%"></div></div>'
+  questions.forEach(function(q,i){
     const sel=answers[i]
-    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/20</span><span class="badge-partie">Partie ${q.partie}</span><span class="badge-theme">${q.chapitre||q.theme}</span></div><p class="q-text">${q.q}</p>`
-    q.opts.forEach((opt,j)=>{
+    html+='<div class="card">'
+    html+='<div class="q-meta"><span class="q-num">Question '+(i+1)+'/20</span><span class="badge-partie">Partie '+q.partie+'</span><span class="badge-theme">'+(q.chapitre||q.theme)+'</span></div>'
+    html+='<p class="q-text">'+q.q+'</p>'
+    q.opts.forEach(function(opt,j){
       const cls=j===sel?'option selected':'option'
-      html+=`<div class="${cls}" onclick="pick(${i},${j})"><span class="letter">${letters[j]}</span>${opt}</div>`
+      html+='<div class="'+cls+'" onclick="pick('+i+','+j+')"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'
     })
     html+='</div>'
   })
-  html+=`<div class="sticky-btn"><button class="btn btn-green btn-full" onclick="terminerExamen()">✅ Terminer l'examen (${nbRepondues}/20 répondues)</button>${nbRepondues<20?'<p style="text-align:center;font-size:12px;color:#999;margin-top:6px">Tu peux terminer même sans tout répondre</p>':''}</div>`
+  html+='<div class="sticky-btn">'
+  html+='<button class="btn btn-green btn-full" onclick="terminerExamen()">✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)</button>'
+  if(nbRepondues<20) html+='<p style="text-align:center;font-size:12px;color:#999;margin-top:6px">Tu peux terminer même sans tout répondre</p>'
+  html+='</div>'
   document.getElementById('main-area').innerHTML=html
 }
 
 function pick(qi,oi){
   answers[qi]=oi
   renderExamen()
-  setTimeout(()=>{
+  setTimeout(function(){
     const cards=document.querySelectorAll('.card')
-    if(cards[qi+1])cards[qi+1].scrollIntoView({behavior:'smooth',block:'start'})
+    if(cards[qi+1]) cards[qi+1].scrollIntoView({behavior:'smooth',block:'start'})
   },200)
 }
 
@@ -361,100 +275,96 @@ function terminerExamen(){
 
 async function sauvegarder(){
   if(saved||!user)return
-  const nbOk=questions.filter((q,i)=>answers[i]===q.answer).length
+  const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
   const tempsSecondes=30*60-chronoSecondes
   const themes={}
-  questions.forEach((q,i)=>{
-    const key=q.theme||`Partie ${q.partie}`
+  questions.forEach(function(q,i){
+    const key=q.theme||'Partie '+q.partie
     if(!themes[key])themes[key]={ok:0,total:0}
     themes[key].total++
     if(answers[i]===q.answer)themes[key].ok++
   })
   const questionsRatees=questions
-    .filter((q,i)=>answers[i]!==undefined&&answers[i]!==q.answer)
-    .map(q=>`${q.theme} — ${q.chapitre||''}`)
+    .filter(function(q,i){return answers[i]!==undefined&&answers[i]!==q.answer})
+    .map(function(q){return q.theme+' — '+(q.chapitre||'')})
   try{
     await sb.from('examens_blancs').insert({
-      user_id:user.id,
-      email:user.email,
-      prenom:prenom||'',
-      email_parent:emailParent||'',
-      score:nbOk,
-      total:20,
-      temps_secondes:tempsSecondes,
-      scores_themes:themes,
-      questions_ratees:questionsRatees,
-      abandonne:false
+      user_id:user.id,email:user.email,
+      prenom:prenom||'',email_parent:emailParent||'',
+      score:nbOk,total:20,temps_secondes:tempsSecondes,
+      scores_themes:themes,questions_ratees:questionsRatees,abandonne:false
     })
     if(emailParent){
       fetch('/api/email-brevet-blanc',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          emailParent,
-          prenom:prenom||'',
-          nom:nom||'',
-          score:nbOk,
-          total:20,
-          pct:Math.round((nbOk/20)*100),
-          scoresThemes:themes,
-          tempsSecondes
-        })
-      }).catch(e=>console.log(e.message))
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({emailParent:emailParent,prenom:prenom||'',nom:nom||'',
+          score:nbOk,total:20,pct:Math.round((nbOk/20)*100),
+          scoresThemes:themes,tempsSecondes:tempsSecondes})
+      }).catch(function(e){console.log(e.message)})
     }
     saved=true
   }catch(e){console.log('Erreur sauvegarde:',e.message)}
 }
 
 function renderResultats(){
-  const nbOk=questions.filter((q,i)=>answers[i]===q.answer).length
+  const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
   const pct=Math.round((nbOk/20)*100)
   const mention=getMention(pct)
   const tempsSecondes=30*60-chronoSecondes
   const themes={}
-  questions.forEach((q,i)=>{
-    const key=q.theme||`Partie ${q.partie}`
+  questions.forEach(function(q,i){
+    const key=q.theme||'Partie '+q.partie
     if(!themes[key])themes[key]={ok:0,total:0}
     themes[key].total++
     if(answers[i]===q.answer)themes[key].ok++
   })
-  let html=`<div class="results-screen">
-    <div class="results-score-big">${nbOk}/20</div>
-    <div class="results-pct" style="color:${pct>=50?'#16a34a':'#dc2626'}">${pct}%</div>
-    <div class="results-mention">${mention.label}</div>
-    <div class="results-temps">⏱️ ${formatTemps(tempsSecondes)}</div>
-    <div class="results-mention-officielle ${mention.cls}">${mention.officiel}</div>
-    <div class="themes-recap">`
-  Object.entries(themes).forEach(([theme,s])=>{
+  let html='<div class="results-screen">'
+  html+='<div class="results-score-big">'+nbOk+'/20</div>'
+  html+='<div class="results-pct" style="color:'+(pct>=50?'#16a34a':'#dc2626')+'">'+pct+'%</div>'
+  html+='<div class="results-mention">'+mention.label+'</div>'
+  html+='<div class="results-temps">⏱️ '+formatTemps(tempsSecondes)+'</div>'
+  html+='<div class="results-mention-officielle '+mention.cls+'">'+mention.officiel+'</div>'
+  html+='<div class="themes-recap">'
+  Object.keys(themes).forEach(function(theme){
+    const s=themes[theme]
     const tpct=Math.round((s.ok/s.total)*100)
-    html+=`<div class="theme-score"><div class="theme-score-num" style="color:${tpct>=50?'#16a34a':'#dc2626'}">${s.ok}/${s.total}</div><div class="theme-score-label">${theme.split(' ')[0]}</div></div>`
+    html+='<div class="theme-score"><div class="theme-score-num" style="color:'+(tpct>=50?'#16a34a':'#dc2626')+'">'+s.ok+'/'+s.total+'</div><div class="theme-score-label">'+theme.split(' ')[0]+'</div></div>'
   })
-  html+=`</div>
-    <div style="font-size:12px;color:#16a34a;margin-bottom:1.5rem">✅ Résultats enregistrés</div>
-    <div class="results-btns">
-      <button class="btn btn-primary btn-full" onclick="voirCorrection()">📋 Voir la correction complète</button>
-      <button class="btn btn-green btn-full" onclick="demarrerExamen()">🔄 Recommencer un nouvel examen</button>
-      <a href="quiz.html" class="btn btn-outline btn-full">← Retour à l'accueil</a>
-    </div></div>`
+  html+='</div>'
+  html+='<div style="font-size:12px;color:#16a34a;margin-bottom:1.5rem">✅ Résultats enregistrés</div>'
+  html+='<div class="results-btns">'
+  html+='<button class="btn btn-primary btn-full" onclick="voirCorrection()">📋 Voir la correction complète</button>'
+  html+='<button class="btn btn-green btn-full" onclick="demarrerExamen()">🔄 Recommencer un nouvel examen</button>'
+  html+='<a href="quiz.html" class="btn btn-outline btn-full">← Retour à l\'accueil</a>'
+  html+='</div></div>'
   document.getElementById('main-area').innerHTML=html
   window.scrollTo({top:0,behavior:'smooth'})
 }
 
 function voirCorrection(){
   const letters=['A','B','C','D']
-  let html=`<div style="margin-bottom:1rem"><button class="btn btn-outline" onclick="renderResultats()">← Retour aux résultats</button></div>`
-  questions.forEach((q,i)=>{
-    const sel=answers[i],correct=sel===q.answer
-    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/20</span><span class="badge" style="${correct?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626'}">${correct?'✅ Correct':'❌ Raté'}</span><span class="badge-theme">${q.chapitre||q.theme}</span></div><p class="q-text">${q.q}</p>`
-    q.opts.forEach((opt,j)=>{
+  let html='<div style="margin-bottom:1rem"><button class="btn btn-outline" onclick="renderResultats()">← Retour aux résultats</button></div>'
+  questions.forEach(function(q,i){
+    const sel=answers[i]
+    const correct=sel===q.answer
+    const couleur=correct?'#16a34a':'#dc2626'
+    const titre=correct?'✓ Bravo !':'✗ Pas tout à fait.'
+    const bonneRep=!correct?'<br><strong style="color:#16a34a">La bonne réponse est : '+q.opts[q.answer]+'</strong>':''
+    html+='<div class="card">'
+    html+='<div class="q-meta"><span class="q-num">Question '+(i+1)+'/20</span>'
+    html+='<span class="badge" style="'+(correct?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626')+'">'+(correct?'✅ Correct':'❌ Raté')+'</span>'
+    html+='<span class="badge-theme">'+(q.chapitre||q.theme)+'</span></div>'
+    html+='<p class="q-text">'+q.q+'</p>'
+    q.opts.forEach(function(opt,j){
       let cls='option'
-      if(j===q.answer)cls+=' correct';else if(j===sel&&sel!==q.answer)cls+=' wrong'
-      html+=`<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`
+      if(j===q.answer) cls+=' correct'
+      else if(j===sel&&sel!==q.answer) cls+=' wrong'
+      html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'
     })
-    html+=`<div class="explication"><strong style="color:${correct?'#16a34a':'#dc2626'}">${correct?'✓ Bravo !':'✗ Pas tout à fait.'}</strong>${!correct?`<br><strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong>`:''}<br><br>${q.explication}</div>`
-    
+    html+='<div class="explication"><strong style="color:'+couleur+'">'+titre+'</strong>'+bonneRep+'<br><br>'+q.explication+'</div>'
+    html+='</div>'
   })
-  html+=`<a href="quiz.html" class="btn btn-outline btn-full" style="margin-bottom:2rem">← Retour à l'accueil</a>`
+  html+='<a href="quiz.html" class="btn btn-outline btn-full" style="margin-bottom:2rem">← Retour à l\'accueil</a>'
   document.getElementById('main-area').innerHTML=html
   window.scrollTo({top:0,behavior:'smooth'})
 }
