@@ -1,7 +1,7 @@
 // /api/generer-brevet.js
 // Génère 60 nouvelles questions pour l'examen blanc (brevet DNB)
 // et les insère dans examen_questions
-// Appel : POST /api/generer-brevet { "secret": "academika2026" }
+// Appel : POST /api/generer-brevet { "secret": "academika2025" }
 
 export default async function handler(req, res) {
 
@@ -108,7 +108,11 @@ Règles OBLIGATOIRES :
 - Exactement 4 options par question — une seule correcte
 - Les 3 mauvaises options = erreurs classiques d'élèves réalistes et crédibles — pas trop évidentes
 - La position de la bonne réponse (answer) DOIT varier équitablement : environ 3-4 fois chaque position (0,1,2,3) sur les 15 questions — JAMAIS la même position plus de 2 fois consécutives
-- L'explication doit être claire, étape par étape, avec un ton encourageant
+- L'EXPLICATION suit ce format obligatoire en 3 étapes maximum :
+  Étape 1 : rappel de la formule ou méthode en français simple (ex: "Pour trouver X, j'utilise...")
+  Étape 2 : application avec les valeurs de la question (ex: "Ici, X = ...")
+  Étape 3 : calcul final et réponse claire
+  → Ton bienveillant, JAMAIS de correction en cours de route, JAMAIS de félicitations dans l'explication, maximum 4 lignes
 - Pour les stats : inclure le tableau de données DANS le texte de la question
 - Chaque question dans un contexte différent — AUCUNE répétition de contexte
 - Langage simple et direct — une phrase = une idée
@@ -118,7 +122,8 @@ INTERDITS ABSOLUS :
 - Probabilité conditionnelle, tirage sans remise, P(A∩B), P(A∪B)
 - Fonctions du second degré, discriminant
 - Notation abstraite sans contexte concret
-- Questions identiques ou très proches des 120 questions déjà existantes`
+- Questions identiques ou très proches des 180 questions déjà existantes
+- Dans l'explication : hésiter, corriger en cours de route, utiliser "Correction :", "Revenons à..."`
 
   try {
     let allRows = []
