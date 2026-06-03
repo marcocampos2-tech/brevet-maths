@@ -1,7 +1,7 @@
 // /api/generer-brevet.js
 // Génère 60 nouvelles questions pour l'examen blanc (brevet DNB)
 // et les insère dans examen_questions
-// Appel : POST /api/generer-brevet { "secret": "academika2025" }
+// Appel : POST /api/generer-brevet { "secret": "academika2026" }
 
 export default async function handler(req, res) {
 
@@ -116,6 +116,8 @@ Règles OBLIGATOIRES :
 - Pour les stats : inclure le tableau de données DANS le texte de la question
 - Chaque question dans un contexte différent — AUCUNE répétition de contexte
 - Langage simple et direct — une phrase = une idée
+- Dans les explications : écrire "probabilité de..." en toutes lettres — JAMAIS P(), P(A), P(contraire) ou toute notation mathématique abstraite
+- Dans les explications : écrire les formules en français — ex: "Volume = (1/3) × base × hauteur" plutôt que "V = (1/3)Bh" 
 
 INTERDITS ABSOLUS :
 - Mode, classe modale
