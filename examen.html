@@ -200,21 +200,107 @@ async function demarrerExamen() {
   try {
     const parties = [1, 2, 3, 4]
     let toutesLesQuestions = []
+
     for (const partie of parties) {
-      const {data, error} = await sb.from('examen_questions').select('*').eq('partie', partie)
+      const {data, error} = await sb.from('examen_questions')
+        .select('*')
+        .eq('partie', partie)
       if (error || !data || data.length === 0) throw new Error(`Questions partie ${partie} introuvables`)
-      const melangees = data.sort(() => Math.random() - 0.5).slice(0, 5)
-      toutesLesQuestions = [...toutesLesQuestions, ...melangees]
+
+      // Répartition par position dans la partie (1-5=accessible, 6-10=standard, 11-15=difficile)
+      // On utilise le numéro local dans la partie pour déterminer la difficulté
+      const total = data.length // 45 questions par partie
+      const tiers = Math.floor(total / 3)
+
+      // Trier aléatoirement dans chaque tiers
+      const shuffled = data.sort(() => Math.random() - 0.5)
+      
+      // Accessible = premier tiers, Standard = deuxième tiers, Expert = troisième tiers
+      const accessibles = shuffled.slice(0, tiers)
+      const standards   = shuffled.slice(tiers, tiers * 2)
+      const experts     = shuffled.slice(tiers * 2)
+
+      // Tirer 2 accessibles + 2 standard + 1 expert
+      const selection = [
+        ...accessibles.sort(() => Math.random() - 0.5).slice(0, 2),
+        ...standards.sort(() => Math.random() - 0.5).slice(0, 2),
+        ...experts.sort(() => Math.random() - 0.5).slice(0, 1)
+      ]
+
+      toutesLesQuestions = [...toutesLesQuestions, ...selection]
     }
-    questions = toutesLesQuestions.map(q => ({
-      q: q.question,
-      opts: typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts,
-      answer: q.answer,
-      explication: q.explication,
-      theme: q.theme,
-      chapitre: q.chapitre,
-      partie: q.partie
-    }))
+
+    // Mélanger l'ordre final pour que ce ne soit pas toujours partie 1 puis 2 puis 3 puis 4
+    questions = toutesLesQuestions
+      .sort(() => Math.random() - 0.5)
+      .map(q => ({
+        q: q.question,
+        opts: typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts,
+        answer: q.answer,
+        explication: q.explication,
+        theme: q.theme,
+        chapitre: q.chapitre,
+        partie: q.partie
+      }))
+
+    answers={}; saved=false; examEnCours=true
+    demarrerChrono()
+    renderExamen()
+  } catch(e) {
+    document.getElementById('main-area').innerHTML=`<div class="loader">❌ ${e.message}</div>`
+  }
+}
+EOF
+Sortie
+
+async function demarrerExamen() {
+  document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de votre examen…</div>'
+  try {
+    const parties = [1, 2, 3, 4]
+    let toutesLesQuestions = []
+
+    for (const partie of parties) {
+      const {data, error} = await sb.from('examen_questions')
+        .select('*')
+        .eq('partie', partie)
+      if (error || !data || data.length === 0) throw new Error(`Questions partie ${partie} introuvables`)
+
+      // Répartition par position dans la partie (1-5=accessible, 6-10=standard, 11-15=difficile)
+      // On utilise le numéro local dans la partie pour déterminer la difficulté
+      const total = data.length // 45 questions par partie
+      const tiers = Math.floor(total / 3)
+
+      // Trier aléatoirement dans chaque tiers
+      const shuffled = data.sort(() => Math.random() - 0.5)
+      
+      // Accessible = premier tiers, Standard = deuxième tiers, Expert = troisième tiers
+      const accessibles = shuffled.slice(0, tiers)
+      const standards   = shuffled.slice(tiers, tiers * 2)
+      const experts     = shuffled.slice(tiers * 2)
+
+      // Tirer 2 accessibles + 2 standard + 1 expert
+      const selection = [
+        ...accessibles.sort(() => Math.random() - 0.5).slice(0, 2),
+        ...standards.sort(() => Math.random() - 0.5).slice(0, 2),
+        ...experts.sort(() => Math.random() - 0.5).slice(0, 1)
+      ]
+
+      toutesLesQuestions = [...toutesLesQuestions, ...selection]
+    }
+
+    // Mélanger l'ordre final pour que ce ne soit pas toujours partie 1 puis 2 puis 3 puis 4
+    questions = toutesLesQuestions
+      .sort(() => Math.random() - 0.5)
+      .map(q => ({
+        q: q.question,
+        opts: typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts,
+        answer: q.answer,
+        explication: q.explication,
+        theme: q.theme,
+        chapitre: q.chapitre,
+        partie: q.partie
+      }))
+
     answers={}; saved=false; examEnCours=true
     demarrerChrono()
     renderExamen()
