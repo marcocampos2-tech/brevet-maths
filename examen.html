@@ -451,7 +451,8 @@ function voirCorrection(){
       if(j===q.answer)cls+=' correct';else if(j===sel&&sel!==q.answer)cls+=' wrong'
       html+=`<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`
     })
-    html+=`<div class="explication"><strong>${correct?'✓ Bravo !':'✗ Pas tout à fait.'}</strong><br><br>${q.explication}</div></div>`
+    html+=`<div class="explication"><strong style="color:${correct?'#16a34a':'#dc2626'}">${correct?'✓ Bravo !':'✗ Pas tout à fait.'}</strong>${!correct?`<br><strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong>`:''}<br><br>${q.explication}</div>`
+    
   })
   html+=`<a href="quiz.html" class="btn btn-outline btn-full" style="margin-bottom:2rem">← Retour à l'accueil</a>`
   document.getElementById('main-area').innerHTML=html
