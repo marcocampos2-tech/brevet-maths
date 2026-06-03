@@ -505,7 +505,7 @@ input:focus { outline: none; border-color: var(--navy); }
     <div class="logo">
       <div>∑</div>
       <h1>ACADEMIKA</h1>
-      <p id="logo-subtitle">Prépare ton brevet avec des QCM </p>
+      <p id="logo-subtitle">Prépare ton brevet avec des QCM IA</p>
     </div>
 
     <div id="login-view">
@@ -539,6 +539,25 @@ input:focus { outline: none; border-color: var(--navy); }
         <div style="position:relative">
           <input type="password" id="password-register" placeholder="••••••••" style="padding-right:40px;width:100%">
           <span onclick="toggleMdpRegister()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil2">👁️</span>
+        </div>
+
+        <!-- Champ source — caché si UTM tract détecté -->
+        <div id="champ-source" style="margin-top:14px;display:none">
+          <label style="margin-bottom:8px;display:block">Comment avez-vous connu Academika ? <span style="color:#999;font-size:11px">(optionnel)</span></label>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer">
+              <input type="radio" name="source" value="ami" style="width:auto"> Un ami / bouche à oreille
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer">
+              <input type="radio" name="source" value="internet" style="width:auto"> Recherche internet
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer">
+              <input type="radio" name="source" value="reseaux" style="width:auto"> Réseaux sociaux
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer">
+              <input type="radio" name="source" value="autre" style="width:auto"> Autre
+            </label>
+          </div>
         </div>
       </div>
 
@@ -582,6 +601,10 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 })
 let mode = 'login'
 
+// Lire utm_source dans l'URL
+const urlParams = new URLSearchParams(window.location.search)
+const utmSource = urlParams.get('utm_source') || ''
+
 function setModeAfterScroll(m) {
   setTimeout(() => setMode(m), 400)
 }
@@ -591,6 +614,15 @@ async function init() {
   if (hash && hash.includes('type=recovery')) { afficherNouveauMdp(); return }
   const { data } = await sb.auth.getSession()
   if (data.session) window.location.href = 'quiz.html'
+}
+
+function afficherChampSource() {
+  // Si UTM tract détecté → on cache le champ (source connue automatiquement)
+  // Sinon → on affiche le champ
+  const champ = document.getElementById('champ-source')
+  if (champ) {
+    champ.style.display = utmSource ? 'none' : 'block'
+  }
 }
 
 function genererFauxEmail(prenom, nom) {
@@ -607,6 +639,7 @@ function setMode(m) {
   document.getElementById('msg').className = 'msg'
   document.getElementById('champs-connexion').style.display = m === 'login' ? 'block' : 'none'
   document.getElementById('champs-inscription').style.display = m === 'register' ? 'block' : 'none'
+  if (m === 'register') afficherChampSource()
 }
 
 async function soumettre() {
@@ -657,11 +690,19 @@ async function soumettre() {
     if (error) {
       afficherMsg('Erreur : ' + error.message, 'error')
     } else {
+      // Déterminer la source
+      let source = utmSource || ''
+      if (!source) {
+        const radioChecked = document.querySelector('input[name="source"]:checked')
+        if (radioChecked) source = radioChecked.value
+      }
+
       await sb.from('profils').insert({
         user_id: signUpData.user.id,
         prenom: prenom.toLowerCase(), nom: nom.toLowerCase(),
         prenom_affiche: prenom, nom_affiche: nom,
-        email_parent: emailParent, faux_email: fauxEmail
+        email_parent: emailParent, faux_email: fauxEmail,
+        source: source || null
       })
       fetch('/api/email-inscription', {
         method: 'POST',
