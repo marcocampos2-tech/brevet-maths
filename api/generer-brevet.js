@@ -5,6 +5,12 @@
 
 export default async function handler(req, res) {
 
+  // Headers CORS
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  if (req.method === 'OPTIONS') { res.status(200).end(); return }
+
   const { secret } = req.body || {}
   if (secret !== process.env.CRON_SECRET) {
     return res.status(401).json({ error: 'Non autorisé' })
