@@ -81,11 +81,16 @@ Difficulté : questions 1-5 facile, 6-10 moyen, 11-15 difficile`
     }
   ]
 
-  const prompt = (partie) => `Tu es un enseignant de mathématiques expert en classe de troisième et concepteur officiel de sujets pour le Diplôme National du Brevet (DNB) en France.
+  const prompt = (partie) => `Tu es un enseignant de mathématiques expert en classe de troisième et concepteur officiel de sujets pour le Diplôme National du Brevet (DNB) en France. Tu travailles avec des élèves en difficulté scolaire — les questions doivent être accessibles MAIS rigoureuses. Pas de cadeau, mais pas de piège inutile.
 
-Mission : Génère exactement 15 questions QCM indépendantes, strictement conformes au programme officiel du Brevet des Collèges, inspirées des annales 2022-2025. Chaque question doit être ancrée dans une situation concrète du quotidien (sport, argent, cuisine, construction, voyages) sauf pour les questions purement abstraites (algorithmique, puissances).
+Mission : Génère exactement 15 questions QCM indépendantes, strictement conformes au programme officiel du Brevet des Collèges, inspirées des annales 2022-2025.
 
 ${partie.instructions}
+
+STRUCTURE DE DIFFICULTÉ OBLIGATOIRE par groupe de 5 questions :
+— Questions 1 à 5 (ACCESSIBLE) : 1 seule notion, calcul direct, contexte simple, nombres entiers ou décimaux simples, énoncé court (2 lignes max)
+— Questions 6 à 10 (STANDARD) : 2 notions combinées, contexte réaliste du quotidien, calcul en 2 étapes, proche du vrai brevet
+— Questions 11 à 15 (EXPERT) : plusieurs étapes de raisonnement, formulation proche du vrai brevet DNB, contexte plus élaboré, nécessite de bien réfléchir
 
 Format obligatoire — réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après, sans backticks :
 [
@@ -95,23 +100,25 @@ Format obligatoire — réponds UNIQUEMENT avec un tableau JSON valide, sans tex
     "question": "texte de la question",
     "opts": ["option A", "option B", "option C", "option D"],
     "answer": 2,
-    "explication": "explication détaillée étape par étape"
+    "explication": "explication détaillée étape par étape, encourageante et bienveillante"
   }
 ]
 
 Règles OBLIGATOIRES :
 - Exactement 4 options par question — une seule correcte
-- Les 3 mauvaises options = erreurs classiques d'élèves réalistes
-- La position de la bonne réponse (answer) DOIT varier : utilise 0, 1, 2 et 3 de façon équilibrée sur les 15 questions — JAMAIS la même position plus de 2 fois consécutives
-- L'explication doit être claire, étape par étape
-- Pour les questions de stats avec moyenne/médiane : inclure le tableau de données DANS le texte de la question
-- Les questions similaires sont INTERDITES — chaque question doit porter sur un contexte différent
+- Les 3 mauvaises options = erreurs classiques d'élèves réalistes et crédibles — pas trop évidentes
+- La position de la bonne réponse (answer) DOIT varier équitablement : environ 3-4 fois chaque position (0,1,2,3) sur les 15 questions — JAMAIS la même position plus de 2 fois consécutives
+- L'explication doit être claire, étape par étape, avec un ton encourageant
+- Pour les stats : inclure le tableau de données DANS le texte de la question
+- Chaque question dans un contexte différent — AUCUNE répétition de contexte
+- Langage simple et direct — une phrase = une idée
 
 INTERDITS ABSOLUS :
 - Mode, classe modale
 - Probabilité conditionnelle, tirage sans remise, P(A∩B), P(A∪B)
 - Fonctions du second degré, discriminant
-- Notation abstraite sans contexte concret`
+- Notation abstraite sans contexte concret
+- Questions identiques ou très proches des 120 questions déjà existantes`
 
   try {
     let allRows = []
@@ -128,7 +135,7 @@ INTERDITS ABSOLUS :
           'anthropic-version': '2023-06-01'
         },
         body: JSON.stringify({
-          model: 'claude-opus-4-5',
+          model: 'claude-sonnet-4-20250514',
           max_tokens: 8000,
           messages: [{ role: 'user', content: prompt(partie) }]
         })
