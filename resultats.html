@@ -17,8 +17,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .nav-left { font-size: 18px; font-weight: 600; }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
 .btn:hover { background: #f5f5f0; }
-.btn-primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
-.card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
 .empty { text-align: center; color: #666; padding: 3rem; }
 .loader { text-align: center; color: #666; padding: 3rem; }
@@ -26,7 +24,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .tab { flex: 1; padding: 8px; border-radius: 8px; border: none; background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: #666; transition: all 0.15s; }
 .tab.active { background: #1a1a1a; color: white; }
 .dashboard-header { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 1.5rem; margin-bottom: 1rem; text-align: center; }
-.dashboard-score { font-size: 56px; font-weight: 700; color: #1a1a1a; line-height: 1; }
+.dashboard-score { font-size: 56px; font-weight: 700; line-height: 1; }
 .dashboard-sub { font-size: 13px; color: #999; margin-top: 8px; }
 .dashboard-stats { display: flex; justify-content: center; gap: 24px; margin-top: 16px; }
 .dashboard-stat { text-align: center; }
@@ -35,11 +33,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .theme-card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1rem 1.25rem; margin-bottom: 8px; }
 .theme-header { display: flex; justify-content: space-between; align-items: center; }
 .theme-nom { font-size: 14px; font-weight: 600; color: #1a1a1a; }
-.theme-pct { font-size: 14px; font-weight: 600; }
-.theme-statut { font-size: 11px; padding: 2px 10px; border-radius: 20px; font-weight: 600; margin-top: 2px; display: inline-block; }
-.statut-maitrise { background: #f0fdf4; color: #16a34a; border: 1px solid #16a34a; }
-.statut-encours { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
-.statut-retrav { background: #fef2f2; color: #dc2626; border: 1px solid #dc2626; }
 .theme-bar-wrap { height: 6px; background: #e8e8e4; border-radius: 3px; margin-top: 10px; }
 .theme-bar { height: 6px; border-radius: 3px; }
 .footer-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
@@ -78,9 +71,9 @@ const THEMES = ['Nombres et calculs','Géométrie','Algèbre et équations','Sta
 const ICONS = {'Nombres et calculs':'🔢','Géométrie':'📐','Algèbre et équations':'🔣','Statistiques et probabilités':'📊','Fonctions':'📈','Algorithmique':'💻'}
 
 function getStatut(pct) {
-  if (pct >= 70) return { label: 'Maîtrisé', cls: 'statut-maitrise', emoji: '🟢', color: '#16a34a' }
-  if (pct >= 50) return { label: 'En cours', cls: 'statut-encours', emoji: '🟡', color: '#f59e0b' }
-  return { label: 'À retravailler', cls: 'statut-retrav', emoji: '🔴', color: '#dc2626' }
+  if (pct >= 70) return { label: 'Maîtrisé', emoji: '🟢', color: '#16a34a' }
+  if (pct >= 50) return { label: 'En cours', emoji: '🟡', color: '#f59e0b' }
+  return { label: 'À retravailler', emoji: '🔴', color: '#dc2626' }
 }
 
 function formatTemps(s) {
@@ -102,16 +95,13 @@ async function init() {
   var session = await sb.auth.getSession()
   if (!session.data.session) { window.location.href = 'index.html'; return }
   var user = session.data.session.user
-
   var res = await sb.from('resultats').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
   var rows = res.data
-
   if (!rows || rows.length === 0) {
     document.getElementById('tab-dashboard').innerHTML = '<div class="empty">Pas encore de résultats.<br>Lance ton premier quiz !</div>'
     document.getElementById('tab-historique').innerHTML = '<div class="empty">Pas encore de résultats.<br>Lance ton premier quiz !</div>'
     return
   }
-
   renderDashboard(rows)
   renderHistorique(rows)
 }
@@ -137,14 +127,16 @@ function renderDashboard(rows) {
   THEMES.forEach(function(t) {
     if (statsByTheme[t].total === 0) return
     var pct = Math.round((statsByTheme[t].score / statsByTheme[t].total) * 100)
-    if (pct > fortPct) { fortPct = pct; fortTheme = t }
+    if (pct >= 70 && pct > fortPct) { fortPct = pct; fortTheme = t }
     if (pct < faiblePct) { faiblePct = pct; faibleTheme = t }
   })
 
   var html = ''
+
+  // Header global
   html += '<div class="dashboard-header">'
   html += '<div style="font-size:13px;color:#999;margin-bottom:4px">Score global</div>'
-  html += '<div class="dashboard-score" style="color:' + globalStatut.color + '">' + globalPct + '%</div>'
+  html += '<div class="dashboard-score" style="color:' + globalStatut.color + '">' + totalScore + '/' + totalTotal + '</div>'
   html += '<div class="dashboard-sub">' + globalStatut.emoji + ' ' + globalStatut.label + '</div>'
   html += '<div class="dashboard-stats">'
   html += '<div class="dashboard-stat"><div class="dashboard-stat-val">' + totalSessions + '</div><div class="dashboard-stat-label">sessions</div></div>'
@@ -153,11 +145,12 @@ function renderDashboard(rows) {
   if (fortTheme || faibleTheme) {
     html += '<div class="insight">'
     if (fortTheme) html += '<span class="insight-tag insight-fort">💪 Fort en : ' + fortTheme + '</span>'
-    if (faibleTheme && faibleTheme !== fortTheme) html += '<span class="insight-tag insight-faible">🎯 À travailler : ' + faibleTheme + '</span>'
+    if (faibleTheme) html += '<span class="insight-tag insight-faible">🎯 À travailler : ' + faibleTheme + '</span>'
     html += '</div>'
   }
   html += '</div>'
 
+  // Par thème
   THEMES.forEach(function(t) {
     var s = statsByTheme[t]
     if (s.total === 0) return
@@ -166,20 +159,19 @@ function renderDashboard(rows) {
     var icon = ICONS[t] || '📚'
     html += '<div class="theme-card">'
     html += '<div class="theme-header">'
-    html += '<div><div class="theme-nom">' + icon + ' ' + t + '</div>'
-    html += '<span class="theme-statut ' + statut.cls + '">' + statut.label + '</span></div>'
-    html += '<div class="theme-pct" style="color:' + statut.color + '">' + pct + '%</div>'
+    html += '<div><div class="theme-nom">' + icon + ' ' + t + '</div></div>'
+    html += '<div style="text-align:right">'
+    html += '<div style="font-size:15px;font-weight:700;color:' + statut.color + '">' + s.score + '/' + s.total + ' bonnes réponses</div>'
+    html += '<div style="font-size:11px;font-weight:600;color:' + statut.color + '">' + statut.emoji + ' ' + statut.label + '</div>'
+    html += '</div>'
     html += '</div>'
     html += '<div class="theme-bar-wrap"><div class="theme-bar" style="width:' + pct + '%;background:' + statut.color + '"></div></div>'
     html += '</div>'
   })
 
+  // Bouton
   html += '<div class="footer-btns">'
-  if (faibleTheme) {
-    html += '<a href="quiz.html" class="btn btn-green">🎯 S\'entraîner sur ' + faibleTheme + ' →</a>'
-  } else {
-    html += '<a href="quiz.html" class="btn btn-green">🎲 Faire un nouveau quiz →</a>'
-  }
+  html += '<a href="quiz.html" class="btn btn-green">💪 Continuer à réviser</a>'
   html += '</div>'
 
   document.getElementById('tab-dashboard').innerHTML = html
@@ -197,10 +189,9 @@ function renderHistorique(rows) {
     return '<div class="hist-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center">' +
       '<div><strong>' + r.theme + '</strong><span class="badge" style="margin-left:6px">' + r.difficulte + '</span><div class="hist-date">' + date + '</div></div>' +
-      '<div><div class="hist-score">' + r.score + '/' + r.total + '</div><div style="text-align:right;margin-top:2px"><span class="theme-statut ' + statut.cls + '">' + pct + '%</span></div></div>' +
+      '<div style="text-align:right"><div class="hist-score" style="color:' + statut.color + '">' + r.score + '/' + r.total + '</div><div style="font-size:11px;font-weight:600;color:' + statut.color + '">' + statut.emoji + ' ' + statut.label + '</div></div>' +
       '</div>' + ratees + '</div>'
   }).join('')
-
   document.getElementById('tab-historique').innerHTML = html
 }
 
