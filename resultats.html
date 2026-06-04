@@ -6,67 +6,204 @@
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1a1a1a">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Brevet Maths">
-<title>Mes résultats — Brevet Maths</title>
+<meta name="apple-mobile-web-app-title" content="ACADEMIKA">
+<title>Mes résultats — ACADEMIKA</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
 .container { max-width: 680px; margin: 0 auto; padding: 1rem; }
-nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e8e8e4; margin-bottom: 1.5rem; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e8e8e4; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px; }
+.nav-left { font-size: 18px; font-weight: 600; }
 .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
 .btn:hover { background: #f5f5f0; }
+.btn-primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
 .card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
-h1 { font-size: 20px; font-weight: 600; }
-.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; margin-left: 8px; }
-.score { font-size: 22px; font-weight: 600; }
-.date { font-size: 12px; color: #999; margin-top: 4px; }
-.ratee { font-size: 12px; color: #666; padding: 4px 0; border-top: 1px solid #f0f0ec; }
-.ratee-label { font-size: 12px; color: #dc2626; margin: 8px 0 4px; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
 .empty { text-align: center; color: #666; padding: 3rem; }
 .loader { text-align: center; color: #666; padding: 3rem; }
+.tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; background: white; border-radius: 10px; padding: 4px; border: 1px solid #e8e8e4; }
+.tab { flex: 1; padding: 8px; border-radius: 8px; border: none; background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: #666; transition: all 0.15s; }
+.tab.active { background: #1a1a1a; color: white; }
+.dashboard-header { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 1.5rem; margin-bottom: 1rem; text-align: center; }
+.dashboard-score { font-size: 56px; font-weight: 700; color: #1a1a1a; line-height: 1; }
+.dashboard-sub { font-size: 13px; color: #999; margin-top: 8px; }
+.dashboard-stats { display: flex; justify-content: center; gap: 24px; margin-top: 16px; }
+.dashboard-stat { text-align: center; }
+.dashboard-stat-val { font-size: 20px; font-weight: 600; color: #1a1a1a; }
+.dashboard-stat-label { font-size: 11px; color: #999; margin-top: 2px; }
+.theme-card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1rem 1.25rem; margin-bottom: 8px; }
+.theme-header { display: flex; justify-content: space-between; align-items: center; }
+.theme-nom { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+.theme-pct { font-size: 14px; font-weight: 600; }
+.theme-statut { font-size: 11px; padding: 2px 10px; border-radius: 20px; font-weight: 600; margin-top: 2px; display: inline-block; }
+.statut-maitrise { background: #f0fdf4; color: #16a34a; border: 1px solid #16a34a; }
+.statut-encours { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
+.statut-retrav { background: #fef2f2; color: #dc2626; border: 1px solid #dc2626; }
+.theme-bar-wrap { height: 6px; background: #e8e8e4; border-radius: 3px; margin-top: 10px; }
+.theme-bar { height: 6px; border-radius: 3px; }
+.footer-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
+.btn-green { background: #16a34a; color: white; border-color: #16a34a; font-size: 15px; padding: 14px; justify-content: center; width: 100%; }
+.btn-green:hover { background: #15803d; }
+.hist-card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
+.hist-score { font-size: 22px; font-weight: 600; }
+.hist-date { font-size: 12px; color: #999; margin-top: 4px; }
+.ratee { font-size: 12px; color: #666; padding: 4px 0; border-top: 1px solid #f0f0ec; }
+.ratee-label { font-size: 12px; color: #dc2626; margin: 8px 0 4px; }
+.insight { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+.insight-tag { font-size: 12px; padding: 4px 10px; border-radius: 20px; }
+.insight-fort { background: #f0fdf4; color: #16a34a; border: 1px solid #dcfce7; }
+.insight-faible { background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
 </style>
 </head>
 <body>
 <div class="container">
   <nav>
+    <div class="nav-left">∑ ACADEMIKA</div>
     <a href="quiz.html" class="btn">← Retour au quiz</a>
-    <h1>Mes résultats</h1>
   </nav>
-  <div id="content"><div class="loader">Chargement…</div></div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('dashboard')">📊 Tableau de bord</button>
+    <button class="tab" onclick="switchTab('historique')">📋 Historique</button>
+  </div>
+  <div id="tab-dashboard"><div class="loader">Chargement...</div></div>
+  <div id="tab-historique" style="display:none"><div class="loader">Chargement...</div></div>
 </div>
-
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
+const THEMES = ['Nombres et calculs','Géométrie','Algèbre et équations','Statistiques et probabilités','Fonctions','Algorithmique']
+const ICONS = {'Nombres et calculs':'🔢','Géométrie':'📐','Algèbre et équations':'🔣','Statistiques et probabilités':'📊','Fonctions':'📈','Algorithmique':'💻'}
+
+function getStatut(pct) {
+  if (pct >= 70) return { label: 'Maîtrisé', cls: 'statut-maitrise', emoji: '🟢', color: '#16a34a' }
+  if (pct >= 50) return { label: 'En cours', cls: 'statut-encours', emoji: '🟡', color: '#f59e0b' }
+  return { label: 'À retravailler', cls: 'statut-retrav', emoji: '🔴', color: '#dc2626' }
+}
+
+function formatTemps(s) {
+  var h = Math.floor(s / 3600)
+  var m = Math.floor((s % 3600) / 60)
+  if (h > 0) return h + 'h' + (m > 0 ? m + 'min' : '')
+  return m + ' min'
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(function(t, i) {
+    t.classList.toggle('active', (i === 0 && tab === 'dashboard') || (i === 1 && tab === 'historique'))
+  })
+  document.getElementById('tab-dashboard').style.display = tab === 'dashboard' ? 'block' : 'none'
+  document.getElementById('tab-historique').style.display = tab === 'historique' ? 'block' : 'none'
+}
+
 async function init() {
-  const { data } = await sb.auth.getSession()
-  if (!data.session) { window.location.href = 'index.html'; return }
-  const { data: rows } = await sb.from('resultats').select('*')
-    .eq('user_id', data.session.user.id).order('created_at', { ascending: false })
-  const content = document.getElementById('content')
+  var session = await sb.auth.getSession()
+  if (!session.data.session) { window.location.href = 'index.html'; return }
+  var user = session.data.session.user
+
+  var res = await sb.from('resultats').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+  var rows = res.data
+
   if (!rows || rows.length === 0) {
-    content.innerHTML = '<div class="empty">Pas encore de résultats.<br>Lance ton premier quiz !</div>'
+    document.getElementById('tab-dashboard').innerHTML = '<div class="empty">Pas encore de résultats.<br>Lance ton premier quiz !</div>'
+    document.getElementById('tab-historique').innerHTML = '<div class="empty">Pas encore de résultats.<br>Lance ton premier quiz !</div>'
     return
   }
-  content.innerHTML = rows.map(r => `
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <strong>${r.theme}</strong>
-          <span class="badge">${r.difficulte}</span>
-          <div class="date">${new Date(r.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}</div>
-        </div>
-        <div class="score">${r.score}/${r.total}</div>
-      </div>
-      ${r.questions_ratees?.length ? `
-        <div class="ratee-label">Questions ratées :</div>
-        ${r.questions_ratees.map(q=>`<div class="ratee">• ${q}</div>`).join('')}
-      ` : ''}
-    </div>`).join('')
+
+  renderDashboard(rows)
+  renderHistorique(rows)
 }
+
+function renderDashboard(rows) {
+  var totalSessions = rows.length
+  var totalSecondes = rows.reduce(function(s, r) { return s + (r.temps_secondes || 0) }, 0)
+  var totalScore = rows.reduce(function(s, r) { return s + (r.score || 0) }, 0)
+  var totalTotal = rows.reduce(function(s, r) { return s + (r.total || 5) }, 0)
+  var globalPct = totalTotal > 0 ? Math.round((totalScore / totalTotal) * 100) : 0
+  var globalStatut = getStatut(globalPct)
+
+  var statsByTheme = {}
+  THEMES.forEach(function(t) { statsByTheme[t] = { score: 0, total: 0 } })
+  rows.forEach(function(r) {
+    if (statsByTheme[r.theme] !== undefined) {
+      statsByTheme[r.theme].score += r.score || 0
+      statsByTheme[r.theme].total += r.total || 5
+    }
+  })
+
+  var fortTheme = '', faibleTheme = '', fortPct = -1, faiblePct = 101
+  THEMES.forEach(function(t) {
+    if (statsByTheme[t].total === 0) return
+    var pct = Math.round((statsByTheme[t].score / statsByTheme[t].total) * 100)
+    if (pct > fortPct) { fortPct = pct; fortTheme = t }
+    if (pct < faiblePct) { faiblePct = pct; faibleTheme = t }
+  })
+
+  var html = ''
+  html += '<div class="dashboard-header">'
+  html += '<div style="font-size:13px;color:#999;margin-bottom:4px">Score global</div>'
+  html += '<div class="dashboard-score" style="color:' + globalStatut.color + '">' + globalPct + '%</div>'
+  html += '<div class="dashboard-sub">' + globalStatut.emoji + ' ' + globalStatut.label + '</div>'
+  html += '<div class="dashboard-stats">'
+  html += '<div class="dashboard-stat"><div class="dashboard-stat-val">' + totalSessions + '</div><div class="dashboard-stat-label">sessions</div></div>'
+  html += '<div class="dashboard-stat"><div class="dashboard-stat-val">' + formatTemps(totalSecondes) + '</div><div class="dashboard-stat-label">temps total</div></div>'
+  html += '</div>'
+  if (fortTheme || faibleTheme) {
+    html += '<div class="insight">'
+    if (fortTheme) html += '<span class="insight-tag insight-fort">💪 Fort en : ' + fortTheme + '</span>'
+    if (faibleTheme && faibleTheme !== fortTheme) html += '<span class="insight-tag insight-faible">🎯 À travailler : ' + faibleTheme + '</span>'
+    html += '</div>'
+  }
+  html += '</div>'
+
+  THEMES.forEach(function(t) {
+    var s = statsByTheme[t]
+    if (s.total === 0) return
+    var pct = Math.round((s.score / s.total) * 100)
+    var statut = getStatut(pct)
+    var icon = ICONS[t] || '📚'
+    html += '<div class="theme-card">'
+    html += '<div class="theme-header">'
+    html += '<div><div class="theme-nom">' + icon + ' ' + t + '</div>'
+    html += '<span class="theme-statut ' + statut.cls + '">' + statut.label + '</span></div>'
+    html += '<div class="theme-pct" style="color:' + statut.color + '">' + pct + '%</div>'
+    html += '</div>'
+    html += '<div class="theme-bar-wrap"><div class="theme-bar" style="width:' + pct + '%;background:' + statut.color + '"></div></div>'
+    html += '</div>'
+  })
+
+  html += '<div class="footer-btns">'
+  if (faibleTheme) {
+    html += '<a href="quiz.html" class="btn btn-green">🎯 S\'entraîner sur ' + faibleTheme + ' →</a>'
+  } else {
+    html += '<a href="quiz.html" class="btn btn-green">🎲 Faire un nouveau quiz →</a>'
+  }
+  html += '</div>'
+
+  document.getElementById('tab-dashboard').innerHTML = html
+}
+
+function renderHistorique(rows) {
+  var html = rows.map(function(r) {
+    var pct = Math.round((r.score / r.total) * 100)
+    var statut = getStatut(pct)
+    var date = new Date(r.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    var ratees = ''
+    if (r.questions_ratees && r.questions_ratees.length) {
+      ratees = '<div class="ratee-label">Questions ratées :</div>' + r.questions_ratees.map(function(q) { return '<div class="ratee">• ' + q + '</div>' }).join('')
+    }
+    return '<div class="hist-card">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<div><strong>' + r.theme + '</strong><span class="badge" style="margin-left:6px">' + r.difficulte + '</span><div class="hist-date">' + date + '</div></div>' +
+      '<div><div class="hist-score">' + r.score + '/' + r.total + '</div><div style="text-align:right;margin-top:2px"><span class="theme-statut ' + statut.cls + '">' + pct + '%</span></div></div>' +
+      '</div>' + ratees + '</div>'
+  }).join('')
+
+  document.getElementById('tab-historique').innerHTML = html
+}
+
 init()
 </script>
 </body>
