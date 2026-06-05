@@ -127,7 +127,6 @@ const sb     = supabase.createClient(SB_URL, SB_KEY)
 
 const THEMES  = ['Nombres et calculs','Géométrie','Algèbre et équations','Statistiques et probabilités','Fonctions','Algorithmique']
 const THEMES_SHORT = ['Nombres','Géométrie','Algèbre','Stats','Fonctions','Algo']
-const NIVEAUX = ['facile','moyen','difficile']
 
 let ROWS = [], EXAMENS = [], PROFILS = {}, ELEVES = []
 
@@ -158,6 +157,19 @@ function mentionLabel(p) {
   if (p >= 60) return 'Assez Bien'
   if (p >= 50) return 'Admis'
   return 'Non admis'
+}
+
+function scoresExamen(th) {
+  const sc = key => {
+    const k = Object.keys(th).find(k => k.toLowerCase().includes(key))
+    return k ? th[k].ok+'/'+th[k].total : '—'
+  }
+  return {
+    nombres:   sc('nombre'),
+    geo:       sc('espace') || sc('geom'),
+    stats:     sc('organisation') || sc('stat'),
+    grandeurs: sc('grandeur') || sc('algo')
+  }
 }
 
 async function logout() { await sb.auth.signOut(); location.href = 'index.html' }
@@ -222,7 +234,7 @@ function openFiche(userId) {
   if (exam) {
     const ep = pct(exam.score, exam.total)
     body += '<div style="background:#eef2ff;border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">'
-    body += '<div style="font-size:13px;font-weight:700;color:#3730a3">📝 Examen blanc</div>'
+    body += '<div style="font-size:13px;font-weight:700;color:#3730a3">📝 Dernier examen blanc</div>'
     body += '<div style="text-align:right">'
     body += '<div style="font-size:16px;font-weight:700;color:'+color(ep)+'">'+exam.score+'/20</div>'
     body += '<div style="font-size:11px;color:'+color(ep)+';font-weight:600">'+mentionLabel(ep)+'</div>'
@@ -308,14 +320,6 @@ async function envoyerBilan(userId) {
   }
 }
 
-async function debloquerExamen(userId) {
-  const e = ELEVES.find(x => x.user_id === userId)
-  if (!confirm('Débloquer l\'examen pour '+(e?.prenom||'cet élève')+' ?')) return
-  const { error } = await sb.from('examens_blancs').delete().eq('user_id', userId)
-  if (error) { alert('Erreur : '+error.message); return }
-  alert('Examen débloqué !'); init()
-}
-
 async function ajouterQuestion() {
   const theme       = document.getElementById('bq-theme').value
   const difficulte  = document.getElementById('bq-diff').value
@@ -383,7 +387,7 @@ function render() {
   ROWS.forEach(r=>(r.questions_ratees||[]).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1))
   const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
   const examMap = {}
-  EXAMENS.filter(e=>!e.abandonne).forEach(e=>examMap[e.user_id]=e)
+  EXAMENS.filter(e=>!e.abandonne).forEach(e=>{ if(!examMap[e.user_id]) examMap[e.user_id]=e })
 
   let h = ''
   h += '<div class="stats">'
@@ -410,24 +414,23 @@ function render() {
   h += '<div style="overflow-x:auto">'
   h += '<table class="dash-table"><thead><tr><th>Élève</th><th>Global</th>'
   THEMES_SHORT.forEach(t => { h += '<th>'+t+'</th>' })
-  h += '<th>Examen blanc</th>'
-  h += '</tr></thead><tbody>'
+  h += '<th>Examen blanc</th></tr></thead><tbody>'
 
   ELEVES.forEach(e => {
     const rows = ROWS.filter(r => r.user_id === e.user_id)
     const exam = examMap[e.user_id]
+    const examCell = !exam
+      ? '<td style="color:#999;font-size:11px">—</td>'
+      : (()=>{ const ep=pct(exam.score,exam.total); return '<td><span style="color:'+color(ep)+';font-weight:700">'+exam.score+'/20</span><br><span style="font-size:10px;color:'+color(ep)+'">'+mentionLabel(ep)+'</span></td>' })()
 
     if (rows.length === 0) {
       h += '<tr><td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></td><td style="color:#999">—</td>'
       THEMES.forEach(() => { h += '<td style="color:#999">—</td>' })
-      h += '<td style="color:#999">'+(exam ? pct(exam.score,exam.total)+'% — '+mentionLabel(pct(exam.score,exam.total)) : '—')+'</td>'
-      h += '</tr>'; return
+      h += examCell + '</tr>'; return
     }
-
     const globalScore = rows.reduce((a,r)=>a+r.score,0)
     const globalTot   = rows.reduce((a,r)=>a+r.total,0)
     const globalPct   = pct(globalScore, globalTot)
-
     h += '<tr>'
     h += '<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></td>'
     h += '<td><strong style="color:'+color(globalPct)+'">'+globalPct+'%</strong></td>'
@@ -439,17 +442,11 @@ function render() {
       const p   = pct(ok, tot)
       h += '<td><span style="color:'+color(p)+';font-weight:600">'+emoji(p)+' '+p+'%</span></td>'
     })
-    if (!exam) {
-      h += '<td style="color:#999;font-size:11px">—</td>'
-    } else {
-      const ep = pct(exam.score, exam.total)
-      h += '<td><span style="color:'+color(ep)+';font-weight:700">'+exam.score+'/20</span><br><span style="font-size:10px;color:'+color(ep)+'">'+mentionLabel(ep)+'</span></td>'
-    }
-    h += '</tr>'
+    h += examCell + '</tr>'
   })
 
   h += '</tbody></table></div>'
-  h += '<p style="font-size:11px;color:#888;margin-top:10px">🟢 ≥70% Maîtrisé | 🟡 50-69% En cours | 🔴 &lt;50% À retravailler — Cliquer sur le prénom pour la fiche détaillée</p>'
+  h += '<p style="font-size:11px;color:#888;margin-top:10px">🟢 ≥70% Maîtrisé | 🟡 50-69% En cours | 🔴 &lt;50% À retravailler — Cliquer sur le prénom pour la fiche</p>'
   h += '</div></div>'
 
   h += '<div class="section" id="sec-eleves"><div class="card">'
@@ -460,9 +457,7 @@ function render() {
     const exam = examMap[e.user_id]
     const examCell = exam ? mentionBadge(pct(exam.score,exam.total))+' <span style="font-size:12px">'+exam.score+'/20</span>' : '<span style="color:#999;font-size:12px">—</span>'
     h += '<tr><td><strong>'+e.prenom+' '+e.nom+'</strong></td><td style="color:#2563eb;font-size:12px">'+e.email_parent+'</td><td>'+e.sessions+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td><td>'+examCell+'</td>'
-    h += '<td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">Fiche</button>'
-    if (exam) h += '<button class="btn btn-sm btn-red" onclick="debloquerExamen(\''+e.user_id+'\')">Débloquer</button>'
-    h += '</td></tr>'
+    h += '<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">Fiche</button></td></tr>'
   })
   h += '</tbody></table></div></div>'
 
@@ -471,15 +466,23 @@ function render() {
   if (!examensValides.length) {
     h += '<p class="empty">Aucun examen passé.</p>'
   } else {
-    h += '<table class="tbl"><thead><tr><th>Élève</th><th>Score</th><th>Mention</th><th>Temps</th><th>Nombres</th><th>Géométrie</th><th>Algèbre</th><th>Stats</th><th>Action</th></tr></thead><tbody>'
+    h += '<table class="tbl"><thead><tr><th>Élève</th><th>Score</th><th>Mention</th><th>Temps</th><th>Nombres</th><th>Organisation</th><th>Géométrie</th><th>Grandeurs</th></tr></thead><tbody>'
     examensValides.forEach(e=>{
       const p = pct(e.score,e.total)
       const th = e.scores_themes||{}
-      const sc = key=>{ const k=Object.keys(th).find(k=>k.toLowerCase().includes(key)); return k?th[k].ok+'/'+th[k].total:'—' }
+      const sc = scoresExamen(th)
       const mins=Math.floor(e.temps_secondes/60), secs=e.temps_secondes%60
       const profil=PROFILS[e.user_id]
       const nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:e.prenom||'—'
-      h += '<tr><td><strong>'+nom+'</strong></td><td><strong>'+e.score+'/20</strong> <span style="font-size:11px;color:'+(p>=50?'#16a34a':'#dc2626')+'">'+p+'%</span></td><td>'+mentionBadge(p)+'</td><td style="font-size:12px">'+fmt(mins,secs)+'</td><td style="text-align:center;font-size:12px">'+sc('nombre')+'</td><td style="text-align:center;font-size:12px">'+sc('geom')+'</td><td style="text-align:center;font-size:12px">'+sc('algebre')+'</td><td style="text-align:center;font-size:12px">'+sc('stat')+'</td><td><button class="btn btn-sm btn-red" onclick="debloquerExamen(\''+e.user_id+'\')">Débloquer</button></td></tr>'
+      h += '<tr><td><strong>'+nom+'</strong></td>'
+      h += '<td><strong>'+e.score+'/20</strong> <span style="font-size:11px;color:'+(p>=50?'#16a34a':'#dc2626')+'">'+p+'%</span></td>'
+      h += '<td>'+mentionBadge(p)+'</td>'
+      h += '<td style="font-size:12px">'+fmt(mins,secs)+'</td>'
+      h += '<td style="text-align:center;font-size:12px">'+sc.nombres+'</td>'
+      h += '<td style="text-align:center;font-size:12px">'+sc.stats+'</td>'
+      h += '<td style="text-align:center;font-size:12px">'+sc.geo+'</td>'
+      h += '<td style="text-align:center;font-size:12px">'+sc.grandeurs+'</td>'
+      h += '</tr>'
     })
     h += '</tbody></table>'
   }
