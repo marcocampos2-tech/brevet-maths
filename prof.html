@@ -119,7 +119,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <div id="fiche-body"></div>
   </div>
 </div>
-
 <script>
 const SB_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SB_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
@@ -151,6 +150,14 @@ function mentionBadge(p) {
   if (p >= 60) return '<span class="badge badge-ab">Assez Bien</span>'
   if (p >= 50) return '<span class="badge badge-admis">Admis</span>'
   return '<span class="badge badge-insuf">Non admis</span>'
+}
+
+function mentionLabel(p) {
+  if (p >= 80) return 'Très Bien'
+  if (p >= 70) return 'Bien'
+  if (p >= 60) return 'Assez Bien'
+  if (p >= 50) return 'Admis'
+  return 'Non admis'
 }
 
 async function logout() { await sb.auth.signOut(); location.href = 'index.html' }
@@ -206,10 +213,21 @@ function openFiche(userId) {
 
   let body = ''
   body += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem">'
-  body += miniStat(moyPct+'%', 'Moyenne', color(moyPct))
+  body += miniStat(moyPct+'%', 'Moyenne quiz', color(moyPct))
   body += miniStat(rows.length, 'Sessions', '#111')
   body += miniStat(fmtTemps(tempsTot), 'Temps total', '#111')
   body += '</div>'
+
+  const exam = EXAMENS.filter(ex => !ex.abandonne).find(ex => ex.user_id === userId)
+  if (exam) {
+    const ep = pct(exam.score, exam.total)
+    body += '<div style="background:#eef2ff;border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">'
+    body += '<div style="font-size:13px;font-weight:700;color:#3730a3">📝 Examen blanc</div>'
+    body += '<div style="text-align:right">'
+    body += '<div style="font-size:16px;font-weight:700;color:'+color(ep)+'">'+exam.score+'/20</div>'
+    body += '<div style="font-size:11px;color:'+color(ep)+';font-weight:600">'+mentionLabel(ep)+'</div>'
+    body += '</div></div>'
+  }
 
   THEMES.forEach(t => {
     const s = themes[t]
@@ -392,17 +410,24 @@ function render() {
   h += '<div style="overflow-x:auto">'
   h += '<table class="dash-table"><thead><tr><th>Élève</th><th>Global</th>'
   THEMES_SHORT.forEach(t => { h += '<th>'+t+'</th>' })
+  h += '<th>Examen blanc</th>'
   h += '</tr></thead><tbody>'
+
   ELEVES.forEach(e => {
     const rows = ROWS.filter(r => r.user_id === e.user_id)
+    const exam = examMap[e.user_id]
+
     if (rows.length === 0) {
-      h += '<tr><td>'+e.prenom+' '+e.nom+'</td><td style="color:#999">—</td>'
+      h += '<tr><td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></td><td style="color:#999">—</td>'
       THEMES.forEach(() => { h += '<td style="color:#999">—</td>' })
+      h += '<td style="color:#999">'+(exam ? pct(exam.score,exam.total)+'% — '+mentionLabel(pct(exam.score,exam.total)) : '—')+'</td>'
       h += '</tr>'; return
     }
+
     const globalScore = rows.reduce((a,r)=>a+r.score,0)
     const globalTot   = rows.reduce((a,r)=>a+r.total,0)
     const globalPct   = pct(globalScore, globalTot)
+
     h += '<tr>'
     h += '<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></td>'
     h += '<td><strong style="color:'+color(globalPct)+'">'+globalPct+'%</strong></td>'
@@ -414,10 +439,17 @@ function render() {
       const p   = pct(ok, tot)
       h += '<td><span style="color:'+color(p)+';font-weight:600">'+emoji(p)+' '+p+'%</span></td>'
     })
+    if (!exam) {
+      h += '<td style="color:#999;font-size:11px">—</td>'
+    } else {
+      const ep = pct(exam.score, exam.total)
+      h += '<td><span style="color:'+color(ep)+';font-weight:700">'+exam.score+'/20</span><br><span style="font-size:10px;color:'+color(ep)+'">'+mentionLabel(ep)+'</span></td>'
+    }
     h += '</tr>'
   })
+
   h += '</tbody></table></div>'
-  h += '<p style="font-size:11px;color:#888;margin-top:10px">🟢 ≥70% Maîtrisé | 🟡 50-69% En cours | 🔴 &lt;50% À retravailler — Cliquer sur le prénom pour la fiche</p>'
+  h += '<p style="font-size:11px;color:#888;margin-top:10px">🟢 ≥70% Maîtrisé | 🟡 50-69% En cours | 🔴 &lt;50% À retravailler — Cliquer sur le prénom pour la fiche détaillée</p>'
   h += '</div></div>'
 
   h += '<div class="section" id="sec-eleves"><div class="card">'
