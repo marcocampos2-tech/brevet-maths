@@ -493,15 +493,47 @@ function render() {
   Object.entries(themeStats).forEach(([t,s])=>{ const p=pct(s.ok,s.tot); h+='<tr><td>'+t+'</td><td>'+s.n+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td></tr>' })
   h += '</tbody></table></div></div>'
 
-  h += '<div class="section" id="sec-sessions"><div class="card"><div class="card-title">30 dernières sessions</div>'
-  h += '<table class="tbl"><thead><tr><th>Élève</th><th>Thème</th><th>Niveau</th><th>Score</th><th>Source</th><th>Date</th></tr></thead><tbody>'
-  ROWS.slice(0,30).forEach(r=>{
-    const profil=PROFILS[r.user_id]
-    const nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:r.prenom||'—'
-    const src=(!r.source_questions||r.source_questions==='ia')?'<span class="badge badge-ia">IA</span>':'<span class="badge badge-banque">Banque</span>'
-    const p=pct(r.score,r.total)
-    h+='<tr><td><strong>'+nom+'</strong></td><td style="font-size:12px">'+r.theme+'</td><td><span class="badge badge-blue">'+r.difficulte+'</span></td><td><strong style="color:'+color(p)+'">'+r.score+'/'+r.total+'</strong></td><td>'+src+'</td><td style="font-size:12px;color:#999">'+dateStr(r.created_at)+'</td></tr>'
-  })
+  h += '<div class="section" id="sec-sessions"><div class="card"><div class="card-title">30 dernières activités</div>'
+  h += '<table class="tbl"><thead><tr><th>Élève</th><th>Type</th><th>Détail</th><th>Score</th><th>Date</th></tr></thead><tbody>'
+
+  const toutesActivites = [
+    ...ROWS.map(r => ({
+      user_id: r.user_id,
+      type: 'quiz',
+      detail: r.theme + ' — ' + r.difficulte,
+      score: r.score,
+      total: r.total,
+      created_at: r.created_at
+    })),
+    ...EXAMENS.filter(e => !e.abandonne).map(e => ({
+      user_id: e.user_id,
+      type: 'examen',
+      detail: 'Examen blanc',
+      score: e.score,
+      total: e.total,
+      created_at: e.created_at
+    }))
+  ]
+
+  toutesActivites
+    .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, 30)
+    .forEach(r => {
+      const profil = PROFILS[r.user_id]
+      const nom = profil ? profil.prenom_affiche + ' ' + profil.nom_affiche : '—'
+      const p = pct(r.score, r.total)
+      const typeBadge = r.type === 'examen'
+        ? '<span class="badge badge-blue">📝 Examen blanc</span>'
+        : '<span class="badge badge-banque">🎲 Quiz</span>'
+      h += '<tr>'
+      h += '<td><strong>' + nom + '</strong></td>'
+      h += '<td>' + typeBadge + '</td>'
+      h += '<td style="font-size:12px;color:#555">' + r.detail + '</td>'
+      h += '<td><strong style="color:' + color(p) + '">' + r.score + '/' + r.total + '</strong></td>'
+      h += '<td style="font-size:12px;color:#999">' + dateStr(r.created_at) + '</td>'
+      h += '</tr>'
+    })
+
   h += '</tbody></table></div></div>'
 
   h += '<div class="section" id="sec-ratees"><div class="card"><div class="card-title">Questions les plus ratées</div>'
