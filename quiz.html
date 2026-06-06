@@ -468,17 +468,24 @@ async function sauvegarder() {
         emailParent = emailFinal
       }
     }
-    await sb.from('resultats').insert({
+
+    // Récupérer l'ID de la session insérée
+    const { data: inserted, error } = await sb.from('resultats').insert({
       user_id: user.id, email: user.email,
       prenom: prenom || '', email_parent: emailFinal || '',
       theme, difficulte: diff,
       score: nbOk, total: questions.length,
       questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
       temps_secondes: chronoSecondes, aucune_idee: nbAucune,
-      source_questions: sourceQuestions
-    })
+      source_questions: sourceQuestions,
+      alerte_envoyee: false
+    }).select('id').single()
+
+    if (error) { console.log('Erreur insert:', error.message); return }
+
+    const resultatsId = inserted?.id
+
     if (emailFinal) {
-      console.log('Envoi email à:', emailFinal)
       try {
         const emailRes = await fetch('/api/email', {
           method: 'POST',
@@ -490,29 +497,25 @@ async function sauvegarder() {
             theme, difficulte: diff,
             score: nbOk, total: questions.length,
             questionsRatees: ratees,
-            questionsInconnues: inconnues,
             tempsSecondes: chronoSecondes,
-            aucuneIdee: nbAucune
+            resultatsId
           })
         })
         const emailData = await emailRes.json()
-        if (!emailRes.ok) {
-          console.error('Erreur email:', emailData)
+        if (emailData.skipped) {
+          console.log('Email non envoyé — score >= 40%')
         } else {
-          console.log('✅ Email envoyé avec succès')
+          console.log('✅ Email envoyé')
         }
       } catch(emailErr) {
-        console.error('Erreur fetch email:', emailErr.message)
+        console.error('Erreur email:', emailErr.message)
       }
-    } else {
-      console.warn('⚠️ emailParent introuvable — email non envoyé')
     }
     saved = true
   } catch(e) {
     console.log('Erreur sauvegarde:', e.message)
   }
 }
-
 async function nouvelleRonde() {
   questions=[]; answers={}; submitted={}; saved=false
   quizEnCours=false
