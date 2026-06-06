@@ -7,6 +7,13 @@ export default async function handler(req, res) {
   try {
     const { theme, difficulte } = req.body
 
+    // ── BANQUE EN PREMIER ──────────────────────────────────
+    const questions = await getBanqueSupabase(theme, difficulte)
+    if (questions.length > 0) {
+      return res.status(200).json({ questions, source: 'banque' })
+    }
+
+    // ── IA EN SECOURS (si banque vide) ────────────────────
     const exemples = {
       'Nombres et calculs': `
 Exemples de BONNES questions pour ce thème :
@@ -113,21 +120,17 @@ Format : [{"q":"question","chapitre":"Théorème de Thalès","tableau":null,"opt
     const response1 = await claudeCall(prompt1)
 
     if (response1.error) {
-      const questions = await getBanqueSupabase(theme, difficulte)
-      if (questions.length > 0) return res.status(200).json({ questions, source: 'banque' })
       return res.status(503).json({ error: '⏳ Service indisponible. Réessaie dans 1 minute !' })
     }
 
     const match = response1.text.match(/\[[\s\S]*\]/)
     if (!match) {
-      const questions = await getBanqueSupabase(theme, difficulte)
-      if (questions.length > 0) return res.status(200).json({ questions, source: 'banque' })
       return res.status(500).json({ error: '❌ Format invalide.' })
     }
 
-    let questions = JSON.parse(match[0])
+    let questionsIA = JSON.parse(match[0])
 
-    questions = questions.map(q => {
+    questionsIA = questionsIA.map(q => {
       const cleanString = (str) => str?.replace(/\s+/g, '').toLowerCase()
       const bonneReponseNettoyee = cleanString(q.bonne_reponse)
       let answer = q.opts.findIndex(opt => cleanString(opt) === bonneReponseNettoyee)
@@ -142,9 +145,8 @@ Format : [{"q":"question","chapitre":"Théorème de Thalès","tableau":null,"opt
       }
     })
 
-    // Vérification en un seul appel groupé
     const prompt2 = `Vérifie ces 5 questions de mathématiques et donne le numéro correct de la bonne réponse pour chacune (0=A, 1=B, 2=C, 3=D).
-${questions.map((q,i) => `Question ${i+1}: ${q.q}\n${q.tableau ? `Tableau: ${JSON.stringify(q.tableau)}\n` : ''}Options:\n${q.opts.map((o,j) => `${j}: ${o}`).join('\n')}`).join('\n\n')}
+${questionsIA.map((q,i) => `Question ${i+1}: ${q.q}\n${q.tableau ? `Tableau: ${JSON.stringify(q.tableau)}\n` : ''}Options:\n${q.opts.map((o,j) => `${j}: ${o}`).join('\n')}`).join('\n\n')}
 Réponds UNIQUEMENT avec un tableau JSON de 5 chiffres : [0, 2, 1, 3, 0]`
 
     const response2 = await claudeCall(prompt2)
@@ -154,15 +156,15 @@ Réponds UNIQUEMENT avec un tableau JSON de 5 chiffres : [0, 2, 1, 3, 0]`
         try {
           const indices = JSON.parse(matchArray[0])
           indices.forEach((idx, i) => {
-            if (typeof idx === 'number' && idx >= 0 && idx <= 3 && i < questions.length) {
-              questions[i].answer = idx
+            if (typeof idx === 'number' && idx >= 0 && idx <= 3 && i < questionsIA.length) {
+              questionsIA[i].answer = idx
             }
           })
         } catch(e) { console.log('Erreur vérification:', e.message) }
       }
     }
 
-    res.status(200).json({ questions, source: 'ia' })
+    res.status(200).json({ questions: questionsIA, source: 'ia' })
 
   } catch(e) {
     console.log('Erreur générale:', e.message)
