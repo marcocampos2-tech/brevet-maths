@@ -73,8 +73,13 @@ export default async function handler(req, res) {
           <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
         </div>
 
-      </div>`
+        <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
+          <a href="https://academika.fr/api/desabonner?email=${emailParent}" style="color:#bbb">Se désabonner des emails automatiques</a>
+        </p>
 
+      </div>`
+          
+          
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
