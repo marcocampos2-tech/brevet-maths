@@ -74,6 +74,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .theme-score-label { color: #666; margin-top: 2px; font-size: 11px; }
 .sticky-btn { position: sticky; bottom: 1rem; padding: 0.5rem 0; }
 .historique-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0ec; font-size: 13px; }
+.alerte-temps { border-radius: 10px; padding: 12px 16px; text-align: center; font-weight: 600; font-size: 14px; margin-bottom: 1rem; }
+.alerte-orange { background: #fff8e1; border: 1px solid #f59e0b; color: #92400e; }
+.alerte-rouge { background: #fef2f2; border: 1px solid #dc2626; color: #dc2626; }
+.alerte-ecoule { background: #fef2f2; border: 1px solid #dc2626; color: #dc2626; }
 </style>
 </head>
 <body>
@@ -84,7 +88,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <span class="nav-email" id="user-email"></span>
     <div class="chrono" id="chrono" style="display:none">
       <div class="chrono-dot"></div>
-      <span id="chrono-text">30:00</span>
+      <span id="chrono-text">40:00</span>
     </div>
     <button class="btn" onclick="retourAccueil()">← Accueil</button>
     <button class="btn" onclick="logout()">Déconnexion</button>
@@ -98,7 +102,7 @@ const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 let user=null, prenom='', nom='', emailParent=''
 let questions=[], answers={}, saved=false
-let chronoInterval=null, chronoSecondes=30*60
+let chronoInterval=null, chronoSecondes=40*60
 let examEnCours=false
 
 window.addEventListener('beforeunload', function(e) {
@@ -120,14 +124,14 @@ async function init() {
   prenom=user.user_metadata?.prenom||''
   nom=user.user_metadata?.nom||''
   emailParent=user.user_metadata?.email_parent||''
-  if(!prenom||!emailParent){
-    const {data:profil}=await sb.from('profils').select('prenom_affiche,nom_affiche,email_parent').eq('user_id',user.id).limit(1)
-    if(profil&&profil.length>0){
-      prenom=prenom||profil[0].prenom_affiche||''
-      nom=nom||profil[0].nom_affiche||''
-      emailParent=emailParent||profil[0].email_parent||''
-    }
+
+  const {data:profil}=await sb.from('profils').select('prenom_affiche,nom_affiche,email_parent').eq('user_id',user.id).limit(1)
+  if(profil&&profil.length>0){
+    prenom=prenom||profil[0].prenom_affiche||''
+    nom=nom||profil[0].nom_affiche||''
+    emailParent=emailParent||profil[0].email_parent||''
   }
+
   document.getElementById('user-email').textContent=prenom||user.email
   await renderIntro()
 }
@@ -168,9 +172,9 @@ async function renderIntro() {
     '<div class="intro-icon">📝</div>'+
     '<div class="intro-title">Examen Blanc Brevet</div>'+
     '<div class="intro-sub">Teste-toi dans les conditions du vrai brevet !<br>20 questions tirées aléatoirement sur tous les thèmes du programme.</div>'+
-    '<div class="intro-deroulement"><p>📋 <strong>Déroulement :</strong> Tu vas répondre à 20 questions QCM réparties sur les 4 parties du programme. Tu as <strong>30 minutes</strong> pour tout répondre. La correction complète s\'affiche à la fin. Les questions changent à chaque passage !</p></div>'+
+    '<div class="intro-deroulement"><p>📋 <strong>Déroulement :</strong> Tu vas répondre à 20 questions QCM réparties sur les 4 parties du programme. Tu as <strong>40 minutes</strong> pour tout répondre. La correction complète s\'affiche à la fin. Les questions changent à chaque passage !</p></div>'+
     '<div class="intro-rules">'+
-    '<li>⏱️ <strong>30 minutes</strong> — chrono réaliste</li>'+
+    '<li>⏱️ <strong>40 minutes</strong> — 2 min par question</li>'+
     '<li>📋 <strong>20 questions</strong> sur les 4 parties</li>'+
     '<li>🔀 <strong>Questions différentes</strong> à chaque passage</li>'+
     '<li>🔕 <strong>Pas de correction</strong> pendant l\'examen</li>'+
@@ -217,7 +221,7 @@ async function demarrerExamen() {
 }
 
 function demarrerChrono(){
-  chronoSecondes=30*60
+  chronoSecondes=40*60
   document.getElementById('chrono').style.display='flex'
   document.getElementById('chrono').classList.remove('chrono-warning')
   chronoInterval=setInterval(function(){
@@ -225,20 +229,53 @@ function demarrerChrono(){
     const m=Math.floor(chronoSecondes/60).toString().padStart(2,'0')
     const s=(chronoSecondes%60).toString().padStart(2,'0')
     document.getElementById('chrono-text').textContent=m+':'+s
-    if(chronoSecondes<=300) document.getElementById('chrono').classList.add('chrono-warning')
-    if(chronoSecondes<=0){clearInterval(chronoInterval);terminerExamen()}
+
+    // Alerte 10 minutes
+    if(chronoSecondes===600) renderExamen()
+
+    // Chrono rouge + alerte 5 minutes
+    if(chronoSecondes<=300){
+      document.getElementById('chrono').classList.add('chrono-warning')
+      if(chronoSecondes===300) renderExamen()
+    }
+
+    // Alerte 1 minute
+    if(chronoSecondes===60) renderExamen()
+
+    // Temps écoulé
+    if(chronoSecondes<=0){
+      clearInterval(chronoInterval)
+      examEnCours=false
+      terminerExamen()
+    }
   },1000)
 }
 
 function arreterChrono(){clearInterval(chronoInterval)}
+
+function getAlerte(){
+  if(chronoSecondes<=60) return '<div class="alerte-temps alerte-rouge">🔴 Dernière minute ! L\'examen se termine automatiquement.</div>'
+  if(chronoSecondes<=300) return '<div class="alerte-temps alerte-rouge">⚠️ Plus que 5 minutes ! Vérifie tes réponses et termine l\'examen.</div>'
+  if(chronoSecondes<=600) return '<div class="alerte-temps alerte-orange">⏰ Plus que 10 minutes ! Pense à vérifier tes réponses.</div>'
+  return ''
+}
 
 function renderExamen(){
   const nbRepondues=Object.keys(answers).length
   const pct=Math.round((nbRepondues/questions.length)*100)
   const letters=['A','B','C','D']
   let html=''
+
+  // Message temps écoulé
+  if(!examEnCours){
+    html+='<div class="alerte-temps alerte-ecoule">⏰ Temps écoulé ! L\'examen est terminé automatiquement.</div>'
+  } else {
+    html+=getAlerte()
+  }
+
   html+='<div class="progress-label"><span>'+nbRepondues+'/20 questions répondues</span><span>'+pct+'%</span></div>'
   html+='<div class="progress-bar-wrap"><div class="progress-bar" style="width:'+pct+'%"></div></div>'
+
   questions.forEach(function(q,i){
     const sel=answers[i]
     html+='<div class="card">'
@@ -246,18 +283,27 @@ function renderExamen(){
     html+='<p class="q-text">'+q.q+'</p>'
     q.opts.forEach(function(opt,j){
       const cls=j===sel?'option selected':'option'
-      html+='<div class="'+cls+'" onclick="pick('+i+','+j+')"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'
+      if(examEnCours){
+        html+='<div class="'+cls+'" onclick="pick('+i+','+j+')"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'
+      } else {
+        html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'
+      }
     })
     html+='</div>'
   })
-  html+='<div class="sticky-btn">'
-  html+='<button class="btn btn-green btn-full" onclick="terminerExamen()">✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)</button>'
-  if(nbRepondues<20) html+='<p style="text-align:center;font-size:12px;color:#999;margin-top:6px">Tu peux terminer même sans tout répondre</p>'
-  html+='</div>'
+
+  if(examEnCours){
+    html+='<div class="sticky-btn">'
+    html+='<button class="btn btn-green btn-full" onclick="confirmerTerminer()">✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)</button>'
+    if(nbRepondues<20) html+='<p style="text-align:center;font-size:12px;color:#999;margin-top:6px">Tu peux terminer même sans tout répondre</p>'
+    html+='</div>'
+  }
+
   document.getElementById('main-area').innerHTML=html
 }
 
 function pick(qi,oi){
+  if(!examEnCours) return
   answers[qi]=oi
   renderExamen()
   setTimeout(function(){
@@ -266,8 +312,18 @@ function pick(qi,oi){
   },200)
 }
 
+function confirmerTerminer(){
+  const nbRepondues=Object.keys(answers).length
+  if(nbRepondues<20){
+    const ok=confirm('⚠️ Tu n\'as répondu qu\'à '+nbRepondues+'/20 questions.\nLes '+(20-nbRepondues)+' questions sans réponse comptent comme fausses.\nTu es sûr de vouloir terminer ?')
+    if(!ok) return
+  }
+  terminerExamen()
+}
+
 function terminerExamen(){
-  arreterChrono();examEnCours=false
+  arreterChrono()
+  examEnCours=false
   document.getElementById('chrono').style.display='none'
   sauvegarder()
   renderResultats()
@@ -275,8 +331,14 @@ function terminerExamen(){
 
 async function sauvegarder(){
   if(saved||!user)return
+
+  if(!emailParent){
+    const {data:profil}=await sb.from('profils').select('email_parent').eq('user_id',user.id).limit(1)
+    if(profil&&profil.length>0) emailParent=profil[0].email_parent
+  }
+
   const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
-  const tempsSecondes=30*60-chronoSecondes
+  const tempsSecondes=40*60-chronoSecondes
   const themes={}
   questions.forEach(function(q,i){
     const key=q.theme||'Partie '+q.partie
@@ -287,30 +349,41 @@ async function sauvegarder(){
   const questionsRatees=questions
     .filter(function(q,i){return answers[i]!==undefined&&answers[i]!==q.answer})
     .map(function(q){return q.theme+' — '+(q.chapitre||'')})
+
   try{
-    await sb.from('examens_blancs').insert({
-      user_id:user.id,email:user.email,
-      prenom:prenom||'',email_parent:emailParent||'',
-      score:nbOk,total:20,temps_secondes:tempsSecondes,
-      scores_themes:themes,questions_ratees:questionsRatees,abandonne:false
+    const {error}=await sb.from('examens_blancs').insert({
+      user_id:user.id, email:user.email,
+      prenom:prenom||'', email_parent:emailParent||'',
+      score:nbOk, total:20, temps_secondes:tempsSecondes,
+      scores_themes:themes, questions_ratees:questionsRatees, abandonne:false
     })
-    if(emailParent){
-      fetch('/api/email-brevet-blanc',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({emailParent:emailParent,prenom:prenom||'',nom:nom||'',
-          score:nbOk,total:20,pct:Math.round((nbOk/20)*100),
-          scoresThemes:themes,tempsSecondes:tempsSecondes})
-      }).catch(function(e){console.log(e.message)})
-    }
+
+    if(error){ console.error('Erreur sauvegarde:', error.message); return }
     saved=true
-  }catch(e){console.log('Erreur sauvegarde:',e.message)}
+    console.log('✅ Examen sauvegardé')
+
+    if(emailParent){
+      try{
+        await fetch('/api/email-brevet-blanc',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            emailParent:emailParent, prenom:prenom||'', nom:nom||'',
+            score:nbOk, total:20, pct:Math.round((nbOk/20)*100),
+            scoresThemes:themes, tempsSecondes:tempsSecondes
+          })
+        })
+        console.log('✅ Email envoyé')
+      }catch(emailErr){ console.error('Erreur email:', emailErr.message) }
+    }
+  }catch(e){ console.log('Erreur:', e.message) }
 }
 
 function renderResultats(){
   const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
   const pct=Math.round((nbOk/20)*100)
   const mention=getMention(pct)
-  const tempsSecondes=30*60-chronoSecondes
+  const tempsSecondes=40*60-chronoSecondes
   const themes={}
   questions.forEach(function(q,i){
     const key=q.theme||'Partie '+q.partie
