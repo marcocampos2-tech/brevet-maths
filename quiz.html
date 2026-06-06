@@ -259,7 +259,7 @@ async function generer() {
   questions = []; answers = {}; submitted = {}; saved = false
   arreterChrono()
   document.getElementById('chrono').style.display = 'none'
-  document.getElementById('quiz-area').innerHTML = '<div class="loader">🔍 Claude génère et vérifie les questions… (~15 secondes)</div>'
+  document.getElementById('quiz-area').innerHTML = '<div class="loader">⏳ Chargement des questions…</div>'
   try {
     const res = await fetch('/api/generer', {
       method: 'POST',
