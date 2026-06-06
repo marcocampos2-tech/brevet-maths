@@ -1,3 +1,4 @@
+// /api/email.js
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST')
@@ -5,81 +6,148 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
   try {
-    const { emailParent, prenom, nom, theme, difficulte, score, total, questionsRatees, questionsInconnues, tempsSecondes, aucuneIdee } = req.body
+    const { emailParent, prenom, nom, theme, difficulte, score, total, 
+            questionsRatees, tempsSecondes, resultatsId } = req.body
 
     const pct = Math.round((score / total) * 100)
-    const couleurScore = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
-    const mention = pct >= 80 ? '🌟 Excellent !' : pct >= 60 ? '👍 Bien !' : pct >= 40 ? '💪 Continue !' : '📚 À retravailler'
 
-    const messageMotivation = pct >= 80
-      ? `Excellent travail ! <strong>${prenom}</strong> maîtrise très bien ce thème. Encouragez-le à continuer !`
-      : pct >= 60
-      ? `Bon travail ! <strong>${prenom}</strong> progresse bien. Quelques notions restent à consolider.`
-      : pct >= 40
-      ? `<strong>${prenom}</strong> fait des efforts mais ce thème nécessite encore du travail. Encouragez-le à s'entraîner davantage.`
-      : `Ce thème est difficile pour <strong>${prenom}</strong> en ce moment. Il est important de retravailler ces notions régulièrement.`
+    // Ne pas envoyer si score >= 40% — récap hebdo suffisant
+    if (pct >= 40) {
+      return res.status(200).json({ success: true, skipped: true, reason: 'score >= 40%' })
+    }
 
+    const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+    const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY
+    const supaHeaders = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'apikey': SUPA_KEY
+    }
+
+    // Vérifier si une alerte a déjà été envoyée aujourd'hui pour cet élève
+    const aujourd_hui = new Date().toISOString().split('T')[0]
+    const alerteRes = await fetch(
+      `${SUPA_URL}/rest/v1/resultats?email_parent=eq.${encodeURIComponent(emailParent)}&alerte_envoyee=eq.true&created_at=gte.${aujourd_hui}T00:00:00&select=id,theme,difficulte,score,total,questions_ratees`,
+      { headers: supaHeaders }
+    )
+    const alertesAujourdhui = await alerteRes.json()
+
+    const couleurScore = '#dc2626'
     const m = Math.floor(tempsSecondes / 60)
     const s = tempsSecondes % 60
-    const tempsFormat = m === 0 ? `${s} secondes` : `${m} min ${s} sec`
+    const tempsFormat = m === 0 ? `${s} sec` : `${m} min ${s} sec`
 
-    const tousLesPoints = [...(questionsRatees||[]), ...(questionsInconnues||[])]
-    const pointsHTML = tousLesPoints.length > 0
-      ? `<div style="margin-top:20px">
-          <p style="color:#1a1a1a;font-weight:600;margin-bottom:8px">📚 Points à améliorer :</p>
-          <ul style="padding-left:20px;color:#555;margin:0">
-            ${tousLesPoints.map(q => `<li style="margin-bottom:6px">${q}</li>`).join('')}
-          </ul>
+    const lienDesabonnement = `https://academika.fr/api/desabonner?email=${encodeURIComponent(emailParent)}`
+
+    let html = ''
+    let sujet = ''
+
+    if (alertesAujourdhui && alertesAujourdhui.length > 0) {
+      // 2+ quiz ratés aujourd'hui — email groupé
+      const toutesLesSessions = [
+        ...alertesAujourdhui,
+        { theme, difficulte, score, total, questions_ratees: questionsRatees }
+      ]
+
+      sujet = `⚠️ ${prenom} a eu des difficultés aujourd'hui — ACADEMIKA`
+
+      const sessionsHTML = toutesLesSessions.map(s => {
+        const sp = Math.round((s.score / s.total) * 100)
+        const ratees = (s.questions_ratees || []).slice(0, 3)
+        return `
+          <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:10px">
+            <div style="font-weight:700;color:#dc2626;margin-bottom:6px">
+              ❌ ${s.theme} — ${s.difficulte} : ${s.score}/${s.total} (${sp}%)
+            </div>
+            ${ratees.length > 0 ? `
+              <div style="font-size:12px;color:#666">
+                ${ratees.map(q => `• ${q.replace(s.theme+' — ','')}`).join('<br>')}
+              </div>` : ''}
+          </div>`
+      }).join('')
+
+      html = `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+          <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+            <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Suivi de révision</div>
+          </div>
+          <p style="margin-bottom:16px">Bonjour Madame, Monsieur,</p>
+          <p style="margin-bottom:20px;color:#444">
+            <strong>${prenom}</strong> a passé <strong>${toutesLesSessions.length} sessions</strong> aujourd'hui 
+            avec des difficultés :
+          </p>
+          ${sessionsHTML}
+          <p style="color:#444;line-height:1.6;margin-top:20px">
+            Ces thèmes nécessitent du travail. Un encouragement ce soir peut faire toute la différence !
+          </p>
+          <div style="text-align:center;margin:28px 0">
+            <a href="https://academika.fr" style="background:#1a1a1a;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
+              Voir ses résultats complets →
+            </a>
+          </div>
+          <p style="color:#888;font-size:12px;text-align:center;margin-top:24px">
+            Pour toute question : <a href="mailto:marcocampos2@gmail.com" style="color:#3730a3">marcocampos2@gmail.com</a>
+          </p>
+          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
+            <a href="${lienDesabonnement}" style="color:#bbb">Se désabonner des emails automatiques</a>
+          </p>
         </div>`
-      : `<p style="color:#16a34a;margin-top:20px;font-weight:600">✅ Toutes les questions sont réussies ! Félicitations !</p>`
 
-    const html = `
-      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+    } else {
+      // 1er quiz raté aujourd'hui
+      sujet = `⚠️ ${prenom} a eu des difficultés aujourd'hui — ACADEMIKA`
 
-        <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
-          <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
-          <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Suivi de révision</div>
-        </div>
+      const rateesHTML = questionsRatees && questionsRatees.length > 0
+        ? `<div style="margin-top:16px">
+            <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:8px">📚 Points à retravailler :</p>
+            ${questionsRatees.slice(0,3).map(q => `
+              <div style="font-size:13px;color:#666;padding:4px 0">
+                • ${q.replace(theme+' — ','')}
+              </div>`).join('')}
+          </div>`
+        : ''
 
-        <p style="margin-bottom:6px;">Bonjour Madame, Monsieur,</p>
-        <p style="margin-bottom:20px;color:#444;">
-          Votre enfant <strong>${prenom}${nom ? ' ' + nom : ''}</strong> vient de terminer 
-          une session de révision sur ACADEMIKA.
-        </p>
-
-        <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
-          <div style="font-size:56px;font-weight:700;color:${couleurScore}">${score}/${total}</div>
-          <div style="font-size:24px;font-weight:600;color:${couleurScore};margin-top:4px">${pct}%</div>
-          <div style="font-size:18px;margin-top:8px">${mention}</div>
-          <div style="font-size:13px;color:#666;margin-top:8px">⏱️ ${tempsFormat} · ${theme} · ${difficulte}</div>
-        </div>
-
-        <p style="color:#444;margin-bottom:16px;">${messageMotivation}</p>
-
-        ${pointsHTML}
-
-        ${aucuneIdee > 0 ? `
-        <div style="margin-top:16px;padding:12px;background:#fffbeb;border-radius:8px;border-left:3px solid #f59e0b">
-          <p style="color:#92400e;font-size:13px;">
-            😅 <strong>${aucuneIdee} question(s)</strong> sans réponse — ces notions sont prioritaires à retravailler.
+      html = `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+          <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+            <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Suivi de révision</div>
+          </div>
+          <p style="margin-bottom:16px">Bonjour Madame, Monsieur,</p>
+          <p style="margin-bottom:20px;color:#444">
+            <strong>${prenom}</strong> a passé une session de révision aujourd'hui 
+            qui nécessite votre attention :
           </p>
-        </div>` : ''}
-
-        <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
-          <p style="color:#444;font-size:13px;margin-bottom:16px;">
-            Pour toute question, contactez-nous : 
-            <a href="mailto:marcocampos2@gmail.com" style="color:#3730a3;text-decoration:none;font-weight:500">marcocampos2@gmail.com</a>
+          <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0">
+            <div style="font-size:16px;font-weight:700;color:#dc2626;margin-bottom:4px">
+              ❌ ${theme} — ${difficulte}
+            </div>
+            <div style="font-size:24px;font-weight:700;color:#dc2626">
+              ${score}/${total} — ${pct}%
+            </div>
+            <div style="font-size:12px;color:#888;margin-top:4px">⏱️ ${tempsFormat}</div>
+          </div>
+          ${rateesHTML}
+          <p style="color:#444;line-height:1.6;margin-top:20px">
+            Un encouragement ce soir peut faire toute la différence !
+            <strong>10 minutes par jour</strong> suffisent pour progresser.
           </p>
-          <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
-        </div>
+          <div style="text-align:center;margin:28px 0">
+            <a href="https://academika.fr" style="background:#1a1a1a;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
+              Voir ses résultats complets →
+            </a>
+          </div>
+          <p style="color:#888;font-size:12px;text-align:center;margin-top:24px">
+            Pour toute question : <a href="mailto:marcocampos2@gmail.com" style="color:#3730a3">marcocampos2@gmail.com</a>
+          </p>
+          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
+            <a href="${lienDesabonnement}" style="color:#bbb">Se désabonner des emails automatiques</a>
+          </p>
+        </div>`
+    }
 
-        <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-          <a href="https://academika.fr/api/desabonner?email=${emailParent}" style="color:#bbb">Se désabonner des emails automatiques</a>
-        </p>
-
-      </div>`
-          
-          
+    // Envoyer l'email
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -89,19 +157,32 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'noreply@academika.fr',
         to: emailParent,
-        subject: `📊 ${prenom} a obtenu ${score}/${total} en ${theme} — ACADEMIKA`,
+        subject: sujet,
         html
       })
     })
 
-    const responseData = await response.json()
     if (!response.ok) {
-      return res.status(500).json({ error: 'Erreur envoi email : ' + JSON.stringify(responseData) })
+      const err = await response.json()
+      return res.status(500).json({ error: 'Erreur email : ' + JSON.stringify(err) })
+    }
+
+    // Marquer alerte_envoyee = true pour cette session
+    if (resultatsId) {
+      await fetch(
+        `${SUPA_URL}/rest/v1/resultats?id=eq.${resultatsId}`,
+        {
+          method: 'PATCH',
+          headers: { ...supaHeaders, 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ alerte_envoyee: true })
+        }
+      )
     }
 
     res.status(200).json({ success: true })
+
   } catch(e) {
-    console.log('Erreur catch:', e.message)
+    console.log('Erreur:', e.message)
     res.status(500).json({ error: e.message })
   }
 }
