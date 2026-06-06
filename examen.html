@@ -23,6 +23,9 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn-primary:hover { background: #333; }
 .btn-green { background: #16a34a; color: white; border-color: #16a34a; font-size: 15px; padding: 14px; }
 .btn-green:hover { background: #15803d; }
+.btn-red { background: #dc2626; color: white; border-color: #dc2626; font-size: 15px; padding: 14px; animation: pulse-btn 1s infinite; }
+.btn-red:hover { background: #b91c1c; }
+@keyframes pulse-btn { 0%,100%{opacity:1} 50%{opacity:0.85} }
 .btn-outline { background: white; color: #666; border: 1px solid #d0d0c8; font-size: 14px; padding: 12px; }
 .btn-outline:hover { background: #f5f5f0; }
 .btn-full { width: 100%; }
@@ -72,12 +75,20 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .theme-score { background: #f5f5f0; border-radius: 8px; padding: 10px; text-align: center; font-size: 12px; }
 .theme-score-num { font-size: 20px; font-weight: 700; }
 .theme-score-label { color: #666; margin-top: 2px; font-size: 11px; }
-.sticky-btn { position: sticky; bottom: 1rem; padding: 0.5rem 0; }
 .historique-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0ec; font-size: 13px; }
 .alerte-temps { border-radius: 10px; padding: 12px 16px; text-align: center; font-weight: 600; font-size: 14px; margin-bottom: 1rem; }
 .alerte-orange { background: #fff8e1; border: 1px solid #f59e0b; color: #92400e; }
 .alerte-rouge { background: #fef2f2; border: 1px solid #dc2626; color: #dc2626; }
 .alerte-ecoule { background: #fef2f2; border: 1px solid #dc2626; color: #dc2626; }
+
+/* Toast notification */
+.toast { position: fixed; bottom: 80px; right: 16px; z-index: 1000; padding: 12px 18px; border-radius: 12px; font-size: 14px; font-weight: 600; color: white; max-width: 280px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); transform: translateX(120%); transition: transform 0.3s ease; }
+.toast.show { transform: translateX(0); }
+.toast-orange { background: #f59e0b; }
+.toast-red { background: #dc2626; }
+
+/* Sticky btn */
+.sticky-btn { position: sticky; bottom: 1rem; padding: 0.5rem 0; }
 </style>
 </head>
 <body>
@@ -96,14 +107,19 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 </nav>
 <div id="main-area"></div>
 </div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 let user=null, prenom='', nom='', emailParent=''
 let questions=[], answers={}, saved=false
-let chronoInterval=null, chronoSecondes=40*60
+let chronoInterval=null, chronoSecondes=0
 let examEnCours=false
+let heureFin=null
 
 window.addEventListener('beforeunload', function(e) {
   if(examEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Examen en cours !'}
@@ -124,14 +140,12 @@ async function init() {
   prenom=user.user_metadata?.prenom||''
   nom=user.user_metadata?.nom||''
   emailParent=user.user_metadata?.email_parent||''
-
   const {data:profil}=await sb.from('profils').select('prenom_affiche,nom_affiche,email_parent').eq('user_id',user.id).limit(1)
   if(profil&&profil.length>0){
     prenom=prenom||profil[0].prenom_affiche||''
     nom=nom||profil[0].nom_affiche||''
     emailParent=emailParent||profil[0].email_parent||''
   }
-
   document.getElementById('user-email').textContent=prenom||user.email
   await renderIntro()
 }
@@ -148,6 +162,18 @@ function formatTemps(s){
   const m=Math.floor(s/60)
   const sec=s%60
   return m+' min '+sec+' sec'
+}
+
+// Toast notification
+let toastTimeout=null
+function showToast(message, type) {
+  const toast = document.getElementById('toast')
+  toast.textContent = message
+  toast.className = 'toast show ' + (type === 'rouge' ? 'toast-red' : 'toast-orange')
+  if(toastTimeout) clearTimeout(toastTimeout)
+  toastTimeout = setTimeout(function() {
+    toast.classList.remove('show')
+  }, 5000)
 }
 
 async function renderIntro() {
@@ -221,43 +247,63 @@ async function demarrerExamen() {
 }
 
 function demarrerChrono(){
-  chronoSecondes=40*60
+  heureFin = Date.now() + 40 * 60 * 1000
   document.getElementById('chrono').style.display='flex'
   document.getElementById('chrono').classList.remove('chrono-warning')
+
+  // Alertes déjà déclenchées
+  var alerte10=false, alerte5=false, alerte1=false
+
   chronoInterval=setInterval(function(){
-    chronoSecondes--
-    const m=Math.floor(chronoSecondes/60).toString().padStart(2,'0')
-    const s=(chronoSecondes%60).toString().padStart(2,'0')
-    document.getElementById('chrono-text').textContent=m+':'+s
+    const restant = Math.max(0, heureFin - Date.now())
+    chronoSecondes = Math.floor((40*60*1000 - restant) / 1000)
 
-    // Alerte 10 minutes
-    if(chronoSecondes===600) renderExamen()
+    const m = Math.floor(restant / 60000).toString().padStart(2,'0')
+    const s = Math.floor((restant % 60000) / 1000).toString().padStart(2,'0')
+    document.getElementById('chrono-text').textContent = m+':'+s
 
-    // Chrono rouge + alerte 5 minutes
-    if(chronoSecondes<=300){
+    // Alerte 10 min
+    if(restant <= 600000 && !alerte10){
+      alerte10=true
       document.getElementById('chrono').classList.add('chrono-warning')
-      if(chronoSecondes===300) renderExamen()
+      showToast('⏰ Plus que 10 minutes !', 'orange')
+      renderExamen()
     }
 
-    // Alerte 1 minute
-    if(chronoSecondes===60) renderExamen()
+    // Alerte 5 min
+    if(restant <= 300000 && !alerte5){
+      alerte5=true
+      showToast('⚠️ Plus que 5 minutes ! Vérifie tes réponses.', 'rouge')
+      renderExamen()
+    }
+
+    // Alerte 1 min
+    if(restant <= 60000 && !alerte1){
+      alerte1=true
+      showToast('🔴 Dernière minute ! L\'examen se termine bientôt.', 'rouge')
+      renderExamen()
+    }
 
     // Temps écoulé
-    if(chronoSecondes<=0){
+    if(restant <= 0){
       clearInterval(chronoInterval)
       examEnCours=false
+      showToast('⏰ Temps écoulé !', 'rouge')
       terminerExamen()
     }
-  },1000)
+  }, 500)
 }
 
 function arreterChrono(){clearInterval(chronoInterval)}
 
-function getAlerte(){
-  if(chronoSecondes<=60) return '<div class="alerte-temps alerte-rouge">🔴 Dernière minute ! L\'examen se termine automatiquement.</div>'
-  if(chronoSecondes<=300) return '<div class="alerte-temps alerte-rouge">⚠️ Plus que 5 minutes ! Vérifie tes réponses et termine l\'examen.</div>'
-  if(chronoSecondes<=600) return '<div class="alerte-temps alerte-orange">⏰ Plus que 10 minutes ! Pense à vérifier tes réponses.</div>'
-  return ''
+function getBtnTerminer(nbRepondues) {
+  const restant = heureFin ? Math.max(0, heureFin - Date.now()) : null
+  const urgence = restant !== null && restant <= 300000 // 5 min
+  const cls = urgence ? 'btn btn-red btn-full' : 'btn btn-green btn-full'
+  const tempsLabel = urgence && restant !== null
+    ? ' — ' + Math.floor(restant/60000) + ':' + Math.floor((restant%60000)/1000).toString().padStart(2,'0') + ' restantes'
+    : ''
+  return '<button class="'+cls+'" onclick="confirmerTerminer()">✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'+tempsLabel+'</button>'
 }
 
 function renderExamen(){
@@ -266,11 +312,8 @@ function renderExamen(){
   const letters=['A','B','C','D']
   let html=''
 
-  // Message temps écoulé
   if(!examEnCours){
     html+='<div class="alerte-temps alerte-ecoule">⏰ Temps écoulé ! L\'examen est terminé automatiquement.</div>'
-  } else {
-    html+=getAlerte()
   }
 
   html+='<div class="progress-label"><span>'+nbRepondues+'/20 questions répondues</span><span>'+pct+'%</span></div>'
@@ -294,7 +337,7 @@ function renderExamen(){
 
   if(examEnCours){
     html+='<div class="sticky-btn">'
-    html+='<button class="btn btn-green btn-full" onclick="confirmerTerminer()">✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)</button>'
+    html+=getBtnTerminer(nbRepondues)
     if(nbRepondues<20) html+='<p style="text-align:center;font-size:12px;color:#999;margin-top:6px">Tu peux terminer même sans tout répondre</p>'
     html+='</div>'
   }
@@ -338,7 +381,7 @@ async function sauvegarder(){
   }
 
   const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
-  const tempsSecondes=40*60-chronoSecondes
+  const tempsSecondes=heureFin ? Math.floor((40*60*1000 - Math.max(0, heureFin - Date.now())) / 1000) : chronoSecondes
   const themes={}
   questions.forEach(function(q,i){
     const key=q.theme||'Partie '+q.partie
@@ -383,7 +426,7 @@ function renderResultats(){
   const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
   const pct=Math.round((nbOk/20)*100)
   const mention=getMention(pct)
-  const tempsSecondes=40*60-chronoSecondes
+  const tempsSecondes=heureFin ? Math.floor((40*60*1000 - Math.max(0, heureFin - Date.now())) / 1000) : chronoSecondes
   const themes={}
   questions.forEach(function(q,i){
     const key=q.theme||'Partie '+q.partie
