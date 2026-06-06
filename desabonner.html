@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Désabonnement — ACADEMIKA</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.card { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 2rem; max-width: 480px; width: 100%; text-align: center; }
+.logo { font-size: 16px; font-weight: 700; color: #1a1a1a; margin-bottom: 2rem; }
+.icon { font-size: 48px; margin-bottom: 1rem; }
+.title { font-size: 20px; font-weight: 700; margin-bottom: 0.5rem; color: #1a1a1a; }
+.subtitle { font-size: 14px; color: #666; line-height: 1.6; margin-bottom: 1.5rem; }
+.note { font-size: 12px; color: #999; margin-top: 1.5rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">∑ ACADEMIKA</div>
+  <div id="content"></div>
+</div>
+<script>
+const params = new URLSearchParams(window.location.search)
+const success = params.get('success')
+const error   = params.get('error')
+const content = document.getElementById('content')
+
+if (success) {
+  content.innerHTML =
+    '<div class="icon">✅</div>' +
+    '<div class="title">Désabonnement confirmé</div>' +
+    '<div class="subtitle">Vous ne recevrez plus d\'emails automatiques d\'ACADEMIKA.</div>' +
+    '<div class="note">Pour vous réabonner, contactez-nous :<br>' +
+    '<a href="mailto:marcocampos2@gmail.com" style="color:#3730a3">marcocampos2@gmail.com</a></div>'
+} else if (error) {
+  content.innerHTML =
+    '<div class="icon">❌</div>' +
+    '<div class="title">Une erreur est survenue</div>' +
+    '<div class="subtitle">Impossible de traiter votre demande.</div>' +
+    '<div class="note">Contactez-nous directement :<br>' +
+    '<a href="mailto:marcocampos2@gmail.com" style="color:#3730a3">marcocampos2@gmail.com</a></div>'
+} else {
+  content.innerHTML =
+    '<div class="icon">📧</div>' +
+    '<div class="title">Lien invalide</div>' +
+    '<div class="subtitle">Ce lien de désabonnement n\'est pas valide.</div>' +
+    '<div class="note">Contactez-nous directement :<br>' +
+    '<a href="mailto:marcocampos2@gmail.com" style="color:#3730a3">marcocampos2@gmail.com</a></div>'
+}
+</script>
+</body>
+</html>
