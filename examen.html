@@ -110,6 +110,7 @@ let questions=[], answers={}, saved=false
 let chronoInterval=null, chronoSecondes=0
 let examEnCours=false
 let heureFin=null
+let questionsIds=[]
 
 window.addEventListener('beforeunload', function(e) {
   if(examEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Examen en cours !'}
@@ -216,6 +217,7 @@ async function demarrerExamen() {
     }
     questions=toutesLesQuestions.sort(function(){return Math.random()-0.5}).map(function(q){
       return {
+        id: q.id,
         q:q.question,
         opts:typeof q.opts==='string'?JSON.parse(q.opts):q.opts,
         answer:q.answer,
@@ -226,6 +228,7 @@ async function demarrerExamen() {
       }
     })
     answers={};saved=false;examEnCours=true
+    questionsIds = questions.map(function(q){ return q.id })
     demarrerChrono()
     renderExamen()
   } catch(e){
@@ -246,10 +249,8 @@ function demarrerChrono(){
     const m = Math.floor(restant / 60000).toString().padStart(2,'0')
     const s = Math.floor((restant % 60000) / 1000).toString().padStart(2,'0')
 
-    // Mettre à jour chrono nav
     document.getElementById('chrono-text').textContent = m+':'+s
 
-    // Mettre à jour bouton sticky EN TEMPS RÉEL sans recréer le DOM
     var nbRepondues = Object.keys(answers).length
     var btn = document.getElementById('btn-terminer')
     if(btn) {
@@ -261,28 +262,20 @@ function demarrerChrono(){
       }
     }
 
-    // Alerte 10 min
     if(restant <= 600000 && !alerte10){
       alerte10=true
       document.getElementById('chrono').classList.add('chrono-warning')
       showToast('⏰ Plus que 10 minutes !', 'orange')
     }
-
-    // Alerte 5 min
     if(restant <= 300000 && !alerte5){
       alerte5=true
       showToast('⚠️ Plus que 5 minutes ! Vérifie tes réponses.', 'rouge')
-      // Changer bouton en rouge
       if(btn) btn.className = 'btn btn-red btn-full'
     }
-
-    // Alerte 1 min
     if(restant <= 60000 && !alerte1){
       alerte1=true
       showToast('🔴 Dernière minute ! L\'examen se termine bientôt.', 'rouge')
     }
-
-    // Temps écoulé
     if(restant <= 0){
       clearInterval(chronoInterval)
       examEnCours=false
@@ -342,7 +335,6 @@ function renderExamen(){
 function pick(qi,oi){
   if(!examEnCours) return
   answers[qi]=oi
-  // Mettre à jour uniquement l'option sélectionnée sans recréer tout le DOM
   const cards = document.querySelectorAll('.card')
   const card = cards[qi]
   if(card) {
@@ -350,7 +342,6 @@ function pick(qi,oi){
       el.className = j===oi ? 'option selected' : 'option'
     })
   }
-  // Mettre à jour le nb répondu dans le bouton
   var btn = document.getElementById('btn-terminer')
   var nbRepondues = Object.keys(answers).length
   if(btn) {
@@ -408,7 +399,8 @@ async function sauvegarder(){
       user_id:user.id, email:user.email,
       prenom:prenom||'', email_parent:emailParent||'',
       score:nbOk, total:20, temps_secondes:tempsSecondes,
-      scores_themes:themes, questions_ratees:questionsRatees, abandonne:false
+      scores_themes:themes, questions_ratees:questionsRatees,
+      abandonne:false, questions_posees:questionsIds
     })
     if(error){ console.error('Erreur sauvegarde:', error.message); return }
     saved=true
