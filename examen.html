@@ -82,6 +82,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .toast-orange { background: #f59e0b; }
 .toast-red { background: #dc2626; }
 .sticky-btn { position: sticky; bottom: 1rem; padding: 0.5rem 0; }
+.q-figure { margin: 10px 0 14px; display: flex; justify-content: center; background: #f9f9f7; border-radius: 8px; padding: 12px; }
+.q-figure svg { max-width: 220px; height: auto; display: block; }
 </style>
 </head>
 <body>
@@ -166,6 +168,88 @@ function showToast(message, type) {
   }, 10000)
 }
 
+function renderFigure(fig) {
+  if (!fig || !fig.type) return ''
+  var f = fig
+  if (typeof f === 'string') { try { f = JSON.parse(f) } catch(e) { return '' } }
+  if (!f || !f.type) return ''
+  const S = 200, P = 26
+  const style = '<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:11px;fill:#3730a3;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>'
+  const open = '<svg width="220" height="220" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg">'+style
+  if (f.type === 'triangle_rect') {
+    const u=f.unite||'cm'
+    const baseVal = f.base==='?' ? 4 : Number(f.base)
+    const hautVal = f.hauteur==='?' ? 4 : Number(f.hauteur)
+    const sc=Math.min((S-2*P)/baseVal,(S-2*P)/hautVal)*0.85
+    const W=baseVal*sc,H=hautVal*sc,ox=P,oy=S-P,sq=10
+    const baseLabel = f.base==='?' ? '?' : f.base+' '+u
+    const hautLabel = f.hauteur==='?' ? '?' : f.hauteur+' '+u
+    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ox+','+(oy-H)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+baseLabel+'</text><text class="fig-lb" x="'+(ox-18)+'" y="'+(oy-H/2+4)+'" text-anchor="middle">'+hautLabel+'</text></svg></div>'
+  }
+  if (f.type === 'triangle') {
+    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85
+    const W=f.base*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=S-P,ax=ox+W*0.38,ay=oy-H
+    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ax+','+ay+'"/><line class="fig-dm" x1="'+ax+'" y1="'+ay+'" x2="'+ax+'" y2="'+oy+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+f.base+' '+u+'</text><text class="fig-lb" x="'+(ax+9)+'" y="'+((ay+oy)/2+4)+'" text-anchor="start">'+f.hauteur+' '+u+'</text></svg></div>'
+  }
+  if (f.type === 'rectangle') {
+    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.largeur,(S-2*P)/f.hauteur)*0.85
+    const W=f.largeur*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=(S-H)/2
+    return '<div class="q-figure">'+open+'<rect class="fig-sh" x="'+ox+'" y="'+oy+'" width="'+W+'" height="'+H+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+H+17)+'" text-anchor="middle">'+f.largeur+' '+u+'</text><text class="fig-lb" x="'+(ox-16)+'" y="'+(oy+H/2+4)+'" text-anchor="middle">'+f.hauteur+' '+u+'</text></svg></div>'
+  }
+  if (f.type === 'cercle') {
+    const u=f.unite||'cm',R=(S-2*P)/2*0.82,cx=S/2,cy=S/2
+    return '<div class="q-figure">'+open+'<circle class="fig-sh" cx="'+cx+'" cy="'+cy+'" r="'+R+'"/><line class="fig-dm" x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R)+'" y2="'+cy+'"/><circle class="fig-dot" cx="'+cx+'" cy="'+cy+'" r="2.5"/><text class="fig-lb" x="'+(cx+R/2)+'" y="'+(cy-8)+'" text-anchor="middle">r = '+f.rayon+' '+u+'</text></svg></div>'
+  }
+  if (f.type === 'pythagore') {
+    const u=f.unite||'cm'
+    const aVal=(f.a&&f.a!=='?'&&f.a!==null)?Number(f.a):null
+    const bVal=(f.b&&f.b!=='?'&&f.b!==null)?Number(f.b):null
+    const scA=aVal?(S-2*P)/(aVal+4):S-2*P
+    const scB=bVal?(S-2*P)/(bVal+4):S-2*P
+    const sc2=Math.min(scA,scB)*0.72
+    const A=(aVal||4)*sc2,B=(bVal||4)*sc2,sq=10,ox=P+10,oy=S-P
+    const aLabel=aVal?aVal+' '+u:'?'
+    const bLabel=bVal?bVal+' '+u:'?'
+    const hypLabel=(f.c&&f.c!=='?'&&f.c!==null)?f.c+' '+u:'?'
+    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+bLabel+'</text><text class="fig-lb" x="'+(ox-18)+'" y="'+(oy-A/2+4)+'" text-anchor="middle">'+aLabel+'</text><text class="fig-lb" x="'+(ox+B/2+14)+'" y="'+(oy-A/2-6)+'" text-anchor="start">'+hypLabel+'</text></svg></div>'
+  }
+  if (f.type === 'thales') {
+    const u=f.unite||'cm',sc=24,ox=S/2,oy=P+14
+    const amVal=f.am==='?'?3:Number(f.am)
+    const abVal=f.ab==='?'?6:Number(f.ab)
+    const anVal=f.an==='?'?3:Number(f.an)
+    const acVal=f.ac==='?'?6:Number(f.ac)
+    const pts={A:{x:ox,y:oy},M:{x:ox-amVal*sc*0.6,y:oy+amVal*sc},B:{x:ox-abVal*sc*0.6,y:oy+abVal*sc},N:{x:ox+anVal*sc*0.5,y:oy+anVal*sc},C:{x:ox+acVal*sc*0.5,y:oy+acVal*sc}}
+    return '<div class="q-figure">'+open+
+      '<line class="fig-ln" x1="'+pts.A.x+'" y1="'+pts.A.y+'" x2="'+pts.B.x+'" y2="'+pts.B.y+'"/>'+
+      '<line class="fig-ln" x1="'+pts.A.x+'" y1="'+pts.A.y+'" x2="'+pts.C.x+'" y2="'+pts.C.y+'"/>'+
+      '<line class="fig-lnb" x1="'+pts.M.x+'" y1="'+pts.M.y+'" x2="'+pts.N.x+'" y2="'+pts.N.y+'"/>'+
+      '<line class="fig-lng" x1="'+pts.B.x+'" y1="'+pts.B.y+'" x2="'+pts.C.x+'" y2="'+pts.C.y+'"/>'+
+      '<circle class="fig-dot" cx="'+pts.A.x+'" cy="'+pts.A.y+'" r="3"/>'+
+      '<circle class="fig-dot" cx="'+pts.M.x+'" cy="'+pts.M.y+'" r="3"/>'+
+      '<circle class="fig-dot" cx="'+pts.B.x+'" cy="'+pts.B.y+'" r="3"/>'+
+      '<circle class="fig-dotg" cx="'+pts.N.x+'" cy="'+pts.N.y+'" r="3"/>'+
+      '<circle class="fig-dotg" cx="'+pts.C.x+'" cy="'+pts.C.y+'" r="3"/>'+
+      '<text class="fig-lb" x="'+pts.A.x+'" y="'+(pts.A.y-7)+'" text-anchor="middle">A</text>'+
+      '<text class="fig-lb" x="'+(pts.M.x-7)+'" y="'+(pts.M.y+4)+'" text-anchor="end">M</text>'+
+      '<text class="fig-lb" x="'+(pts.B.x-7)+'" y="'+(pts.B.y+4)+'" text-anchor="end">B</text>'+
+      '<text class="fig-lb" x="'+(pts.N.x+7)+'" y="'+(pts.N.y+4)+'" text-anchor="start">N</text>'+
+      '<text class="fig-lb" x="'+(pts.C.x+7)+'" y="'+(pts.C.y+4)+'" text-anchor="start">C</text>'+
+      '</svg></div>'
+  }
+  if (f.type === 'trapeze') {
+    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.grande_base,(S-2*P)/f.hauteur)*0.82
+    const GB=f.grande_base*sc,PB=f.petite_base*sc,H=f.hauteur*sc,ox=(S-GB)/2,oy=S-P,off=(GB-PB)/2
+    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+GB)+','+oy+' '+(ox+GB-off)+','+(oy-H)+' '+(ox+off)+','+(oy-H)+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+f.grande_base+' '+u+'</text><text class="fig-lb" x="'+(S/2)+'" y="'+(oy-H-7)+'" text-anchor="middle">'+f.petite_base+' '+u+'</text></svg></div>'
+  }
+  if (f.type === 'parallelogramme') {
+    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.78
+    const W=f.base*sc,H=f.hauteur*sc,sh=H*0.5,ox=P,oy=S-P
+    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+(ox+sh)+','+(oy-H)+' '+(ox+sh+W)+','+(oy-H)+' '+(ox+W)+','+oy+' '+ox+','+oy+'"/><text class="fig-lb" x="'+(ox+sh/2+W/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+f.base+' '+u+'</text></svg></div>'
+  }
+  return ''
+}
+
 async function renderIntro() {
   const {data:historique}=await sb.from('examens_blancs')
     .select('*').eq('user_id',user.id).eq('abandonne',false)
@@ -218,13 +302,14 @@ async function demarrerExamen() {
     questions=toutesLesQuestions.sort(function(){return Math.random()-0.5}).map(function(q){
       return {
         id: q.id,
-        q:q.question,
-        opts:typeof q.opts==='string'?JSON.parse(q.opts):q.opts,
-        answer:q.answer,
-        explication:q.explication,
-        theme:q.theme,
-        chapitre:q.chapitre,
-        partie:q.partie
+        q: q.question,
+        opts: typeof q.opts==='string'?JSON.parse(q.opts):q.opts,
+        answer: q.answer,
+        explication: q.explication,
+        theme: q.theme,
+        chapitre: q.chapitre,
+        partie: q.partie,
+        figure: q.figure ? (typeof q.figure==='string'?JSON.parse(q.figure):q.figure) : null
       }
     })
     answers={};saved=false;examEnCours=true
@@ -245,10 +330,8 @@ function demarrerChrono(){
   chronoInterval=setInterval(function(){
     const restant = Math.max(0, heureFin - Date.now())
     chronoSecondes = Math.floor((40*60*1000 - restant) / 1000)
-
     const m = Math.floor(restant / 60000).toString().padStart(2,'0')
     const s = Math.floor((restant % 60000) / 1000).toString().padStart(2,'0')
-
     document.getElementById('chrono-text').textContent = m+':'+s
 
     var nbRepondues = Object.keys(answers).length
@@ -305,6 +388,7 @@ function renderExamen(){
     html+='<div class="card">'
     html+='<div class="q-meta"><span class="q-num">Question '+(i+1)+'/20</span><span class="badge-partie">Partie '+q.partie+'</span><span class="badge-theme">'+(q.chapitre||q.theme)+'</span></div>'
     html+='<p class="q-text">'+q.q+'</p>'
+    html+=renderFigure(q.figure)
     q.opts.forEach(function(opt,j){
       const cls=j===sel?'option selected':'option'
       if(examEnCours){
@@ -471,6 +555,7 @@ function voirCorrection(){
     html+='<span class="badge" style="'+(correct?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626')+'">'+(correct?'✅ Correct':'❌ Raté')+'</span>'
     html+='<span class="badge-theme">'+(q.chapitre||q.theme)+'</span></div>'
     html+='<p class="q-text">'+q.q+'</p>'
+    html+=renderFigure(q.figure)
     q.opts.forEach(function(opt,j){
       let cls='option'
       if(j===q.answer) cls+=' correct'
