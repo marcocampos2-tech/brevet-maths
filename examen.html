@@ -43,6 +43,9 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 6px; }
 .q-num { font-size: 12px; color: #999; }
 .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 10px; color: #1a1a1a; }
+.q-tableau { border-collapse: collapse; margin: 10px 0 14px 0; font-size: 14px; width: 100%; }
+.q-tableau th { border: 1px solid #ccc; padding: 6px 14px; background: #f5f5f0; font-weight: 600; text-align: center; }
+.q-tableau td { border: 1px solid #ccc; padding: 6px 14px; text-align: center; }
 .loader { text-align: center; padding: 3rem; color: #666; font-size: 14px; }
 .chrono { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #e8e8e4; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: #1a1a1a; }
 .chrono-dot { width: 8px; height: 8px; background: #dc2626; border-radius: 50%; animation: pulse 1s infinite; }
@@ -168,11 +171,24 @@ function showToast(message, type) {
   }, 10000)
 }
 
+function renderTableau(tableau) {
+  if (!tableau) return ''
+  var t = tableau
+  if (typeof t === 'string') { try { t = JSON.parse(t) } catch(e) { return '' } }
+  if (!t || !t.headers || !t.rows) return ''
+  return '<table class="q-tableau"><tr>' +
+    t.headers.map(function(h){ return '<th>' + h + '</th>' }).join('') +
+    '</tr>' +
+    t.rows.map(function(row){ return '<tr>' + row.map(function(cell){ return '<td>' + cell + '</td>' }).join('') + '</tr>' }).join('') +
+    '</table>'
+}
+
 function renderFigure(fig) {
   if (!fig || !fig.type) return ''
   var f = fig
   if (typeof f === 'string') { try { f = JSON.parse(f) } catch(e) { return '' } }
   if (!f || !f.type) return ''
+  if (f.type === 'triangle_rect' && f.base === '?' && f.hauteur === '?') return ''
   const S = 220, P = 36
   const style = '<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:11px;fill:#3730a3;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>'
   const open = '<svg width="260" height="220" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg">'+style
@@ -209,7 +225,7 @@ function renderFigure(fig) {
     const u=f.unite||'cm'
     const aVal=(f.a&&f.a!=='?'&&f.a!==null)?Number(f.a):null
     const bVal=(f.b&&f.b!=='?'&&f.b!==null)?Number(f.b):null
-    const refVal = aVal||bVal||4
+    const refVal=aVal||bVal||4
     const sc2=Math.min((S-2*P)/(refVal+4),(S-2*P)/(refVal+4))*0.72
     const A=(aVal||refVal)*sc2,B=(bVal||refVal)*sc2,sq=10,ox=P+10,oy=S-P
     const aLabel=aVal?aVal+' '+u:'?'
@@ -218,27 +234,25 @@ function renderFigure(fig) {
     return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+bLabel+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy-A/2+4)+'" text-anchor="end">'+aLabel+'</text><text class="fig-lb" x="'+(ox+B/2+14)+'" y="'+(oy-A/2-6)+'" text-anchor="start">'+hypLabel+'</text></svg></div>'
   }
   if (f.type === 'thales') {
-    const sc=24,ox=S/2,oy=P+14
-    const amVal=f.am==='?'?3:Number(f.am)
-    const abVal=f.ab==='?'?6:Number(f.ab)
-    const anVal=f.an==='?'?3:Number(f.an)
-    const acVal=f.ac==='?'?6:Number(f.ac)
-    const pts={A:{x:ox,y:oy},M:{x:ox-amVal*sc*0.6,y:oy+amVal*sc},B:{x:ox-abVal*sc*0.6,y:oy+abVal*sc},N:{x:ox+anVal*sc*0.5,y:oy+anVal*sc},C:{x:ox+acVal*sc*0.5,y:oy+acVal*sc}}
+    const ox=S/2, oy=P+10
+    const abVal=f.ab==='?'?6:Number(f.ab)||6
+    const amVal=f.am==='?'?3:Number(f.am)||3
+    const ratio=Math.min(Math.max(amVal/abVal,0.2),0.8)
+    const H=S-2*P, W=H*0.75
+    const A={x:ox,y:oy}, B={x:ox-W/2,y:oy+H}, C={x:ox+W/2,y:oy+H}
+    const D={x:ox-(W/2)*ratio,y:oy+H*ratio}, E={x:ox+(W/2)*ratio,y:oy+H*ratio}
     return '<div class="q-figure">'+open+
-      '<line class="fig-ln" x1="'+pts.A.x+'" y1="'+pts.A.y+'" x2="'+pts.B.x+'" y2="'+pts.B.y+'"/>'+
-      '<line class="fig-ln" x1="'+pts.A.x+'" y1="'+pts.A.y+'" x2="'+pts.C.x+'" y2="'+pts.C.y+'"/>'+
-      '<line class="fig-lnb" x1="'+pts.M.x+'" y1="'+pts.M.y+'" x2="'+pts.N.x+'" y2="'+pts.N.y+'"/>'+
-      '<line class="fig-lng" x1="'+pts.B.x+'" y1="'+pts.B.y+'" x2="'+pts.C.x+'" y2="'+pts.C.y+'"/>'+
-      '<circle class="fig-dot" cx="'+pts.A.x+'" cy="'+pts.A.y+'" r="3"/>'+
-      '<circle class="fig-dot" cx="'+pts.M.x+'" cy="'+pts.M.y+'" r="3"/>'+
-      '<circle class="fig-dot" cx="'+pts.B.x+'" cy="'+pts.B.y+'" r="3"/>'+
-      '<circle class="fig-dotg" cx="'+pts.N.x+'" cy="'+pts.N.y+'" r="3"/>'+
-      '<circle class="fig-dotg" cx="'+pts.C.x+'" cy="'+pts.C.y+'" r="3"/>'+
-      '<text class="fig-lb" x="'+pts.A.x+'" y="'+(pts.A.y-7)+'" text-anchor="middle">A</text>'+
-      '<text class="fig-lb" x="'+(pts.M.x-7)+'" y="'+(pts.M.y+4)+'" text-anchor="end">D</text>'+
-      '<text class="fig-lb" x="'+(pts.B.x-7)+'" y="'+(pts.B.y+4)+'" text-anchor="end">B</text>'+
-      '<text class="fig-lb" x="'+(pts.N.x+7)+'" y="'+(pts.N.y+4)+'" text-anchor="start">E</text>'+
-      '<text class="fig-lb" x="'+(pts.C.x+7)+'" y="'+(pts.C.y+4)+'" text-anchor="start">C</text>'+
+      '<polygon class="fig-sh" points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'"/>'+
+      '<line class="fig-lnb" x1="'+D.x+'" y1="'+D.y+'" x2="'+E.x+'" y2="'+E.y+'"/>'+
+      '<line class="fig-lng" x1="'+B.x+'" y1="'+B.y+'" x2="'+C.x+'" y2="'+C.y+'"/>'+
+      '<circle class="fig-dot" cx="'+A.x+'" cy="'+A.y+'" r="3"/>'+
+      '<circle class="fig-dot" cx="'+D.x+'" cy="'+D.y+'" r="3"/>'+
+      '<circle class="fig-dot" cx="'+B.x+'" cy="'+B.y+'" r="3"/>'+
+      '<circle class="fig-dotg" cx="'+E.x+'" cy="'+E.y+'" r="3"/>'+
+      '<circle class="fig-dotg" cx="'+C.x+'" cy="'+C.y+'" r="3"/>'+
+      '<text class="fig-lb" x="'+A.x+'" y="'+(A.y-7)+'" text-anchor="middle">A</text>'+
+      '<text class="fig-lb" x="'+(B.x-7)+'" y="'+(B.y+4)+'" text-anchor="end">B</text>'+
+      '<text class="fig-lb" x="'+(C.x+7)+'" y="'+(C.y+4)+'" text-anchor="start">C</text>'+
       '</svg></div>'
   }
   if (f.type === 'trapeze') {
@@ -285,7 +299,6 @@ async function renderIntro() {
     '<button class="btn btn-primary btn-full" style="font-size:16px;padding:14px" onclick="demarrerExamen()">🚀 Commencer l\'examen</button>'+
     '</div>'
 }
-
 async function demarrerExamen() {
   document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de votre examen…</div>'
   try {
@@ -313,11 +326,12 @@ async function demarrerExamen() {
         theme: q.theme,
         chapitre: q.chapitre,
         partie: q.partie,
-        figure: q.figure ? (typeof q.figure==='string'?JSON.parse(q.figure):q.figure) : null
+        figure: q.figure ? (typeof q.figure==='string'?JSON.parse(q.figure):q.figure) : null,
+        tableau: q.tableau ? (typeof q.tableau==='string'?JSON.parse(q.tableau):q.tableau) : null
       }
     })
     answers={};saved=false;examEnCours=true
-    questionsIds = questions.map(function(q){ return q.id })
+    questionsIds=questions.map(function(q){ return q.id })
     demarrerChrono()
     renderExamen()
   } catch(e){
@@ -326,50 +340,27 @@ async function demarrerExamen() {
 }
 
 function demarrerChrono(){
-  heureFin = Date.now() + 40 * 60 * 1000
+  heureFin=Date.now()+40*60*1000
   document.getElementById('chrono').style.display='flex'
   document.getElementById('chrono').classList.remove('chrono-warning')
-  var alerte10=false, alerte5=false, alerte1=false
-
+  var alerte10=false,alerte5=false,alerte1=false
   chronoInterval=setInterval(function(){
-    const restant = Math.max(0, heureFin - Date.now())
-    chronoSecondes = Math.floor((40*60*1000 - restant) / 1000)
-    const m = Math.floor(restant / 60000).toString().padStart(2,'0')
-    const s = Math.floor((restant % 60000) / 1000).toString().padStart(2,'0')
-    document.getElementById('chrono-text').textContent = m+':'+s
-
-    var nbRepondues = Object.keys(answers).length
-    var btn = document.getElementById('btn-terminer')
-    if(btn) {
-      if(restant <= 300000) {
-        btn.className = 'btn btn-red btn-full'
-        btn.textContent = '✅ Terminer l\'examen ('+nbRepondues+'/20 répondues) — '+m+':'+s+' restantes'
-      } else {
-        btn.textContent = '✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'
-      }
+    const restant=Math.max(0,heureFin-Date.now())
+    chronoSecondes=Math.floor((40*60*1000-restant)/1000)
+    const m=Math.floor(restant/60000).toString().padStart(2,'0')
+    const s=Math.floor((restant%60000)/1000).toString().padStart(2,'0')
+    document.getElementById('chrono-text').textContent=m+':'+s
+    var nbRepondues=Object.keys(answers).length
+    var btn=document.getElementById('btn-terminer')
+    if(btn){
+      if(restant<=300000){btn.className='btn btn-red btn-full';btn.textContent='✅ Terminer l\'examen ('+nbRepondues+'/20 répondues) — '+m+':'+s+' restantes'}
+      else{btn.textContent='✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'}
     }
-
-    if(restant <= 600000 && !alerte10){
-      alerte10=true
-      document.getElementById('chrono').classList.add('chrono-warning')
-      showToast('⏰ Plus que 10 minutes !', 'orange')
-    }
-    if(restant <= 300000 && !alerte5){
-      alerte5=true
-      showToast('⚠️ Plus que 5 minutes ! Vérifie tes réponses.', 'rouge')
-      if(btn) btn.className = 'btn btn-red btn-full'
-    }
-    if(restant <= 60000 && !alerte1){
-      alerte1=true
-      showToast('🔴 Dernière minute ! L\'examen se termine bientôt.', 'rouge')
-    }
-    if(restant <= 0){
-      clearInterval(chronoInterval)
-      examEnCours=false
-      showToast('⏰ Temps écoulé !', 'rouge')
-      terminerExamen()
-    }
-  }, 500)
+    if(restant<=600000&&!alerte10){alerte10=true;document.getElementById('chrono').classList.add('chrono-warning');showToast('⏰ Plus que 10 minutes !','orange')}
+    if(restant<=300000&&!alerte5){alerte5=true;showToast('⚠️ Plus que 5 minutes ! Vérifie tes réponses.','rouge');if(btn)btn.className='btn btn-red btn-full'}
+    if(restant<=60000&&!alerte1){alerte1=true;showToast('🔴 Dernière minute ! L\'examen se termine bientôt.','rouge')}
+    if(restant<=0){clearInterval(chronoInterval);examEnCours=false;showToast('⏰ Temps écoulé !','rouge');terminerExamen()}
+  },500)
 }
 
 function arreterChrono(){clearInterval(chronoInterval)}
@@ -379,149 +370,89 @@ function renderExamen(){
   const pct=Math.round((nbRepondues/questions.length)*100)
   const letters=['A','B','C','D']
   let html=''
-
-  if(!examEnCours){
-    html+='<div class="alerte-ecoule">⏰ Temps écoulé ! L\'examen est terminé automatiquement.</div>'
-  }
-
+  if(!examEnCours){html+='<div class="alerte-ecoule">⏰ Temps écoulé ! L\'examen est terminé automatiquement.</div>'}
   html+='<div class="progress-label"><span>'+nbRepondues+'/20 questions répondues</span><span>'+pct+'%</span></div>'
   html+='<div class="progress-bar-wrap"><div class="progress-bar" style="width:'+pct+'%"></div></div>'
-
   questions.forEach(function(q,i){
     const sel=answers[i]
     html+='<div class="card">'
     html+='<div class="q-meta"><span class="q-num">Question '+(i+1)+'/20</span><span class="badge-partie">Partie '+q.partie+'</span><span class="badge-theme">'+(q.chapitre||q.theme)+'</span></div>'
     html+='<p class="q-text">'+q.q+'</p>'
+    html+=renderTableau(q.tableau)
     html+=renderFigure(q.figure)
     q.opts.forEach(function(opt,j){
       const cls=j===sel?'option selected':'option'
-      if(examEnCours){
-        html+='<div class="'+cls+'" onclick="pick('+i+','+j+')"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'
-      } else {
-        html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'
-      }
+      if(examEnCours){html+='<div class="'+cls+'" onclick="pick('+i+','+j+')"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'}
+      else{html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'}
     })
     html+='</div>'
   })
-
   if(examEnCours){
-    const restant = heureFin ? Math.max(0, heureFin - Date.now()) : null
-    const urgence = restant !== null && restant <= 300000
-    const btnCls = urgence ? 'btn btn-red btn-full' : 'btn btn-green btn-full'
-    const tempsLabel = urgence && restant !== null
-      ? ' — ' + Math.floor(restant/60000) + ':' + Math.floor((restant%60000)/1000).toString().padStart(2,'0') + ' restantes'
-      : ''
+    const restant=heureFin?Math.max(0,heureFin-Date.now()):null
+    const urgence=restant!==null&&restant<=300000
+    const btnCls=urgence?'btn btn-red btn-full':'btn btn-green btn-full'
+    const tempsLabel=urgence&&restant!==null?' — '+Math.floor(restant/60000)+':'+Math.floor((restant%60000)/1000).toString().padStart(2,'0')+' restantes':''
     html+='<div class="sticky-btn">'
     html+='<button id="btn-terminer" class="'+btnCls+'" onclick="confirmerTerminer()">✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'+tempsLabel+'</button>'
-    if(nbRepondues<20) html+='<p style="text-align:center;font-size:12px;color:#999;margin-top:6px">Tu peux terminer même sans tout répondre</p>'
+    if(nbRepondues<20)html+='<p style="text-align:center;font-size:12px;color:#999;margin-top:6px">Tu peux terminer même sans tout répondre</p>'
     html+='</div>'
   }
-
   document.getElementById('main-area').innerHTML=html
 }
 
 function pick(qi,oi){
-  if(!examEnCours) return
+  if(!examEnCours)return
   answers[qi]=oi
-  const cards = document.querySelectorAll('.card')
-  const card = cards[qi]
-  if(card) {
-    card.querySelectorAll('.option').forEach(function(el, j) {
-      el.className = j===oi ? 'option selected' : 'option'
-    })
+  const cards=document.querySelectorAll('.card')
+  const card=cards[qi]
+  if(card){card.querySelectorAll('.option').forEach(function(el,j){el.className=j===oi?'option selected':'option'})}
+  var btn=document.getElementById('btn-terminer')
+  var nbRepondues=Object.keys(answers).length
+  if(btn){
+    const restant=heureFin?Math.max(0,heureFin-Date.now()):null
+    const urgence=restant!==null&&restant<=300000
+    const m=restant?Math.floor(restant/60000).toString().padStart(2,'0'):'00'
+    const s=restant?Math.floor((restant%60000)/1000).toString().padStart(2,'0'):'00'
+    btn.textContent=urgence?'✅ Terminer l\'examen ('+nbRepondues+'/20 répondues) — '+m+':'+s+' restantes':'✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'
   }
-  var btn = document.getElementById('btn-terminer')
-  var nbRepondues = Object.keys(answers).length
-  if(btn) {
-    const restant = heureFin ? Math.max(0, heureFin - Date.now()) : null
-    const urgence = restant !== null && restant <= 300000
-    const m = restant ? Math.floor(restant/60000).toString().padStart(2,'0') : '00'
-    const s = restant ? Math.floor((restant%60000)/1000).toString().padStart(2,'0') : '00'
-    btn.textContent = urgence
-      ? '✅ Terminer l\'examen ('+nbRepondues+'/20 répondues) — '+m+':'+s+' restantes'
-      : '✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'
-  }
-  setTimeout(function(){
-    const cards=document.querySelectorAll('.card')
-    if(cards[qi+1]) cards[qi+1].scrollIntoView({behavior:'smooth',block:'start'})
-  },200)
+  setTimeout(function(){const cards=document.querySelectorAll('.card');if(cards[qi+1])cards[qi+1].scrollIntoView({behavior:'smooth',block:'start'})},200)
 }
 
 function confirmerTerminer(){
   const nbRepondues=Object.keys(answers).length
-  if(nbRepondues<20){
-    const ok=confirm('⚠️ Tu n\'as répondu qu\'à '+nbRepondues+'/20 questions.\nLes '+(20-nbRepondues)+' questions sans réponse comptent comme fausses.\nTu es sûr de vouloir terminer ?')
-    if(!ok) return
-  }
+  if(nbRepondues<20){const ok=confirm('⚠️ Tu n\'as répondu qu\'à '+nbRepondues+'/20 questions.\nLes '+(20-nbRepondues)+' questions sans réponse comptent comme fausses.\nTu es sûr de vouloir terminer ?');if(!ok)return}
   terminerExamen()
 }
 
 function terminerExamen(){
-  arreterChrono()
-  examEnCours=false
+  arreterChrono();examEnCours=false
   document.getElementById('chrono').style.display='none'
-  sauvegarder()
-  renderResultats()
+  sauvegarder();renderResultats()
 }
 
 async function sauvegarder(){
   if(saved||!user)return
-  if(!emailParent){
-    const {data:profil}=await sb.from('profils').select('email_parent').eq('user_id',user.id).limit(1)
-    if(profil&&profil.length>0) emailParent=profil[0].email_parent
-  }
+  if(!emailParent){const {data:profil}=await sb.from('profils').select('email_parent').eq('user_id',user.id).limit(1);if(profil&&profil.length>0)emailParent=profil[0].email_parent}
   const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
-  const tempsSecondes=heureFin ? Math.floor((40*60*1000 - Math.max(0, heureFin - Date.now())) / 1000) : chronoSecondes
+  const tempsSecondes=heureFin?Math.floor((40*60*1000-Math.max(0,heureFin-Date.now()))/1000):chronoSecondes
   const themes={}
-  questions.forEach(function(q,i){
-    const key=q.theme||'Partie '+q.partie
-    if(!themes[key])themes[key]={ok:0,total:0}
-    themes[key].total++
-    if(answers[i]===q.answer)themes[key].ok++
-  })
-  const questionsRatees=questions
-    .filter(function(q,i){return answers[i]!==undefined&&answers[i]!==q.answer})
-    .map(function(q){return q.theme+' — '+(q.chapitre||'')})
+  questions.forEach(function(q,i){const key=q.theme||'Partie '+q.partie;if(!themes[key])themes[key]={ok:0,total:0};themes[key].total++;if(answers[i]===q.answer)themes[key].ok++})
+  const questionsRatees=questions.filter(function(q,i){return answers[i]!==undefined&&answers[i]!==q.answer}).map(function(q){return q.theme+' — '+(q.chapitre||'')})
   try{
-    const {error}=await sb.from('examens_blancs').insert({
-      user_id:user.id, email:user.email,
-      prenom:prenom||'', email_parent:emailParent||'',
-      score:nbOk, total:20, temps_secondes:tempsSecondes,
-      scores_themes:themes, questions_ratees:questionsRatees,
-      abandonne:false, questions_posees:questionsIds
-    })
-    if(error){ console.error('Erreur sauvegarde:', error.message); return }
-    saved=true
-    console.log('✅ Examen sauvegardé')
-    if(emailParent){
-      try{
-        await fetch('/api/email-brevet-blanc',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({
-            emailParent:emailParent, prenom:prenom||'', nom:nom||'',
-            score:nbOk, total:20, pct:Math.round((nbOk/20)*100),
-            scoresThemes:themes, tempsSecondes:tempsSecondes
-          })
-        })
-        console.log('✅ Email envoyé')
-      }catch(emailErr){ console.error('Erreur email:', emailErr.message) }
-    }
-  }catch(e){ console.log('Erreur:', e.message) }
+    const {error}=await sb.from('examens_blancs').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',score:nbOk,total:20,temps_secondes:tempsSecondes,scores_themes:themes,questions_ratees:questionsRatees,abandonne:false,questions_posees:questionsIds})
+    if(error){console.error('Erreur sauvegarde:',error.message);return}
+    saved=true;console.log('✅ Examen sauvegardé')
+    if(emailParent){try{await fetch('/api/email-brevet-blanc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emailParent:emailParent,prenom:prenom||'',nom:nom||'',score:nbOk,total:20,pct:Math.round((nbOk/20)*100),scoresThemes:themes,tempsSecondes:tempsSecondes})});console.log('✅ Email envoyé')}catch(emailErr){console.error('Erreur email:',emailErr.message)}}
+  }catch(e){console.log('Erreur:',e.message)}
 }
 
 function renderResultats(){
   const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
   const pct=Math.round((nbOk/20)*100)
   const mention=getMention(pct)
-  const tempsSecondes=heureFin ? Math.floor((40*60*1000 - Math.max(0, heureFin - Date.now())) / 1000) : chronoSecondes
+  const tempsSecondes=heureFin?Math.floor((40*60*1000-Math.max(0,heureFin-Date.now()))/1000):chronoSecondes
   const themes={}
-  questions.forEach(function(q,i){
-    const key=q.theme||'Partie '+q.partie
-    if(!themes[key])themes[key]={ok:0,total:0}
-    themes[key].total++
-    if(answers[i]===q.answer)themes[key].ok++
-  })
+  questions.forEach(function(q,i){const key=q.theme||'Partie '+q.partie;if(!themes[key])themes[key]={ok:0,total:0};themes[key].total++;if(answers[i]===q.answer)themes[key].ok++})
   let html='<div class="results-screen">'
   html+='<div class="results-score-big">'+nbOk+'/20</div>'
   html+='<div class="results-pct" style="color:'+(pct>=50?'#16a34a':'#dc2626')+'">'+pct+'%</div>'
@@ -529,11 +460,7 @@ function renderResultats(){
   html+='<div class="results-temps">⏱️ '+formatTemps(tempsSecondes)+'</div>'
   html+='<div class="results-mention-officielle '+mention.cls+'">'+mention.officiel+'</div>'
   html+='<div class="themes-recap">'
-  Object.keys(themes).forEach(function(theme){
-    const s=themes[theme]
-    const tpct=Math.round((s.ok/s.total)*100)
-    html+='<div class="theme-score"><div class="theme-score-num" style="color:'+(tpct>=50?'#16a34a':'#dc2626')+'">'+s.ok+'/'+s.total+'</div><div class="theme-score-label">'+theme.split(' ')[0]+'</div></div>'
-  })
+  Object.keys(themes).forEach(function(theme){const s=themes[theme];const tpct=Math.round((s.ok/s.total)*100);html+='<div class="theme-score"><div class="theme-score-num" style="color:'+(tpct>=50?'#16a34a':'#dc2626')+'">'+s.ok+'/'+s.total+'</div><div class="theme-score-label">'+theme.split(' ')[0]+'</div></div>'})
   html+='</div>'
   html+='<div style="font-size:12px;color:#16a34a;margin-bottom:1.5rem">✅ Résultats enregistrés</div>'
   html+='<div class="results-btns">'
@@ -559,13 +486,9 @@ function voirCorrection(){
     html+='<span class="badge" style="'+(correct?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626')+'">'+(correct?'✅ Correct':'❌ Raté')+'</span>'
     html+='<span class="badge-theme">'+(q.chapitre||q.theme)+'</span></div>'
     html+='<p class="q-text">'+q.q+'</p>'
+    html+=renderTableau(q.tableau)
     html+=renderFigure(q.figure)
-    q.opts.forEach(function(opt,j){
-      let cls='option'
-      if(j===q.answer) cls+=' correct'
-      else if(j===sel&&sel!==q.answer) cls+=' wrong'
-      html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'
-    })
+    q.opts.forEach(function(opt,j){let cls='option';if(j===q.answer)cls+=' correct';else if(j===sel&&sel!==q.answer)cls+=' wrong';html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'})
     html+='<div class="explication"><strong style="color:'+couleur+'">'+titre+'</strong>'+bonneRep+'<br><br>'+q.explication+'</div>'
     html+='</div>'
   })
@@ -575,10 +498,7 @@ function voirCorrection(){
 }
 
 async function logout(){
-  if(examEnCours&&!saved){
-    const ok=confirm('⚠️ Examen en cours. Tes résultats seront perdus. Continuer ?')
-    if(!ok)return
-  }
+  if(examEnCours&&!saved){const ok=confirm('⚠️ Examen en cours. Tes résultats seront perdus. Continuer ?');if(!ok)return}
   await sb.auth.signOut()
   window.location.href='index.html'
 }
