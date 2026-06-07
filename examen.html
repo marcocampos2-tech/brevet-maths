@@ -235,9 +235,9 @@ function renderFigure(fig) {
       '<circle class="fig-dotg" cx="'+pts.N.x+'" cy="'+pts.N.y+'" r="3"/>'+
       '<circle class="fig-dotg" cx="'+pts.C.x+'" cy="'+pts.C.y+'" r="3"/>'+
       '<text class="fig-lb" x="'+pts.A.x+'" y="'+(pts.A.y-7)+'" text-anchor="middle">A</text>'+
-      '<text class="fig-lb" x="'+(pts.M.x-7)+'" y="'+(pts.M.y+4)+'" text-anchor="end">M</text>'+
+      '<text class="fig-lb" x="'+(pts.M.x-7)+'" y="'+(pts.M.y+4)+'" text-anchor="end">D</text>'+
       '<text class="fig-lb" x="'+(pts.B.x-7)+'" y="'+(pts.B.y+4)+'" text-anchor="end">B</text>'+
-      '<text class="fig-lb" x="'+(pts.N.x+7)+'" y="'+(pts.N.y+4)+'" text-anchor="start">N</text>'+
+      '<text class="fig-lb" x="'+(pts.N.x+7)+'" y="'+(pts.N.y+4)+'" text-anchor="start">E</text>'+
       '<text class="fig-lb" x="'+(pts.C.x+7)+'" y="'+(pts.C.y+4)+'" text-anchor="start">C</text>'+
       '</svg></div>'
   }
@@ -285,6 +285,7 @@ async function renderIntro() {
     '<button class="btn btn-primary btn-full" style="font-size:16px;padding:14px" onclick="demarrerExamen()">🚀 Commencer l\'examen</button>'+
     '</div>'
 }
+
 async function demarrerExamen() {
   document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de votre examen…</div>'
   try {
