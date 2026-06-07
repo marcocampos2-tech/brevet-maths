@@ -178,8 +178,8 @@ function renderFigure(fig) {
   const open = '<svg width="220" height="220" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg">'+style
   if (f.type === 'triangle_rect') {
     const u=f.unite||'cm'
-    const baseVal = f.base==='?' ? 4 : Number(f.base)
-    const hautVal = f.hauteur==='?' ? 4 : Number(f.hauteur)
+    const baseVal = f.base==='?' ? (Number(f.hauteur)||4) : Number(f.base)
+    const hautVal = f.hauteur==='?' ? (Number(f.base)||4) : Number(f.hauteur)
     const sc=Math.min((S-2*P)/baseVal,(S-2*P)/hautVal)*0.85
     const W=baseVal*sc,H=hautVal*sc,ox=P,oy=S-P,sq=10
     const baseLabel = f.base==='?' ? '?' : f.base+' '+u
