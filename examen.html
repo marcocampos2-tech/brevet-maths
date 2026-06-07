@@ -83,7 +83,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .toast-red { background: #dc2626; }
 .sticky-btn { position: sticky; bottom: 1rem; padding: 0.5rem 0; }
 .q-figure { margin: 10px 0 14px; display: flex; justify-content: center; background: #f9f9f7; border-radius: 8px; padding: 12px; }
-.q-figure svg { max-width: 220px; height: auto; display: block; }
+.q-figure svg { max-width: 260px; height: auto; display: block; }
 </style>
 </head>
 <body>
@@ -173,18 +173,23 @@ function renderFigure(fig) {
   var f = fig
   if (typeof f === 'string') { try { f = JSON.parse(f) } catch(e) { return '' } }
   if (!f || !f.type) return ''
-  const S = 200, P = 26
+  const S = 220, P = 36
   const style = '<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:11px;fill:#3730a3;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>'
-  const open = '<svg width="220" height="220" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg">'+style
+  const open = '<svg width="260" height="220" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg">'+style
   if (f.type === 'triangle_rect') {
     const u=f.unite||'cm'
     const baseVal = f.base==='?' ? (Number(f.hauteur)||4) : Number(f.base)
     const hautVal = f.hauteur==='?' ? (Number(f.base)||4) : Number(f.hauteur)
     const sc=Math.min((S-2*P)/baseVal,(S-2*P)/hautVal)*0.85
-    const W=baseVal*sc,H=hautVal*sc,ox=P,oy=S-P,sq=10
+    const W=baseVal*sc,H=hautVal*sc,ox=P+10,oy=S-P,sq=10
     const baseLabel = f.base==='?' ? '?' : f.base+' '+u
     const hautLabel = f.hauteur==='?' ? '?' : f.hauteur+' '+u
-    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ox+','+(oy-H)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+baseLabel+'</text><text class="fig-lb" x="'+(ox-18)+'" y="'+(oy-H/2+4)+'" text-anchor="middle">'+hautLabel+'</text></svg></div>'
+    return '<div class="q-figure">'+open+
+      '<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ox+','+(oy-H)+'"/>'+
+      '<rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/>'+
+      '<text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+baseLabel+'</text>'+
+      '<text class="fig-lb" x="'+(ox-8)+'" y="'+(oy-H/2+4)+'" text-anchor="end">'+hautLabel+'</text>'+
+      '</svg></div>'
   }
   if (f.type === 'triangle') {
     const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85
@@ -194,7 +199,7 @@ function renderFigure(fig) {
   if (f.type === 'rectangle') {
     const u=f.unite||'cm',sc=Math.min((S-2*P)/f.largeur,(S-2*P)/f.hauteur)*0.85
     const W=f.largeur*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=(S-H)/2
-    return '<div class="q-figure">'+open+'<rect class="fig-sh" x="'+ox+'" y="'+oy+'" width="'+W+'" height="'+H+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+H+17)+'" text-anchor="middle">'+f.largeur+' '+u+'</text><text class="fig-lb" x="'+(ox-16)+'" y="'+(oy+H/2+4)+'" text-anchor="middle">'+f.hauteur+' '+u+'</text></svg></div>'
+    return '<div class="q-figure">'+open+'<rect class="fig-sh" x="'+ox+'" y="'+oy+'" width="'+W+'" height="'+H+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+H+17)+'" text-anchor="middle">'+f.largeur+' '+u+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy+H/2+4)+'" text-anchor="end">'+f.hauteur+' '+u+'</text></svg></div>'
   }
   if (f.type === 'cercle') {
     const u=f.unite||'cm',R=(S-2*P)/2*0.82,cx=S/2,cy=S/2
@@ -204,17 +209,16 @@ function renderFigure(fig) {
     const u=f.unite||'cm'
     const aVal=(f.a&&f.a!=='?'&&f.a!==null)?Number(f.a):null
     const bVal=(f.b&&f.b!=='?'&&f.b!==null)?Number(f.b):null
-    const scA=aVal?(S-2*P)/(aVal+4):S-2*P
-    const scB=bVal?(S-2*P)/(bVal+4):S-2*P
-    const sc2=Math.min(scA,scB)*0.72
-    const A=(aVal||4)*sc2,B=(bVal||4)*sc2,sq=10,ox=P+10,oy=S-P
+    const refVal = aVal||bVal||4
+    const sc2=Math.min((S-2*P)/(refVal+4),(S-2*P)/(refVal+4))*0.72
+    const A=(aVal||refVal)*sc2,B=(bVal||refVal)*sc2,sq=10,ox=P+10,oy=S-P
     const aLabel=aVal?aVal+' '+u:'?'
     const bLabel=bVal?bVal+' '+u:'?'
     const hypLabel=(f.c&&f.c!=='?'&&f.c!==null)?f.c+' '+u:'?'
-    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+bLabel+'</text><text class="fig-lb" x="'+(ox-18)+'" y="'+(oy-A/2+4)+'" text-anchor="middle">'+aLabel+'</text><text class="fig-lb" x="'+(ox+B/2+14)+'" y="'+(oy-A/2-6)+'" text-anchor="start">'+hypLabel+'</text></svg></div>'
+    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+bLabel+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy-A/2+4)+'" text-anchor="end">'+aLabel+'</text><text class="fig-lb" x="'+(ox+B/2+14)+'" y="'+(oy-A/2-6)+'" text-anchor="start">'+hypLabel+'</text></svg></div>'
   }
   if (f.type === 'thales') {
-    const u=f.unite||'cm',sc=24,ox=S/2,oy=P+14
+    const sc=24,ox=S/2,oy=P+14
     const amVal=f.am==='?'?3:Number(f.am)
     const abVal=f.ab==='?'?6:Number(f.ab)
     const anVal=f.an==='?'?3:Number(f.an)
@@ -281,7 +285,6 @@ async function renderIntro() {
     '<button class="btn btn-primary btn-full" style="font-size:16px;padding:14px" onclick="demarrerExamen()">🚀 Commencer l\'examen</button>'+
     '</div>'
 }
-
 async function demarrerExamen() {
   document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de votre examen…</div>'
   try {
