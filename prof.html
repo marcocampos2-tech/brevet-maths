@@ -10,6 +10,7 @@
 <meta name="apple-mobile-web-app-title" content="ACADEMIKA">
 <title>Prof — ACADEMIKA</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,6 +33,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn-blue:hover { background: var(--blue); color: white; }
 .btn-green { background: var(--green-bg); color: var(--green); border-color: var(--green); }
 .btn-green:hover { background: var(--green); color: white; }
+.btn-amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber); }
+.btn-amber:hover { background: var(--amber); color: white; }
 .btn:disabled { opacity: .5; cursor: default; pointer-events: none; }
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
 .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; }
@@ -64,14 +67,9 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .badge-ab { background: var(--amber-bg); color: var(--amber); border: 1px solid #fcd34d; }
 .badge-admis { background: #f5f5f5; color: #555; border: 1px solid #ccc; }
 .badge-insuf { background: var(--red-bg); color: var(--red); border: 1px solid #fca5a5; }
-.bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.bar-label { font-size: 12px; color: var(--muted); width: 115px; flex-shrink: 0; }
-.bar-track { flex: 1; height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 4px; }
-.bar-pct { font-size: 12px; font-weight: 600; width: 36px; text-align: right; }
 .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: center; justify-content: center; }
 .overlay.active { display: flex; }
-.modal { background: white; border-radius: 14px; padding: 1.75rem; max-width: 580px; width: 92%; max-height: 88vh; overflow-y: auto; }
+.modal { background: white; border-radius: 14px; padding: 1.75rem; max-width: 620px; width: 92%; max-height: 88vh; overflow-y: auto; }
 .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 .modal-title { font-size: 16px; font-weight: 600; }
 .modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); line-height: 1; }
@@ -96,6 +94,21 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .dash-table td { padding: 8px 6px; border-bottom: 1px solid #f3f3ef; text-align: center; vertical-align: middle; }
 .dash-table td:first-child { text-align: left; }
 .dash-table tr:last-child td { border-bottom: none; }
+.q-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+.q-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.q-card-text { font-size: 13px; color: var(--text); line-height: 1.6; flex: 1; }
+.q-card-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+.q-figure { margin: 8px 0; display: flex; justify-content: center; background: white; border-radius: 8px; padding: 10px; border: 1px solid var(--border); }
+.q-figure svg { max-width: 200px; height: auto; }
+.q-figure img { max-width: 200px; height: auto; border-radius: 6px; }
+.q-tableau { border-collapse: collapse; margin: 8px 0; font-size: 12px; width: 100%; }
+.q-tableau th { border: 1px solid #ccc; padding: 4px 10px; background: #f5f5f0; font-weight: 600; text-align: center; }
+.q-tableau td { border: 1px solid #ccc; padding: 4px 10px; text-align: center; }
+.q-chart { margin: 8px 0; position: relative; width: 100%; height: 140px; }
+.banque-filters { display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+.banque-filters select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; background: white; }
+.banque-filters input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; flex: 1; min-width: 160px; }
+.pagination { display: flex; gap: 6px; align-items: center; margin-top: 1rem; justify-content: center; font-size: 12px; }
 @media (max-width: 600px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
   .tbl th:nth-child(n+5), .tbl td:nth-child(n+5) { display: none; }
@@ -110,6 +123,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   </nav>
   <div id="root"><div class="loader">Chargement…</div></div>
 </div>
+
+<!-- Modal fiche élève -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <div class="modal-head">
@@ -119,6 +134,18 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <div id="fiche-body"></div>
   </div>
 </div>
+
+<!-- Modal modifier question -->
+<div class="overlay" id="overlay-edit">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">✏️ Modifier la question</div>
+      <button class="modal-close" onclick="closeEdit()">✕</button>
+    </div>
+    <div id="edit-body"></div>
+  </div>
+</div>
+
 <script>
 const SB_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SB_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
@@ -129,6 +156,12 @@ const THEMES  = ['Nombres et calculs','Géométrie','Algèbre et équations','St
 const THEMES_SHORT = ['Nombres','Géométrie','Algèbre','Stats','Fonctions','Algo']
 
 let ROWS = [], EXAMENS = [], PROFILS = {}, ELEVES = []
+let BANQUE_DATA = []
+let banqueFiltre = { theme: '', diff: '', search: '', page: 0 }
+const PER_PAGE = 20
+let editCurrentId = null
+let editCurrentTable = 'questions_banque'
+let chartsInstances = {}
 
 const pct      = (ok, tot) => tot ? Math.round(ok / tot * 100) : 0
 const color    = p => p >= 70 ? '#16a34a' : p >= 50 ? '#d97706' : '#dc2626'
@@ -164,12 +197,7 @@ function scoresExamen(th) {
     const k = Object.keys(th).find(k => k.toLowerCase().includes(key))
     return k ? th[k].ok+'/'+th[k].total : '—'
   }
-  return {
-    nombres:   sc('nombre'),
-    geo:       sc('espace') || sc('geom'),
-    stats:     sc('organisation') || sc('stat'),
-    grandeurs: sc('grandeur') || sc('algo')
-  }
+  return { nombres: sc('nombre'), geo: sc('espace')||sc('geom'), stats: sc('organisation')||sc('stat'), grandeurs: sc('grandeur')||sc('algo') }
 }
 
 async function logout() { await sb.auth.signOut(); location.href = 'index.html' }
@@ -177,16 +205,287 @@ async function logout() { await sb.auth.signOut(); location.href = 'index.html' 
 function setTab(id) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id))
   document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === 'sec-'+id))
-  if (id === 'banque') chargerStatsBanque()
+  if (id === 'banque') { banqueFiltre = { theme: '', diff: '', search: '', page: 0 }; chargerBanque() }
 }
 
 function miniStat(val, label, col) {
-  return '<div style="background:#f7f7f5;border-radius:10px;padding:12px;text-align:center">' +
-    '<div style="font-size:26px;font-weight:700;color:'+col+'">'+val+'</div>' +
-    '<div style="font-size:11px;color:#888;margin-top:4px">'+label+'</div>' +
-    '</div>'
+  return '<div style="background:#f7f7f5;border-radius:10px;padding:12px;text-align:center"><div style="font-size:26px;font-weight:700;color:'+col+'">'+val+'</div><div style="font-size:11px;color:#888;margin-top:4px">'+label+'</div></div>'
 }
 
+// ═══════════════════════════════════════════════════
+// RENDU FIGURE SVG
+// ═══════════════════════════════════════════════════
+function renderFigureSVG(fig) {
+  if (!fig || !fig.type) return ''
+  var f = fig
+  if (typeof f === 'string') { try { f = JSON.parse(f) } catch(e) { return '' } }
+  if (!f || !f.type) return ''
+  if (f.type === 'triangle_rect' && f.base === '?' && f.hauteur === '?') return ''
+
+  const S = 180, P = 28
+  const style = '<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:10px;fill:#3730a3;font-weight:600;font-family:sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>'
+  const open = '<svg width="180" height="180" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg">'+style
+
+  if (f.type === 'triangle_rect') {
+    const u=f.unite||'cm'
+    const baseVal=f.base==='?'?(Number(f.hauteur)||4):Number(f.base)
+    const hautVal=f.hauteur==='?'?(Number(f.base)||4):Number(f.hauteur)
+    const sc=Math.min((S-2*P)/baseVal,(S-2*P)/hautVal)*0.85
+    const W=baseVal*sc,H=hautVal*sc,ox=P+8,oy=S-P,sq=9
+    const bL=f.base==='?'?'?':f.base+' '+u
+    const hL=f.hauteur==='?'?'?':f.hauteur+' '+u
+    return open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ox+','+(oy-H)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+bL+'</text><text class="fig-lb" x="'+(ox-7)+'" y="'+(oy-H/2+4)+'" text-anchor="end">'+hL+'</text></svg>'
+  }
+  if (f.type === 'rectangle') {
+    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.largeur,(S-2*P)/f.hauteur)*0.85
+    const W=f.largeur*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=(S-H)/2
+    return open+'<rect class="fig-sh" x="'+ox+'" y="'+oy+'" width="'+W+'" height="'+H+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+H+14)+'" text-anchor="middle">'+f.largeur+' '+u+'</text><text class="fig-lb" x="'+(ox-7)+'" y="'+(oy+H/2+4)+'" text-anchor="end">'+f.hauteur+' '+u+'</text></svg>'
+  }
+  if (f.type === 'cercle') {
+    const u=f.unite||'cm',R=(S-2*P)/2*0.82,cx=S/2,cy=S/2
+    return open+'<circle class="fig-sh" cx="'+cx+'" cy="'+cy+'" r="'+R+'"/><line class="fig-dm" x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R)+'" y2="'+cy+'"/><circle class="fig-dot" cx="'+cx+'" cy="'+cy+'" r="2.5"/><text class="fig-lb" x="'+(cx+R/2)+'" y="'+(cy-7)+'" text-anchor="middle">r='+f.rayon+' '+u+'</text></svg>'
+  }
+  if (f.type === 'pythagore') {
+    const u=f.unite||'cm'
+    const aVal=(f.a&&f.a!=='?'&&f.a!==null)?Number(f.a):null
+    const bVal=(f.b&&f.b!=='?'&&f.b!==null)?Number(f.b):null
+    const refVal=aVal||bVal||4
+    const sc2=Math.min((S-2*P)/(refVal+4),(S-2*P)/(refVal+4))*0.72
+    const A=(aVal||refVal)*sc2,B=(bVal||refVal)*sc2,sq=9,ox=P+8,oy=S-P
+    const aL=aVal?aVal+' '+u:'?',bL=bVal?bVal+' '+u:'?',cL=(f.c&&f.c!=='?')?f.c+' '+u:'?'
+    return open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+bL+'</text><text class="fig-lb" x="'+(ox-7)+'" y="'+(oy-A/2+4)+'" text-anchor="end">'+aL+'</text><text class="fig-lb" x="'+(ox+B/2+12)+'" y="'+(oy-A/2-5)+'" text-anchor="start">'+cL+'</text></svg>'
+  }
+  if (f.type === 'triangle') {
+    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85
+    const W=f.base*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=S-P,ax=ox+W*0.38,ay=oy-H
+    return open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ax+','+ay+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+f.base+' '+u+'</text></svg>'
+  }
+  if (f.type === 'trapeze') {
+    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.grande_base,(S-2*P)/f.hauteur)*0.82
+    const GB=f.grande_base*sc,PB=f.petite_base*sc,H=f.hauteur*sc,ox=(S-GB)/2,oy=S-P,off=(GB-PB)/2
+    return open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+GB)+','+oy+' '+(ox+GB-off)+','+(oy-H)+' '+(ox+off)+','+(oy-H)+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+f.grande_base+' '+u+'</text></svg>'
+  }
+  if (f.type === 'parallelogramme') {
+    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.78
+    const W=f.base*sc,H=f.hauteur*sc,sh=H*0.5,ox=P,oy=S-P
+    return open+'<polygon class="fig-sh" points="'+(ox+sh)+','+(oy-H)+' '+(ox+sh+W)+','+(oy-H)+' '+(ox+W)+','+oy+' '+ox+','+oy+'"/><text class="fig-lb" x="'+(ox+sh/2+W/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+f.base+' '+u+'</text></svg>'
+  }
+  return ''
+}
+
+function renderTableauHTML(tableau) {
+  if (!tableau) return ''
+  var t = tableau
+  if (typeof t === 'string') { try { t = JSON.parse(t) } catch(e) { return '' } }
+  if (!t || !t.headers || !t.rows) return ''
+  return '<table class="q-tableau"><tr>'+t.headers.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+t.rows.map(row=>'<tr>'+row.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>').join('')+'</table>'
+}
+
+// ═══════════════════════════════════════════════════
+// BANQUE — CHARGEMENT ET AFFICHAGE
+// ═══════════════════════════════════════════════════
+async function chargerBanque() {
+  const el = document.getElementById('banque-list')
+  if (!el) return
+  el.innerHTML = '<div class="loader">Chargement…</div>'
+
+  let query = sb.from('questions_banque').select('*').order('theme').order('difficulte')
+  if (banqueFiltre.theme) query = query.eq('theme', banqueFiltre.theme)
+  if (banqueFiltre.diff)  query = query.eq('difficulte', banqueFiltre.diff)
+
+  const { data, error } = await query
+  if (error) { el.innerHTML='<div class="empty">Erreur : '+error.message+'</div>'; return }
+
+  let filtered = data || []
+  if (banqueFiltre.search) {
+    const s = banqueFiltre.search.toLowerCase()
+    filtered = filtered.filter(q => q.question.toLowerCase().includes(s))
+  }
+
+  BANQUE_DATA = filtered
+  const total = filtered.length
+  const start = banqueFiltre.page * PER_PAGE
+  const page  = filtered.slice(start, start + PER_PAGE)
+
+  if (!page.length) { el.innerHTML='<div class="empty">Aucune question trouvée.</div>'; return }
+
+  let html = ''
+  page.forEach(q => {
+    const opts = typeof q.opts === 'string' ? JSON.parse(q.opts) : (q.opts || [])
+    const letters = ['A','B','C','D']
+    const hasFigSVG = q.figure && q.figure.type
+    const hasFigURL = q.figure_url
+    const hasTab    = q.tableau
+
+    html += '<div class="q-card" id="qcard-'+q.id+'">'
+    html += '<div class="q-card-header">'
+    html += '<div>'
+    html += '<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">'
+    html += '<span class="badge badge-blue">'+q.theme+'</span>'
+    html += '<span class="badge '+(q.difficulte==='facile'?'badge-tb':q.difficulte==='moyen'?'badge-ab':'badge-insuf')+'">'+q.difficulte+'</span>'
+    if (hasFigSVG) html += '<span class="badge" style="background:#f0f0ff;color:#3730a3">🔷 Figure SVG</span>'
+    if (hasFigURL) html += '<span class="badge" style="background:#fff0f0;color:#dc2626">🖼 Image</span>'
+    if (hasTab)    html += '<span class="badge badge-banque">📊 Tableau</span>'
+    html += '</div>'
+    html += '<div class="q-card-text">'+q.question+'</div>'
+    html += '</div>'
+    html += '<div class="q-card-actions">'
+    html += '<button class="btn btn-sm btn-blue" onclick="ouvrirEdit('+q.id+',\'questions_banque\')">✏️ Modifier</button>'
+    html += '<label class="btn btn-sm btn-amber" style="cursor:pointer">🖼 Image<input type="file" accept="image/*" style="display:none" onchange="uploadFigure(event,'+q.id+',\'questions_banque\')"></label>'
+    if (hasFigSVG || hasFigURL) html += '<button class="btn btn-sm btn-red" onclick="supprimerFigure('+q.id+',\'questions_banque\')">🗑 Figure</button>'
+    html += '</div>'
+    html += '</div>'
+
+    // Figure SVG
+    if (hasFigSVG) {
+      const svg = renderFigureSVG(q.figure)
+      if (svg) html += '<div class="q-figure">'+svg+'</div>'
+    }
+    // Image uploadée
+    if (hasFigURL) {
+      html += '<div class="q-figure"><img src="'+q.figure_url+'" alt="figure"></div>'
+    }
+    // Tableau
+    if (hasTab) {
+      html += renderTableauHTML(q.tableau)
+    }
+
+    // Options
+    html += '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px">'
+    opts.forEach((opt, i) => {
+      const correct = i === q.answer
+      html += '<div style="font-size:11px;padding:4px 8px;border-radius:6px;background:'+(correct?'#f0fdf4':'#f7f7f5')+';color:'+(correct?'#16a34a':'#555')+';border:1px solid '+(correct?'#86efac':'#e8e8e4')+'">'
+      html += '<strong>'+letters[i]+'.</strong> '+opt+(correct?' ✓':'')
+      html += '</div>'
+    })
+    html += '</div>'
+    html += '</div>'
+  })
+
+  // Pagination
+  const totalPages = Math.ceil(total / PER_PAGE)
+  html += '<div class="pagination">'
+  html += '<button class="btn btn-sm" onclick="banquePage(-1)" '+(banqueFiltre.page===0?'disabled':'')+'>← Préc</button>'
+  html += '<span style="color:var(--muted)">Page '+(banqueFiltre.page+1)+' / '+totalPages+' ('+total+' questions)</span>'
+  html += '<button class="btn btn-sm" onclick="banquePage(1)" '+(banqueFiltre.page>=totalPages-1?'disabled':'')+'>Suiv →</button>'
+  html += '</div>'
+
+  el.innerHTML = html
+}
+
+function banquePage(dir) {
+  banqueFiltre.page += dir
+  chargerBanque()
+  document.getElementById('sec-banque').scrollTop = 0
+}
+
+function filtrerBanque() {
+  banqueFiltre.theme  = document.getElementById('filtre-theme').value
+  banqueFiltre.diff   = document.getElementById('filtre-diff').value
+  banqueFiltre.search = document.getElementById('filtre-search').value.trim()
+  banqueFiltre.page   = 0
+  chargerBanque()
+}
+
+// ═══════════════════════════════════════════════════
+// UPLOAD FIGURE IMAGE
+// ═══════════════════════════════════════════════════
+async function uploadFigure(event, id, table) {
+  const file = event.target.files[0]
+  if (!file) return
+  const ext = file.name.split('.').pop()
+  const path = table+'/'+id+'.'+ext
+
+  const { error: upErr } = await sb.storage.from('figures').upload(path, file, { upsert: true })
+  if (upErr) { alert('Erreur upload : '+upErr.message); return }
+
+  const { data: urlData } = sb.storage.from('figures').getPublicUrl(path)
+  const url = urlData.publicUrl
+
+  const { error: dbErr } = await sb.from(table).update({ figure_url: url }).eq('id', id)
+  if (dbErr) { alert('Erreur sauvegarde : '+dbErr.message); return }
+
+  alert('✅ Image uploadée !')
+  chargerBanque()
+}
+
+// ═══════════════════════════════════════════════════
+// SUPPRIMER FIGURE
+// ═══════════════════════════════════════════════════
+async function supprimerFigure(id, table) {
+  if (!confirm('Supprimer la figure de cette question ?')) return
+  const { error } = await sb.from(table).update({ figure: null, figure_url: null }).eq('id', id)
+  if (error) { alert('Erreur : '+error.message); return }
+  chargerBanque()
+}
+
+// ═══════════════════════════════════════════════════
+// MODIFIER QUESTION
+// ═══════════════════════════════════════════════════
+async function ouvrirEdit(id, table) {
+  editCurrentId    = id
+  editCurrentTable = table
+  const { data, error } = await sb.from(table).select('*').eq('id', id).single()
+  if (error || !data) { alert('Erreur chargement question'); return }
+
+  const opts = typeof data.opts === 'string' ? JSON.parse(data.opts) : (data.opts || ['','','',''])
+  const letters = ['A','B','C','D']
+
+  let html = ''
+  html += '<div class="field"><label>Question</label><textarea id="edit-question" style="min-height:80px">'+data.question+'</textarea></div>'
+  html += '<div style="margin-bottom:12px">'
+  letters.forEach((l,i) => {
+    html += '<div class="opt-row"><label>'+l+'</label><input type="text" id="edit-opt'+l+'" value="'+(opts[i]||'')+'"><label class="radio-label"><input type="radio" name="edit-bonne" value="'+i+'" '+(data.answer===i?'checked':'')+'>  Bonne</label></div>'
+  })
+  html += '</div>'
+  html += '<div class="field"><label>Explication</label><textarea id="edit-explication" style="min-height:80px">'+data.explication+'</textarea></div>'
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+  html += '<button class="btn btn-green" onclick="sauvegarderEdit()">💾 Sauvegarder</button>'
+  html += '<button class="btn btn-red" onclick="supprimerQuestion()">🗑 Supprimer la question</button>'
+  html += '<button class="btn" onclick="closeEdit()">Annuler</button>'
+  html += '</div>'
+  html += '<div id="edit-msg" style="margin-top:10px;font-size:13px"></div>'
+
+  document.getElementById('edit-body').innerHTML = html
+  document.getElementById('overlay-edit').classList.add('active')
+}
+
+function closeEdit() { document.getElementById('overlay-edit').classList.remove('active') }
+
+async function sauvegarderEdit() {
+  const question    = document.getElementById('edit-question').value.trim()
+  const explication = document.getElementById('edit-explication').value.trim()
+  const bonneVal    = document.querySelector('input[name="edit-bonne"]:checked')?.value
+  const letters     = ['A','B','C','D']
+  const opts        = letters.map(l => document.getElementById('edit-opt'+l).value.trim())
+  const msg         = document.getElementById('edit-msg')
+
+  if (!question || opts.some(o=>!o) || bonneVal === undefined || !explication) {
+    msg.innerHTML = '<span style="color:#dc2626">⚠ Remplis tous les champs.</span>'; return
+  }
+  msg.innerHTML = '<span style="color:#888">Sauvegarde…</span>'
+  const { error } = await sb.from(editCurrentTable).update({
+    question, opts: JSON.stringify(opts), answer: parseInt(bonneVal), explication
+  }).eq('id', editCurrentId)
+
+  if (error) {
+    msg.innerHTML = '<span style="color:#dc2626">Erreur : '+error.message+'</span>'
+  } else {
+    msg.innerHTML = '<span style="color:#16a34a">✓ Sauvegardé !</span>'
+    setTimeout(() => { closeEdit(); chargerBanque() }, 1000)
+  }
+}
+
+async function supprimerQuestion() {
+  if (!confirm('⚠️ Supprimer définitivement cette question ?')) return
+  const { error } = await sb.from(editCurrentTable).delete().eq('id', editCurrentId)
+  if (error) { alert('Erreur : '+error.message); return }
+  closeEdit()
+  chargerBanque()
+}
+// ═══════════════════════════════════════════════════
+// FICHE ÉLÈVE
+// ═══════════════════════════════════════════════════
 function openFiche(userId) {
   const e = ELEVES.find(x => x.user_id === userId)
   if (!e) return
@@ -198,10 +497,7 @@ function openFiche(userId) {
 
   const themes = {}
   rows.forEach(r => {
-    if (!themes[r.theme]) themes[r.theme] = {
-      ok:0, tot:0, n:0,
-      niveaux: { facile:{ok:0,tot:0}, moyen:{ok:0,tot:0}, difficile:{ok:0,tot:0} }
-    }
+    if (!themes[r.theme]) themes[r.theme] = { ok:0, tot:0, n:0, niveaux: { facile:{ok:0,tot:0}, moyen:{ok:0,tot:0}, difficile:{ok:0,tot:0} } }
     themes[r.theme].ok  += r.score
     themes[r.theme].tot += r.total
     themes[r.theme].n++
@@ -230,15 +526,15 @@ function openFiche(userId) {
   body += miniStat(fmtTemps(tempsTot), 'Temps total', '#111')
   body += '</div>'
 
-  const exam = EXAMENS.filter(ex => !ex.abandonne).find(ex => ex.user_id === userId)
+  const examMap = {}
+  EXAMENS.filter(e=>!e.abandonne).forEach(e=>{ if(!examMap[e.user_id]) examMap[e.user_id]=e })
+  const exam = examMap[userId]
   if (exam) {
     const ep = pct(exam.score, exam.total)
     body += '<div style="background:#eef2ff;border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">'
     body += '<div style="font-size:13px;font-weight:700;color:#3730a3">📝 Dernier examen blanc</div>'
-    body += '<div style="text-align:right">'
-    body += '<div style="font-size:16px;font-weight:700;color:'+color(ep)+'">'+exam.score+'/20</div>'
-    body += '<div style="font-size:11px;color:'+color(ep)+';font-weight:600">'+mentionLabel(ep)+'</div>'
-    body += '</div></div>'
+    body += '<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+color(ep)+'">'+exam.score+'/20</div>'
+    body += '<div style="font-size:11px;color:'+color(ep)+';font-weight:600">'+mentionLabel(ep)+'</div></div></div>'
   }
 
   THEMES.forEach(t => {
@@ -249,10 +545,8 @@ function openFiche(userId) {
     body += '<div style="background:#f7f7f5;border-radius:10px;padding:12px 14px;margin-bottom:10px">'
     body += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
     body += '<div style="font-size:13px;font-weight:700;color:#111">'+t+'</div>'
-    body += '<div style="text-align:right">'
-    body += '<div style="font-size:14px;font-weight:700;color:'+statut.color+'">'+s.ok+'/'+s.tot+' bonnes réponses</div>'
-    body += '<div style="font-size:11px;color:'+statut.color+';font-weight:600">'+statut.emoji+' '+statut.label+'</div>'
-    body += '</div></div>'
+    body += '<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:'+statut.color+'">'+s.ok+'/'+s.tot+' bonnes réponses</div>'
+    body += '<div style="font-size:11px;color:'+statut.color+';font-weight:600">'+statut.emoji+' '+statut.label+'</div></div></div>'
     ;['facile','moyen','difficile'].forEach(niv => {
       const n = s.niveaux[niv]
       if (n.tot === 0) return
@@ -260,8 +554,7 @@ function openFiche(userId) {
       const ns = getStatut(np)
       body += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0 5px 12px;font-size:12px;border-top:1px solid #e8e8e4">'
       body += '<span style="color:#666">'+niveauEmoji[niv]+'</span>'
-      body += '<span style="color:'+ns.color+';font-weight:600">'+ns.emoji+' '+ns.label+' — '+n.ok+'/'+n.tot+'</span>'
-      body += '</div>'
+      body += '<span style="color:'+ns.color+';font-weight:600">'+ns.emoji+' '+ns.label+' — '+n.ok+'/'+n.tot+'</span></div>'
     })
     const chaps = chapitresRates[t]
     if (chaps && Object.keys(chaps).length > 0) {
@@ -320,6 +613,9 @@ async function envoyerBilan(userId) {
   }
 }
 
+// ═══════════════════════════════════════════════════
+// AJOUTER QUESTION
+// ═══════════════════════════════════════════════════
 async function ajouterQuestion() {
   const theme       = document.getElementById('bq-theme').value
   const difficulte  = document.getElementById('bq-diff').value
@@ -344,36 +640,15 @@ async function ajouterQuestion() {
     msg.innerHTML='<span style="color:#dc2626">Erreur : '+error.message+'</span>'
   } else {
     msg.innerHTML='<span style="color:#16a34a">✓ Question ajoutée !</span>'
-    document.getElementById('bq-question').value=''
-    document.getElementById('bq-optA').value=''
-    document.getElementById('bq-optB').value=''
-    document.getElementById('bq-optC').value=''
-    document.getElementById('bq-optD').value=''
-    document.getElementById('bq-explication').value=''
+    ;['question','optA','optB','optC','optD','explication'].forEach(id => { document.getElementById('bq-'+id).value='' })
     document.querySelectorAll('input[name="bq-bonne"]').forEach(r=>r.checked=false)
-    chargerStatsBanque()
     setTimeout(()=>msg.innerHTML='',3000)
   }
 }
 
-async function chargerStatsBanque() {
-  const el = document.getElementById('bq-stats')
-  if (!el) return
-  el.innerHTML='<span style="color:#888;font-size:13px">Chargement…</span>'
-  const { data } = await sb.from('questions_banque').select('theme, difficulte')
-  if (!data) return
-  const stats = {}
-  THEMES.forEach(t => { stats[t] = { facile:0, moyen:0, difficile:0 } })
-  data.forEach(r => { if (stats[r.theme]) stats[r.theme][r.difficulte]++ })
-  const cell = (n) => '<td style="text-align:center"><span style="font-weight:600;color:'+(n>=50?'#16a34a':n>=20?'#d97706':'#dc2626')+'">'+n+(n>=50?' ✓':'')+'</span></td>'
-  el.innerHTML = '<table class="tbl"><thead><tr><th>Thème</th><th style="text-align:center">Facile</th><th style="text-align:center">Moyen</th><th style="text-align:center">Difficile</th><th style="text-align:center">Total</th></tr></thead><tbody>' +
-    THEMES.map(t => {
-      const s = stats[t]
-      const tot = s.facile + s.moyen + s.difficile
-      return '<tr><td style="font-size:12px">'+t+'</td>'+cell(s.facile)+cell(s.moyen)+cell(s.difficile)+'<td style="text-align:center;font-weight:600">'+tot+'</td></tr>'
-    }).join('') + '</tbody></table><p style="font-size:11px;color:#888;margin-top:10px">✓ vert ≥50 → objectif atteint</p>'
-}
-
+// ═══════════════════════════════════════════════════
+// RENDER PRINCIPAL
+// ═══════════════════════════════════════════════════
 function render() {
   const nbEleves  = [...new Set(ROWS.map(r=>r.user_id))].length
   const moyGlo    = ROWS.length ? Math.round((ROWS.reduce((a,r)=>a+r.score/r.total,0)/ROWS.length)*100) : 0
@@ -406,159 +681,132 @@ function render() {
   h += '<button class="tab" data-tab="themes" onclick="setTab(\'themes\')">Thèmes</button>'
   h += '<button class="tab" data-tab="sessions" onclick="setTab(\'sessions\')">Sessions</button>'
   h += '<button class="tab" data-tab="ratees" onclick="setTab(\'ratees\')">Questions ratées</button>'
-  h += '<button class="tab" data-tab="banque" onclick="setTab(\'banque\')">+ Banque</button>'
+  h += '<button class="tab" data-tab="banque" onclick="setTab(\'banque\')">📚 Banque</button>'
   h += '</div>'
 
+  // DASHBOARD
   h += '<div class="section active" id="sec-dashboard"><div class="card">'
   h += '<div class="card-title">📊 Tableau comparatif — tous les élèves</div>'
-  h += '<div style="overflow-x:auto">'
-  h += '<table class="dash-table"><thead><tr><th>Élève</th><th>Global</th>'
+  h += '<div style="overflow-x:auto"><table class="dash-table"><thead><tr><th>Élève</th><th>Global</th>'
   THEMES_SHORT.forEach(t => { h += '<th>'+t+'</th>' })
   h += '<th>Examen blanc</th></tr></thead><tbody>'
-
   ELEVES.forEach(e => {
     const rows = ROWS.filter(r => r.user_id === e.user_id)
     const exam = examMap[e.user_id]
-    const examCell = !exam
-      ? '<td style="color:#999;font-size:11px">—</td>'
+    const examCell = !exam ? '<td style="color:#999;font-size:11px">—</td>'
       : (()=>{ const ep=pct(exam.score,exam.total); return '<td><span style="color:'+color(ep)+';font-weight:700">'+exam.score+'/20</span><br><span style="font-size:10px;color:'+color(ep)+'">'+mentionLabel(ep)+'</span></td>' })()
-
     if (rows.length === 0) {
       h += '<tr><td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></td><td style="color:#999">—</td>'
       THEMES.forEach(() => { h += '<td style="color:#999">—</td>' })
       h += examCell + '</tr>'; return
     }
-    const globalScore = rows.reduce((a,r)=>a+r.score,0)
-    const globalTot   = rows.reduce((a,r)=>a+r.total,0)
-    const globalPct   = pct(globalScore, globalTot)
-    h += '<tr>'
-    h += '<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></td>'
-    h += '<td><strong style="color:'+color(globalPct)+'">'+globalPct+'%</strong></td>'
+    const gS=rows.reduce((a,r)=>a+r.score,0), gT=rows.reduce((a,r)=>a+r.total,0), gP=pct(gS,gT)
+    h += '<tr><td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></td>'
+    h += '<td><strong style="color:'+color(gP)+'">'+gP+'%</strong></td>'
     THEMES.forEach(t => {
-      const tr = rows.filter(r => r.theme === t)
-      if (tr.length === 0) { h += '<td style="color:#999;font-size:11px">—</td>'; return }
-      const ok  = tr.reduce((a,r)=>a+r.score,0)
-      const tot = tr.reduce((a,r)=>a+r.total,0)
-      const p   = pct(ok, tot)
+      const tr=rows.filter(r=>r.theme===t)
+      if (!tr.length) { h += '<td style="color:#999;font-size:11px">—</td>'; return }
+      const ok=tr.reduce((a,r)=>a+r.score,0), tot=tr.reduce((a,r)=>a+r.total,0), p=pct(ok,tot)
       h += '<td><span style="color:'+color(p)+';font-weight:600">'+emoji(p)+' '+p+'%</span></td>'
     })
     h += examCell + '</tr>'
   })
-
   h += '</tbody></table></div>'
-  h += '<p style="font-size:11px;color:#888;margin-top:10px">🟢 ≥70% Maîtrisé | 🟡 50-69% En cours | 🔴 &lt;50% À retravailler — Cliquer sur le prénom pour la fiche</p>'
+  h += '<p style="font-size:11px;color:#888;margin-top:10px">🟢 ≥70% Maîtrisé | 🟡 50-69% En cours | 🔴 &lt;50% À retravailler</p>'
   h += '</div></div>'
 
-  h += '<div class="section" id="sec-eleves"><div class="card">'
-  h += '<div class="card-title">Liste des élèves</div>'
+  // ÉLÈVES
+  h += '<div class="section" id="sec-eleves"><div class="card"><div class="card-title">Liste des élèves</div>'
   h += '<table class="tbl"><thead><tr><th>Élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th><th>Examen</th><th>Actions</th></tr></thead><tbody>'
   ELEVES.forEach(e=>{
-    const p = e.totalQ>0 ? pct(e.totalScore,e.totalQ) : 0
-    const exam = examMap[e.user_id]
-    const examCell = exam ? mentionBadge(pct(exam.score,exam.total))+' <span style="font-size:12px">'+exam.score+'/20</span>' : '<span style="color:#999;font-size:12px">—</span>'
+    const p=e.totalQ>0?pct(e.totalScore,e.totalQ):0
+    const exam=examMap[e.user_id]
+    const examCell=exam?mentionBadge(pct(exam.score,exam.total))+' <span style="font-size:12px">'+exam.score+'/20</span>':'<span style="color:#999;font-size:12px">—</span>'
     h += '<tr><td><strong>'+e.prenom+' '+e.nom+'</strong></td><td style="color:#2563eb;font-size:12px">'+e.email_parent+'</td><td>'+e.sessions+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td><td>'+examCell+'</td>'
     h += '<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">Fiche</button></td></tr>'
   })
   h += '</tbody></table></div></div>'
 
+  // EXAMENS BLANCS
   const examensValides = EXAMENS.filter(e=>!e.abandonne)
   h += '<div class="section" id="sec-examens"><div class="card"><div class="card-title">Résultats Examens Blancs</div>'
-  if (!examensValides.length) {
-    h += '<p class="empty">Aucun examen passé.</p>'
-  } else {
+  if (!examensValides.length) { h += '<p class="empty">Aucun examen passé.</p>' }
+  else {
     h += '<table class="tbl"><thead><tr><th>Élève</th><th>Score</th><th>Mention</th><th>Temps</th><th>Nombres</th><th>Organisation</th><th>Géométrie</th><th>Grandeurs</th></tr></thead><tbody>'
     examensValides.forEach(e=>{
-      const p = pct(e.score,e.total)
-      const th = e.scores_themes||{}
-      const sc = scoresExamen(th)
+      const p=pct(e.score,e.total), th=e.scores_themes||{}, sc=scoresExamen(th)
       const mins=Math.floor(e.temps_secondes/60), secs=e.temps_secondes%60
-      const profil=PROFILS[e.user_id]
-      const nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:e.prenom||'—'
-      h += '<tr><td><strong>'+nom+'</strong></td>'
-      h += '<td><strong>'+e.score+'/20</strong> <span style="font-size:11px;color:'+(p>=50?'#16a34a':'#dc2626')+'">'+p+'%</span></td>'
-      h += '<td>'+mentionBadge(p)+'</td>'
-      h += '<td style="font-size:12px">'+fmt(mins,secs)+'</td>'
-      h += '<td style="text-align:center;font-size:12px">'+sc.nombres+'</td>'
-      h += '<td style="text-align:center;font-size:12px">'+sc.stats+'</td>'
-      h += '<td style="text-align:center;font-size:12px">'+sc.geo+'</td>'
-      h += '<td style="text-align:center;font-size:12px">'+sc.grandeurs+'</td>'
-      h += '</tr>'
+      const profil=PROFILS[e.user_id], nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:e.prenom||'—'
+      h += '<tr><td><strong>'+nom+'</strong></td><td><strong>'+e.score+'/20</strong> <span style="font-size:11px;color:'+(p>=50?'#16a34a':'#dc2626')+'">'+p+'%</span></td>'
+      h += '<td>'+mentionBadge(p)+'</td><td style="font-size:12px">'+fmt(mins,secs)+'</td>'
+      h += '<td style="text-align:center;font-size:12px">'+sc.nombres+'</td><td style="text-align:center;font-size:12px">'+sc.stats+'</td>'
+      h += '<td style="text-align:center;font-size:12px">'+sc.geo+'</td><td style="text-align:center;font-size:12px">'+sc.grandeurs+'</td></tr>'
     })
     h += '</tbody></table>'
   }
   h += '</div></div>'
 
+  // THÈMES
   h += '<div class="section" id="sec-themes"><div class="card"><div class="card-title">Résultats par thème</div>'
   h += '<table class="tbl"><thead><tr><th>Thème</th><th>Sessions</th><th>Moyenne</th></tr></thead><tbody>'
   Object.entries(themeStats).forEach(([t,s])=>{ const p=pct(s.ok,s.tot); h+='<tr><td>'+t+'</td><td>'+s.n+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td></tr>' })
   h += '</tbody></table></div></div>'
 
+  // SESSIONS
   h += '<div class="section" id="sec-sessions"><div class="card"><div class="card-title">30 dernières activités</div>'
   h += '<table class="tbl"><thead><tr><th>Élève</th><th>Type</th><th>Détail</th><th>Score</th><th>Date</th></tr></thead><tbody>'
-
   const toutesActivites = [
-    ...ROWS.map(r => ({
-      user_id: r.user_id,
-      type: 'quiz',
-      detail: r.theme + ' — ' + r.difficulte,
-      score: r.score,
-      total: r.total,
-      created_at: r.created_at
-    })),
-    ...EXAMENS.filter(e => !e.abandonne).map(e => ({
-      user_id: e.user_id,
-      type: 'examen',
-      detail: 'Examen blanc',
-      score: e.score,
-      total: e.total,
-      created_at: e.created_at
-    }))
+    ...ROWS.map(r=>({ user_id:r.user_id, type:'quiz', detail:r.theme+' — '+r.difficulte, score:r.score, total:r.total, created_at:r.created_at })),
+    ...EXAMENS.filter(e=>!e.abandonne).map(e=>({ user_id:e.user_id, type:'examen', detail:'Examen blanc', score:e.score, total:e.total, created_at:e.created_at }))
   ]
-
-  toutesActivites
-    .sort((a,b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, 30)
-    .forEach(r => {
-      const profil = PROFILS[r.user_id]
-      const nom = profil ? profil.prenom_affiche + ' ' + profil.nom_affiche : '—'
-      const p = pct(r.score, r.total)
-      const typeBadge = r.type === 'examen'
-        ? '<span class="badge badge-blue">📝 Examen blanc</span>'
-        : '<span class="badge badge-banque">🎲 Quiz</span>'
-      h += '<tr>'
-      h += '<td><strong>' + nom + '</strong></td>'
-      h += '<td>' + typeBadge + '</td>'
-      h += '<td style="font-size:12px;color:#555">' + r.detail + '</td>'
-      h += '<td><strong style="color:' + color(p) + '">' + r.score + '/' + r.total + '</strong></td>'
-      h += '<td style="font-size:12px;color:#999">' + dateStr(r.created_at) + '</td>'
-      h += '</tr>'
-    })
-
+  toutesActivites.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,30).forEach(r=>{
+    const profil=PROFILS[r.user_id], nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:'—', p=pct(r.score,r.total)
+    const typeBadge=r.type==='examen'?'<span class="badge badge-blue">📝 Examen blanc</span>':'<span class="badge badge-banque">🎲 Quiz</span>'
+    h += '<tr><td><strong>'+nom+'</strong></td><td>'+typeBadge+'</td><td style="font-size:12px;color:#555">'+r.detail+'</td>'
+    h += '<td><strong style="color:'+color(p)+'">'+r.score+'/'+r.total+'</strong></td><td style="font-size:12px;color:#999">'+dateStr(r.created_at)+'</td></tr>'
+  })
   h += '</tbody></table></div></div>'
 
+  // QUESTIONS RATÉES
   h += '<div class="section" id="sec-ratees"><div class="card"><div class="card-title">Questions les plus ratées</div>'
   if (topRatees.length) {
     topRatees.forEach(([q,n])=>{ h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="color:#444">'+q+'</span><span style="color:#dc2626;font-weight:600;margin-left:12px;white-space:nowrap">'+n+'× raté</span></div>' })
   } else { h += '<p class="empty">Pas encore de données.</p>' }
   h += '</div></div>'
 
+  // BANQUE
   h += '<div class="section" id="sec-banque">'
-  h += '<div class="card"><div class="card-title">Ajouter une question</div>'
+
+  // Filtres
+  h += '<div class="card">'
+  h += '<div class="banque-filters">'
+  h += '<select id="filtre-theme" onchange="filtrerBanque()"><option value="">Tous les thèmes</option>'+THEMES.map(t=>'<option value="'+t+'">'+t+'</option>').join('')+'</select>'
+  h += '<select id="filtre-diff" onchange="filtrerBanque()"><option value="">Toutes difficultés</option><option value="facile">Facile</option><option value="moyen">Moyen</option><option value="difficile">Difficile</option></select>'
+  h += '<input type="text" id="filtre-search" placeholder="🔍 Rechercher dans les questions…" oninput="filtrerBanque()">'
+  h += '</div></div>'
+
+  // Liste questions
+  h += '<div class="card"><div class="card-title">Questions de la banque</div><div id="banque-list"><div class="loader">Cliquez sur l\'onglet Banque pour charger…</div></div></div>'
+
+  // Ajouter question
+  h += '<div class="card"><div class="card-title">➕ Ajouter une question</div>'
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
   h += '<div class="field"><label>Thème</label><select id="bq-theme">'+THEMES.map(t=>'<option>'+t+'</option>').join('')+'</select></div>'
   h += '<div class="field"><label>Difficulté</label><select id="bq-diff"><option value="facile">Facile</option><option value="moyen" selected>Moyen</option><option value="difficile">Difficile</option></select></div>'
   h += '</div>'
-  h += '<div class="field"><label>Question</label><textarea id="bq-question" placeholder="Énoncé complet de la question…"></textarea></div>'
+  h += '<div class="field"><label>Question</label><textarea id="bq-question" placeholder="Énoncé complet…"></textarea></div>'
   h += ['A','B','C','D'].map(l=>'<div class="opt-row"><label>'+l+'</label><input type="text" id="bq-opt'+l+'" placeholder="Option '+l+'"><label class="radio-label"><input type="radio" name="bq-bonne" value="'+l+'"> Bonne réponse</label></div>').join('')
   h += '<div class="field" style="margin-top:10px"><label>Explication</label><textarea id="bq-explication" placeholder="Correction étape par étape…"></textarea></div>'
-  h += '<button class="btn btn-green" onclick="ajouterQuestion()">Ajouter la question</button>'
+  h += '<button class="btn btn-green" onclick="ajouterQuestion()">➕ Ajouter la question</button>'
   h += '<div id="bq-msg" style="margin-top:10px;font-size:13px"></div></div>'
-  h += '<div class="card"><div class="card-title">État de la banque</div><div id="bq-stats"><span style="color:#888;font-size:13px">Cliquez sur l\'onglet Banque pour charger…</span></div></div>'
   h += '</div>'
 
   document.getElementById('root').innerHTML = h
 }
 
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
 async function init() {
   const { data: { session } } = await sb.auth.getSession()
   if (!session) { location.href='index.html'; return }
