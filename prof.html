@@ -104,7 +104,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .q-tableau { border-collapse: collapse; margin: 8px 0; font-size: 12px; width: 100%; }
 .q-tableau th { border: 1px solid #ccc; padding: 4px 10px; background: #f5f5f0; font-weight: 600; text-align: center; }
 .q-tableau td { border: 1px solid #ccc; padding: 4px 10px; text-align: center; }
-.q-chart { margin: 8px 0; position: relative; width: 100%; height: 140px; }
 .banque-filters { display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
 .banque-filters select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; background: white; }
 .banque-filters input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; flex: 1; min-width: 160px; }
@@ -124,7 +123,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   <div id="root"><div class="loader">Chargement…</div></div>
 </div>
 
-<!-- Modal fiche élève -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <div class="modal-head">
@@ -135,7 +133,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   </div>
 </div>
 
-<!-- Modal modifier question -->
 <div class="overlay" id="overlay-edit">
   <div class="modal">
     <div class="modal-head">
@@ -161,7 +158,6 @@ let banqueFiltre = { theme: '', diff: '', search: '', page: 0 }
 const PER_PAGE = 20
 let editCurrentId = null
 let editCurrentTable = 'questions_banque'
-let chartsInstances = {}
 
 const pct      = (ok, tot) => tot ? Math.round(ok / tot * 100) : 0
 const color    = p => p >= 70 ? '#16a34a' : p >= 50 ? '#d97706' : '#dc2626'
@@ -212,20 +208,15 @@ function miniStat(val, label, col) {
   return '<div style="background:#f7f7f5;border-radius:10px;padding:12px;text-align:center"><div style="font-size:26px;font-weight:700;color:'+col+'">'+val+'</div><div style="font-size:11px;color:#888;margin-top:4px">'+label+'</div></div>'
 }
 
-// ═══════════════════════════════════════════════════
-// RENDU FIGURE SVG
-// ═══════════════════════════════════════════════════
 function renderFigureSVG(fig) {
   if (!fig || !fig.type) return ''
   var f = fig
   if (typeof f === 'string') { try { f = JSON.parse(f) } catch(e) { return '' } }
   if (!f || !f.type) return ''
   if (f.type === 'triangle_rect' && f.base === '?' && f.hauteur === '?') return ''
-
   const S = 180, P = 28
   const style = '<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:10px;fill:#3730a3;font-weight:600;font-family:sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>'
   const open = '<svg width="180" height="180" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg">'+style
-
   if (f.type === 'triangle_rect') {
     const u=f.unite||'cm'
     const baseVal=f.base==='?'?(Number(f.hauteur)||4):Number(f.base)
@@ -258,7 +249,12 @@ function renderFigureSVG(fig) {
   if (f.type === 'triangle') {
     const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85
     const W=f.base*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=S-P,ax=ox+W*0.38,ay=oy-H
-    return open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ax+','+ay+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+f.base+' '+u+'</text></svg>'
+    return open+
+      '<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ax+','+ay+'"/>'+
+      '<line class="fig-dm" x1="'+ax+'" y1="'+ay+'" x2="'+ax+'" y2="'+oy+'"/>'+
+      '<text class="fig-lb" x="'+(S/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+f.base+' '+u+'</text>'+
+      '<text class="fig-lb" x="'+(ax+7)+'" y="'+((ay+oy)/2+4)+'" text-anchor="start">'+f.hauteur+' '+u+'</text>'+
+      '</svg>'
   }
   if (f.type === 'trapeze') {
     const u=f.unite||'cm',sc=Math.min((S-2*P)/f.grande_base,(S-2*P)/f.hauteur)*0.82
@@ -281,34 +277,25 @@ function renderTableauHTML(tableau) {
   return '<table class="q-tableau"><tr>'+t.headers.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+t.rows.map(row=>'<tr>'+row.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>').join('')+'</table>'
 }
 
-// ═══════════════════════════════════════════════════
-// BANQUE — CHARGEMENT ET AFFICHAGE
-// ═══════════════════════════════════════════════════
 async function chargerBanque() {
   const el = document.getElementById('banque-list')
   if (!el) return
   el.innerHTML = '<div class="loader">Chargement…</div>'
-
   let query = sb.from('questions_banque').select('*').order('theme').order('difficulte')
   if (banqueFiltre.theme) query = query.eq('theme', banqueFiltre.theme)
   if (banqueFiltre.diff)  query = query.eq('difficulte', banqueFiltre.diff)
-
   const { data, error } = await query
   if (error) { el.innerHTML='<div class="empty">Erreur : '+error.message+'</div>'; return }
-
   let filtered = data || []
   if (banqueFiltre.search) {
     const s = banqueFiltre.search.toLowerCase()
     filtered = filtered.filter(q => q.question.toLowerCase().includes(s))
   }
-
   BANQUE_DATA = filtered
   const total = filtered.length
   const start = banqueFiltre.page * PER_PAGE
   const page  = filtered.slice(start, start + PER_PAGE)
-
   if (!page.length) { el.innerHTML='<div class="empty">Aucune question trouvée.</div>'; return }
-
   let html = ''
   page.forEach(q => {
     const opts = typeof q.opts === 'string' ? JSON.parse(q.opts) : (q.opts || [])
@@ -316,10 +303,8 @@ async function chargerBanque() {
     const hasFigSVG = q.figure && q.figure.type
     const hasFigURL = q.figure_url
     const hasTab    = q.tableau
-
     html += '<div class="q-card" id="qcard-'+q.id+'">'
-    html += '<div class="q-card-header">'
-    html += '<div>'
+    html += '<div class="q-card-header"><div>'
     html += '<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">'
     html += '<span class="badge badge-blue">'+q.theme+'</span>'
     html += '<span class="badge '+(q.difficulte==='facile'?'badge-tb':q.difficulte==='moyen'?'badge-ab':'badge-insuf')+'">'+q.difficulte+'</span>'
@@ -333,51 +318,28 @@ async function chargerBanque() {
     html += '<button class="btn btn-sm btn-blue" onclick="ouvrirEdit('+q.id+',\'questions_banque\')">✏️ Modifier</button>'
     html += '<label class="btn btn-sm btn-amber" style="cursor:pointer">🖼 Image<input type="file" accept="image/*" style="display:none" onchange="uploadFigure(event,'+q.id+',\'questions_banque\')"></label>'
     if (hasFigSVG || hasFigURL) html += '<button class="btn btn-sm btn-red" onclick="supprimerFigure('+q.id+',\'questions_banque\')">🗑 Figure</button>'
-    html += '</div>'
-    html += '</div>'
-
-    // Figure SVG
-    if (hasFigSVG) {
-      const svg = renderFigureSVG(q.figure)
-      if (svg) html += '<div class="q-figure">'+svg+'</div>'
-    }
-    // Image uploadée
-    if (hasFigURL) {
-      html += '<div class="q-figure"><img src="'+q.figure_url+'" alt="figure"></div>'
-    }
-    // Tableau
-    if (hasTab) {
-      html += renderTableauHTML(q.tableau)
-    }
-
-    // Options
+    html += '</div></div>'
+    if (hasFigSVG) { const svg = renderFigureSVG(q.figure); if (svg) html += '<div class="q-figure">'+svg+'</div>' }
+    if (hasFigURL) html += '<div class="q-figure"><img src="'+q.figure_url+'" alt="figure"></div>'
+    if (hasTab)    html += renderTableauHTML(q.tableau)
     html += '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px">'
     opts.forEach((opt, i) => {
       const correct = i === q.answer
       html += '<div style="font-size:11px;padding:4px 8px;border-radius:6px;background:'+(correct?'#f0fdf4':'#f7f7f5')+';color:'+(correct?'#16a34a':'#555')+';border:1px solid '+(correct?'#86efac':'#e8e8e4')+'">'
-      html += '<strong>'+letters[i]+'.</strong> '+opt+(correct?' ✓':'')
-      html += '</div>'
+      html += '<strong>'+letters[i]+'.</strong> '+opt+(correct?' ✓':'')+'</div>'
     })
-    html += '</div>'
-    html += '</div>'
+    html += '</div></div>'
   })
-
-  // Pagination
   const totalPages = Math.ceil(total / PER_PAGE)
   html += '<div class="pagination">'
   html += '<button class="btn btn-sm" onclick="banquePage(-1)" '+(banqueFiltre.page===0?'disabled':'')+'>← Préc</button>'
   html += '<span style="color:var(--muted)">Page '+(banqueFiltre.page+1)+' / '+totalPages+' ('+total+' questions)</span>'
   html += '<button class="btn btn-sm" onclick="banquePage(1)" '+(banqueFiltre.page>=totalPages-1?'disabled':'')+'>Suiv →</button>'
   html += '</div>'
-
   el.innerHTML = html
 }
 
-function banquePage(dir) {
-  banqueFiltre.page += dir
-  chargerBanque()
-  document.getElementById('sec-banque').scrollTop = 0
-}
+function banquePage(dir) { banqueFiltre.page += dir; chargerBanque() }
 
 function filtrerBanque() {
   banqueFiltre.theme  = document.getElementById('filtre-theme').value
@@ -387,50 +349,39 @@ function filtrerBanque() {
   chargerBanque()
 }
 
-// ═══════════════════════════════════════════════════
-// UPLOAD FIGURE IMAGE
-// ═══════════════════════════════════════════════════
 async function uploadFigure(event, id, table) {
   const file = event.target.files[0]
   if (!file) return
   const ext = file.name.split('.').pop()
   const path = table+'/'+id+'.'+ext
-
   const { error: upErr } = await sb.storage.from('figures').upload(path, file, { upsert: true })
   if (upErr) { alert('Erreur upload : '+upErr.message); return }
-
   const { data: urlData } = sb.storage.from('figures').getPublicUrl(path)
   const url = urlData.publicUrl
-
   const { error: dbErr } = await sb.from(table).update({ figure_url: url }).eq('id', id)
   if (dbErr) { alert('Erreur sauvegarde : '+dbErr.message); return }
-
   alert('✅ Image uploadée !')
   chargerBanque()
 }
 
-// ═══════════════════════════════════════════════════
-// SUPPRIMER FIGURE
-// ═══════════════════════════════════════════════════
 async function supprimerFigure(id, table) {
-  if (!confirm('Supprimer la figure de cette question ?')) return
-  const { error } = await sb.from(table).update({ figure: null, figure_url: null }).eq('id', id)
+  if (!confirm('⚠️ Supprimer UNIQUEMENT la figure (pas la question) ?')) return
+  const { data, error } = await sb.from(table)
+    .update({ figure: null, figure_url: null })
+    .eq('id', id)
+    .select('id, question')
   if (error) { alert('Erreur : '+error.message); return }
+  if (!data || data.length === 0) { alert('⚠️ Mise à jour impossible — vérifier les permissions Supabase'); return }
   chargerBanque()
 }
 
-// ═══════════════════════════════════════════════════
-// MODIFIER QUESTION
-// ═══════════════════════════════════════════════════
 async function ouvrirEdit(id, table) {
   editCurrentId    = id
   editCurrentTable = table
   const { data, error } = await sb.from(table).select('*').eq('id', id).single()
   if (error || !data) { alert('Erreur chargement question'); return }
-
   const opts = typeof data.opts === 'string' ? JSON.parse(data.opts) : (data.opts || ['','','',''])
   const letters = ['A','B','C','D']
-
   let html = ''
   html += '<div class="field"><label>Question</label><textarea id="edit-question" style="min-height:80px">'+data.question+'</textarea></div>'
   html += '<div style="margin-bottom:12px">'
@@ -445,7 +396,6 @@ async function ouvrirEdit(id, table) {
   html += '<button class="btn" onclick="closeEdit()">Annuler</button>'
   html += '</div>'
   html += '<div id="edit-msg" style="margin-top:10px;font-size:13px"></div>'
-
   document.getElementById('edit-body').innerHTML = html
   document.getElementById('overlay-edit').classList.add('active')
 }
@@ -459,7 +409,6 @@ async function sauvegarderEdit() {
   const letters     = ['A','B','C','D']
   const opts        = letters.map(l => document.getElementById('edit-opt'+l).value.trim())
   const msg         = document.getElementById('edit-msg')
-
   if (!question || opts.some(o=>!o) || bonneVal === undefined || !explication) {
     msg.innerHTML = '<span style="color:#dc2626">⚠ Remplis tous les champs.</span>'; return
   }
@@ -467,7 +416,6 @@ async function sauvegarderEdit() {
   const { error } = await sb.from(editCurrentTable).update({
     question, opts: JSON.stringify(opts), answer: parseInt(bonneVal), explication
   }).eq('id', editCurrentId)
-
   if (error) {
     msg.innerHTML = '<span style="color:#dc2626">Erreur : '+error.message+'</span>'
   } else {
@@ -477,24 +425,20 @@ async function sauvegarderEdit() {
 }
 
 async function supprimerQuestion() {
-  if (!confirm('⚠️ Supprimer définitivement cette question ?')) return
+  if (!confirm('⚠️ Supprimer DÉFINITIVEMENT cette question ? Cette action est irréversible !')) return
+  if (!confirm('Dernière confirmation — supprimer la question ID '+editCurrentId+' ?')) return
   const { error } = await sb.from(editCurrentTable).delete().eq('id', editCurrentId)
   if (error) { alert('Erreur : '+error.message); return }
   closeEdit()
   chargerBanque()
 }
-// ═══════════════════════════════════════════════════
-// FICHE ÉLÈVE
-// ═══════════════════════════════════════════════════
 function openFiche(userId) {
   const e = ELEVES.find(x => x.user_id === userId)
   if (!e) return
   const rows = ROWS.filter(r => r.user_id === userId)
   if (!rows.length) { alert('Pas encore de données pour cet élève.'); return }
-
   const moyPct   = Math.round((rows.reduce((a,r) => a + r.score/r.total, 0)/rows.length)*100)
   const tempsTot = rows.reduce((a,r) => a + (r.temps_secondes||0), 0)
-
   const themes = {}
   rows.forEach(r => {
     if (!themes[r.theme]) themes[r.theme] = { ok:0, tot:0, n:0, niveaux: { facile:{ok:0,tot:0}, moyen:{ok:0,tot:0}, difficile:{ok:0,tot:0} } }
@@ -506,7 +450,6 @@ function openFiche(userId) {
       themes[r.theme].niveaux[r.difficulte].tot += r.total
     }
   })
-
   const chapitresRates = {}
   rows.forEach(r => {
     ;(r.questions_ratees||[]).forEach(q => {
@@ -515,17 +458,14 @@ function openFiche(userId) {
       chapitresRates[theme][q] = (chapitresRates[theme][q]||0) + 1
     })
   })
-
   const niveauEmoji = { facile: '😊 Facile', moyen: '😐 Moyen', difficile: '😤 Difficile' }
   document.getElementById('fiche-titre').textContent = e.prenom + ' ' + e.nom
-
   let body = ''
   body += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem">'
   body += miniStat(moyPct+'%', 'Moyenne quiz', color(moyPct))
   body += miniStat(rows.length, 'Sessions', '#111')
   body += miniStat(fmtTemps(tempsTot), 'Temps total', '#111')
   body += '</div>'
-
   const examMap = {}
   EXAMENS.filter(e=>!e.abandonne).forEach(e=>{ if(!examMap[e.user_id]) examMap[e.user_id]=e })
   const exam = examMap[userId]
@@ -536,7 +476,6 @@ function openFiche(userId) {
     body += '<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+color(ep)+'">'+exam.score+'/20</div>'
     body += '<div style="font-size:11px;color:'+color(ep)+';font-weight:600">'+mentionLabel(ep)+'</div></div></div>'
   }
-
   THEMES.forEach(t => {
     const s = themes[t]
     if (!s) return
@@ -568,12 +507,10 @@ function openFiche(userId) {
     }
     body += '</div>'
   })
-
   body += '<div style="margin-top:1.5rem;display:flex;gap:8px;flex-wrap:wrap">'
   body += '<button class="btn btn-green" id="btn-bilan" onclick="envoyerBilan(\''+userId+'\')">Envoyer bilan parents</button>'
   body += '<button class="btn" onclick="closeFiche()">Fermer</button>'
   body += '</div>'
-
   document.getElementById('fiche-body').innerHTML = body
   document.getElementById('overlay').classList.add('active')
 }
@@ -613,9 +550,6 @@ async function envoyerBilan(userId) {
   }
 }
 
-// ═══════════════════════════════════════════════════
-// AJOUTER QUESTION
-// ═══════════════════════════════════════════════════
 async function ajouterQuestion() {
   const theme       = document.getElementById('bq-theme').value
   const difficulte  = document.getElementById('bq-diff').value
@@ -646,9 +580,6 @@ async function ajouterQuestion() {
   }
 }
 
-// ═══════════════════════════════════════════════════
-// RENDER PRINCIPAL
-// ═══════════════════════════════════════════════════
 function render() {
   const nbEleves  = [...new Set(ROWS.map(r=>r.user_id))].length
   const moyGlo    = ROWS.length ? Math.round((ROWS.reduce((a,r)=>a+r.score/r.total,0)/ROWS.length)*100) : 0
@@ -684,7 +615,6 @@ function render() {
   h += '<button class="tab" data-tab="banque" onclick="setTab(\'banque\')">📚 Banque</button>'
   h += '</div>'
 
-  // DASHBOARD
   h += '<div class="section active" id="sec-dashboard"><div class="card">'
   h += '<div class="card-title">📊 Tableau comparatif — tous les élèves</div>'
   h += '<div style="overflow-x:auto"><table class="dash-table"><thead><tr><th>Élève</th><th>Global</th>'
@@ -715,7 +645,6 @@ function render() {
   h += '<p style="font-size:11px;color:#888;margin-top:10px">🟢 ≥70% Maîtrisé | 🟡 50-69% En cours | 🔴 &lt;50% À retravailler</p>'
   h += '</div></div>'
 
-  // ÉLÈVES
   h += '<div class="section" id="sec-eleves"><div class="card"><div class="card-title">Liste des élèves</div>'
   h += '<table class="tbl"><thead><tr><th>Élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th><th>Examen</th><th>Actions</th></tr></thead><tbody>'
   ELEVES.forEach(e=>{
@@ -727,7 +656,6 @@ function render() {
   })
   h += '</tbody></table></div></div>'
 
-  // EXAMENS BLANCS
   const examensValides = EXAMENS.filter(e=>!e.abandonne)
   h += '<div class="section" id="sec-examens"><div class="card"><div class="card-title">Résultats Examens Blancs</div>'
   if (!examensValides.length) { h += '<p class="empty">Aucun examen passé.</p>' }
@@ -746,13 +674,11 @@ function render() {
   }
   h += '</div></div>'
 
-  // THÈMES
   h += '<div class="section" id="sec-themes"><div class="card"><div class="card-title">Résultats par thème</div>'
   h += '<table class="tbl"><thead><tr><th>Thème</th><th>Sessions</th><th>Moyenne</th></tr></thead><tbody>'
   Object.entries(themeStats).forEach(([t,s])=>{ const p=pct(s.ok,s.tot); h+='<tr><td>'+t+'</td><td>'+s.n+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td></tr>' })
   h += '</tbody></table></div></div>'
 
-  // SESSIONS
   h += '<div class="section" id="sec-sessions"><div class="card"><div class="card-title">30 dernières activités</div>'
   h += '<table class="tbl"><thead><tr><th>Élève</th><th>Type</th><th>Détail</th><th>Score</th><th>Date</th></tr></thead><tbody>'
   const toutesActivites = [
@@ -767,28 +693,19 @@ function render() {
   })
   h += '</tbody></table></div></div>'
 
-  // QUESTIONS RATÉES
   h += '<div class="section" id="sec-ratees"><div class="card"><div class="card-title">Questions les plus ratées</div>'
   if (topRatees.length) {
     topRatees.forEach(([q,n])=>{ h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="color:#444">'+q+'</span><span style="color:#dc2626;font-weight:600;margin-left:12px;white-space:nowrap">'+n+'× raté</span></div>' })
   } else { h += '<p class="empty">Pas encore de données.</p>' }
   h += '</div></div>'
 
-  // BANQUE
   h += '<div class="section" id="sec-banque">'
-
-  // Filtres
-  h += '<div class="card">'
-  h += '<div class="banque-filters">'
+  h += '<div class="card"><div class="banque-filters">'
   h += '<select id="filtre-theme" onchange="filtrerBanque()"><option value="">Tous les thèmes</option>'+THEMES.map(t=>'<option value="'+t+'">'+t+'</option>').join('')+'</select>'
   h += '<select id="filtre-diff" onchange="filtrerBanque()"><option value="">Toutes difficultés</option><option value="facile">Facile</option><option value="moyen">Moyen</option><option value="difficile">Difficile</option></select>'
-  h += '<input type="text" id="filtre-search" placeholder="🔍 Rechercher dans les questions…" oninput="filtrerBanque()">'
+  h += '<input type="text" id="filtre-search" placeholder="🔍 Rechercher…" oninput="filtrerBanque()">'
   h += '</div></div>'
-
-  // Liste questions
-  h += '<div class="card"><div class="card-title">Questions de la banque</div><div id="banque-list"><div class="loader">Cliquez sur l\'onglet Banque pour charger…</div></div></div>'
-
-  // Ajouter question
+  h += '<div class="card"><div class="card-title">Questions de la banque</div><div id="banque-list"><div class="loader">Chargement…</div></div></div>'
   h += '<div class="card"><div class="card-title">➕ Ajouter une question</div>'
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
   h += '<div class="field"><label>Thème</label><select id="bq-theme">'+THEMES.map(t=>'<option>'+t+'</option>').join('')+'</select></div>'
@@ -804,9 +721,6 @@ function render() {
   document.getElementById('root').innerHTML = h
 }
 
-// ═══════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════
 async function init() {
   const { data: { session } } = await sb.auth.getSession()
   if (!session) { location.href='index.html'; return }
