@@ -12,16 +12,16 @@ export default async function handler(req, res) {
     'apikey': SUPA_KEY
   }
 
-  // Mode test = true par défaut — ne pas écrire en BDD
   const modeTest = req.query.test !== 'false'
-  const limite = modeTest ? 3 : 136
+  const table = req.query.table === 'examen' ? 'examen_questions' : 'questions_banque'
+  const limite = modeTest ? 3 : 500
 
   try {
-    // Récupérer les questions sans figure
-    const questRes = await fetch(
-      `${SUPA_URL}/rest/v1/questions_banque?theme=eq.Géométrie&figure=is.null&select=id,question&limit=${limite}`,
-      { headers: supaHeaders }
-    )
+    // Récupérer questions sans figure selon la table
+    const champQuestion = table === 'examen_questions' ? 'question' : 'question'
+    const url = `${SUPA_URL}/rest/v1/${table}?figure=is.null&select=id,question&limit=${limite}`
+    
+    const questRes = await fetch(url, { headers: supaHeaders })
     const questions = await questRes.json()
 
     if (!questions || questions.length === 0) {
@@ -33,14 +33,16 @@ export default async function handler(req, res) {
     for (const q of questions) {
       const prompt = `Tu es un expert en géométrie au collège français (niveau 3ème/Brevet).
 
-Analyse cet énoncé de question mathématique et détermine si une figure géométrique aiderait l'élève à visualiser le problème.
+Analyse cet énoncé et détermine si une figure géométrique aiderait l'élève à visualiser le problème.
 
 Énoncé : "${q.question}"
 
-Si une figure est utile, génère le JSON correspondant selon ces types disponibles :
+Types de figures disponibles :
 
 1. triangle_rect : {"type":"triangle_rect","base":X,"hauteur":Y,"unite":"cm"}
-   → Pour : Pythagore, aires de triangles rectangles, échelle contre mur
+   → Pour : Pythagore, aires triangles rectangles, échelle contre mur
+   → AUSSI pour trigonométrie avec angle : phare+bateau, drone+sol, cerf-volant, skieur, câble+pylône, randonneur+pente
+   → Mettre "?" pour la valeur INCONNUE (celle qu'on cherche)
 
 2. triangle : {"type":"triangle","base":X,"hauteur":Y,"unite":"cm"}
    → Pour : aires de triangles quelconques
@@ -52,11 +54,11 @@ Si une figure est utile, génère le JSON correspondant selon ces types disponib
    → Pour : aires et périmètres de cercles
 
 5. pythagore : {"type":"pythagore","a":X,"b":Y,"c":Z,"unite":"cm"}
-   → Pour : théorème de Pythagore (mettre "?" pour la valeur inconnue)
-   Exemple côté inconnu : {"type":"pythagore","a":3,"b":"?","c":5,"unite":"cm"}
+   → Pour : théorème de Pythagore explicite
+   → Mettre "?" pour le côté inconnu
 
 6. thales : {"type":"thales","am":X,"ab":Y,"an":Z,"ac":W,"unite":"cm"}
-   → Pour : théorème de Thalès, ombres, lampadaires, agrandissements
+   → Pour : Thalès, ombres, lampadaires, poteaux, agrandissements avec triangles semblables
 
 7. trapeze : {"type":"trapeze","grande_base":X,"petite_base":Y,"hauteur":Z,"unite":"cm"}
    → Pour : aires de trapèzes
@@ -64,13 +66,22 @@ Si une figure est utile, génère le JSON correspondant selon ces types disponib
 8. parallelogramme : {"type":"parallelogramme","base":X,"hauteur":Y,"unite":"cm"}
    → Pour : aires de parallélogrammes
 
-RÈGLES IMPORTANTES :
-- Extrais les vraies mesures depuis l'énoncé
-- Pour Pythagore : mets "?" pour le côté INCONNU (celui qu'on cherche)
-- Si la question parle de volume (sphère, prisme, cylindre, cône) → réponds null
-- Si la question parle de trigonométrie avec angles → réponds null (pas de figure disponible)
-- Si la question parle d'homothétie, agrandissement sans triangle → réponds null
-- Si aucune figure n'aide vraiment → réponds null
+EXEMPLES TRIGONOMÉTRIE → triangle_rect :
+- "Du haut d'un phare de 50 m, angle de 30°, distance au bateau ?" → {"type":"triangle_rect","base":"?","hauteur":50,"unite":"m"}
+- "Drone à 80 m, angle 45°, distance horizontale ?" → {"type":"triangle_rect","base":"?","hauteur":80,"unite":"m"}
+- "Cerf-volant fil 50 m, angle 60°, hauteur ?" → {"type":"triangle_rect","base":"?","hauteur":"?","unite":"m"}
+- "Skieur pente 30°, 400 m sur piste, dénivelé ?" → {"type":"triangle_rect","base":"?","hauteur":"?","unite":"m"}
+- "Câble pylône 15 m, point sol à 20 m, angle ?" → {"type":"triangle_rect","base":20,"hauteur":15,"unite":"m"}
+- "Randonneur angle 35°, distance horizontale 200 m, altitude ?" → {"type":"triangle_rect","base":200,"hauteur":"?","unite":"m"}
+
+RÈGLES :
+- Trigonométrie avec angle ET distance/hauteur → triangle_rect avec mesures connues et "?" pour l'inconnue
+- Volumes (sphère, cylindre, pyramide, prisme, cône, boule) → null
+- Rotation, translation, symétrie → null
+- Homothétie sans triangle visible → null
+- Échelle/carte sans figure → null
+- Coordonnées → null
+- Probabilités, statistiques, algèbre → null
 
 Réponds UNIQUEMENT avec le JSON ou le mot null. Rien d'autre.`
 
@@ -104,10 +115,9 @@ Réponds UNIQUEMENT avec le JSON ou le mot null. Rien d'autre.`
           raw: texte
         })
 
-        // Si pas en mode test — écrire en BDD
         if (!modeTest && figure !== null) {
           await fetch(
-            `${SUPA_URL}/rest/v1/questions_banque?id=eq.${q.id}`,
+            `${SUPA_URL}/rest/v1/${table}?id=eq.${q.id}`,
             {
               method: 'PATCH',
               headers: { ...supaHeaders, 'Prefer': 'return=minimal' },
@@ -120,13 +130,18 @@ Réponds UNIQUEMENT avec le JSON ou le mot null. Rien d'autre.`
         resultats.push({ id: q.id, question: q.question.substring(0,80), erreur: e.message })
       }
 
-      // Pause 500ms entre chaque appel pour éviter rate limit
       await new Promise(r => setTimeout(r, 500))
     }
 
+    const avecFigure = resultats.filter(r => r.figure_generee !== null).length
+    const sansFigure = resultats.filter(r => r.figure_generee === null).length
+
     return res.status(200).json({
       mode: modeTest ? 'TEST — rien écrit en BDD' : 'PRODUCTION — figures sauvegardées',
+      table,
       traite: resultats.length,
+      avec_figure: avecFigure,
+      sans_figure: sansFigure,
       resultats
     })
 
