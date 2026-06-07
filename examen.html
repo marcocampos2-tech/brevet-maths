@@ -76,18 +76,11 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .theme-score-num { font-size: 20px; font-weight: 700; }
 .theme-score-label { color: #666; margin-top: 2px; font-size: 11px; }
 .historique-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0ec; font-size: 13px; }
-.alerte-temps { border-radius: 10px; padding: 12px 16px; text-align: center; font-weight: 600; font-size: 14px; margin-bottom: 1rem; }
-.alerte-orange { background: #fff8e1; border: 1px solid #f59e0b; color: #92400e; }
-.alerte-rouge { background: #fef2f2; border: 1px solid #dc2626; color: #dc2626; }
-.alerte-ecoule { background: #fef2f2; border: 1px solid #dc2626; color: #dc2626; }
-
-/* Toast notification */
+.alerte-ecoule { background: #fef2f2; border: 1px solid #dc2626; border-radius: 10px; padding: 12px 16px; text-align: center; color: #dc2626; font-weight: 600; font-size: 14px; margin-bottom: 1rem; }
 .toast { position: fixed; bottom: 80px; right: 16px; z-index: 1000; padding: 12px 18px; border-radius: 12px; font-size: 14px; font-weight: 600; color: white; max-width: 280px; box-shadow: 0 4px 16px rgba(0,0,0,0.2); transform: translateX(120%); transition: transform 0.3s ease; }
 .toast.show { transform: translateX(0); }
 .toast-orange { background: #f59e0b; }
 .toast-red { background: #dc2626; }
-
-/* Sticky btn */
 .sticky-btn { position: sticky; bottom: 1rem; padding: 0.5rem 0; }
 </style>
 </head>
@@ -107,10 +100,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 </nav>
 <div id="main-area"></div>
 </div>
-
-<!-- Toast -->
 <div class="toast" id="toast"></div>
-
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
@@ -164,7 +154,6 @@ function formatTemps(s){
   return m+' min '+sec+' sec'
 }
 
-// Toast notification
 let toastTimeout=null
 function showToast(message, type) {
   const toast = document.getElementById('toast')
@@ -173,14 +162,13 @@ function showToast(message, type) {
   if(toastTimeout) clearTimeout(toastTimeout)
   toastTimeout = setTimeout(function() {
     toast.classList.remove('show')
-  }, 5000)
+  }, 8000)
 }
 
 async function renderIntro() {
   const {data:historique}=await sb.from('examens_blancs')
     .select('*').eq('user_id',user.id).eq('abandonne',false)
     .order('created_at',{ascending:false}).limit(5)
-
   let historiqueHTML=''
   if(historique&&historique.length>0){
     let items=''
@@ -192,7 +180,6 @@ async function renderIntro() {
     })
     historiqueHTML='<div style="margin-bottom:1.5rem;text-align:left"><p style="font-size:13px;font-weight:600;margin-bottom:8px;color:#1a1a1a">📊 Mes derniers examens :</p>'+items+'</div>'
   }
-
   document.getElementById('main-area').innerHTML=
     '<div class="intro-card">'+
     '<div class="intro-icon">📝</div>'+
@@ -250,8 +237,6 @@ function demarrerChrono(){
   heureFin = Date.now() + 40 * 60 * 1000
   document.getElementById('chrono').style.display='flex'
   document.getElementById('chrono').classList.remove('chrono-warning')
-
-  // Alertes déjà déclenchées
   var alerte10=false, alerte5=false, alerte1=false
 
   chronoInterval=setInterval(function(){
@@ -260,28 +245,41 @@ function demarrerChrono(){
 
     const m = Math.floor(restant / 60000).toString().padStart(2,'0')
     const s = Math.floor((restant % 60000) / 1000).toString().padStart(2,'0')
+
+    // Mettre à jour chrono nav
     document.getElementById('chrono-text').textContent = m+':'+s
+
+    // Mettre à jour bouton sticky EN TEMPS RÉEL sans recréer le DOM
+    var nbRepondues = Object.keys(answers).length
+    var btn = document.getElementById('btn-terminer')
+    if(btn) {
+      if(restant <= 300000) {
+        btn.className = 'btn btn-red btn-full'
+        btn.textContent = '✅ Terminer l\'examen ('+nbRepondues+'/20 répondues) — '+m+':'+s+' restantes'
+      } else {
+        btn.textContent = '✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'
+      }
+    }
 
     // Alerte 10 min
     if(restant <= 600000 && !alerte10){
       alerte10=true
       document.getElementById('chrono').classList.add('chrono-warning')
       showToast('⏰ Plus que 10 minutes !', 'orange')
-      renderExamen()
     }
 
     // Alerte 5 min
     if(restant <= 300000 && !alerte5){
       alerte5=true
       showToast('⚠️ Plus que 5 minutes ! Vérifie tes réponses.', 'rouge')
-      renderExamen()
+      // Changer bouton en rouge
+      if(btn) btn.className = 'btn btn-red btn-full'
     }
 
     // Alerte 1 min
     if(restant <= 60000 && !alerte1){
       alerte1=true
       showToast('🔴 Dernière minute ! L\'examen se termine bientôt.', 'rouge')
-      renderExamen()
     }
 
     // Temps écoulé
@@ -296,16 +294,6 @@ function demarrerChrono(){
 
 function arreterChrono(){clearInterval(chronoInterval)}
 
-function getBtnTerminer(nbRepondues) {
-  const restant = heureFin ? Math.max(0, heureFin - Date.now()) : null
-  const urgence = restant !== null && restant <= 300000 // 5 min
-  const cls = urgence ? 'btn btn-red btn-full' : 'btn btn-green btn-full'
-  const tempsLabel = urgence && restant !== null
-    ? ' — ' + Math.floor(restant/60000) + ':' + Math.floor((restant%60000)/1000).toString().padStart(2,'0') + ' restantes'
-    : ''
-  return '<button class="'+cls+'" onclick="confirmerTerminer()">✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'+tempsLabel+'</button>'
-}
-
 function renderExamen(){
   const nbRepondues=Object.keys(answers).length
   const pct=Math.round((nbRepondues/questions.length)*100)
@@ -313,7 +301,7 @@ function renderExamen(){
   let html=''
 
   if(!examEnCours){
-    html+='<div class="alerte-temps alerte-ecoule">⏰ Temps écoulé ! L\'examen est terminé automatiquement.</div>'
+    html+='<div class="alerte-ecoule">⏰ Temps écoulé ! L\'examen est terminé automatiquement.</div>'
   }
 
   html+='<div class="progress-label"><span>'+nbRepondues+'/20 questions répondues</span><span>'+pct+'%</span></div>'
@@ -336,8 +324,14 @@ function renderExamen(){
   })
 
   if(examEnCours){
+    const restant = heureFin ? Math.max(0, heureFin - Date.now()) : null
+    const urgence = restant !== null && restant <= 300000
+    const btnCls = urgence ? 'btn btn-red btn-full' : 'btn btn-green btn-full'
+    const tempsLabel = urgence && restant !== null
+      ? ' — ' + Math.floor(restant/60000) + ':' + Math.floor((restant%60000)/1000).toString().padStart(2,'0') + ' restantes'
+      : ''
     html+='<div class="sticky-btn">'
-    html+=getBtnTerminer(nbRepondues)
+    html+='<button id="btn-terminer" class="'+btnCls+'" onclick="confirmerTerminer()">✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'+tempsLabel+'</button>'
     if(nbRepondues<20) html+='<p style="text-align:center;font-size:12px;color:#999;margin-top:6px">Tu peux terminer même sans tout répondre</p>'
     html+='</div>'
   }
@@ -348,7 +342,26 @@ function renderExamen(){
 function pick(qi,oi){
   if(!examEnCours) return
   answers[qi]=oi
-  renderExamen()
+  // Mettre à jour uniquement l'option sélectionnée sans recréer tout le DOM
+  const cards = document.querySelectorAll('.card')
+  const card = cards[qi]
+  if(card) {
+    card.querySelectorAll('.option').forEach(function(el, j) {
+      el.className = j===oi ? 'option selected' : 'option'
+    })
+  }
+  // Mettre à jour le nb répondu dans le bouton
+  var btn = document.getElementById('btn-terminer')
+  var nbRepondues = Object.keys(answers).length
+  if(btn) {
+    const restant = heureFin ? Math.max(0, heureFin - Date.now()) : null
+    const urgence = restant !== null && restant <= 300000
+    const m = restant ? Math.floor(restant/60000).toString().padStart(2,'0') : '00'
+    const s = restant ? Math.floor((restant%60000)/1000).toString().padStart(2,'0') : '00'
+    btn.textContent = urgence
+      ? '✅ Terminer l\'examen ('+nbRepondues+'/20 répondues) — '+m+':'+s+' restantes'
+      : '✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'
+  }
   setTimeout(function(){
     const cards=document.querySelectorAll('.card')
     if(cards[qi+1]) cards[qi+1].scrollIntoView({behavior:'smooth',block:'start'})
@@ -374,12 +387,10 @@ function terminerExamen(){
 
 async function sauvegarder(){
   if(saved||!user)return
-
   if(!emailParent){
     const {data:profil}=await sb.from('profils').select('email_parent').eq('user_id',user.id).limit(1)
     if(profil&&profil.length>0) emailParent=profil[0].email_parent
   }
-
   const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
   const tempsSecondes=heureFin ? Math.floor((40*60*1000 - Math.max(0, heureFin - Date.now())) / 1000) : chronoSecondes
   const themes={}
@@ -392,7 +403,6 @@ async function sauvegarder(){
   const questionsRatees=questions
     .filter(function(q,i){return answers[i]!==undefined&&answers[i]!==q.answer})
     .map(function(q){return q.theme+' — '+(q.chapitre||'')})
-
   try{
     const {error}=await sb.from('examens_blancs').insert({
       user_id:user.id, email:user.email,
@@ -400,11 +410,9 @@ async function sauvegarder(){
       score:nbOk, total:20, temps_secondes:tempsSecondes,
       scores_themes:themes, questions_ratees:questionsRatees, abandonne:false
     })
-
     if(error){ console.error('Erreur sauvegarde:', error.message); return }
     saved=true
     console.log('✅ Examen sauvegardé')
-
     if(emailParent){
       try{
         await fetch('/api/email-brevet-blanc',{
