@@ -1,12 +1,31 @@
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' })
-
+  
   const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
   const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY
   const RESEND_KEY = process.env.RESEND_API_KEY
   const PROF_EMAIL = 'marcocampos2@gmail.com'
   const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPA_KEY}`, 'apikey': SUPA_KEY }
+
+  // ── GET places ──────────────────────────────
+  if (req.method === 'GET' || req.query?.action === 'places') {
+    try {
+      const r = await fetch(`${SUPA_URL}/rest/v1/inscriptions_brevet?select=date_choisie`, { headers })
+      const data = await r.json()
+      const places = { '17 juin': 0, '24 juin': 0 }
+      data.forEach(d => {
+        if (d.date_choisie === '17 juin') places['17 juin']++
+        else if (d.date_choisie === '24 juin') places['24 juin']++
+        else if (d.date_choisie === 'les deux') { places['17 juin']++; places['24 juin']++ }
+      })
+      return res.status(200).json({ places })
+    } catch(e) {
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ── POST inscription ─────────────────────────
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' })
 
   const { prenom, nom, email_parent, telephone, date_choisie } = req.body
   if (!prenom || !nom || !email_parent || !date_choisie) {
@@ -20,10 +39,9 @@ export default async function handler(req, res) {
       { headers }
     )
     const existing = await checkRes.json()
-    const dejaInscrit = existing && existing.length > 0
-    const prioritaire = !dejaInscrit
+    const prioritaire = !existing || existing.length === 0
 
-    // Vérifier places disponibles
+    // Compter places
     const placesRes = await fetch(`${SUPA_URL}/rest/v1/inscriptions_brevet?select=date_choisie`, { headers })
     const placesData = await placesRes.json()
     const places = { '17 juin': 0, '24 juin': 0 }
@@ -33,12 +51,12 @@ export default async function handler(req, res) {
       else if (d.date_choisie === 'les deux') { places['17 juin']++; places['24 juin']++ }
     })
 
-    // Vérifier si complet
+    // Vérifier places disponibles
     if (date_choisie === '17 juin' && places['17 juin'] >= 5) return res.status(400).json({ error: 'Session du 17 juin complète' })
     if (date_choisie === '24 juin' && places['24 juin'] >= 5) return res.status(400).json({ error: 'Session du 24 juin complète' })
     if (date_choisie === 'les deux' && places['17 juin'] >= 5 && places['24 juin'] >= 5) return res.status(400).json({ error: 'Les deux sessions sont complètes' })
 
-    // Sauvegarder inscription
+    // Sauvegarder
     const insertRes = await fetch(`${SUPA_URL}/rest/v1/inscriptions_brevet`, {
       method: 'POST',
       headers: { ...headers, 'Prefer': 'return=minimal' },
@@ -46,7 +64,7 @@ export default async function handler(req, res) {
     })
     if (!insertRes.ok) throw new Error('Erreur sauvegarde inscription')
 
-    // Email au prof
+    // Email prof
     await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
@@ -59,16 +77,16 @@ export default async function handler(req, res) {
           <p><strong>Élève :</strong> ${prenom} ${nom}</p>
           <p><strong>Email parents :</strong> ${email_parent}</p>
           <p><strong>Téléphone :</strong> ${telephone||'Non renseigné'}</p>
-          <p><strong>Date souhaitée :</strong> ${date_choisie}</p>
-          <p><strong>Prioritaire :</strong> ${prioritaire ? '✅ Oui (nouvel élève)' : '⚠️ Non (déjà inscrit)'}</p>
+          <p><strong>Date :</strong> ${date_choisie}</p>
+          <p><strong>Prioritaire :</strong> ${prioritaire ? '✅ Oui' : '⚠️ Non (déjà inscrit)'}</p>
           <p><strong>Places restantes 17 juin :</strong> ${5 - places['17 juin']}</p>
           <p><strong>Places restantes 24 juin :</strong> ${5 - places['24 juin']}</p>
-          <p>→ Confirmez depuis <a href="https://academika.fr/prof.html">prof.html</a></p>
+          <p>→ <a href="https://academika.fr/prof.html">Gérer les inscriptions</a></p>
         `
       })
     })
 
-    // Email aux parents
+    // Email parents
     const msgParents = prioritaire
       ? `<p>Votre inscription est enregistrée. Le lieu exact vous sera communiqué par email après confirmation.</p>`
       : `<p>Votre inscription est bien reçue. Vous serez contacté par email pour confirmation. Priorité sera donnée aux nouveaux élèves.</p>`
