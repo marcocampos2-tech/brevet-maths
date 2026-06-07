@@ -177,7 +177,7 @@ let dejaInscrit = false
 
 async function chargerPlaces() {
   try {
-    const res = await fetch('/api/places-brevet')
+    const res = await fetch('/api/inscription-brevet?action=places')
     const data = await res.json()
     placesData = data.places || { '17 juin': 0, '24 juin': 0 }
     dejaInscrit = false
