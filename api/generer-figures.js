@@ -14,18 +14,16 @@ export default async function handler(req, res) {
 
   const modeTest = req.query.test !== 'false'
   const table = req.query.table === 'examen' ? 'examen_questions' : 'questions_banque'
-  const limite = modeTest ? 3 : 500
+  const limite = modeTest ? 3 : parseInt(req.query.limite) || 50
+  const offset = parseInt(req.query.offset) || 0
 
   try {
-    // Récupérer questions sans figure selon la table
-    const champQuestion = table === 'examen_questions' ? 'question' : 'question'
-    const url = `${SUPA_URL}/rest/v1/${table}?figure=is.null&select=id,question&limit=${limite}`
-    
+    const url = `${SUPA_URL}/rest/v1/${table}?figure=is.null&select=id,question&limit=${limite}&offset=${offset}`
     const questRes = await fetch(url, { headers: supaHeaders })
     const questions = await questRes.json()
 
     if (!questions || questions.length === 0) {
-      return res.status(200).json({ message: 'Aucune question sans figure !' })
+      return res.status(200).json({ message: 'Aucune question sans figure !', table, offset })
     }
 
     const resultats = []
@@ -111,8 +109,7 @@ Réponds UNIQUEMENT avec le JSON ou le mot null. Rien d'autre.`
         resultats.push({
           id: q.id,
           question: q.question.substring(0, 80) + '...',
-          figure_generee: figure,
-          raw: texte
+          figure_generee: figure
         })
 
         if (!modeTest && figure !== null) {
@@ -139,6 +136,7 @@ Réponds UNIQUEMENT avec le JSON ou le mot null. Rien d'autre.`
     return res.status(200).json({
       mode: modeTest ? 'TEST — rien écrit en BDD' : 'PRODUCTION — figures sauvegardées',
       table,
+      offset,
       traite: resultats.length,
       avec_figure: avecFigure,
       sans_figure: sansFigure,
