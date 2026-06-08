@@ -41,10 +41,17 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .theme-card.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 .theme-icon { font-size: 22px; margin-bottom: 4px; }
 .theme-label { font-size: 12px; font-weight: 500; }
-.diff-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+.diff-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
 .diff-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #d0d0c8; background: white; font-size: 13px; cursor: pointer; transition: all 0.15s; }
 .diff-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
 .diff-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.diff-btn.locked { background: #f5f5f0; color: #999; border-color: #e0e0d8; cursor: not-allowed; }
+.lock-msg { font-size: 11px; color: #888; margin-top: 6px; padding: 6px 12px; background: #f9f9f7; border-radius: 8px; border-left: 3px solid #f59e0b; display: none; }
+.lock-msg.visible { display: block; }
+.deblocage-bar { margin-top: 4px; margin-bottom: 2px; }
+.deblocage-bar-track { height: 5px; background: #e8e8e4; border-radius: 3px; overflow: hidden; margin-top: 3px; }
+.deblocage-bar-fill { height: 5px; border-radius: 3px; background: #16a34a; transition: width 0.3s; }
+.deblocage-label { font-size: 10px; color: #999; }
 .option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid #e8e8e4; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.15s; margin-bottom: 8px; }
 .option:hover { border-color: #999; background: #f9f9f7; }
 .option.selected { border-color: #3730a3; background: #eef2ff; }
@@ -90,7 +97,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 <body>
 <div class="container">
 <nav>
-  <div class="nav-left"> ∑ ACADEMIKA </div>
+  <div class="nav-left">∑ ACADEMIKA</div>
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
     <div class="chrono" id="chrono" style="display:none">
@@ -113,10 +120,12 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="theme-grid" id="theme-grid"></div>
   <h2 style="margin-top:1rem">Niveau</h2>
   <div class="diff-row" id="diff-row">
-    <button class="diff-btn" onclick="setDiff(this,'facile')">Facile</button>
-    <button class="diff-btn active" onclick="setDiff(this,'moyen')">Moyen</button>
-    <button class="diff-btn" onclick="setDiff(this,'difficile')">Difficile</button>
+    <button class="diff-btn active" id="btn-facile" onclick="setDiff(this,'facile')">😊 Facile</button>
+    <button class="diff-btn" id="btn-moyen" onclick="setDiff(this,'moyen')">😐 Moyen</button>
+    <button class="diff-btn" id="btn-difficile" onclick="setDiff(this,'difficile')">😤 Difficile</button>
   </div>
+  <div class="lock-msg" id="lock-msg"></div>
+  <div id="deblocage-info" style="margin-bottom:0.75rem"></div>
   <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:0.5rem">🎲 Générer 5 questions</button>
 </div>
 <div id="quiz-area"></div>
@@ -134,12 +143,16 @@ const THEMES = [
   { label: 'Fonctions', value: 'Fonctions', icon: '📈' },
   { label: 'Algorithmique', value: 'Algorithmique', icon: '💻' },
 ]
+const SEUIL_SESSIONS = 5
+const SEUIL_PCT = 70
+
 let user=null, prenom='', emailParent=''
-let theme='Nombres et calculs', diff='moyen'
+let theme='Nombres et calculs', diff='facile'
 let questions=[], answers={}, submitted={}, saved=false
 let chronoInterval=null, chronoSecondes=0, sourceQuestions='ia'
 let quizEnCours=false
 let modeAffichage={}, charts={}
+let deblocageCache={} // cache par thème : { moyen: true/false, difficile: true/false }
 
 window.addEventListener('beforeunload', function(e) {
   if(quizEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Si vous quittez, votre quiz sera enregistré avec un score de 0.';sauvegarderAbandonne()}
@@ -151,7 +164,107 @@ async function sauvegarderAbandonne() {
 }
 
 function bloquerConfig(){quizEnCours=true;document.getElementById('gen-btn').disabled=true;document.getElementById('gen-btn').textContent='⏳ Quiz en cours...';document.querySelectorAll('.theme-card').forEach(c=>c.classList.add('disabled'));document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=true)}
-function debloquerConfig(){quizEnCours=false;document.getElementById('gen-btn').disabled=false;document.getElementById('gen-btn').textContent='🎲 Générer 5 questions';document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('disabled'));document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=false)}
+function debloquerConfig(){quizEnCours=false;document.getElementById('gen-btn').disabled=false;document.getElementById('gen-btn').textContent='🎲 Générer 5 questions';document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('disabled'));mettreAJourNiveaux()}
+
+// ═══════════════════════════════════════════════════
+// DÉBLOCAGE PROGRESSIF DES NIVEAUX
+// ═══════════════════════════════════════════════════
+async function verifierDeblocage(t) {
+  if(deblocageCache[t]) return deblocageCache[t]
+  try {
+    const { data } = await sb.from('resultats')
+      .select('difficulte, score, total')
+      .eq('user_id', user.id)
+      .eq('theme', t)
+    if (!data) { deblocageCache[t] = { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0 }; return deblocageCache[t] }
+
+    const sessionsFacile = data.filter(r => r.difficulte === 'facile' && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
+    const sessionsMoyen  = data.filter(r => r.difficulte === 'moyen'  && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
+
+    deblocageCache[t] = {
+      moyen:          sessionsFacile >= SEUIL_SESSIONS,
+      difficile:      sessionsMoyen  >= SEUIL_SESSIONS,
+      sessionsFacile,
+      sessionsMoyen
+    }
+    return deblocageCache[t]
+  } catch(e) {
+    console.log('Erreur vérification déblocage:', e.message)
+    return { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0 }
+  }
+}
+
+async function mettreAJourNiveaux() {
+  const d = await verifierDeblocage(theme)
+
+  const btnFacile    = document.getElementById('btn-facile')
+  const btnMoyen     = document.getElementById('btn-moyen')
+  const btnDifficile = document.getElementById('btn-difficile')
+  const lockMsg      = document.getElementById('lock-msg')
+  const debInfo      = document.getElementById('deblocage-info')
+
+  if (!btnFacile || !btnMoyen || !btnDifficile) return
+
+  // Facile — toujours accessible
+  btnFacile.disabled = false
+  btnFacile.classList.remove('locked')
+  btnFacile.textContent = '😊 Facile'
+
+  // Moyen
+  if (d.moyen) {
+    btnMoyen.disabled = false
+    btnMoyen.classList.remove('locked')
+    btnMoyen.textContent = '😐 Moyen'
+  } else {
+    btnMoyen.disabled = true
+    btnMoyen.classList.add('locked')
+    btnMoyen.textContent = '🔒 Moyen'
+    // Si diff actuel = moyen → repasser à facile
+    if (diff === 'moyen') { diff = 'facile'; btnFacile.classList.add('active'); btnMoyen.classList.remove('active') }
+  }
+
+  // Difficile
+  if (d.difficile) {
+    btnDifficile.disabled = false
+    btnDifficile.classList.remove('locked')
+    btnDifficile.textContent = '😤 Difficile'
+  } else {
+    btnDifficile.disabled = true
+    btnDifficile.classList.add('locked')
+    btnDifficile.textContent = '🔒 Difficile'
+    if (diff === 'difficile') { diff = 'facile'; btnFacile.classList.add('active'); btnDifficile.classList.remove('active') }
+  }
+
+  // Message de progression
+  if (!d.moyen) {
+    const restant = SEUIL_SESSIONS - d.sessionsFacile
+    const pctBarre = Math.round((d.sessionsFacile / SEUIL_SESSIONS) * 100)
+    debInfo.innerHTML = `
+      <div style="background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e">
+        🔒 <strong>Moyen verrouillé</strong> — Fais encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> pour débloquer
+        <div style="margin-top:6px;background:#fde68a;border-radius:4px;height:6px;overflow:hidden">
+          <div style="height:6px;background:#f59e0b;border-radius:4px;width:${pctBarre}%"></div>
+        </div>
+        <div style="margin-top:3px;font-size:10px;color:#b45309">${d.sessionsFacile}/${SEUIL_SESSIONS} sessions réussies</div>
+      </div>`
+    lockMsg.classList.remove('visible')
+  } else if (!d.difficile) {
+    const restant = SEUIL_SESSIONS - d.sessionsMoyen
+    const pctBarre = Math.round((d.sessionsMoyen / SEUIL_SESSIONS) * 100)
+    debInfo.innerHTML = `
+      <div style="background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e">
+        🔒 <strong>Difficile verrouillé</strong> — Fais encore <strong>${restant} session${restant>1?'s':''} Moyen ≥ 70%</strong> pour débloquer
+        <div style="margin-top:6px;background:#fde68a;border-radius:4px;height:6px;overflow:hidden">
+          <div style="height:6px;background:#f59e0b;border-radius:4px;width:${pctBarre}%"></div>
+        </div>
+        <div style="margin-top:3px;font-size:10px;color:#b45309">${d.sessionsMoyen}/${SEUIL_SESSIONS} sessions réussies</div>
+      </div>`
+    lockMsg.classList.remove('visible')
+  } else {
+    debInfo.innerHTML = `<div style="font-size:12px;color:#16a34a;padding:4px 0">✅ Tous les niveaux débloqués pour ce thème !</div>`
+    lockMsg.classList.remove('visible')
+  }
+}
 
 async function init() {
   const {data}=await sb.auth.getSession()
@@ -164,17 +277,35 @@ async function init() {
   document.getElementById('user-email').textContent=prenom||user.email
   if(user.user_metadata?.email_parent===PROF_EMAIL||emailParent===PROF_EMAIL)document.getElementById('btn-prof').style.display='inline-flex'
   renderThemes()
+  await mettreAJourNiveaux()
 }
 
-function renderThemes(){document.getElementById('theme-grid').innerHTML=THEMES.map((t,i)=>`<div class="theme-card ${i===0?'active':''}" onclick="setTheme(this,'${t.value}')"><div class="theme-icon">${t.icon}</div><div class="theme-label">${t.label}</div></div>`).join('')}
-function setTheme(el,val){if(quizEnCours)return;document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('active'));el.classList.add('active');theme=val}
-function setDiff(el,val){if(quizEnCours)return;document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');diff=val}
+function renderThemes(){
+  document.getElementById('theme-grid').innerHTML=THEMES.map((t,i)=>`<div class="theme-card ${i===0?'active':''}" onclick="setTheme(this,'${t.value}')"><div class="theme-icon">${t.icon}</div><div class="theme-label">${t.label}</div></div>`).join('')
+}
+
+async function setTheme(el,val){
+  if(quizEnCours)return
+  document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('active'))
+  el.classList.add('active')
+  theme=val
+  deblocageCache={} // reset cache pour recharger
+  await mettreAJourNiveaux()
+}
+
+function setDiff(el,val){
+  if(quizEnCours)return
+  const btn=document.getElementById('btn-'+val)
+  if(btn&&(btn.disabled||btn.classList.contains('locked')))return
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'))
+  el.classList.add('active')
+  diff=val
+}
 
 async function logout(){
   if(quizEnCours&&!saved){const ok=confirm('⚠️ Tu as un quiz en cours. Si tu te déconnectes, il sera enregistré avec un score de 0. Continuer ?');if(!ok)return;await sauvegarderAbandonne()}
   await sb.auth.signOut();window.location.href='index.html'
 }
-
 function demarrerChrono(){chronoSecondes=0;document.getElementById('chrono').style.display='flex';chronoInterval=setInterval(()=>{chronoSecondes++;const m=Math.floor(chronoSecondes/60).toString().padStart(2,'0');const s=(chronoSecondes%60).toString().padStart(2,'0');document.getElementById('chrono-text').textContent=`${m}:${s}`},1000)}
 function arreterChrono(){clearInterval(chronoInterval)}
 function formatTemps(secondes){const m=Math.floor(secondes/60);const s=secondes%60;if(m===0)return `${s} sec`;return `${m} min ${s} sec`}
@@ -295,6 +426,7 @@ function renderFigure(fig){
   if(f.type==='parallelogramme'){const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.78;const W=f.base*sc,H=f.hauteur*sc,sh=H*0.5,ox=P,oy=S-P;return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+(ox+sh)+','+(oy-H)+' '+(ox+sh+W)+','+(oy-H)+' '+(ox+W)+','+oy+' '+ox+','+oy+'"/><text class="fig-lb" x="'+(ox+sh/2+W/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+f.base+' '+u+'</text></svg></div>'}
   return ''
 }
+
 function renderQuiz() {
   const area = document.getElementById('quiz-area')
   const nbDone = Object.keys(submitted).length
@@ -402,6 +534,8 @@ async function sauvegarder() {
       }catch(emailErr){console.error('Erreur email:',emailErr.message)}
     }
     saved=true
+    // Reset cache déblocage pour ce thème après sauvegarde
+    delete deblocageCache[theme]
   }catch(e){console.log('Erreur sauvegarde:',e.message)}
 }
 
