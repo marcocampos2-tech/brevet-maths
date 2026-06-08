@@ -83,13 +83,37 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .lock-msg { font-size: 11px; color: #888; margin-top: 6px; padding: 6px 12px; background: #f9f9f7; border-radius: 8px; border-left: 3px solid #f59e0b; display: none; }
 .lock-msg.visible { display: block; }
 
+/* ── PROGRESSION GLOBALE ── */
+.progression-globale { margin-top: 16px; }
+.prog-titre { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+.prog-compteurs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.prog-compteur { background: #f5f5f0; border-radius: 8px; padding: 10px; text-align: center; }
+.prog-compteur.vert { background: #f0fdf4; border: 1px solid #16a34a; }
+.prog-compteur.orange { background: #fff8e6; border: 1px solid #f59e0b; }
+.prog-compteur.gris { background: #f5f5f0; border: 1px solid #e8e8e4; }
+.prog-num { font-size: 18px; font-weight: 600; }
+.prog-label { font-size: 11px; margin-top: 2px; }
+.prog-message { font-size: 12px; color: #555; background: #f5f5f0; border-radius: 8px; padding: 8px 12px; }
+
+/* ── BADGE TROPHÉE ── */
+.badge-trophee { background: #002395; border-radius: 12px; padding: 18px 16px; text-align: center; margin-top: 16px; }
+.badge-trophee-icon { font-size: 28px; margin-bottom: 8px; }
+.badge-trophee-titre { font-size: 15px; font-weight: 600; color: white; margin-bottom: 4px; }
+.badge-trophee-sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-bottom: 12px; }
+.badge-trophee-themes { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.badge-theme-pill { background: rgba(255,255,255,0.15); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: white; }
+
 /* ── BANNIÈRE EXAMEN ── */
-.banniere-examen { border: 1.5px solid #002395; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #eef1ff; margin-top: 28px; }
+.banniere-examen { border: 1.5px solid #002395; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #eef1ff; margin-top: 20px; }
+.banniere-examen.rouge { border-color: #ED2939; background: #fff5f5; }
 .banniere-examen-texte { }
 .banniere-examen-titre { font-size: 13px; font-weight: 600; color: #002395; margin-bottom: 3px; }
+.banniere-examen.rouge .banniere-examen-titre { color: #ED2939; }
 .banniere-examen-sub { font-size: 11px; color: #002395; opacity: 0.7; }
+.banniere-examen.rouge .banniere-examen-sub { color: #ED2939; }
 .banniere-examen-btn { padding: 9px 16px; background: #002395; color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-.banniere-examen-btn:hover { background: #001a6e; }
+.banniere-examen.rouge .banniere-examen-btn { background: #ED2939; }
+.banniere-examen-btn:hover { opacity: 0.9; }
 .separateur { height: 1px; background: #e8e8e4; margin: 20px 0; }
 
 /* ── OPTIONS QUIZ (inchangé) ── */
@@ -201,19 +225,18 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   </div>
   <div class="lock-msg" id="lock-msg"></div>
   <div id="deblocage-info"></div>
+  <div id="progression-globale"></div>
 
   <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:1rem">🎲 Générer 5 questions</button>
 
   <div class="separateur"></div>
-  <div class="banniere-examen">
+  <div class="banniere-examen" id="banniere-examen">
     <div class="banniere-examen-texte">
       <div class="banniere-examen-titre">💡 Prêt à te tester en conditions réelles ?</div>
-      <div class="banniere-examen-sub">20 questions · 40 minutes · correction complète · type QCM</div>
+      <div class="banniere-examen-sub">20 questions · 40 minutes · type QCM · correction complète</div>
     </div>
     <a href="examen.html" class="banniere-examen-btn">📝 Examen Blanc →</a>
   </div>
-</div>
-<div id="quiz-area"></div>
 </div>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -285,14 +308,11 @@ async function verifierDeblocage(t) {
 async function mettreAJourNiveaux() {
   const d = await verifierDeblocage(theme)
 
-  // ── Boutons cachés JS (compatibilité) ──
   const btnFacile=document.getElementById('btn-facile')
   const btnMoyen=document.getElementById('btn-moyen')
   const btnDifficile=document.getElementById('btn-difficile')
   const lockMsg=document.getElementById('lock-msg')
   const debInfo=document.getElementById('deblocage-info')
-
-  // ── Cartes visuelles ──
   const cardFacile=document.getElementById('niveau-facile')
   const cardMoyen=document.getElementById('niveau-moyen')
   const cardDifficile=document.getElementById('niveau-difficile')
@@ -301,7 +321,6 @@ async function mettreAJourNiveaux() {
 
   if(!btnFacile||!btnMoyen||!btnDifficile)return
 
-  // Sync boutons cachés
   btnFacile.disabled=false; btnFacile.classList.remove('locked')
 
   // ── MOYEN ──
@@ -309,6 +328,7 @@ async function mettreAJourNiveaux() {
     btnMoyen.disabled=false; btnMoyen.classList.remove('locked')
     cardMoyen.classList.remove('locked')
     cardMoyen.querySelector('.niveau-icon').textContent='😐'
+    cardMoyen.querySelector('.niveau-sous').textContent='On monte !'
     if(barreMoyen) barreMoyen.style.width='100%'
   } else {
     btnMoyen.disabled=true; btnMoyen.classList.add('locked')
@@ -326,6 +346,7 @@ async function mettreAJourNiveaux() {
     btnDifficile.disabled=false; btnDifficile.classList.remove('locked')
     cardDifficile.classList.remove('locked')
     cardDifficile.querySelector('.niveau-icon').textContent='😤'
+    cardDifficile.querySelector('.niveau-sous').textContent='Niveau expert'
     if(barreDifficile) barreDifficile.style.width='100%'
   } else {
     btnDifficile.disabled=true; btnDifficile.classList.add('locked')
@@ -338,7 +359,7 @@ async function mettreAJourNiveaux() {
     if(diff==='difficile'){diff='facile';btnFacile.classList.add('active');btnDifficile.classList.remove('active');cardFacile.classList.add('active');cardDifficile.classList.remove('active')}
   }
 
-  // ── Info déblocage dans deblocage-info ──
+  // ── Info déblocage thème actuel ──
   if(!d.moyen){
     const restant=SEUIL_SESSIONS-d.sessionsFacile
     debInfo.innerHTML=`<div style="font-size:11px;color:#92400e;background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-top:8px">🔒 <strong>Moyen verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> — ${d.sessionsFacile}/${SEUIL_SESSIONS} réussies</div>`
@@ -349,6 +370,89 @@ async function mettreAJourNiveaux() {
     debInfo.innerHTML=`<div style="font-size:11px;color:#16a34a;padding:4px 0;margin-top:6px">✅ Tous les niveaux débloqués pour ce thème !</div>`
   }
   lockMsg.classList.remove('visible')
+
+  // ── Progression globale ──
+  await mettreAJourProgressionGlobale()
+}
+
+// ═══════════════════════════════════════════════════
+// PROGRESSION GLOBALE (tous les thèmes)
+// ═══════════════════════════════════════════════════
+async function mettreAJourProgressionGlobale() {
+  const zone = document.getElementById('progression-globale')
+  const banniere = document.getElementById('banniere-examen')
+  if(!zone||!banniere) return
+
+  try {
+    // Charger tous les thèmes en parallèle
+    const resultats = await Promise.all(THEMES.map(t => verifierDeblocage(t.value)))
+
+    const nbFacile    = resultats.filter(d => d.moyen || d.difficile || d.sessionsFacile>=SEUIL_SESSIONS).length
+    const nbMoyen     = resultats.filter(d => d.moyen).length
+    const nbDifficile = resultats.filter(d => d.difficile).length
+    const total = THEMES.length // 6
+
+    const toutDebloque = nbDifficile === total
+
+    // ── Compteurs couleur ──
+    const couleurF = nbFacile===total ? 'vert' : nbFacile>0 ? 'orange' : 'gris'
+    const couleurM = nbMoyen===total  ? 'vert' : nbMoyen>0  ? 'orange' : 'gris'
+    const couleurD = nbDifficile===total ? 'vert' : nbDifficile>0 ? 'orange' : 'gris'
+
+    const couleurNumF = nbFacile===total ? '#16a34a' : nbFacile>0 ? '#f59e0b' : '#999'
+    const couleurNumM = nbMoyen===total  ? '#16a34a' : nbMoyen>0  ? '#f59e0b' : '#999'
+    const couleurNumD = nbDifficile===total ? '#16a34a' : nbDifficile>0 ? '#f59e0b' : '#999'
+
+    if(toutDebloque) {
+      // ── ÉTAT 2 : tout débloqué ──
+      zone.innerHTML = `
+        <div class="badge-trophee">
+          <div class="badge-trophee-icon">🏆</div>
+          <div class="badge-trophee-titre">Bravo ! Tu as tout débloqué.</div>
+          <div class="badge-trophee-sub">Tu maîtrises tous les thèmes. Tu peux refaire des quiz pour réviser, ou te tester en conditions de vrai Brevet 👇</div>
+          <div class="badge-trophee-themes">
+            ${THEMES.map(t=>`<span class="badge-theme-pill">${t.icon} ${t.label}</span>`).join('')}
+          </div>
+        </div>`
+      // Bannière rouge renforcée
+      banniere.classList.add('rouge')
+      banniere.querySelector('.banniere-examen-titre').textContent = '🎯 Tu es prêt pour le vrai Brevet !'
+      banniere.querySelector('.banniere-examen-sub').textContent = 'Teste-toi maintenant en conditions réelles · 40 min · 20 questions'
+    } else {
+      // ── ÉTAT 1 : en cours ──
+      const restantM = total - nbMoyen
+      const restantD = total - nbDifficile
+      let msg = ''
+      if(nbMoyen < total) msg = `💪 Continue ! Débloque encore <strong>${restantM} thème${restantM>1?'s':''} Moyen</strong> pour progresser.`
+      if(nbDifficile < total && nbMoyen === total) msg = `🔥 Presque ! Plus que <strong>${restantD} thème${restantD>1?'s':''} Difficile</strong> pour tout débloquer !`
+
+      zone.innerHTML = `
+        <div class="progression-globale">
+          <p class="prog-titre">Progression globale</p>
+          <div class="prog-compteurs">
+            <div class="prog-compteur ${couleurF}">
+              <div class="prog-num" style="color:${couleurNumF}">${nbFacile}/${total}</div>
+              <div class="prog-label" style="color:${couleurNumF}">😊 Facile</div>
+            </div>
+            <div class="prog-compteur ${couleurM}">
+              <div class="prog-num" style="color:${couleurNumM}">${nbMoyen}/${total}</div>
+              <div class="prog-label" style="color:${couleurNumM}">😐 Moyen</div>
+            </div>
+            <div class="prog-compteur ${couleurD}">
+              <div class="prog-num" style="color:${couleurNumD}">${nbDifficile}/${total}</div>
+              <div class="prog-label" style="color:${couleurNumD}">😤 Difficile</div>
+            </div>
+          </div>
+          ${msg ? `<div class="prog-message">${msg}</div>` : ''}
+        </div>`
+      // Bannière bleue normale
+      banniere.classList.remove('rouge')
+      banniere.querySelector('.banniere-examen-titre').textContent = '💡 Prêt à te tester en conditions réelles ?'
+      banniere.querySelector('.banniere-examen-sub').textContent = '20 questions · 40 minutes · correction complète · type QCM'
+    }
+  } catch(e) {
+    console.log('Erreur progression globale:', e.message)
+  }
 }
 
 // ── Nouvelle fonction pour les cartes visuelles ──
@@ -356,12 +460,11 @@ function setDiffCard(el, val) {
   if(quizEnCours) return
   const cardMoyen=document.getElementById('niveau-moyen')
   const cardDifficile=document.getElementById('niveau-difficile')
-  if(val==='moyen' && (cardMoyen.classList.contains('locked'))) return
-  if(val==='difficile' && (cardDifficile.classList.contains('locked'))) return
+  if(val==='moyen' && cardMoyen.classList.contains('locked')) return
+  if(val==='difficile' && cardDifficile.classList.contains('locked')) return
   document.querySelectorAll('.niveau-card').forEach(c=>c.classList.remove('active'))
   el.classList.add('active')
   diff=val
-  // Sync boutons cachés
   document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'))
   const btn=document.getElementById('btn-'+val)
   if(btn) btn.classList.add('active')
@@ -669,3 +772,5 @@ init()
 </script>
 </body>
 </html>
+<div id="quiz-area"></div>
+</div>
