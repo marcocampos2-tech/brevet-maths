@@ -16,18 +16,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .container { max-width: 680px; margin: 0 auto; padding: 0 1rem 1rem 1rem; }
 
 /* ── NAV ── */
-nav { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 0; border-bottom: 3px solid #002395; margin-bottom: 0; flex-wrap: wrap; gap: 8px; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 0; border-bottom: 3px solid #002395; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px; }
 .nav-left { font-size: 18px; font-weight: 700; color: #002395; letter-spacing: -0.5px; }
 .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .nav-email { font-size: 12px; color: #666; }
-
-/* ── BARRE ÉTAPES ── */
-.steps-bar { background: #002395; padding: 10px 0; margin: 0 -1rem 1.25rem -1rem; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
-.step { display: flex; align-items: center; gap: 7px; color: rgba(255,255,255,0.5); font-size: 13px; }
-.step.active { color: white; }
-.step-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; background: rgba(255,255,255,0.2); flex-shrink: 0; }
-.step.active .step-num { background: #ED2939; color: white; }
-.step-arrow { color: rgba(255,255,255,0.3); font-size: 13px; }
 
 /* ── CARDS GÉNÉRALES ── */
 .card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
@@ -46,6 +38,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 #btn-prof { background: #fbbf24; border-color: #f59e0b; color: #1a1a1a; }
 #btn-prof:hover { background: #f59e0b; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
+
+/* ── MESSAGE ACCUEIL ── */
+.msg-accueil { background: #eef1ff; border-left: 4px solid #002395; border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 1.25rem; font-size: 13px; color: #002395; line-height: 1.6; }
+.msg-accueil strong { font-weight: 600; }
 
 /* ── SECTION LABEL ── */
 .section-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
@@ -80,20 +76,8 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .diff-btn { display: none; }
 .diff-btn.active { }
 .diff-btn.locked { }
-.lock-msg { font-size: 11px; color: #888; margin-top: 6px; padding: 6px 12px; background: #f9f9f7; border-radius: 8px; border-left: 3px solid #f59e0b; display: none; }
+.lock-msg { display: none; }
 .lock-msg.visible { display: block; }
-
-/* ── PROGRESSION GLOBALE ── */
-.progression-globale { margin-top: 16px; }
-.prog-titre { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
-.prog-compteurs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
-.prog-compteur { background: #f5f5f0; border-radius: 8px; padding: 10px; text-align: center; }
-.prog-compteur.vert { background: #f0fdf4; border: 1px solid #16a34a; }
-.prog-compteur.orange { background: #fff8e6; border: 1px solid #f59e0b; }
-.prog-compteur.gris { background: #f5f5f0; border: 1px solid #e8e8e4; }
-.prog-num { font-size: 18px; font-weight: 600; }
-.prog-label { font-size: 11px; margin-top: 2px; }
-.prog-message { font-size: 12px; color: #555; background: #f5f5f0; border-radius: 8px; padding: 8px 12px; }
 
 /* ── BADGE TROPHÉE ── */
 .badge-trophee { background: #002395; border-radius: 12px; padding: 18px 16px; text-align: center; margin-top: 16px; }
@@ -106,7 +90,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 /* ── BANNIÈRE EXAMEN ── */
 .banniere-examen { border: 1.5px solid #002395; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #eef1ff; margin-top: 20px; }
 .banniere-examen.rouge { border-color: #ED2939; background: #fff5f5; }
-.banniere-examen-texte { }
 .banniere-examen-titre { font-size: 13px; font-weight: 600; color: #002395; margin-bottom: 3px; }
 .banniere-examen.rouge .banniere-examen-titre { color: #ED2939; }
 .banniere-examen-sub { font-size: 11px; color: #002395; opacity: 0.7; }
@@ -175,24 +158,12 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   </div>
 </nav>
 
-<div class="steps-bar">
-  <div class="step active">
-    <div class="step-num">1</div>
-    Choisis un thème
-  </div>
-  <div class="step-arrow">→</div>
-  <div class="step">
-    <div class="step-num">2</div>
-    Choisis ton niveau
-  </div>
-  <div class="step-arrow">→</div>
-  <div class="step">
-    <div class="step-num">3</div>
-    Génère tes questions
-  </div>
-</div>
-
 <div class="card" id="config">
+
+  <div class="msg-accueil">
+    🎯 <strong>Comment ça marche ?</strong> Choisis un thème, fais les 5 questions en <strong>Facile</strong> et débloque le niveau <strong>Moyen</strong> — puis continue pour atteindre le niveau <strong>Difficile</strong> !
+  </div>
+
   <p class="section-label">Thème</p>
   <div class="theme-grid" id="theme-grid"></div>
 
@@ -225,7 +196,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   </div>
   <div class="lock-msg" id="lock-msg"></div>
   <div id="deblocage-info"></div>
-  <div id="progression-globale"></div>
+  <div id="trophee-zone"></div>
 
   <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:1rem">🎲 Générer 5 questions</button>
 
@@ -233,7 +204,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="banniere-examen" id="banniere-examen">
     <div class="banniere-examen-texte">
       <div class="banniere-examen-titre">💡 Prêt à te tester en conditions réelles ?</div>
-      <div class="banniere-examen-sub">20 questions · 40 minutes · type QCM · correction complète</div>
+      <div class="banniere-examen-sub">20 questions · 40 minutes · correction complète · type QCM</div>
     </div>
     <a href="examen.html" class="banniere-examen-btn">📝 Examen Blanc →</a>
   </div>
@@ -359,7 +330,7 @@ async function mettreAJourNiveaux() {
     if(diff==='difficile'){diff='facile';btnFacile.classList.add('active');btnDifficile.classList.remove('active');cardFacile.classList.add('active');cardDifficile.classList.remove('active')}
   }
 
-  // ── Info déblocage thème actuel ──
+  // ── Message contextuel par thème ──
   if(!d.moyen){
     const restant=SEUIL_SESSIONS-d.sessionsFacile
     debInfo.innerHTML=`<div style="font-size:11px;color:#92400e;background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-top:8px">🔒 <strong>Moyen verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> — ${d.sessionsFacile}/${SEUIL_SESSIONS} réussies</div>`
@@ -371,40 +342,21 @@ async function mettreAJourNiveaux() {
   }
   lockMsg.classList.remove('visible')
 
-  // ── Progression globale ──
-  await mettreAJourProgressionGlobale()
+  // ── Trophée si tout débloqué sur tous les thèmes ──
+  await verifierTropheeGlobal()
 }
 
 // ═══════════════════════════════════════════════════
-// PROGRESSION GLOBALE (tous les thèmes)
+// TROPHÉE GLOBAL
 // ═══════════════════════════════════════════════════
-async function mettreAJourProgressionGlobale() {
-  const zone = document.getElementById('progression-globale')
+async function verifierTropheeGlobal() {
+  const zone = document.getElementById('trophee-zone')
   const banniere = document.getElementById('banniere-examen')
   if(!zone||!banniere) return
-
   try {
-    // Charger tous les thèmes en parallèle
     const resultats = await Promise.all(THEMES.map(t => verifierDeblocage(t.value)))
-
-    const nbFacile    = resultats.filter(d => d.moyen || d.difficile || d.sessionsFacile>=SEUIL_SESSIONS).length
-    const nbMoyen     = resultats.filter(d => d.moyen).length
-    const nbDifficile = resultats.filter(d => d.difficile).length
-    const total = THEMES.length // 6
-
-    const toutDebloque = nbDifficile === total
-
-    // ── Compteurs couleur ──
-    const couleurF = nbFacile===total ? 'vert' : nbFacile>0 ? 'orange' : 'gris'
-    const couleurM = nbMoyen===total  ? 'vert' : nbMoyen>0  ? 'orange' : 'gris'
-    const couleurD = nbDifficile===total ? 'vert' : nbDifficile>0 ? 'orange' : 'gris'
-
-    const couleurNumF = nbFacile===total ? '#16a34a' : nbFacile>0 ? '#f59e0b' : '#999'
-    const couleurNumM = nbMoyen===total  ? '#16a34a' : nbMoyen>0  ? '#f59e0b' : '#999'
-    const couleurNumD = nbDifficile===total ? '#16a34a' : nbDifficile>0 ? '#f59e0b' : '#999'
-
+    const toutDebloque = resultats.every(d => d.difficile)
     if(toutDebloque) {
-      // ── ÉTAT 2 : tout débloqué ──
       zone.innerHTML = `
         <div class="badge-trophee">
           <div class="badge-trophee-icon">🏆</div>
@@ -414,48 +366,19 @@ async function mettreAJourProgressionGlobale() {
             ${THEMES.map(t=>`<span class="badge-theme-pill">${t.icon} ${t.label}</span>`).join('')}
           </div>
         </div>`
-      // Bannière rouge renforcée
       banniere.classList.add('rouge')
-      banniere.querySelector('.banniere-examen-titre').textContent = '🎯 Tu es prêt pour le vrai Brevet !'
-      banniere.querySelector('.banniere-examen-sub').textContent = 'Teste-toi maintenant en conditions réelles · 40 min · 20 questions'
+      banniere.querySelector('.banniere-examen-titre').textContent='🎯 Tu es prêt pour le vrai Brevet !'
+      banniere.querySelector('.banniere-examen-sub').textContent='Teste-toi maintenant en conditions réelles · 40 min · 20 questions'
     } else {
-      // ── ÉTAT 1 : en cours ──
-      const restantM = total - nbMoyen
-      const restantD = total - nbDifficile
-      let msg = ''
-      if(nbMoyen < total) msg = `💪 Continue ! Débloque encore <strong>${restantM} thème${restantM>1?'s':''} Moyen</strong> pour progresser.`
-      if(nbDifficile < total && nbMoyen === total) msg = `🔥 Presque ! Plus que <strong>${restantD} thème${restantD>1?'s':''} Difficile</strong> pour tout débloquer !`
-
-      zone.innerHTML = `
-        <div class="progression-globale">
-          <p class="prog-titre">Progression globale</p>
-          <div class="prog-compteurs">
-            <div class="prog-compteur ${couleurF}">
-              <div class="prog-num" style="color:${couleurNumF}">${nbFacile}/${total}</div>
-              <div class="prog-label" style="color:${couleurNumF}">😊 Facile</div>
-            </div>
-            <div class="prog-compteur ${couleurM}">
-              <div class="prog-num" style="color:${couleurNumM}">${nbMoyen}/${total}</div>
-              <div class="prog-label" style="color:${couleurNumM}">😐 Moyen</div>
-            </div>
-            <div class="prog-compteur ${couleurD}">
-              <div class="prog-num" style="color:${couleurNumD}">${nbDifficile}/${total}</div>
-              <div class="prog-label" style="color:${couleurNumD}">😤 Difficile</div>
-            </div>
-          </div>
-          ${msg ? `<div class="prog-message">${msg}</div>` : ''}
-        </div>`
-      // Bannière bleue normale
+      zone.innerHTML=''
       banniere.classList.remove('rouge')
-      banniere.querySelector('.banniere-examen-titre').textContent = '💡 Prêt à te tester en conditions réelles ?'
-      banniere.querySelector('.banniere-examen-sub').textContent = '20 questions · 40 minutes · correction complète · type QCM'
+      banniere.querySelector('.banniere-examen-titre').textContent='💡 Prêt à te tester en conditions réelles ?'
+      banniere.querySelector('.banniere-examen-sub').textContent='20 questions · 40 minutes · correction complète · type QCM'
     }
-  } catch(e) {
-    console.log('Erreur progression globale:', e.message)
-  }
+  } catch(e) { console.log('Erreur trophée:', e.message) }
 }
 
-// ── Nouvelle fonction pour les cartes visuelles ──
+// ── Cartes visuelles niveaux ──
 function setDiffCard(el, val) {
   if(quizEnCours) return
   const cardMoyen=document.getElementById('niveau-moyen')
