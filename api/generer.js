@@ -175,7 +175,6 @@ Réponds UNIQUEMENT avec un tableau JSON de 5 chiffres : [0, 2, 1, 3, 0]`
     res.status(500).json({ error: '❌ Une erreur est survenue.' })
   }
 }
-
 async function getBanqueSupabase(theme, difficulte) {
   try {
     const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -190,7 +189,13 @@ async function getBanqueSupabase(theme, difficulte) {
     const data = await res.json()
     if (!Array.isArray(data) || data.length === 0) return []
 
-    const shuffled = data.sort(() => Math.random() - 0.5).slice(0, 5)
+    // ── DÉDOUBLONNER par texte de question ──────────────
+    const unique = data.filter((q, idx, arr) =>
+      arr.findIndex(x => x.question.trim() === q.question.trim()) === idx
+    )
+
+    // ── SHUFFLE + SLICE 5 ────────────────────────────────
+    const shuffled = unique.sort(() => Math.random() - 0.5).slice(0, 5)
 
     return shuffled.map(q => {
       const opts = typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts
