@@ -13,16 +13,30 @@
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
-.container { max-width: 680px; margin: 0 auto; padding: 1rem; }
-nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e8e8e4; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px; }
-.nav-left { font-size: 18px; font-weight: 600; }
+.container { max-width: 680px; margin: 0 auto; padding: 0 1rem 1rem 1rem; }
+
+/* ── NAV ── */
+nav { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 0; border-bottom: 3px solid #002395; margin-bottom: 0; flex-wrap: wrap; gap: 8px; }
+.nav-left { font-size: 18px; font-weight: 700; color: #002395; letter-spacing: -0.5px; }
 .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .nav-email { font-size: 12px; color: #666; }
+
+/* ── BARRE ÉTAPES ── */
+.steps-bar { background: #002395; padding: 10px 0; margin: 0 -1rem 1.25rem -1rem; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.step { display: flex; align-items: center; gap: 7px; color: rgba(255,255,255,0.5); font-size: 13px; }
+.step.active { color: white; }
+.step-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 11px; background: rgba(255,255,255,0.2); flex-shrink: 0; }
+.step.active .step-num { background: #ED2939; color: white; }
+.step-arrow { color: rgba(255,255,255,0.3); font-size: 13px; }
+
+/* ── CARDS GÉNÉRALES ── */
 .card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
+
+/* ── BOUTONS GÉNÉRAUX ── */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
 .btn:hover { background: #f5f5f0; }
-.btn-primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
-.btn-primary:hover { background: #333; }
+.btn-primary { background: #ED2939; color: white; border-color: #ED2939; }
+.btn-primary:hover { background: #c0212f; border-color: #c0212f; }
 .btn-green { background: #16a34a; color: white; border-color: #16a34a; font-size: 16px; padding: 16px; }
 .btn-green:hover { background: #15803d; }
 .btn-outline { background: white; color: #666; border: 1px solid #d0d0c8; font-size: 14px; padding: 12px; }
@@ -31,23 +45,54 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 #btn-prof { background: #fbbf24; border-color: #f59e0b; color: #1a1a1a; }
 #btn-prof:hover { background: #f59e0b; }
-#btn-examen { background: #eef2ff; border-color: #3730a3; color: #3730a3; }
-#btn-examen:hover { background: #3730a3; color: white; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
-.theme-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 1rem; }
+
+/* ── SECTION LABEL ── */
+.section-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
+
+/* ── THÈMES ── */
+.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
 .theme-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
-.theme-card:hover { border-color: #999; }
-.theme-card.active { border: 2px solid #1a1a1a; background: #f5f5f0; }
+.theme-card:hover { border-color: #002395; }
+.theme-card.active { border: 2px solid #002395; background: #eef1ff; }
 .theme-card.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 .theme-icon { font-size: 22px; margin-bottom: 4px; }
-.theme-label { font-size: 12px; font-weight: 500; }
-.diff-row { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
-.diff-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid #d0d0c8; background: white; font-size: 13px; cursor: pointer; transition: all 0.15s; }
-.diff-btn.active { background: #1a1a1a; color: white; border-color: #1a1a1a; }
-.diff-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.diff-btn.locked { background: #f5f5f0; color: #999; border-color: #e0e0d8; cursor: not-allowed; }
+.theme-label { font-size: 12px; font-weight: 500; color: #1a1a1a; }
+.theme-card.active .theme-label { color: #002395; }
+
+/* ── NIVEAUX CARDS ── */
+.niveaux-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+.niveau-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 14px 10px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; position: relative; }
+.niveau-card:hover { border-color: #002395; }
+.niveau-card.active { border: 2px solid #002395; background: #eef1ff; }
+.niveau-card.locked { background: #f9f9f7; cursor: not-allowed; opacity: 0.65; }
+.niveau-card.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.niveau-icon { font-size: 22px; margin-bottom: 6px; }
+.niveau-titre { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 3px; }
+.niveau-card.active .niveau-titre { color: #002395; }
+.niveau-sous { font-size: 11px; color: #888; }
+.niveau-card.active .niveau-sous { color: #002395; opacity: 0.8; }
+.niveau-barre-wrap { margin-top: 8px; height: 4px; background: #e8e8e4; border-radius: 2px; overflow: hidden; }
+.niveau-barre-fill { height: 4px; background: #f59e0b; border-radius: 2px; transition: width 0.3s; }
+
+/* ── DIFF BTN (gardés pour compatibilité JS) ── */
+.diff-row { display: none; }
+.diff-btn { display: none; }
+.diff-btn.active { }
+.diff-btn.locked { }
 .lock-msg { font-size: 11px; color: #888; margin-top: 6px; padding: 6px 12px; background: #f9f9f7; border-radius: 8px; border-left: 3px solid #f59e0b; display: none; }
 .lock-msg.visible { display: block; }
+
+/* ── BANNIÈRE EXAMEN ── */
+.banniere-examen { border: 1.5px solid #002395; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #eef1ff; margin-top: 28px; }
+.banniere-examen-texte { }
+.banniere-examen-titre { font-size: 13px; font-weight: 600; color: #002395; margin-bottom: 3px; }
+.banniere-examen-sub { font-size: 11px; color: #002395; opacity: 0.7; }
+.banniere-examen-btn { padding: 9px 16px; background: #002395; color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.banniere-examen-btn:hover { background: #001a6e; }
+.separateur { height: 1px; background: #e8e8e4; margin: 20px 0; }
+
+/* ── OPTIONS QUIZ (inchangé) ── */
 .option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid #e8e8e4; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.15s; margin-bottom: 8px; }
 .option:hover { border-color: #999; background: #f9f9f7; }
 .option.selected { border-color: #3730a3; background: #eef2ff; }
@@ -62,8 +107,8 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .quiz-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
 .progress-steps { display: flex; gap: 4px; flex: 1; }
 .progress-step { height: 6px; flex: 1; border-radius: 3px; background: #e0e0d8; }
-.progress-step.done { background: #3730a3; }
-.progress-step.current { background: #3730a3; opacity: 0.4; }
+.progress-step.done { background: #002395; }
+.progress-step.current { background: #002395; opacity: 0.4; }
 .progress-label { font-size: 12px; color: #666; white-space: nowrap; }
 .results-screen { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 2rem 1.5rem; margin-bottom: 1rem; text-align: center; }
 .results-score-big { font-size: 72px; font-weight: 700; color: #1a1a1a; line-height: 1; }
@@ -101,28 +146,72 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
       <span id="chrono-text">00:00</span>
     </div>
     <a href="prof.html" class="btn" id="btn-prof" style="display:none">🎓 Prof</a>
-    <a href="examen.html" class="btn" id="btn-examen">📝 Examen Blanc</a>
     <a href="resultats.html" class="btn">Mes résultats</a>
     <button class="btn" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
+
+<div class="steps-bar">
+  <div class="step active">
+    <div class="step-num">1</div>
+    Choisis un thème
+  </div>
+  <div class="step-arrow">→</div>
+  <div class="step">
+    <div class="step-num">2</div>
+    Choisis ton niveau
+  </div>
+  <div class="step-arrow">→</div>
+  <div class="step">
+    <div class="step-num">3</div>
+    Génère tes questions
+  </div>
+</div>
+
 <div class="card" id="config">
-  <div style="background:#eef2ff;border-radius:10px;padding:12px 16px;margin-bottom:1rem;font-size:15px;font-weight:600;color:#3730a3;">
-    ① Choisis un thème &nbsp;→&nbsp; ② Choisis ton niveau &nbsp;→&nbsp; ③ Clique Générer
-    <div style="margin-top:8px;font-size:13px;font-weight:400;color:#555;">
-    💡 Prêt à te tester ? Clique sur le bouton <strong style="color:#3730a3;">📝 Examen Blanc</strong> en haut à droite.
+  <p class="section-label">Thème</p>
+  <div class="theme-grid" id="theme-grid"></div>
+
+  <p class="section-label">Niveau</p>
+  <div class="niveaux-grid" id="niveaux-grid">
+    <div class="niveau-card active" id="niveau-facile" onclick="setDiffCard(this,'facile')">
+      <div class="niveau-icon">😊</div>
+      <div class="niveau-titre">Facile</div>
+      <div class="niveau-sous">Pour commencer</div>
+    </div>
+    <div class="niveau-card locked" id="niveau-moyen" onclick="setDiffCard(this,'moyen')">
+      <div class="niveau-icon">🔒</div>
+      <div class="niveau-titre">Moyen</div>
+      <div class="niveau-sous">On monte !</div>
+      <div class="niveau-barre-wrap"><div class="niveau-barre-fill" id="barre-moyen" style="width:0%"></div></div>
+    </div>
+    <div class="niveau-card locked" id="niveau-difficile" onclick="setDiffCard(this,'difficile')">
+      <div class="niveau-icon">🔒</div>
+      <div class="niveau-titre">Difficile</div>
+      <div class="niveau-sous">Niveau expert</div>
+      <div class="niveau-barre-wrap"><div class="niveau-barre-fill" id="barre-difficile" style="width:0%"></div></div>
     </div>
   </div>
-  <div class="theme-grid" id="theme-grid"></div>
-  <h2 style="margin-top:1rem">Niveau</h2>
+
+  <!-- Éléments JS conservés mais cachés -->
   <div class="diff-row" id="diff-row">
     <button class="diff-btn active" id="btn-facile" onclick="setDiff(this,'facile')">😊 Facile</button>
     <button class="diff-btn" id="btn-moyen" onclick="setDiff(this,'moyen')">😐 Moyen</button>
     <button class="diff-btn" id="btn-difficile" onclick="setDiff(this,'difficile')">😤 Difficile</button>
   </div>
   <div class="lock-msg" id="lock-msg"></div>
-  <div id="deblocage-info" style="margin-bottom:0.75rem"></div>
-  <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:0.5rem">🎲 Générer 5 questions</button>
+  <div id="deblocage-info"></div>
+
+  <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:1rem">🎲 Générer 5 questions</button>
+
+  <div class="separateur"></div>
+  <div class="banniere-examen">
+    <div class="banniere-examen-texte">
+      <div class="banniere-examen-titre">💡 Prêt à te tester en conditions réelles ?</div>
+      <div class="banniere-examen-sub">20 questions · 40 minutes · correction complète · type QCM</div>
+    </div>
+    <a href="examen.html" class="banniere-examen-btn">📝 Examen Blanc →</a>
+  </div>
 </div>
 <div id="quiz-area"></div>
 </div>
@@ -159,8 +248,22 @@ async function sauvegarderAbandonne() {
   try{await sb.from('resultats').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',theme,difficulte:diff,score:0,total:5,questions_ratees:['Quiz abandonné'],temps_secondes:chronoSecondes,aucune_idee:0,source_questions:sourceQuestions,alerte_envoyee:false});saved=true}catch(e){console.log('Erreur abandon:',e.message)}
 }
 
-function bloquerConfig(){quizEnCours=true;document.getElementById('gen-btn').disabled=true;document.getElementById('gen-btn').textContent='⏳ Quiz en cours...';document.querySelectorAll('.theme-card').forEach(c=>c.classList.add('disabled'));document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=true)}
-function debloquerConfig(){quizEnCours=false;document.getElementById('gen-btn').disabled=false;document.getElementById('gen-btn').textContent='🎲 Générer 5 questions';document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('disabled'));mettreAJourNiveaux()}
+function bloquerConfig(){
+  quizEnCours=true
+  document.getElementById('gen-btn').disabled=true
+  document.getElementById('gen-btn').textContent='⏳ Quiz en cours...'
+  document.querySelectorAll('.theme-card').forEach(c=>c.classList.add('disabled'))
+  document.querySelectorAll('.niveau-card').forEach(c=>c.classList.add('disabled'))
+  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=true)
+}
+
+function debloquerConfig(){
+  quizEnCours=false
+  document.getElementById('gen-btn').disabled=false
+  document.getElementById('gen-btn').textContent='🎲 Générer 5 questions'
+  document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('disabled'))
+  mettreAJourNiveaux()
+}
 
 // ═══════════════════════════════════════════════════
 // DÉBLOCAGE PROGRESSIF
@@ -181,26 +284,87 @@ async function verifierDeblocage(t) {
 
 async function mettreAJourNiveaux() {
   const d = await verifierDeblocage(theme)
-  const btnFacile=document.getElementById('btn-facile'), btnMoyen=document.getElementById('btn-moyen'), btnDifficile=document.getElementById('btn-difficile')
-  const lockMsg=document.getElementById('lock-msg'), debInfo=document.getElementById('deblocage-info')
+
+  // ── Boutons cachés JS (compatibilité) ──
+  const btnFacile=document.getElementById('btn-facile')
+  const btnMoyen=document.getElementById('btn-moyen')
+  const btnDifficile=document.getElementById('btn-difficile')
+  const lockMsg=document.getElementById('lock-msg')
+  const debInfo=document.getElementById('deblocage-info')
+
+  // ── Cartes visuelles ──
+  const cardFacile=document.getElementById('niveau-facile')
+  const cardMoyen=document.getElementById('niveau-moyen')
+  const cardDifficile=document.getElementById('niveau-difficile')
+  const barreMoyen=document.getElementById('barre-moyen')
+  const barreDifficile=document.getElementById('barre-difficile')
+
   if(!btnFacile||!btnMoyen||!btnDifficile)return
-  btnFacile.disabled=false; btnFacile.classList.remove('locked'); btnFacile.textContent='😊 Facile'
-  if(d.moyen){btnMoyen.disabled=false;btnMoyen.classList.remove('locked');btnMoyen.textContent='😐 Moyen'}
-  else{btnMoyen.disabled=true;btnMoyen.classList.add('locked');btnMoyen.textContent='🔒 Moyen';if(diff==='moyen'){diff='facile';btnFacile.classList.add('active');btnMoyen.classList.remove('active')}}
-  if(d.difficile){btnDifficile.disabled=false;btnDifficile.classList.remove('locked');btnDifficile.textContent='😤 Difficile'}
-  else{btnDifficile.disabled=true;btnDifficile.classList.add('locked');btnDifficile.textContent='🔒 Difficile';if(diff==='difficile'){diff='facile';btnFacile.classList.add('active');btnDifficile.classList.remove('active')}}
-  if(!d.moyen){
-    const restant=SEUIL_SESSIONS-d.sessionsFacile, pctBarre=Math.round((d.sessionsFacile/SEUIL_SESSIONS)*100)
-    debInfo.innerHTML=`<div style="background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e">🔒 <strong>Moyen verrouillé</strong> — Fais encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> pour débloquer<div style="margin-top:6px;background:#fde68a;border-radius:4px;height:6px;overflow:hidden"><div style="height:6px;background:#f59e0b;border-radius:4px;width:${pctBarre}%"></div></div><div style="margin-top:3px;font-size:10px;color:#b45309">${d.sessionsFacile}/${SEUIL_SESSIONS} sessions réussies</div></div>`
-    lockMsg.classList.remove('visible')
-  } else if(!d.difficile){
-    const restant=SEUIL_SESSIONS-d.sessionsMoyen, pctBarre=Math.round((d.sessionsMoyen/SEUIL_SESSIONS)*100)
-    debInfo.innerHTML=`<div style="background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e">🔒 <strong>Difficile verrouillé</strong> — Fais encore <strong>${restant} session${restant>1?'s':''} Moyen ≥ 70%</strong> pour débloquer<div style="margin-top:6px;background:#fde68a;border-radius:4px;height:6px;overflow:hidden"><div style="height:6px;background:#f59e0b;border-radius:4px;width:${pctBarre}%"></div></div><div style="margin-top:3px;font-size:10px;color:#b45309">${d.sessionsMoyen}/${SEUIL_SESSIONS} sessions réussies</div></div>`
-    lockMsg.classList.remove('visible')
+
+  // Sync boutons cachés
+  btnFacile.disabled=false; btnFacile.classList.remove('locked')
+
+  // ── MOYEN ──
+  if(d.moyen){
+    btnMoyen.disabled=false; btnMoyen.classList.remove('locked')
+    cardMoyen.classList.remove('locked')
+    cardMoyen.querySelector('.niveau-icon').textContent='😐'
+    if(barreMoyen) barreMoyen.style.width='100%'
   } else {
-    debInfo.innerHTML=`<div style="font-size:12px;color:#16a34a;padding:4px 0">✅ Tous les niveaux débloqués pour ce thème !</div>`
-    lockMsg.classList.remove('visible')
+    btnMoyen.disabled=true; btnMoyen.classList.add('locked')
+    cardMoyen.classList.add('locked')
+    cardMoyen.querySelector('.niveau-icon').textContent='🔒'
+    const pctM=Math.round((d.sessionsFacile/SEUIL_SESSIONS)*100)
+    if(barreMoyen) barreMoyen.style.width=pctM+'%'
+    const restantM=SEUIL_SESSIONS-d.sessionsFacile
+    cardMoyen.querySelector('.niveau-sous').textContent=restantM+' session'+(restantM>1?'s':'')+' Facile ≥ 70%'
+    if(diff==='moyen'){diff='facile';btnFacile.classList.add('active');btnMoyen.classList.remove('active');cardFacile.classList.add('active');cardMoyen.classList.remove('active')}
   }
+
+  // ── DIFFICILE ──
+  if(d.difficile){
+    btnDifficile.disabled=false; btnDifficile.classList.remove('locked')
+    cardDifficile.classList.remove('locked')
+    cardDifficile.querySelector('.niveau-icon').textContent='😤'
+    if(barreDifficile) barreDifficile.style.width='100%'
+  } else {
+    btnDifficile.disabled=true; btnDifficile.classList.add('locked')
+    cardDifficile.classList.add('locked')
+    cardDifficile.querySelector('.niveau-icon').textContent='🔒'
+    const pctD=Math.round((d.sessionsMoyen/SEUIL_SESSIONS)*100)
+    if(barreDifficile) barreDifficile.style.width=pctD+'%'
+    const restantD=SEUIL_SESSIONS-d.sessionsMoyen
+    cardDifficile.querySelector('.niveau-sous').textContent=restantD+' session'+(restantD>1?'s':'')+' Moyen ≥ 70%'
+    if(diff==='difficile'){diff='facile';btnFacile.classList.add('active');btnDifficile.classList.remove('active');cardFacile.classList.add('active');cardDifficile.classList.remove('active')}
+  }
+
+  // ── Info déblocage dans deblocage-info ──
+  if(!d.moyen){
+    const restant=SEUIL_SESSIONS-d.sessionsFacile
+    debInfo.innerHTML=`<div style="font-size:11px;color:#92400e;background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-top:8px">🔒 <strong>Moyen verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> — ${d.sessionsFacile}/${SEUIL_SESSIONS} réussies</div>`
+  } else if(!d.difficile){
+    const restant=SEUIL_SESSIONS-d.sessionsMoyen
+    debInfo.innerHTML=`<div style="font-size:11px;color:#92400e;background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-top:8px">🔒 <strong>Difficile verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Moyen ≥ 70%</strong> — ${d.sessionsMoyen}/${SEUIL_SESSIONS} réussies</div>`
+  } else {
+    debInfo.innerHTML=`<div style="font-size:11px;color:#16a34a;padding:4px 0;margin-top:6px">✅ Tous les niveaux débloqués pour ce thème !</div>`
+  }
+  lockMsg.classList.remove('visible')
+}
+
+// ── Nouvelle fonction pour les cartes visuelles ──
+function setDiffCard(el, val) {
+  if(quizEnCours) return
+  const cardMoyen=document.getElementById('niveau-moyen')
+  const cardDifficile=document.getElementById('niveau-difficile')
+  if(val==='moyen' && (cardMoyen.classList.contains('locked'))) return
+  if(val==='difficile' && (cardDifficile.classList.contains('locked'))) return
+  document.querySelectorAll('.niveau-card').forEach(c=>c.classList.remove('active'))
+  el.classList.add('active')
+  diff=val
+  // Sync boutons cachés
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'))
+  const btn=document.getElementById('btn-'+val)
+  if(btn) btn.classList.add('active')
 }
 
 // ═══════════════════════════════════════════════════
@@ -209,48 +373,29 @@ async function mettreAJourNiveaux() {
 async function envoyerRecapJournalier() {
   if (!emailParent || !user) return
   try {
-    // Récupérer toutes les sessions du jour
     const aujourd_hui = new Date().toISOString().split('T')[0]
     const { data: sessions } = await sb.from('resultats')
       .select('theme, difficulte, score, total, temps_secondes, questions_ratees, created_at')
       .eq('user_id', user.id)
       .gte('created_at', aujourd_hui + 'T00:00:00')
       .order('created_at', { ascending: true })
-
     if (!sessions || sessions.length === 0) return
-
-    // Ne pas envoyer si toutes les sessions ont score >= 40%
-    const auMoinsUneDifficile = sessions.some(s => Math.round((s.score/s.total)*100) < 40)
-
-    // Calculer stats globales
     const totalSessions = sessions.length
     const moyGlobale = Math.round((sessions.reduce((a,s) => a + s.score/s.total, 0) / totalSessions) * 100)
     const tempsTot = sessions.reduce((a,s) => a + (s.temps_secondes||0), 0)
-    const m = Math.floor(tempsTot/60), sec = tempsTot%60
-
     await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        emailParent,
-        prenom: prenom||'',
-        nom: user.user_metadata?.nom||'',
-        theme: sessions[sessions.length-1].theme,
-        difficulte: sessions[sessions.length-1].difficulte,
-        score: sessions.reduce((a,s) => a+s.score, 0),
-        total: sessions.reduce((a,s) => a+s.total, 0),
+        emailParent, prenom: prenom||'', nom: user.user_metadata?.nom||'',
+        theme: sessions[sessions.length-1].theme, difficulte: sessions[sessions.length-1].difficulte,
+        score: sessions.reduce((a,s) => a+s.score, 0), total: sessions.reduce((a,s) => a+s.total, 0),
         questionsRatees: sessions.flatMap(s => s.questions_ratees||[]).filter(q => !q.includes('abandonné')),
-        tempsSecondes: tempsTot,
-        resultatsId: null,
-        recap: true,
-        totalSessions,
-        moyGlobale
+        tempsSecondes: tempsTot, resultatsId: null, recap: true, totalSessions, moyGlobale
       })
     })
     console.log('✅ Email récap journalier envoyé')
-  } catch(e) {
-    console.log('Erreur email récap:', e.message)
-  }
+  } catch(e) { console.log('Erreur email récap:', e.message) }
 }
 
 async function init() {
@@ -351,8 +496,8 @@ function renderGraphique(tableau,questionIndex){
   setTimeout(function(){
     var canvas=document.getElementById(chartId);if(!canvas)return
     var config={}
-    if(type==='barres'){config={type:'bar',data:{labels:labels,datasets:[{data:values,backgroundColor:'#3730a3',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:t.headers[0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor,stepSize:1},grid:{color:gridColor},beginAtZero:true}}}}}
-    else if(type==='fonction'){config={type:'line',data:{labels:labels,datasets:[{data:values,borderColor:'#3730a3',backgroundColor:'#3730a3',pointRadius:5,pointBackgroundColor:'#3730a3',tension:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'x',color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}}}}}}
+    if(type==='barres'){config={type:'bar',data:{labels:labels,datasets:[{data:values,backgroundColor:'#002395',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:t.headers[0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor,stepSize:1},grid:{color:gridColor},beginAtZero:true}}}}}
+    else if(type==='fonction'){config={type:'line',data:{labels:labels,datasets:[{data:values,borderColor:'#002395',backgroundColor:'#002395',pointRadius:5,pointBackgroundColor:'#002395',tension:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'x',color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}}}}}}
     charts[chartId]=new Chart(canvas,config)
   },50)
   return html
