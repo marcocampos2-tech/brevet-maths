@@ -1,17 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1a1a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ACADEMIKA">
+<title>ACADEMIKA — Brevet Maths</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
 .container { max-width: 680px; margin: 0 auto; padding: 0 1rem 1rem 1rem; }
-
-/* ── NAV ── */
 nav { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 0; border-bottom: 3px solid #002395; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px; }
 .nav-left { font-size: 18px; font-weight: 700; color: #002395; letter-spacing: -0.5px; }
 .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .nav-email { font-size: 12px; color: #666; }
-
-/* ── CARDS GÉNÉRALES ── */
 .card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
-
-/* ── BOUTONS GÉNÉRAUX ── */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
 .btn:hover { background: #f5f5f0; }
 .btn-primary { background: #ED2939; color: white; border-color: #ED2939; }
@@ -25,15 +32,9 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 #btn-prof { background: #fbbf24; border-color: #f59e0b; color: #1a1a1a; }
 #btn-prof:hover { background: #f59e0b; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
-
-/* ── MESSAGE ACCUEIL ── */
 .msg-accueil { background: #eef1ff; border-left: 4px solid #002395; border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 1.25rem; font-size: 13px; color: #002395; line-height: 1.6; }
 .msg-accueil strong { font-weight: 600; }
-
-/* ── SECTION LABEL ── */
 .section-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
-
-/* ── THÈMES ── */
 .theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
 .theme-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
 .theme-card:hover { border-color: #002395; }
@@ -42,8 +43,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .theme-icon { font-size: 22px; margin-bottom: 4px; }
 .theme-label { font-size: 12px; font-weight: 500; color: #1a1a1a; }
 .theme-card.active .theme-label { color: #002395; }
-
-/* ── NIVEAUX CARDS ── */
 .niveaux-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
 .niveau-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 14px 10px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; position: relative; }
 .niveau-card:hover { border-color: #002395; }
@@ -57,24 +56,18 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .niveau-card.active .niveau-sous { color: #002395; opacity: 0.8; }
 .niveau-barre-wrap { margin-top: 8px; height: 4px; background: #e8e8e4; border-radius: 2px; overflow: hidden; }
 .niveau-barre-fill { height: 4px; background: #f59e0b; border-radius: 2px; transition: width 0.3s; }
-
-/* ── DIFF BTN (gardés pour compatibilité JS) ── */
 .diff-row { display: none; }
 .diff-btn { display: none; }
 .diff-btn.active { }
 .diff-btn.locked { }
 .lock-msg { display: none; }
 .lock-msg.visible { display: block; }
-
-/* ── BADGE TROPHÉE ── */
 .badge-trophee { background: #002395; border-radius: 12px; padding: 18px 16px; text-align: center; margin-top: 16px; }
 .badge-trophee-icon { font-size: 28px; margin-bottom: 8px; }
 .badge-trophee-titre { font-size: 15px; font-weight: 600; color: white; margin-bottom: 4px; }
 .badge-trophee-sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-bottom: 12px; }
 .badge-trophee-themes { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .badge-theme-pill { background: rgba(255,255,255,0.15); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: white; }
-
-/* ── BANNIÈRE EXAMEN ── */
 .banniere-examen { border: 1.5px solid #002395; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #eef1ff; margin-top: 20px; }
 .banniere-examen.rouge { border-color: #ED2939; background: #fff5f5; }
 .banniere-examen-titre { font-size: 13px; font-weight: 600; color: #002395; margin-bottom: 3px; }
@@ -85,8 +78,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .banniere-examen.rouge .banniere-examen-btn { background: #ED2939; }
 .banniere-examen-btn:hover { opacity: 0.9; }
 .separateur { height: 1px; background: #e8e8e4; margin: 20px 0; }
-
-/* ── OPTIONS QUIZ ── */
 .option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid #e8e8e4; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.15s; margin-bottom: 8px; }
 .option:hover { border-color: #999; background: #f9f9f7; }
 .option.selected { border-color: #3730a3; background: #eef2ff; }
@@ -104,12 +95,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .progress-step.done { background: #002395; }
 .progress-step.current { background: #002395; opacity: 0.4; }
 .progress-label { font-size: 12px; color: #666; white-space: nowrap; }
-.results-screen { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 2rem 1.5rem; margin-bottom: 1rem; text-align: center; }
-.results-score-big { font-size: 72px; font-weight: 700; color: #1a1a1a; line-height: 1; }
-.results-pct { font-size: 28px; font-weight: 600; margin: 10px 0 6px; }
-.results-mention { font-size: 18px; margin-bottom: 1rem; }
-.results-temps { font-size: 12px; color: #999; margin-bottom: 2rem; }
-.results-btns { display: flex; flex-direction: column; gap: 10px; }
 .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
 .q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .q-num { font-size: 12px; color: #999; }
@@ -127,8 +112,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .quiz-en-cours { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #92400e; margin-bottom: 1rem; text-align: center; }
 .q-figure { margin: 10px 0 14px; display: flex; justify-content: center; background: #f9f9f7; border-radius: 8px; padding: 12px; }
 .q-figure svg { max-width: 260px; height: auto; display: block; }
-
-/* ── RÉSULTATS COMPACTS ── */
 .results-bande { display:flex; align-items:center; gap:14px; padding:14px 16px; background:white; border-radius:12px; border:1px solid #e8e8e4; margin-bottom:10px; }
 .results-score-col { text-align:center; min-width:52px; }
 .results-score-num { font-size:34px; font-weight:700; color:#1a1a1a; line-height:1; }
@@ -138,7 +121,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .results-mention-sm { font-size:14px; font-weight:500; color:#1a1a1a; margin-bottom:2px; }
 .results-meta-sm { font-size:11px; color:#888; }
 .results-saved { font-size:11px; color:#16a34a; margin-top:4px; }
-/* ── BLOC PROGRESSION ── */
 .prog-bloc { background:white; border-radius:12px; border:1px solid #e8e8e4; padding:12px 16px; margin-bottom:10px; }
 .prog-titre { font-size:11px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
 .prog-msg { border-radius:8px; padding:9px 12px; margin-bottom:8px; font-size:13px; }
@@ -151,6 +133,70 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .prog-barre-wrap { flex:1; height:6px; background:#e8e8e4; border-radius:3px; overflow:hidden; }
 .prog-barre-fill { height:6px; border-radius:3px; transition:width 0.4s; }
 .prog-reste { font-size:12px; white-space:nowrap; min-width:52px; text-align:right; }
+</style>
+</head>
+<body>
+<div class="container">
+<nav>
+  <div class="nav-left">∑ ACADEMIKA</div>
+  <div class="nav-right">
+    <span class="nav-email" id="user-email"></span>
+    <div class="chrono" id="chrono" style="display:none">
+      <div class="chrono-dot"></div>
+      <span id="chrono-text">00:00</span>
+    </div>
+    <a href="prof.html" class="btn" id="btn-prof" style="display:none">🎓 Prof</a>
+    <a href="resultats.html" class="btn">Mes résultats</a>
+    <button class="btn" onclick="logout()">Déconnexion</button>
+  </div>
+</nav>
+<div class="card" id="config">
+  <div class="msg-accueil">
+    🎯 <strong>Comment ça marche ?</strong> Choisis un thème, fais les 5 questions en <strong>Facile</strong> et débloque le niveau <strong>Moyen</strong> — puis continue pour atteindre le niveau <strong>Difficile</strong> !
+  </div>
+  <p class="section-label">Thème</p>
+  <div class="theme-grid" id="theme-grid"></div>
+  <p class="section-label">Niveau</p>
+  <div class="niveaux-grid" id="niveaux-grid">
+    <div class="niveau-card active" id="niveau-facile" onclick="setDiffCard(this,'facile')">
+      <div class="niveau-icon">😊</div>
+      <div class="niveau-titre">Facile</div>
+      <div class="niveau-sous">Pour commencer</div>
+    </div>
+    <div class="niveau-card locked" id="niveau-moyen" onclick="setDiffCard(this,'moyen')">
+      <div class="niveau-icon">🔒</div>
+      <div class="niveau-titre">Moyen</div>
+      <div class="niveau-sous">On monte !</div>
+      <div class="niveau-barre-wrap"><div class="niveau-barre-fill" id="barre-moyen" style="width:0%"></div></div>
+    </div>
+    <div class="niveau-card locked" id="niveau-difficile" onclick="setDiffCard(this,'difficile')">
+      <div class="niveau-icon">🔒</div>
+      <div class="niveau-titre">Difficile</div>
+      <div class="niveau-sous">Niveau expert</div>
+      <div class="niveau-barre-wrap"><div class="niveau-barre-fill" id="barre-difficile" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div class="diff-row" id="diff-row">
+    <button class="diff-btn active" id="btn-facile" onclick="setDiff(this,'facile')">😊 Facile</button>
+    <button class="diff-btn" id="btn-moyen" onclick="setDiff(this,'moyen')">😐 Moyen</button>
+    <button class="diff-btn" id="btn-difficile" onclick="setDiff(this,'difficile')">😤 Difficile</button>
+  </div>
+  <div class="lock-msg" id="lock-msg"></div>
+  <div id="deblocage-info"></div>
+  <div id="trophee-zone"></div>
+  <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:1rem">🎲 Générer 5 questions</button>
+  <div class="separateur"></div>
+  <div class="banniere-examen" id="banniere-examen">
+    <div class="banniere-examen-texte">
+      <div class="banniere-examen-titre">💡 Prêt à te tester en conditions réelles ?</div>
+      <div class="banniere-examen-sub">20 questions · 40 minutes · correction complète · type QCM</div>
+    </div>
+    <a href="examen.html" class="banniere-examen-btn">📝 Examen Blanc →</a>
+  </div>
+</div>
+<div id="quiz-area"></div>
+</div>
+<script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const PROF_EMAIL = 'marcocampos2@gmail.com'
@@ -216,7 +262,6 @@ async function verifierDeblocage(t) {
 
 async function mettreAJourNiveaux() {
   const d = await verifierDeblocage(theme)
-
   const btnFacile=document.getElementById('btn-facile')
   const btnMoyen=document.getElementById('btn-moyen')
   const btnDifficile=document.getElementById('btn-difficile')
@@ -227,11 +272,8 @@ async function mettreAJourNiveaux() {
   const cardDifficile=document.getElementById('niveau-difficile')
   const barreMoyen=document.getElementById('barre-moyen')
   const barreDifficile=document.getElementById('barre-difficile')
-
   if(!btnFacile||!btnMoyen||!btnDifficile)return
-
   btnFacile.disabled=false; btnFacile.classList.remove('locked')
-
   if(d.moyen){
     btnMoyen.disabled=false; btnMoyen.classList.remove('locked')
     cardMoyen.classList.remove('locked')
@@ -248,7 +290,6 @@ async function mettreAJourNiveaux() {
     cardMoyen.querySelector('.niveau-sous').textContent=restantM+' session'+(restantM>1?'s':'')+' Facile ≥ 70%'
     if(diff==='moyen'){diff='facile';btnFacile.classList.add('active');btnMoyen.classList.remove('active');cardFacile.classList.add('active');cardMoyen.classList.remove('active')}
   }
-
   if(d.difficile){
     btnDifficile.disabled=false; btnDifficile.classList.remove('locked')
     cardDifficile.classList.remove('locked')
@@ -265,7 +306,6 @@ async function mettreAJourNiveaux() {
     cardDifficile.querySelector('.niveau-sous').textContent=restantD+' session'+(restantD>1?'s':'')+' Moyen ≥ 70%'
     if(diff==='difficile'){diff='facile';btnFacile.classList.add('active');btnDifficile.classList.remove('active');cardFacile.classList.add('active');cardDifficile.classList.remove('active')}
   }
-
   if(!d.moyen){
     const restant=SEUIL_SESSIONS-d.sessionsFacile
     debInfo.innerHTML=`<div style="font-size:11px;color:#92400e;background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-top:8px">🔒 <strong>Moyen verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> — ${d.sessionsFacile}/${SEUIL_SESSIONS} réussies</div>`
@@ -276,7 +316,6 @@ async function mettreAJourNiveaux() {
     debInfo.innerHTML=`<div style="font-size:11px;color:#16a34a;padding:4px 0;margin-top:6px">✅ Tous les niveaux débloqués pour ce thème !</div>`
   }
   lockMsg.classList.remove('visible')
-
   await verifierTropheeGlobal()
 }
 
@@ -347,7 +386,6 @@ async function envoyerRecapJournalier() {
         tempsSecondes: tempsTot, resultatsId: null, recap: true, totalSessions, moyGlobale
       })
     })
-    console.log('✅ Email récap journalier envoyé')
   } catch(e) { console.log('Erreur email récap:', e.message) }
 }
 
@@ -695,3 +733,6 @@ async function valider(qi) {
 }
 
 init()
+</script>
+</body>
+</html>
