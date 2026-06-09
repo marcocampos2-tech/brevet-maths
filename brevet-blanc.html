@@ -192,32 +192,15 @@ function renderDates() {
   const dates = [
     { value: '17 juin', label: 'Mercredi 17 juin 2025', heure: '15h00' },
     { value: '24 juin', label: 'Mercredi 24 juin 2025', heure: '15h00' },
-    { value: 'les deux', label: 'Les deux dates', heure: '17 & 24 juin · 15h00' },
   ]
 
   let html = ''
   dates.forEach(d => {
-    const places17 = placesData['17 juin'] || 0
-    const places24 = placesData['24 juin'] || 0
-
-    let restantes, isFull, badgeText, badgeClass
-    if (d.value === '17 juin') {
-      restantes = MAX_PLACES - places17
-      isFull = restantes <= 0
-      badgeText = isFull ? 'Complet' : restantes === 1 ? '1 place restante' : restantes + ' places'
-      badgeClass = isFull ? 'full' : restantes <= 2 ? 'warn' : ''
-    } else if (d.value === '24 juin') {
-      restantes = MAX_PLACES - places24
-      isFull = restantes <= 0
-      badgeText = isFull ? 'Complet' : restantes === 1 ? '1 place restante' : restantes + ' places'
-      badgeClass = isFull ? 'full' : restantes <= 2 ? 'warn' : ''
-    } else {
-      const full17 = places17 >= MAX_PLACES
-      const full24 = places24 >= MAX_PLACES
-      isFull = full17 && full24
-      badgeText = isFull ? 'Complet' : 'Sous réserve de places'
-      badgeClass = isFull ? 'full' : 'warn'
-    }
+    const places = placesData[d.value] || 0
+    const restantes = MAX_PLACES - places
+    const isFull = restantes <= 0
+    const badgeText = isFull ? 'Complet' : restantes === 1 ? '1 place restante' : restantes + ' places'
+    const badgeClass = isFull ? 'full' : restantes <= 2 ? 'warn' : ''
 
     html += '<label class="date-option'+(isFull?' full':'')+'" onclick="selectDate(this,\''+d.value+'\')">'
     html += '<input type="radio" name="date" value="'+d.value+'" '+(isFull?'disabled':'')+' style="pointer-events:none">'
