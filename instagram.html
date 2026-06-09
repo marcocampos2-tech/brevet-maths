@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Générateur Instagram — ACADEMIKA</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
+.container { max-width: 640px; margin: 0 auto; padding: 1.5rem 1rem; }
+nav { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.25rem; border-bottom: 3px solid #4c1d95; margin-bottom: 1.5rem; }
+.logo { font-size: 16px; font-weight: 700; color: #4c1d95; letter-spacing: -0.5px; }
+.nav-sub { font-size: 12px; color: #888; }
+.card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
+.card-title { font-size: 14px; font-weight: 600; color: #1a1a1a; margin-bottom: 1rem; }
+.tabs { display: flex; gap: 6px; margin-bottom: 1.25rem; }
+.tab { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #e8e8e4; background: white; font-size: 13px; font-weight: 500; cursor: pointer; text-align: center; color: #666; transition: all 0.15s; }
+.tab:hover { background: #f5f5f0; }
+.tab.active { background: #4c1d95; color: white; border-color: #4c1d95; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+.field input, .field select, .field textarea { width: 100%; padding: 9px 12px; border: 1px solid #d0d0c8; border-radius: 8px; font-size: 13px; font-family: inherit; background: white; color: #1a1a1a; transition: border-color 0.15s; }
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #4c1d95; }
+.field textarea { resize: vertical; min-height: 140px; line-height: 1.6; }
+.opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; border-radius: 10px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.btn-violet { background: #4c1d95; color: white; }
+.btn-violet:hover { background: #3b1678; }
+.btn-green { background: #16a34a; color: white; }
+.btn-green:hover { background: #15803d; }
+.preview-wrap { background: #f0f0f0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 1rem; }
+.preview-wrap canvas { width: 100%; max-width: 400px; height: auto; border-radius: 10px; display: block; }
+.hint { font-size: 11px; color: #999; text-align: center; }
+.hint strong { color: #4c1d95; }
+.section { display: none; }
+.section.active { display: block; }
+.info-box { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #6d28d9; margin-bottom: 1rem; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="container">
+  <nav>
+    <div class="logo">∑ ACADEMIKA — Instagram</div>
+    <div class="nav-sub">Générateur de posts</div>
+  </nav>
+
+  <div class="info-box">
+    💡 <strong>Comment utiliser :</strong> Sélectionne le jour → les champs se remplissent automatiquement → modifie si besoin → fais un <strong>clic droit sur l'image</strong> → "Enregistrer l'image sous".
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="setTab('question')">📝 Post question</div>
+    <div class="tab" onclick="setTab('reponse')">✅ Post réponse</div>
+  </div>
+
+  <!-- ONGLET QUESTION -->
+  <div class="section active" id="sec-question">
+    <div class="card">
+      <div class="card-title">Paramètres du post</div>
+      <div class="field">
+        <label>Jour</label>
+        <select id="jour" onchange="autoFill()">
+          <option value="15">J-15 — dimanche 15 juin</option>
+          <option value="14">J-14 — lundi 16 juin</option>
+          <option value="13">J-13 — mardi 17 juin</option>
+          <option value="12">J-12 — mercredi 18 juin</option>
+          <option value="11">J-11 — jeudi 19 juin</option>
+          <option value="10">J-10 — vendredi 20 juin</option>
+          <option value="9">J-9 — samedi 21 juin</option>
+          <option value="8">J-8 — dimanche 22 juin</option>
+          <option value="7">J-7 — lundi 23 juin</option>
+          <option value="6">J-6 — mardi 24 juin</option>
+          <option value="5">J-5 — mercredi 25 juin</option>
+          <option value="4">J-4 — jeudi 26 juin</option>
+          <option value="3">J-3 — vendredi 27 juin</option>
+          <option value="2">J-2 — samedi 28 juin</option>
+          <option value="1">J-1 — dimanche 29 juin</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Question</label>
+        <textarea id="question" oninput="drawQuestion()"></textarea>
+      </div>
+      <div class="opt-grid">
+        <div class="field"><label>Option A</label><input type="text" id="optA" oninput="drawQuestion()"></div>
+        <div class="field"><label>Option B</label><input type="text" id="optB" oninput="drawQuestion()"></div>
+        <div class="field"><label>Option C</label><input type="text" id="optC" oninput="drawQuestion()"></div>
+        <div class="field"><label>Option D</label><input type="text" id="optD" oninput="drawQuestion()"></div>
+      </div>
+    </div>
+    <div class="preview-wrap">
+      <canvas id="canvas-q" width="1080" height="1080"></canvas>
+      <div class="hint">Clic droit sur l'image → <strong>Enregistrer l'image sous</strong></div>
+    </div>
+  </div>
+
+  <!-- ONGLET RÉPONSE -->
+  <div class="section" id="sec-reponse">
+    <div class="card">
+      <div class="card-title">Paramètres du post réponse</div>
+      <div class="field">
+        <label>Jour</label>
+        <select id="jour-rep" onchange="autoFillRep()">
+          <option value="15">J-15 — dimanche 15 juin</option>
+          <option value="14">J-14 — lundi 16 juin</option>
+          <option value="13">J-13 — mardi 17 juin</option>
+          <option value="12">J-12 — mercredi 18 juin</option>
+          <option value="11">J-11 — jeudi 19 juin</option>
+          <option value="10">J-10 — vendredi 20 juin</option>
+          <option value="9">J-9 — samedi 21 juin</option>
+          <option value="8">J-8 — dimanche 22 juin</option>
+          <option value="7">J-7 — lundi 23 juin</option>
+          <option value="6">J-6 — mardi 24 juin</option>
+          <option value="5">J-5 — mercredi 25 juin</option>
+          <option value="4">J-4 — jeudi 26 juin</option>
+          <option value="3">J-3 — vendredi 27 juin</option>
+          <option value="2">J-2 — samedi 28 juin</option>
+          <option value="1">J-1 — dimanche 29 juin</option>
+        </select>
+      </div>
+      <div class="opt-grid">
+        <div class="field">
+          <label>Bonne réponse</label>
+          <select id="rep-lettre" onchange="drawReponse()">
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Texte de la réponse</label>
+          <input type="text" id="rep-texte" oninput="drawReponse()">
+        </div>
+      </div>
+      <div class="field">
+        <label>Explication (les lignes commençant par "Etape" ou "Erreur" s'affichent en jaune)</label>
+        <textarea id="explication" style="min-height:200px" oninput="drawReponse()"></textarea>
+      </div>
+    </div>
+    <div class="preview-wrap">
+      <canvas id="canvas-r" width="1080" height="1080"></canvas>
+      <div class="hint">Clic droit sur l'image → <strong>Enregistrer l'image sous</strong></div>
+    </div>
+  </div>
+
+</div>
+<script>
+const QUESTIONS = {
+  15:{q:"Un article coute 85 EUR HT. TVA 20%. Apres reduction de 15% sur le prix TTC, quel est le prix final ?",opts:["86,70 EUR","85 EUR","72,25 EUR","78,50 EUR"],rep:"A",reptexte:"86,70 EUR",explication:"Etape 1 - Prix TTC\n85 x 1,20 = 102 EUR\n(TVA 20% = multiplier par 1,20)\n\nEtape 2 - Reduction 15%\n102 x 0,85 = 86,70 EUR\n(-15% = multiplier par 0,85)\n\nErreur frequente : appliquer la\nreduction sur le prix HT et non TTC."},
+  14:{q:"Developpe et reduis : (2x+3)² - (2x-3)(2x+3)",opts:["12x + 9","8x² + 9","12x + 18","9"],rep:"C",reptexte:"12x + 18",explication:"Etape 1 - Developper (2x+3)²\n= 4x² + 12x + 9\n(identite : (a+b)² = a²+2ab+b²)\n\nEtape 2 - Developper (2x-3)(2x+3)\n= 4x² - 9\n(identite : (a+b)(a-b) = a²-b²)\n\nEtape 3 - Soustraire\n4x²+12x+9-(4x²-9) = 12x+18\n\nErreur frequente : oublier le signe -\ndevant la parenthese."},
+  13:{q:"Temperatures relevees : 12, 15, 11, 18, 14, 16, 13. Quelle est l'etendue ?",opts:["5","6","7","8"],rep:"C",reptexte:"7",explication:"Etape 1 - Classer les valeurs\n11, 12, 13, 14, 15, 16, 18\n\nEtape 2 - Calculer l'etendue\nEtendue = valeur max - valeur min\n= 18 - 11 = 7\n\nErreur frequente : ne pas classer\nles valeurs avant de calculer."},
+  12:{q:"Triangle ABC, MN // BC. AM=6cm, MB=4cm, BC=15cm. Longueur de MN ?",opts:["7 cm","8 cm","9 cm","10 cm"],rep:"C",reptexte:"9 cm",explication:"Etape 1 - Calculer AB\nAB = AM + MB = 6 + 4 = 10 cm\n\nEtape 2 - Appliquer Thales\nMN/BC = AM/AB\nMN/15 = 6/10\nMN = 15 x 6/10 = 9 cm\n\nErreur frequente : utiliser MB\nau lieu de AB dans le rapport."},
+  11:{q:"Fonction affine f : f(2)=7 et f(5)=13. Quelle est l'image de 0 ?",opts:["1","2","3","4"],rep:"C",reptexte:"3",explication:"Etape 1 - Coefficient directeur a\na = (13-7)/(5-2) = 6/3 = 2\n\nEtape 2 - Trouver b\nf(2)=7 -> 2x2+b=7 -> b=3\n\nEtape 3 - Calculer f(0)\nf(0) = 2x0 + 3 = 3\n\nErreur frequente : confondre\ncoefficient directeur et ordonnee."},
+  10:{q:"Notes : 5, 8, 10, 10, 12, 14, 15, 16, 18, 20, 20. Quelle est la mediane ?",opts:["12","13","14","15"],rep:"C",reptexte:"14",explication:"Etape 1 - Classer les valeurs\n5,8,10,10,12,14,15,16,18,20,20\n\nEtape 2 - Valeur du milieu\n11 valeurs -> mediane = 6eme valeur\n= 14\n\nErreur frequente : calculer la\nmoyenne au lieu de la mediane."},
+  9:{q:"Triangle rectangle en B, angle A=38 degres, AB=12cm. Longueur BC ? (tan 38=0,781)",opts:["9,4 cm","9,1 cm","9,8 cm","8,9 cm"],rep:"A",reptexte:"9,4 cm",explication:"Etape 1 - Identifier les elements\nAngle A=38 deg, adjacent AB=12cm\nOn cherche BC = cote oppose\n\nEtape 2 - Appliquer la tangente\ntan(38) = BC/AB\nBC = 12 x 0,781 = 9,4 cm\n\nErreur frequente : utiliser cos ou\nsin au lieu de tan."},
+  8:{q:"Billet adulte = billet enfant + 2 EUR. 2 adultes + 3 enfants = 31 EUR. Prix adulte ?",opts:["6 EUR","7 EUR","8 EUR","9 EUR"],rep:"B",reptexte:"7 EUR",explication:"Etape 1 - Poser l'equation\nEnfant=x, Adulte=x+2\n2(x+2) + 3x = 31\n\nEtape 2 - Resoudre\n2x+4+3x=31 -> 5x=27 -> x=5,40\n\nEtape 3 - Billet adulte\n5,40 + 2 = 7 EUR\n\nErreur frequente : oublier de\nmultiplier l'adulte par 2."},
+  7:{q:"Cone : rayon=5cm, hauteur=12cm. Quel est son volume ? (pi=3,14)",opts:["314 cm3","157 cm3","628 cm3","942 cm3"],rep:"A",reptexte:"314 cm3",explication:"Etape 1 - Formule du cone\nV = (1/3) x pi x r2 x h\n\nEtape 2 - Appliquer\nV = (1/3) x 3,14 x 25 x 12\nV = (1/3) x 942 = 314 cm3\n\nErreur frequente : oublier de\ndiviser par 3."},
+  6:{q:"Quel est le PGCD de 84 et 126 ?",opts:["14","21","28","42"],rep:"D",reptexte:"42",explication:"Etape 1 - Facteurs premiers\n84 = 2² x 3 x 7\n126 = 2 x 3² x 7\n\nEtape 2 - Facteurs communs\navec le plus petit exposant\nPGCD = 2 x 3 x 7 = 42\n\nErreur frequente : prendre le plus\ngrand exposant au lieu du plus petit."},
+  5:{q:"Factorise : 4x² - 25",opts:["(2x-5)²","(4x-5)(x+5)","(2x+5)(2x-5)","(2x-5)(2x-5)"],rep:"C",reptexte:"(2x+5)(2x-5)",explication:"Etape 1 - Reconnaitre la forme\n4x² - 25 = (2x)² - 5²\n\nEtape 2 - Identite remarquable\na² - b² = (a+b)(a-b)\n= (2x+5)(2x-5)\n\nErreur frequente : confondre avec\n(2x-5)² = 4x²-20x+25."},
+  4:{q:"Sac : 3 billes rouges, 4 bleues, 3 vertes. Probabilite de ne PAS tirer une bleue ?",opts:["2/5","3/5","4/10","1/2"],rep:"B",reptexte:"3/5",explication:"Etape 1 - Billes non bleues\n3 rouges + 3 vertes = 6 billes\n\nEtape 2 - Probabilite\nP(non bleue) = 6/10 = 3/5\n\nErreur frequente : calculer\nP(bleue) au lieu de P(non bleue)."},
+  3:{q:"Triangle ABC : AB=15cm, AC=20cm, AM=9cm, AN=12cm. MN // BC ?",opts:["Oui car AM/AB = AN/AC","Non, rapports differents","Oui car MN=9cm","Impossible a determiner"],rep:"A",reptexte:"Oui car AM/AB = AN/AC",explication:"Etape 1 - Calculer les rapports\nAM/AB = 9/15 = 3/5\nAN/AC = 12/20 = 3/5\n\nEtape 2 - Conclure\nRapports egaux -> reciproque\nde Thales : MN // BC\n\nErreur frequente : ne verifier\nqu'un seul rapport."},
+  2:{q:"Voiture : 6,5L/100km, carburant 1,80 EUR/L. Cout d'un trajet de 350 km ?",opts:["38,50 EUR","40,95 EUR","42,50 EUR","35,10 EUR"],rep:"B",reptexte:"40,95 EUR",explication:"Etape 1 - Consommation\n350 x 6,5 / 100 = 22,75 litres\n\nEtape 2 - Cout\n22,75 x 1,80 = 40,95 EUR\n\nErreur frequente : oublier de\ndiviser par 100."},
+  1:{q:"Marches d'escalier : hauteur=20cm, profondeur=25cm. Angle d'inclinaison ? (tan=opp/adj)",opts:["37 degres","39 degres","41 degres","43 degres"],rep:"B",reptexte:"39 degres",explication:"Etape 1 - Elements\nOppose = hauteur = 20 cm\nAdjacent = profondeur = 25 cm\n\nEtape 2 - Tangente\ntan(angle) = 20/25 = 0,8\n\nEtape 3 - Angle\narctan(0,8) = 39 degres\n\nErreur frequente : confondre\nhauteur et profondeur."}
+}
+
+const S=1080, PAD=60
+const BG='#4c1d95', JAUNE='#fbbf24', BLANC='#ffffff'
+const VIOLET_CLAIR='#c4b5fd', VIOLET_MID='#a78bfa', VERT='#86efac'
+
+function wrapText(ctx, text, x, y, maxW, lineH) {
+  const words = text.split(' ')
+  let line = '', lines = []
+  for (let w of words) {
+    const test = line ? line + ' ' + w : w
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w }
+    else line = test
+  }
+  lines.push(line)
+  lines.forEach((l, i) => ctx.fillText(l, x, y + i * lineH))
+  return lines.length
+}
+
+function drawQuestion() {
+  const jour = document.getElementById('jour').value
+  const q = document.getElementById('question').value
+  const opts = [
+    document.getElementById('optA').value,
+    document.getElementById('optB').value,
+    document.getElementById('optC').value,
+    document.getElementById('optD').value
+  ]
+  const canvas = document.getElementById('canvas-q')
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, S, S)
+
+  ctx.fillStyle = BG
+  ctx.beginPath(); ctx.roundRect(0, 0, S, S, 40); ctx.fill()
+
+  ctx.fillStyle = VIOLET_CLAIR
+  ctx.font = '36px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('ACADEMIKA  @academika.fr', PAD, 74)
+
+  ctx.fillStyle = JAUNE
+  ctx.font = 'bold 160px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('J-' + jour, PAD, 244)
+
+  ctx.fillStyle = VIOLET_CLAIR
+  ctx.font = '38px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('avant le brevet maths', PAD, 294)
+
+  ctx.fillStyle = BLANC
+  ctx.font = '42px -apple-system, BlinkMacSystemFont, sans-serif'
+  const qLines = wrapText(ctx, q || 'Votre question ici...', PAD, 374, S - PAD * 2, 58)
+
+  const optsY = 374 + qLines * 58 + 44
+  const letters = ['A','B','C','D']
+  opts.forEach((opt, i) => {
+    const oy = optsY + i * 112
+    ctx.fillStyle = 'rgba(251,191,36,0.15)'
+    ctx.beginPath(); ctx.roundRect(PAD - 10, oy - 42, S - PAD * 2 + 20, 90, 18); ctx.fill()
+    ctx.fillStyle = JAUNE
+    ctx.font = 'bold 40px -apple-system, BlinkMacSystemFont, sans-serif'
+    ctx.fillText(letters[i], PAD + 10, oy + 16)
+    ctx.fillStyle = BLANC
+    ctx.font = '38px -apple-system, BlinkMacSystemFont, sans-serif'
+    ctx.fillText(opt || '...', PAD + 74, oy + 16)
+  })
+
+  ctx.fillStyle = VIOLET_MID
+  ctx.font = '34px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText('Reponse demain  |  Revise sur academika.fr', S / 2, S - 30)
+  ctx.textAlign = 'left'
+}
+
+function drawReponse() {
+  const jour = document.getElementById('jour-rep').value
+  const lettre = document.getElementById('rep-lettre').value
+  const reptexte = document.getElementById('rep-texte').value
+  const explication = document.getElementById('explication').value
+  const canvas = document.getElementById('canvas-r')
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, S, S)
+
+  ctx.fillStyle = BG
+  ctx.beginPath(); ctx.roundRect(0, 0, S, S, 40); ctx.fill()
+
+  ctx.fillStyle = VIOLET_CLAIR
+  ctx.font = '36px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('ACADEMIKA  @academika.fr', PAD, 74)
+
+  ctx.fillStyle = JAUNE
+  ctx.font = 'bold 100px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('J-' + jour + ' — Reponse', PAD, 184)
+
+  ctx.fillStyle = VERT
+  ctx.font = 'bold 46px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('Reponse : ' + lettre + ')  ' + reptexte, PAD, 248)
+
+  const lines = explication.split('\n')
+  let y = 318
+  lines.forEach(line => {
+    if (!line.trim()) { y += 22; return }
+    if (line.startsWith('Etape') || line.startsWith('Erreur')) {
+      ctx.fillStyle = JAUNE
+      ctx.font = 'bold 38px -apple-system, BlinkMacSystemFont, sans-serif'
+    } else {
+      ctx.fillStyle = BLANC
+      ctx.font = '36px -apple-system, BlinkMacSystemFont, sans-serif'
+    }
+    ctx.fillText(line, PAD, y)
+    y += 50
+  })
+
+  ctx.fillStyle = VIOLET_MID
+  ctx.font = '34px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText('Revise tous les themes sur academika.fr', S / 2, S - 30)
+  ctx.textAlign = 'left'
+}
+
+function autoFill() {
+  const jour = parseInt(document.getElementById('jour').value)
+  const data = QUESTIONS[jour]
+  if (!data) return
+  document.getElementById('question').value = data.q
+  document.getElementById('optA').value = data.opts[0]
+  document.getElementById('optB').value = data.opts[1]
+  document.getElementById('optC').value = data.opts[2]
+  document.getElementById('optD').value = data.opts[3]
+  drawQuestion()
+}
+
+function autoFillRep() {
+  const jour = parseInt(document.getElementById('jour-rep').value)
+  const data = QUESTIONS[jour]
+  if (!data) return
+  document.getElementById('rep-lettre').value = data.rep
+  document.getElementById('rep-texte').value = data.reptexte
+  document.getElementById('explication').value = data.explication
+  drawReponse()
+}
+
+function setTab(t) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'))
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
+  if (t === 'question') {
+    document.getElementById('sec-question').classList.add('active')
+    document.querySelectorAll('.tab')[0].classList.add('active')
+  } else {
+    document.getElementById('sec-reponse').classList.add('active')
+    document.querySelectorAll('.tab')[1].classList.add('active')
+    autoFillRep()
+  }
+}
+
+autoFill()
+autoFillRep()
+</script>
+</body>
+</html>
