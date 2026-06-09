@@ -450,6 +450,7 @@ async function generer() {
     questions=data.questions;sourceQuestions=data.source||'ia'
     questions.forEach(function(q,i){const type=detecterTypeGraphique(q.tableau);if(type){modeAffichage[i]=Math.random()<0.5?'tableau':'graphique'}else{modeAffichage[i]='tableau'}})
     bloquerConfig();demarrerChrono();renderQuiz()
+    setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
   }catch(e){document.getElementById('quiz-area').innerHTML='<div class="loader">❌ '+e.message+'</div>';debloquerConfig()}
 }
 
@@ -678,7 +679,7 @@ async function renderResultats() {
     html += '</div>'
   })
   area.innerHTML = html
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
 }
 
 async function sauvegarder() {
