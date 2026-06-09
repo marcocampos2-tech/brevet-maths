@@ -8,7 +8,6 @@
 .results-mention-sm { font-size:14px; font-weight:500; color:#1a1a1a; margin-bottom:2px; }
 .results-meta-sm { font-size:11px; color:#888; }
 .results-saved { font-size:11px; color:#16a34a; margin-top:4px; }
-
 /* ── BLOC PROGRESSION ── */
 .prog-bloc { background:white; border-radius:12px; border:1px solid #e8e8e4; padding:12px 16px; margin-bottom:10px; }
 .prog-titre { font-size:11px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
@@ -35,19 +34,12 @@ async function renderResultats() {
 
   sauvegarder()
 
-  // Récupérer état déblocage APRÈS sauvegarde
   delete deblocageCache[theme]
   const d = await verifierDeblocage(theme)
 
-  // ── Bloc progression ──
-  const sessionsCourantes = pct >= SEUIL_PCT
-    ? (diff === 'facile' ? d.sessionsFacile : d.sessionsMoyen)
-    : null
-
   let progMsg = ''
   if(pct >= SEUIL_PCT) {
-    // Session réussie — vérifier si un niveau vient de se débloquer
-    if(diff === 'facile' && d.sessionsFacile === SEUIL_SESSIONS && !d.difficile) {
+    if(diff === 'facile' && d.sessionsFacile === SEUIL_SESSIONS) {
       progMsg = `<div class="prog-msg debloque">🔓 Niveau Moyen débloqué ! Tu peux maintenant le choisir.</div>`
     } else if(diff === 'moyen' && d.sessionsMoyen === SEUIL_SESSIONS) {
       progMsg = `<div class="prog-msg debloque">🔓 Niveau Difficile débloqué ! Tu es au top.</div>`
@@ -76,7 +68,6 @@ async function renderResultats() {
   const resteDifficile = d.difficile ? 'Débloqué' : (d.moyen ? `encore ${SEUIL_SESSIONS - d.sessionsMoyen}` : 'bloqué')
   const couleurResteMoyen = d.moyen ? '#16a34a' : '#92400e'
   const couleurResteDifficile = d.difficile ? '#16a34a' : '#888'
-
   const themeCourt = THEMES.find(t => t.value === theme)?.label || theme
 
   let html = `
@@ -92,7 +83,6 @@ async function renderResultats() {
         <div class="results-saved">✅ Résultats enregistrés</div>
       </div>
     </div>
-
     <div class="prog-bloc">
       <div class="prog-titre">Progression — ${themeCourt}</div>
       ${progMsg}
@@ -107,12 +97,10 @@ async function renderResultats() {
         <span class="prog-reste" style="color:${couleurResteDifficile}">${resteDifficile}</span>
       </div>
     </div>
-
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
       <button class="btn btn-green btn-full" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
       <button class="btn btn-outline btn-full" onclick="terminer()">🚪 Terminer et se déconnecter</button>
     </div>
-
     <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#1a1a1a;padding:0 4px">📋 Récapitulatif</div>`
 
   const letters = ['A','B','C','D']
@@ -136,4 +124,22 @@ async function renderResultats() {
 
   area.innerHTML = html
   window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+async function valider(qi) {
+  if(answers[qi] === undefined) return
+  const sel = answers[qi]
+  submitted[qi] = sel === 'aucune' ? 'aucune' : (sel === questions[qi].answer ? 'correct' : 'wrong')
+  const toutFini = Object.keys(submitted).length === questions.length
+  if(toutFini) {
+    arreterChrono()
+    await renderResultats()
+  } else {
+    renderQuiz()
+    setTimeout(() => {
+      const cards = document.querySelectorAll('.card')
+      const nextCard = cards[qi + 1]
+      if(nextCard) nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 300)
+  }
 }
