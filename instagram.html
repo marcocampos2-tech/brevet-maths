@@ -44,6 +44,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   <div class="tabs">
     <div class="tab active" onclick="setTab('question')">📝 Post question</div>
     <div class="tab" onclick="setTab('reponse')">✅ Post réponse</div>
+    <div class="tab" onclick="setTab('annonce')">📣 Post annonce</div>
   </div>
   <div class="section active" id="sec-question">
     <div class="card">
@@ -129,6 +130,12 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     </div>
     <div class="preview-wrap">
       <canvas id="canvas-r" width="1080" height="1080"></canvas>
+      <div class="hint">Clic droit sur l'image → <strong>Enregistrer l'image sous</strong></div>
+    </div>
+  </div>
+  <div class="section" id="sec-annonce">
+    <div class="preview-wrap">
+      <canvas id="canvas-a" width="1080" height="1080"></canvas>
       <div class="hint">Clic droit sur l'image → <strong>Enregistrer l'image sous</strong></div>
     </div>
   </div>
@@ -258,6 +265,41 @@ function drawReponse() {
   ctx.textAlign = 'left'
 }
 
+function drawAnnonce() {
+  const canvas = document.getElementById('canvas-a')
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0, 0, S, S)
+  ctx.fillStyle = BG
+  ctx.beginPath(); ctx.roundRect(0, 0, S, S, 40); ctx.fill()
+  ctx.textAlign = 'center'
+  ctx.fillStyle = VIOLET_CLAIR
+  ctx.font = '36px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('ACADEMIKA  @academika.fr', S/2, 80)
+  ctx.fillStyle = JAUNE
+  ctx.font = 'bold 110px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('Le Defi Brevet', S/2, 220)
+  ctx.fillStyle = BLANC
+  ctx.font = '50px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('1 question maths par jour', S/2, 320)
+  ctx.fillText("pour s'entrainer au brevet", S/2, 385)
+  ctx.fillStyle = 'rgba(196,181,253,0.3)'
+  ctx.fillRect(S/2 - 200, 420, 400, 2)
+  ctx.fillStyle = '#ddd6fe'
+  ctx.font = '44px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('Du 15 au 29 juin', S/2, 490)
+  ctx.fillText('Reponds en commentaire', S/2, 550)
+  ctx.fillText('Correction le lendemain', S/2, 610)
+  ctx.fillStyle = 'rgba(251,191,36,0.2)'
+  ctx.beginPath(); ctx.roundRect(S/2 - 340, 650, 680, 100, 18); ctx.fill()
+  ctx.fillStyle = JAUNE
+  ctx.font = 'bold 42px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('Suis le compte et releve le defi !', S/2, 712)
+  ctx.fillStyle = VIOLET_MID
+  ctx.font = '34px -apple-system, BlinkMacSystemFont, sans-serif'
+  ctx.fillText('academika.fr', S/2, S - 30)
+  ctx.textAlign = 'left'
+}
+
 function autoFill() {
   const jour = parseInt(document.getElementById('jour').value)
   const data = QUESTIONS[jour]
@@ -286,10 +328,14 @@ function setTab(t) {
   if (t === 'question') {
     document.getElementById('sec-question').classList.add('active')
     document.querySelectorAll('.tab')[0].classList.add('active')
-  } else {
+  } else if (t === 'reponse') {
     document.getElementById('sec-reponse').classList.add('active')
     document.querySelectorAll('.tab')[1].classList.add('active')
     autoFillRep()
+  } else if (t === 'annonce') {
+    document.getElementById('sec-annonce').classList.add('active')
+    document.querySelectorAll('.tab')[2].classList.add('active')
+    drawAnnonce()
   }
 }
 
