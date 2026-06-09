@@ -257,17 +257,20 @@ async function chargerInscriptions() {
 
   INSCRIPTIONS = data || []
 
-  // Compter places
   const places = { '17 juin': 0, '24 juin': 0 }
   INSCRIPTIONS.forEach(i => {
     if (i.date_choisie === '17 juin') places['17 juin']++
     else if (i.date_choisie === '24 juin') places['24 juin']++
-    else if (i.date_choisie === 'les deux') { places['17 juin']++; places['24 juin']++ }
   })
 
   let html = ''
 
-  // Stats places
+  const adresseActuelle = document.getElementById('adresse-lieu')?.value || '12 rue des Lilas, 77310 Ponthierry'
+  html += '<div class="card" style="margin-bottom:1rem">'
+  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px">📍 Adresse du lieu d\'examen — incluse dans l\'email de confirmation</div>'
+  html += '<textarea id="adresse-lieu" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:\'DM Sans\',sans-serif;font-size:13px;resize:vertical;min-height:52px;background:white;color:var(--text)">'+adresseActuelle+'</textarea>'
+  html += '</div>'
+
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem">'
   ;['17 juin', '24 juin'].forEach(date => {
     const nb = places[date]
@@ -286,12 +289,11 @@ async function chargerInscriptions() {
     return
   }
 
-  // Par date
-  ;['17 juin', '24 juin', 'les deux'].forEach(date => {
+  ;['17 juin', '24 juin'].forEach(date => {
     const inscrits = INSCRIPTIONS.filter(i => i.date_choisie === date)
     if (!inscrits.length) return
 
-    html += '<div style="font-size:13px;font-weight:600;color:#555;margin-bottom:8px;margin-top:8px">📅 '+date+(date!=='les deux'?' · 15h00':'')+'</div>'
+    html += '<div style="font-size:13px;font-weight:600;color:#555;margin-bottom:8px;margin-top:8px">📅 '+date+' · 15h00</div>'
 
     inscrits.forEach(i => {
       const isConfirme = i.confirme
@@ -309,7 +311,6 @@ async function chargerInscriptions() {
       html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
       if (isConfirme) html += '<span class="badge badge-tb">✅ Confirmé</span>'
       else html += '<span class="badge badge-ab">⏳ En attente</span>'
-      if (i.lieu_envoye) html += '<span class="badge" style="background:#eef2ff;color:#3730a3">📍 Lieu envoyé</span>'
       if (hasNote) html += '<span class="badge badge-blue">📝 Note : '+i.note+'/20</span>'
       if (i.resultats_envoyes) html += '<span class="badge badge-tb">📤 Résultats envoyés</span>'
       html += '</div>'
@@ -317,24 +318,77 @@ async function chargerInscriptions() {
 
       html += '<div class="inscrit-actions">'
       if (!isConfirme) {
-        html += '<button class="btn btn-sm btn-green" onclick="confirmerInscription(\''+i.id+'\')">✅ Confirmer</button>'
+        html += '<button class="btn btn-sm btn-green" onclick="confirmerEtEnvoyerAdresse(\''+i.id+'\',\''+i.prenom+'\',\''+i.nom+'\',\''+i.email_parent+'\',\''+i.date_choisie+'\')">✅ Confirmer + adresse</button>'
+        html += '<button class="btn btn-sm btn-red" onclick="refuserInscription(\''+i.id+'\',\''+i.prenom+'\',\''+i.nom+'\',\''+i.email_parent+'\',\''+i.date_choisie+'\')">❌ Refuser</button>'
       }
-      if (isConfirme && !i.lieu_envoye) {
-        html += '<button class="btn btn-sm btn-blue" onclick="ouvrirAdresse(\''+i.id+'\',\''+i.prenom+'\',\''+i.email_parent+'\')">📍 Envoyer adresse</button>'
-      }
-      if (!hasNote) {
+      if (isConfirme && !hasNote) {
         html += '<button class="btn btn-sm btn-amber" onclick="ouvrirNote(\''+i.id+'\',\''+i.prenom+' '+i.nom+'\')">📝 Saisir note</button>'
       }
-      if (hasNote && !i.resultats_envoyes) {
+      if (isConfirme && hasNote && !i.resultats_envoyes) {
         html += '<button class="btn btn-sm btn-green" onclick="envoyerResultats(\''+i.id+'\')">📤 Envoyer résultats</button>'
       }
-      html += '<button class="btn btn-sm btn-red" onclick="supprimerInscription(\''+i.id+'\')">🗑</button>'
+      if (isConfirme) {
+        html += '<button class="btn btn-sm btn-red" onclick="supprimerAvecEmail(\''+i.id+'\',\''+i.prenom+'\',\''+i.nom+'\',\''+i.email_parent+'\',\''+i.date_choisie+'\')">🗑 Annuler</button>'
+      }
       html += '</div>'
       html += '</div>'
     })
   })
 
   el.innerHTML = html
+}
+
+async function confirmerEtEnvoyerAdresse(id, prenom, nom, emailParent, date) {
+  const adresse = document.getElementById('adresse-lieu')?.value?.trim()
+  if (!adresse) { alert('⚠️ Saisis l\'adresse du lieu avant de confirmer.'); return }
+  if (!confirm('Confirmer l\'inscription de '+prenom+' et envoyer l\'adresse à '+emailParent+' ?')) return
+
+  const { error } = await sb.from('inscriptions_brevet').update({ confirme: true, lieu_envoye: true }).eq('id', id)
+  if (error) { alert('Erreur : '+error.message); return }
+
+  try {
+    await fetch('/api/email-adresse-brevet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emailParent, prenom, nom, date, adresse, type: 'confirmation' })
+    })
+  } catch(e) { console.log('Erreur email confirmation:', e.message) }
+
+  chargerInscriptions()
+}
+
+async function refuserInscription(id, prenom, nom, emailParent, date) {
+  if (!confirm('Refuser l\'inscription de '+prenom+' et envoyer un email à '+emailParent+' ?')) return
+
+  try {
+    await fetch('/api/email-adresse-brevet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emailParent, prenom, nom, date, type: 'refus' })
+    })
+  } catch(e) { console.log('Erreur email refus:', e.message) }
+
+  const { error } = await sb.from('inscriptions_brevet').delete().eq('id', id)
+  if (error) { alert('Erreur suppression : '+error.message); return }
+
+  chargerInscriptions()
+}
+
+async function supprimerAvecEmail(id, prenom, nom, emailParent, date) {
+  if (!confirm('Annuler l\'inscription confirmée de '+prenom+' et envoyer un email à '+emailParent+' ?')) return
+
+  try {
+    await fetch('/api/email-adresse-brevet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ emailParent, prenom, nom, date, type: 'annulation' })
+    })
+  } catch(e) { console.log('Erreur email annulation:', e.message) }
+
+  const { error } = await sb.from('inscriptions_brevet').delete().eq('id', id)
+  if (error) { alert('Erreur suppression : '+error.message); return }
+
+  chargerInscriptions()
 }
 
 async function confirmerInscription(id) {
