@@ -594,7 +594,7 @@ async function renderResultats() {
   else if(pct >= 60){ mention = '👍 Bien !'; couleur = '#3730a3' }
   else if(pct >= 40){ mention = '💪 Continue !'; couleur = '#f59e0b' }
   else { mention = '📚 À retravailler'; couleur = '#dc2626' }
-  sauvegarder()
+  await sauvegarder()
   delete deblocageCache[theme]
   const d = await verifierDeblocage(theme)
   let progMsg = ''
