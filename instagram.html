@@ -23,11 +23,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: #4c1d95; }
 .field textarea { resize: vertical; min-height: 140px; line-height: 1.6; }
 .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; border-radius: 10px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family: inherit; }
-.btn-violet { background: #4c1d95; color: white; }
-.btn-violet:hover { background: #3b1678; }
-.btn-green { background: #16a34a; color: white; }
-.btn-green:hover { background: #15803d; }
 .preview-wrap { background: #f0f0f0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 1rem; }
 .preview-wrap canvas { width: 100%; max-width: 400px; height: auto; border-radius: 10px; display: block; }
 .hint { font-size: 11px; color: #999; text-align: center; }
@@ -43,17 +38,13 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <div class="logo">∑ ACADEMIKA — Instagram</div>
     <div class="nav-sub">Générateur de posts</div>
   </nav>
-
   <div class="info-box">
     💡 <strong>Comment utiliser :</strong> Sélectionne le jour → les champs se remplissent automatiquement → modifie si besoin → fais un <strong>clic droit sur l'image</strong> → "Enregistrer l'image sous".
   </div>
-
   <div class="tabs">
     <div class="tab active" onclick="setTab('question')">📝 Post question</div>
     <div class="tab" onclick="setTab('reponse')">✅ Post réponse</div>
   </div>
-
-  <!-- ONGLET QUESTION -->
   <div class="section active" id="sec-question">
     <div class="card">
       <div class="card-title">Paramètres du post</div>
@@ -93,8 +84,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
       <div class="hint">Clic droit sur l'image → <strong>Enregistrer l'image sous</strong></div>
     </div>
   </div>
-
-  <!-- ONGLET RÉPONSE -->
   <div class="section" id="sec-reponse">
     <div class="card">
       <div class="card-title">Paramètres du post réponse</div>
@@ -143,9 +132,11 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
       <div class="hint">Clic droit sur l'image → <strong>Enregistrer l'image sous</strong></div>
     </div>
   </div>
-
 </div>
 <script>
+const mdp = prompt('Mot de passe Academika :')
+if (mdp !== 'academika2026') { document.body.innerHTML = '<div style="text-align:center;padding:4rem;font-family:sans-serif;color:#999">Acces refuse.</div>'; throw new Error('Acces refuse') }
+
 const QUESTIONS = {
   15:{q:"Un article coute 85 EUR HT. TVA 20%. Apres reduction de 15% sur le prix TTC, quel est le prix final ?",opts:["86,70 EUR","85 EUR","72,25 EUR","78,50 EUR"],rep:"A",reptexte:"86,70 EUR",explication:"Etape 1 - Prix TTC\n85 x 1,20 = 102 EUR\n(TVA 20% = multiplier par 1,20)\n\nEtape 2 - Reduction 15%\n102 x 0,85 = 86,70 EUR\n(-15% = multiplier par 0,85)\n\nErreur frequente : appliquer la\nreduction sur le prix HT et non TTC."},
   14:{q:"Developpe et reduis : (2x+3)² - (2x-3)(2x+3)",opts:["12x + 9","8x² + 9","12x + 18","9"],rep:"C",reptexte:"12x + 18",explication:"Etape 1 - Developper (2x+3)²\n= 4x² + 12x + 9\n(identite : (a+b)² = a²+2ab+b²)\n\nEtape 2 - Developper (2x-3)(2x+3)\n= 4x² - 9\n(identite : (a+b)(a-b) = a²-b²)\n\nEtape 3 - Soustraire\n4x²+12x+9-(4x²-9) = 12x+18\n\nErreur frequente : oublier le signe -\ndevant la parenthese."},
@@ -193,26 +184,20 @@ function drawQuestion() {
   const canvas = document.getElementById('canvas-q')
   const ctx = canvas.getContext('2d')
   ctx.clearRect(0, 0, S, S)
-
   ctx.fillStyle = BG
   ctx.beginPath(); ctx.roundRect(0, 0, S, S, 40); ctx.fill()
-
   ctx.fillStyle = VIOLET_CLAIR
   ctx.font = '36px -apple-system, BlinkMacSystemFont, sans-serif'
   ctx.fillText('ACADEMIKA  @academika.fr', PAD, 74)
-
   ctx.fillStyle = JAUNE
   ctx.font = 'bold 160px -apple-system, BlinkMacSystemFont, sans-serif'
   ctx.fillText('J-' + jour, PAD, 244)
-
   ctx.fillStyle = VIOLET_CLAIR
   ctx.font = '38px -apple-system, BlinkMacSystemFont, sans-serif'
   ctx.fillText('avant le brevet maths', PAD, 294)
-
   ctx.fillStyle = BLANC
   ctx.font = '42px -apple-system, BlinkMacSystemFont, sans-serif'
   const qLines = wrapText(ctx, q || 'Votre question ici...', PAD, 374, S - PAD * 2, 58)
-
   const optsY = 374 + qLines * 58 + 44
   const letters = ['A','B','C','D']
   opts.forEach((opt, i) => {
@@ -226,7 +211,6 @@ function drawQuestion() {
     ctx.font = '38px -apple-system, BlinkMacSystemFont, sans-serif'
     ctx.fillText(opt || '...', PAD + 74, oy + 16)
   })
-
   ctx.fillStyle = VIOLET_MID
   ctx.font = '34px -apple-system, BlinkMacSystemFont, sans-serif'
   ctx.textAlign = 'center'
@@ -242,22 +226,17 @@ function drawReponse() {
   const canvas = document.getElementById('canvas-r')
   const ctx = canvas.getContext('2d')
   ctx.clearRect(0, 0, S, S)
-
   ctx.fillStyle = BG
   ctx.beginPath(); ctx.roundRect(0, 0, S, S, 40); ctx.fill()
-
   ctx.fillStyle = VIOLET_CLAIR
   ctx.font = '36px -apple-system, BlinkMacSystemFont, sans-serif'
   ctx.fillText('ACADEMIKA  @academika.fr', PAD, 74)
-
   ctx.fillStyle = JAUNE
   ctx.font = 'bold 100px -apple-system, BlinkMacSystemFont, sans-serif'
   ctx.fillText('J-' + jour + ' — Reponse', PAD, 184)
-
   ctx.fillStyle = VERT
   ctx.font = 'bold 46px -apple-system, BlinkMacSystemFont, sans-serif'
   ctx.fillText('Reponse : ' + lettre + ')  ' + reptexte, PAD, 248)
-
   const lines = explication.split('\n')
   let y = 318
   lines.forEach(line => {
@@ -272,7 +251,6 @@ function drawReponse() {
     ctx.fillText(line, PAD, y)
     y += 50
   })
-
   ctx.fillStyle = VIOLET_MID
   ctx.font = '34px -apple-system, BlinkMacSystemFont, sans-serif'
   ctx.textAlign = 'center'
