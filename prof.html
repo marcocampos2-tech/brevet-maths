@@ -327,9 +327,6 @@ async function chargerInscriptions() {
       if (isConfirme && hasNote && !i.resultats_envoyes) {
         html += '<button class="btn btn-sm btn-green" onclick="envoyerResultats(\''+i.id+'\')">📤 Envoyer résultats</button>'
       }
-      if (isConfirme) {
-        html += '<button class="btn btn-sm btn-red" onclick="supprimerAvecEmail(\''+i.id+'\',\''+i.prenom+'\',\''+i.nom+'\',\''+i.email_parent+'\',\''+i.date_choisie+'\')">🗑 Annuler</button>'
-      }
       html += '</div>'
       html += '</div>'
     })
