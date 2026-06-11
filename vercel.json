@@ -2,7 +2,7 @@
   "rewrites": [
     { "source": "/", "destination": "/index.html" },
     { "source": "/instagram", "destination": "/instagram.html" },
-    { "source": "/budget", "destination": "/budget.html" }
+    
   ],
   "crons": [
     {
