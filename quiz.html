@@ -35,7 +35,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .msg-accueil { background: #eef1ff; border-left: 4px solid #002395; border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 1.25rem; font-size: 13px; color: #002395; line-height: 1.6; }
 .msg-accueil strong { font-weight: 600; }
 .section-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
-.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+.theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 1.25rem; }
 .theme-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
 .theme-card:hover { border-color: #002395; }
 .theme-card.active { border: 2px solid #002395; background: #eef1ff; }
@@ -152,9 +152,9 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 </nav>
 <div class="card" id="config">
   <div class="msg-accueil">
-    🎯 <strong>Comment ça marche ?</strong> Choisis un thème, fais les 5 questions en <strong>Facile</strong> et débloque le niveau <strong>Moyen</strong> — puis continue pour atteindre le niveau <strong>Difficile</strong> !
+    🎯 <strong>Comment ça marche ?</strong> Choisis un domaine, fais les 5 questions en <strong>Facile</strong> et débloque le niveau <strong>Moyen</strong> — puis continue pour atteindre le niveau <strong>Difficile</strong> !
   </div>
-  <p class="section-label">Thème</p>
+  <p class="section-label">Domaine</p>
   <div class="theme-grid" id="theme-grid"></div>
   <p class="section-label">Niveau</p>
   <div class="niveaux-grid" id="niveaux-grid">
@@ -201,14 +201,15 @@ const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const PROF_EMAIL = 'marcocampos2@gmail.com'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+// ── CHANGEMENT 1 : 4 domaines officiels DNB (était 6 thèmes) ──
 const THEMES = [
-  { label: 'Nombres & calculs', value: 'Nombres et calculs', icon: '🔢' },
-  { label: 'Géométrie', value: 'Géométrie', icon: '📐' },
-  { label: 'Algèbre', value: 'Algèbre et équations', icon: '🔣' },
-  { label: 'Stats & probas', value: 'Statistiques et probabilités', icon: '📊' },
-  { label: 'Fonctions', value: 'Fonctions', icon: '📈' },
-  { label: 'Algorithmique', value: 'Algorithmique', icon: '💻' },
+  { label: 'Nombres et calculs',        value: 'Nombres et calculs',                          icon: '🔢' },
+  { label: 'Organisation et données',   value: 'Organisation et gestion de données, fonctions', icon: '📊' },
+  { label: 'Espace et géométrie',       value: 'Espace et géométrie',                          icon: '📐' },
+  { label: 'Grandeurs et mesures',      value: 'Grandeurs, mesures et algorithmique',           icon: '📏' },
 ]
+
 const SEUIL_SESSIONS = 5
 const SEUIL_PCT = 70
 
@@ -313,7 +314,7 @@ async function mettreAJourNiveaux() {
     const restant=SEUIL_SESSIONS-d.sessionsMoyen
     debInfo.innerHTML=`<div style="font-size:11px;color:#92400e;background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-top:8px">🔒 <strong>Difficile verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Moyen ≥ 70%</strong> — ${d.sessionsMoyen}/${SEUIL_SESSIONS} réussies</div>`
   } else {
-    debInfo.innerHTML=`<div style="font-size:11px;color:#16a34a;padding:4px 0;margin-top:6px">✅ Tous les niveaux débloqués pour ce thème !</div>`
+    debInfo.innerHTML=`<div style="font-size:11px;color:#16a34a;padding:4px 0;margin-top:6px">✅ Tous les niveaux débloqués pour ce domaine !</div>`
   }
   lockMsg.classList.remove('visible')
   await verifierTropheeGlobal()
@@ -331,7 +332,7 @@ async function verifierTropheeGlobal() {
         <div class="badge-trophee">
           <div class="badge-trophee-icon">🏆</div>
           <div class="badge-trophee-titre">Bravo ! Tu as tout débloqué.</div>
-          <div class="badge-trophee-sub">Tu maîtrises tous les thèmes. Tu peux refaire des quiz pour réviser, ou te tester en conditions de vrai Brevet 👇</div>
+          <div class="badge-trophee-sub">Tu maîtrises tous les domaines. Tu peux refaire des quiz pour réviser, ou te tester en conditions de vrai Brevet 👇</div>
           <div class="badge-trophee-themes">
             ${THEMES.map(t=>`<span class="badge-theme-pill">${t.icon} ${t.label}</span>`).join('')}
           </div>
