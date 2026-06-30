@@ -15,75 +15,86 @@ export default async function handler(req, res) {
 
     // ── IA EN SECOURS (si banque vide) ────────────────────
     const exemples = {
+
       'Nombres et calculs': `
-Exemples de BONNES questions pour ce thème :
-- "Une pizza coûte 12€. Le restaurant offre une réduction de 25%. Quel est le nouveau prix ?"
-- "Un train roule à 180 km/h. Combien de temps met-il pour parcourir 270 km ?"
+Exemples de BONNES questions pour ce domaine :
+Sous-thème Fractions et priorités opératoires :
+- "Calcule : 3/4 + 2/3"
+- "Calcule en respectant les priorités : 3 + 2 × (5 - 1)"
+Sous-thème Puissances et écriture scientifique :
 - "Écris 0,000045 en notation scientifique."
-- "Simplifie la fraction 36/48."
-- "Développe et réduis : 3(2x+5) - 2(x-1)"
-- "Décompose 84 en produit de facteurs premiers."
 - "Calcule : 2³ × 2⁴"
-- "Un article coûte 80€. Son prix augmente de 15%. Quel est le nouveau prix ?"`,
-
-      'Géométrie': `
-Exemples de BONNES questions pour ce thème :
-- "Une échelle de 5m est appuyée contre un mur. Son pied est à 2m du mur. À quelle hauteur touche-t-elle le mur ?"
-- "Un triangle a les côtés 6cm, 8cm et 10cm. Est-il rectangle ?"
-- "Dans un triangle ABC, MN est parallèle à BC. AM=4cm, AB=6cm, AN=3cm. Calcule AC."
-- "Un jardin circulaire a un rayon de 5m. Calcule son aire. (π≈3,14)"
-- "Un rectangle mesure 8cm sur 6cm. Quelle est la longueur de sa diagonale ?"
-- "Dans un triangle rectangle, l'angle A vaut 35° et l'hypoténuse mesure 10cm. Calcule le côté opposé à A."`,
-
-      'Algèbre et équations': `
-Exemples de BONNES questions pour ce thème :
-- "Lucas pense à un nombre. Il le multiplie par 3 puis ajoute 7. Il obtient 28. Quel est ce nombre ?"
-- "Développe et réduis : (2x+3)(x-4)"
-- "Résous : 5x - 3 = 2x + 9"
+Sous-thème Arithmétique (nombres premiers, divisibilité) :
+- "Décompose 84 en produit de facteurs premiers."
+- "Le nombre 91 est-il premier ?"
+Sous-thème Pourcentages et proportionnalité :
+- "Une pizza coûte 12€. Le restaurant offre une réduction de 25%. Quel est le nouveau prix ?"
+- "Un article coûte 80€. Son prix augmente de 15%. Quel est le nouveau prix ?"
+Sous-thème Calcul littéral (développer, factoriser, identités remarquables) :
+- "Développe et réduis : 3(2x+5) - 2(x-1)"
 - "Factorise : 6x² + 9x"
-- "Résous : (x-2)(3x+6) = 0"
 - "Développe : (x+5)²"
-- "Une piscine rectangulaire a un périmètre de 36m. Sa longueur est le double de sa largeur. Quelles sont ses dimensions ?"
-- "Factorise : x² - 16"`,
+- "Factorise : x² - 16"
+Sous-thème Équations du 1er degré et équations-produit :
+- "Lucas pense à un nombre. Il le multiplie par 3 puis ajoute 7. Il obtient 28. Quel est ce nombre ?"
+- "Résous : 5x - 3 = 2x + 9"
+- "Résous : (x-2)(3x+6) = 0"
+- "Une piscine rectangulaire a un périmètre de 36m. Sa longueur est le double de sa largeur. Quelles sont ses dimensions ?"`,
 
-      'Statistiques et probabilités': `
-Exemples de BONNES questions pour ce thème :
+      'Organisation et gestion de données, fonctions': `
+Exemples de BONNES questions pour ce domaine :
+Sous-thème Statistiques (moyenne, médiane, étendue) :
 - "Les notes d'un élève sont 8, 12, 15, 10, 14, 11. Calcule la moyenne."
 - "Voici 7 notes classées : 8, 10, 11, 12, 13, 14, 16. Quelle est la médiane ?"
 - "Les températures min et max ce mois sont 5° et 28°. Quelle est l'étendue ?"
+Sous-thème Probabilités :
 - "Un sac contient 3 billes rouges et 5 bleues. On tire une bille au hasard. Quelle est la probabilité de tirer une bille bleue ?"
 - "On lance un dé équilibré. Quelle est la probabilité de NE PAS obtenir un 6 ?"
 - "On lance une pièce puis un dé. Quelle est la probabilité d'obtenir pile ET un nombre impair ?"
-- "Dans une classe de 25 élèves, 10 ont eu plus de 12. Quelle est la fréquence relative ?"
-INTERDITS ABSOLUS : mode, classe modale, système d'équations, P(A∩B), P(A∪B), probabilité conditionnelle, tirage sans remise, notation abstraite sans contexte.`,
-
-      'Fonctions': `
-Exemples de BONNES questions pour ce thème :
+Sous-thème Proportionnalité (pourcentages, vitesses, échelles) :
+- "Un train roule à 180 km/h. Combien de temps met-il pour parcourir 270 km ?"
+- "Sur une carte à l'échelle 1/25000, deux villes sont à 4 cm. Quelle est la distance réelle ?"
+Sous-thème Fonctions affines et linéaires :
 - "Un plombier facture 50€ de déplacement plus 30€ par heure. Exprime le prix p(x) en fonction du nombre d'heures x."
 - "La fonction f est définie par f(x) = 3x - 5. Calcule f(4)."
-- "Une fonction affine passe par A(0;2) et B(3;8). Quelle est son expression ?"
-- "La fonction f(x) = 2x + 1 est-elle croissante ou décroissante ?"
 - "Quel est l'antécédent de 7 par la fonction f(x) = 2x - 1 ?"
-- "Un taxi facture 2€ par km plus 5€ de prise en charge. Quelle est la fonction donnant le prix en fonction des km ?"
-INTERDITS ABSOLUS : composition de fonctions g(x)=f(f(x)), fonctions du second degré, discriminant, systèmes d'équations.`,
+- "Une fonction affine passe par A(0;2) et B(3;8). Quelle est son expression ?"
+INTERDITS ABSOLUS : mode, classe modale, P(A∩B), P(A∪B), probabilité conditionnelle, tirage sans remise, composition de fonctions, fonctions du second degré, discriminant, systèmes d'équations, notation abstraite sans contexte.`,
 
-      'Algorithmique': `
-Exemples de BONNES questions pour ce thème :
+      'Espace et géométrie': `
+Exemples de BONNES questions pour ce domaine :
+Sous-thème Théorème de Pythagore :
+- "Une échelle de 5m est appuyée contre un mur. Son pied est à 2m du mur. À quelle hauteur touche-t-elle le mur ?"
+- "Un triangle a les côtés 6cm, 8cm et 10cm. Est-il rectangle ?"
+- "Un rectangle mesure 8cm sur 6cm. Quelle est la longueur de sa diagonale ?"
+Sous-thème Théorème de Thalès :
+- "Dans un triangle ABC, MN est parallèle à BC. AM=4cm, AB=6cm, AN=3cm. Calcule AC."
+Sous-thème Trigonométrie :
+- "Dans un triangle rectangle, l'angle A vaut 35° et l'hypoténuse mesure 10cm. Calcule le côté opposé à A."
+Sous-thème Aires, périmètres et volumes :
+- "Un jardin circulaire a un rayon de 5m. Calcule son aire. (π≈3,14)"
+- "Une boîte cylindrique a un rayon de 3cm et une hauteur de 10cm. Calcule son volume."
+Sous-thème Transformations (symétrie, translation, rotation, homothétie) :
+- "Le point A(2;3) subit une translation de vecteur (1;-2). Quelles sont les coordonnées de l'image ?"
+Sous-thème Géométrie dans l'espace :
+- "Une pyramide a une base carrée de 4cm de côté et une hauteur de 6cm. Calcule son volume."`,
+
+      'Grandeurs, mesures et algorithmique': `
+Exemples de BONNES questions pour ce domaine :
+Sous-thème Aires et volumes :
+- "Un carré a un périmètre de 24cm. Calcule son aire."
+- "Un cylindre a un rayon de 5cm et une hauteur de 8cm. Calcule son volume. (π≈3,14)"
+Sous-thème Conversions d'unités et vitesses :
+- "Convertis 2,5 km en mètres."
+- "Une voiture roule à 90 km/h. Quelle distance parcourt-elle en 20 minutes ?"
+Sous-thème Agrandissement et réduction :
+- "Une figure est agrandie avec un coefficient 3. Si un côté mesure 4cm, quelle est la mesure du côté agrandi ?"
+Sous-thème Algorithmique Scratch :
 - "Un programme Scratch répète 4 fois : avancer de 100 pas, tourner de 90°. Quelle figure est tracée ?"
 - "Un programme met x à 3, puis ajoute 5 à x, puis multiplie x par 2. Quelle est la valeur finale de x ?"
 - "Un programme répète 6 fois : avancer de 50 pas, tourner de 60°. Quelle figure est tracée ?"
 - "Un programme : mettre n à 10, répéter 3 fois (ajouter 4 à n). Quelle est la valeur finale de n ?"
-- "Un programme affiche les nombres de 1 à 5 en ajoutant 1 à chaque répétition. Combien de fois la boucle s'exécute-t-elle ?"`,
-
-      'Mélange de tous les thèmes': `
-Génère 5 questions variées, UNE par thème parmi : Nombres et calculs, Géométrie, Algèbre, Statistiques, Fonctions.
-Chaque question doit être dans le style des exemples suivants :
-- Nombres : "Un article coûte 80€ soldé à 30%. Quel est le prix final ?"
-- Géométrie : "Une échelle de 5m a son pied à 2m du mur. À quelle hauteur touche-t-elle le mur ?"
-- Algèbre : "Résous : 3x + 5 = 2x + 12"
-- Stats : "Un sac a 4 billes rouges et 6 bleues. Probabilité de tirer une rouge ?"
-- Fonctions : "f(x) = 2x + 3. Calcule f(5)."
-INTERDITS : mode, classe modale, composition de fonctions, systèmes d'équations, probabilité conditionnelle, notation abstraite.`
+INTERDITS ABSOLUS : boucles Python, variables Python, fonctions Python — ce domaine utilise uniquement Scratch au niveau 3ème.`
     }
 
     const niveaux = {
@@ -92,10 +103,38 @@ INTERDITS : mode, classe modale, composition de fonctions, systèmes d'équation
       'difficile': 'de niveau Brevet mention Très Bien, plusieurs étapes'
     }
 
-    const prompt1 = `Tu es un professeur de mathématiques expert au Brevet des collèges français.
-Génère exactement 5 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le thème "${theme}".
+    const chapitres = {
+      'Nombres et calculs': [
+        'Fractions', 'Priorités opératoires', 'Puissances', 'Écriture scientifique',
+        'Nombres premiers', 'Divisibilité', 'PGCD', 'Pourcentages', 'Proportionnalité',
+        'Vitesse', 'Calcul littéral', 'Développement', 'Factorisation',
+        'Identités remarquables', 'Équations du 1er degré', 'Équations-produit'
+      ],
+      'Organisation et gestion de données, fonctions': [
+        'Moyenne', 'Médiane', 'Étendue', 'Statistiques descriptives',
+        'Probabilités simples', 'Événement contraire', 'Arbre des possibles',
+        'Proportionnalité', 'Échelles', 'Vitesse',
+        'Fonction affine', 'Fonction linéaire', 'Image et antécédent',
+        'Tableau de valeurs', 'Graphique de fonction'
+      ],
+      'Espace et géométrie': [
+        'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie',
+        'Aires et périmètres', 'Volumes', 'Symétrie centrale',
+        'Translation', 'Rotation', 'Homothétie', 'Géométrie dans l\'espace'
+      ],
+      'Grandeurs, mesures et algorithmique': [
+        'Aires', 'Volumes', 'Conversions d\'unités', 'Vitesse',
+        'Agrandissement', 'Réduction', 'Boucles Scratch',
+        'Variables Scratch', 'Programmes de calcul'
+      ]
+    }
 
-${exemples[theme] || exemples['Mélange de tous les thèmes']}
+    const chapitresList = (chapitres[theme] || []).join('", "')
+
+    const prompt1 = `Tu es un professeur de mathématiques expert au Brevet des collèges français.
+Génère exactement 5 questions QCM ${niveaux[difficulte] || 'de niveau moyen'} sur le domaine "${theme}".
+
+${exemples[theme] || ''}
 
 RÈGLES OBLIGATOIRES :
 1. Chaque question DOIT être ancrée dans une situation concrète du quotidien (sport, argent, cuisine, construction, voyages).
@@ -105,14 +144,7 @@ RÈGLES OBLIGATOIRES :
 5. Pour les fonctions : tableau de valeurs dans "tableau" si nécessaire : {"headers":["x","-2","0","2","4"],"rows":[["f(x)","-1","3","7","11"]]}
 6. La bonne réponse ne doit PAS toujours être en position A — varie les positions (A, B, C ou D).
 7. L'explication DOIT correspondre exactement à la bonne réponse indiquée dans "bonne_reponse".
-8. Pour le champ "chapitre", utilise UNIQUEMENT un de ces chapitres selon le thème :
-   - Nombres et calculs : "Fractions", "Puissances", "Écriture scientifique", "Pourcentages", "Proportionnalité", "Vitesse", "Nombres premiers", "PGCD"
-   - Géométrie : "Théorème de Pythagore", "Théorème de Thalès", "Trigonométrie", "Aires et périmètres", "Volumes", "Transformations", "Agrandissements"
-   - Algèbre et équations : "Développement", "Factorisation", "Équations", "Inéquations", "Identités remarquables"
-   - Statistiques et probabilités : "Moyenne", "Médiane", "Étendue", "Probabilités simples", "Événement contraire", "Arbre des possibles"
-   - Fonctions : "Fonction affine", "Fonction linéaire", "Image et antécédent", "Tableau de valeurs", "Graphique"
-   - Algorithmique : "Boucles", "Variables", "Instructions conditionnelles", "Programmes de calcul"
-   - Mélange de tous les thèmes : utilise le chapitre correspondant au thème de la question
+8. Pour le champ "chapitre", utilise UNIQUEMENT un de ces chapitres : "${chapitresList}"
 
 Réponds UNIQUEMENT avec un tableau JSON valide, sans texte avant ou après.
 Format : [{"q":"question","chapitre":"Théorème de Thalès","tableau":null,"opts":["A","B","C","D"],"bonne_reponse":"A","explication":"explication étape par étape"}]`
@@ -175,6 +207,7 @@ Réponds UNIQUEMENT avec un tableau JSON de 5 chiffres : [0, 2, 1, 3, 0]`
     res.status(500).json({ error: '❌ Une erreur est survenue.' })
   }
 }
+
 async function getBanqueSupabase(theme, difficulte) {
   try {
     const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -189,12 +222,10 @@ async function getBanqueSupabase(theme, difficulte) {
     const data = await res.json()
     if (!Array.isArray(data) || data.length === 0) return []
 
-    // ── DÉDOUBLONNER par texte de question ──────────────
     const unique = data.filter((q, idx, arr) =>
       arr.findIndex(x => x.question.trim() === q.question.trim()) === idx
     )
 
-    // ── SHUFFLE + SLICE 5 ────────────────────────────────
     const shuffled = unique.sort(() => Math.random() - 0.5).slice(0, 5)
 
     return shuffled.map(q => {
