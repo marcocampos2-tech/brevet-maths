@@ -133,6 +133,13 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .prog-barre-wrap { flex:1; height:6px; background:#e8e8e4; border-radius:3px; overflow:hidden; }
 .prog-barre-fill { height:6px; border-radius:3px; transition:width 0.4s; }
 .prog-reste { font-size:12px; white-space:nowrap; min-width:52px; text-align:right; }
+.st-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1.25rem; }
+.st-row { background: white; border: 1px solid #e8e8e4; border-radius: 8px; padding: 11px 14px; font-size: 13px; font-weight: 500; color: #1a1a1a; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s; }
+.st-row:hover { border-color: #002395; }
+.st-row.active { border: 2px solid #002395; background: #eef1ff; color: #002395; }
+.st-row.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.st-check { font-size: 14px; color: #002395; display: none; }
+.st-row.active .st-check { display: inline; }
 </style>
 </head>
 <body>
@@ -156,6 +163,8 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   </div>
   <p class="section-label">Domaine</p>
   <div class="theme-grid" id="theme-grid"></div>
+  <p class="section-label">Sous-thème</p>
+  <div class="st-list" id="st-list"></div>
   <p class="section-label">Niveau</p>
   <div class="niveaux-grid" id="niveaux-grid">
     <div class="niveau-card active" id="niveau-facile" onclick="setDiffCard(this,'facile')">
@@ -210,11 +219,28 @@ const THEMES = [
   { label: 'Grandeurs et mesures',      value: 'Grandeurs, mesures et algorithmique',           icon: '📏' },
 ]
 
+const SOUS_THEMES = {
+  'Nombres et calculs': [
+    'Équations', 'Calcul littéral', 'Fractions',
+    'Pourcentages', 'Puissances', 'Arithmétique', 'Proportionnalité'
+  ],
+  'Organisation et gestion de données, fonctions': [
+    'Fonctions', 'Probabilités', 'Statistiques', 'Proportionnalité'
+  ],
+  'Espace et géométrie': [
+    'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie',
+    'Volumes', 'Aires et périmètres', 'Transformations'
+  ],
+  'Grandeurs, mesures et algorithmique': [
+    'Algorithmique', 'Aires et volumes', 'Conversions', 'Agrandissement'
+  ]
+}
+
 const SEUIL_SESSIONS = 5
 const SEUIL_PCT = 70
 
 let user=null, prenom='', emailParent=''
-let theme='Nombres et calculs', diff='facile'
+let theme='Nombres et calculs', diff='facile', sousTheme='Équations'
 let questions=[], answers={}, submitted={}, saved=false
 let chronoInterval=null, chronoSecondes=0, sourceQuestions='ia'
 let quizEnCours=false
@@ -235,6 +261,7 @@ function bloquerConfig(){
   document.getElementById('gen-btn').disabled=true
   document.getElementById('gen-btn').textContent='⏳ Quiz en cours...'
   document.querySelectorAll('.theme-card').forEach(c=>c.classList.add('disabled'))
+  document.querySelectorAll('.st-row').forEach(c=>c.classList.add('disabled'))
   document.querySelectorAll('.niveau-card').forEach(c=>c.classList.add('disabled'))
   document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=true)
 }
@@ -244,6 +271,7 @@ function debloquerConfig(){
   document.getElementById('gen-btn').disabled=false
   document.getElementById('gen-btn').textContent='🎲 Générer 5 questions'
   document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('disabled'))
+  document.querySelectorAll('.st-row').forEach(c=>c.classList.remove('disabled'))
   mettreAJourNiveaux()
 }
 
@@ -401,6 +429,7 @@ async function init() {
   document.getElementById('user-email').textContent=prenom||user.email
   if(user.user_metadata?.email_parent===PROF_EMAIL||emailParent===PROF_EMAIL)document.getElementById('btn-prof').style.display='inline-flex'
   renderThemes()
+  renderSousThemes()
   await mettreAJourNiveaux()
 }
 
@@ -408,10 +437,28 @@ function renderThemes(){
   document.getElementById('theme-grid').innerHTML=THEMES.map((t,i)=>`<div class="theme-card ${i===0?'active':''}" onclick="setTheme(this,'${t.value}')"><div class="theme-icon">${t.icon}</div><div class="theme-label">${t.label}</div></div>`).join('')
 }
 
+function renderSousThemes(){
+  const liste = SOUS_THEMES[theme] || []
+  document.getElementById('st-list').innerHTML = liste.map((st,i) =>
+    `<div class="st-row ${i===0?'active':''}" onclick="setSousTheme(this,'${st.replace(/'/g,"\\'")}')">
+      <span>${st}</span><span class="st-check">✓</span>
+    </div>`
+  ).join('')
+  sousTheme = liste[0] || ''
+}
+
+function setSousTheme(el, val){
+  if(quizEnCours) return
+  document.querySelectorAll('.st-row').forEach(r=>r.classList.remove('active'))
+  el.classList.add('active')
+  sousTheme = val
+}
+
 async function setTheme(el,val){
   if(quizEnCours)return
   document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('active'))
   el.classList.add('active'); theme=val; deblocageCache={}
+  renderSousThemes()
   await mettreAJourNiveaux()
 }
 
@@ -445,7 +492,7 @@ async function generer() {
   arreterChrono();document.getElementById('chrono').style.display='none'
   document.getElementById('quiz-area').innerHTML='<div class="loader">⏳ Chargement des questions…</div>'
   try{
-    const res=await fetch('/api/generer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme,difficulte:diff})})
+    const res=await fetch('/api/generer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme,sous_theme:sousTheme,difficulte:diff})})
     const data=await res.json()
     if(data.error)throw new Error(data.error)
     questions=data.questions;sourceQuestions=data.source||'ia'
