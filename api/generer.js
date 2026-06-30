@@ -24,42 +24,42 @@ Sous-thème Fractions et priorités opératoires :
 Sous-thème Puissances et écriture scientifique :
 - "Écris 0,000045 en notation scientifique."
 - "Calcule : 2³ × 2⁴"
+Sous-thème Pourcentages :
+- "Une pizza coûte 12€. Le restaurant offre une réduction de 25%. Quel est le nouveau prix ?"
+- "Un article coûte 80€. Son prix augmente de 15%. Quel est le nouveau prix ?"
 Sous-thème Arithmétique (nombres premiers, divisibilité) :
 - "Décompose 84 en produit de facteurs premiers."
 - "Le nombre 91 est-il premier ?"
-Sous-thème Pourcentages et proportionnalité :
-- "Une pizza coûte 12€. Le restaurant offre une réduction de 25%. Quel est le nouveau prix ?"
-- "Un article coûte 80€. Son prix augmente de 15%. Quel est le nouveau prix ?"
 Sous-thème Calcul littéral (développer, factoriser, identités remarquables) :
 - "Développe et réduis : 3(2x+5) - 2(x-1)"
 - "Factorise : 6x² + 9x"
 - "Développe : (x+5)²"
 - "Factorise : x² - 16"
 Sous-thème Équations du 1er degré et équations-produit :
-- "Lucas pense à un nombre. Il le multiplie par 3 puis ajoute 7. Il obtient 28. Quel est ce nombre ?"
 - "Résous : 5x - 3 = 2x + 9"
 - "Résous : (x-2)(3x+6) = 0"
-- "Une piscine rectangulaire a un périmètre de 36m. Sa longueur est le double de sa largeur. Quelles sont ses dimensions ?"`,
+- "Une piscine a un périmètre de 36m. Sa longueur est le double de sa largeur. Quelles sont ses dimensions ?"`,
 
       'Organisation et gestion de données, fonctions': `
 Exemples de BONNES questions pour ce domaine :
 Sous-thème Statistiques (moyenne, médiane, étendue) :
 - "Les notes d'un élève sont 8, 12, 15, 10, 14, 11. Calcule la moyenne."
 - "Voici 7 notes classées : 8, 10, 11, 12, 13, 14, 16. Quelle est la médiane ?"
-- "Les températures min et max ce mois sont 5° et 28°. Quelle est l'étendue ?"
+- "Les températures min et max sont 5° et 28°. Quelle est l'étendue ?"
 Sous-thème Probabilités :
-- "Un sac contient 3 billes rouges et 5 bleues. On tire une bille au hasard. Quelle est la probabilité de tirer une bille bleue ?"
-- "On lance un dé équilibré. Quelle est la probabilité de NE PAS obtenir un 6 ?"
+- "Un sac contient 3 billes rouges et 5 bleues. Quelle est la probabilité de tirer une bille bleue ?"
+- "On lance un dé. Quelle est la probabilité de NE PAS obtenir un 6 ?"
 - "On lance une pièce puis un dé. Quelle est la probabilité d'obtenir pile ET un nombre impair ?"
-Sous-thème Proportionnalité (pourcentages, vitesses, échelles) :
+Sous-thème Proportionnalité et vitesses :
 - "Un train roule à 180 km/h. Combien de temps met-il pour parcourir 270 km ?"
-- "Sur une carte à l'échelle 1/25000, deux villes sont à 4 cm. Quelle est la distance réelle ?"
+- "Sur une carte à l'échelle 1/25000, deux villes sont à 4cm. Quelle est la distance réelle ?"
+- "Dans une classe, 12 élèves sur 30 ont eu plus de 12. Quelle est la fréquence relative ?"
 Sous-thème Fonctions affines et linéaires :
 - "Un plombier facture 50€ de déplacement plus 30€ par heure. Exprime le prix p(x) en fonction du nombre d'heures x."
 - "La fonction f est définie par f(x) = 3x - 5. Calcule f(4)."
 - "Quel est l'antécédent de 7 par la fonction f(x) = 2x - 1 ?"
 - "Une fonction affine passe par A(0;2) et B(3;8). Quelle est son expression ?"
-INTERDITS ABSOLUS : mode, classe modale, P(A∩B), P(A∪B), probabilité conditionnelle, tirage sans remise, composition de fonctions, fonctions du second degré, discriminant, systèmes d'équations, notation abstraite sans contexte.`,
+INTERDITS ABSOLUS : mode, classe modale, probabilité conditionnelle, tirage sans remise, composition de fonctions, fonctions du second degré, discriminant, systèmes d'équations.`,
 
       'Espace et géométrie': `
 Exemples de BONNES questions pour ce domaine :
@@ -74,7 +74,7 @@ Sous-thème Trigonométrie :
 Sous-thème Aires, périmètres et volumes :
 - "Un jardin circulaire a un rayon de 5m. Calcule son aire. (π≈3,14)"
 - "Une boîte cylindrique a un rayon de 3cm et une hauteur de 10cm. Calcule son volume."
-Sous-thème Transformations (symétrie, translation, rotation, homothétie) :
+Sous-thème Transformations :
 - "Le point A(2;3) subit une translation de vecteur (1;-2). Quelles sont les coordonnées de l'image ?"
 Sous-thème Géométrie dans l'espace :
 - "Une pyramide a une base carrée de 4cm de côté et une hauteur de 6cm. Calcule son volume."`,
@@ -84,17 +84,19 @@ Exemples de BONNES questions pour ce domaine :
 Sous-thème Aires et volumes :
 - "Un carré a un périmètre de 24cm. Calcule son aire."
 - "Un cylindre a un rayon de 5cm et une hauteur de 8cm. Calcule son volume. (π≈3,14)"
+- "Un triangle a une base de 6cm et une hauteur de 4cm. Calcule son aire."
 Sous-thème Conversions d'unités et vitesses :
 - "Convertis 2,5 km en mètres."
 - "Une voiture roule à 90 km/h. Quelle distance parcourt-elle en 20 minutes ?"
+- "Convertis 3,5 heures en minutes."
 Sous-thème Agrandissement et réduction :
-- "Une figure est agrandie avec un coefficient 3. Si un côté mesure 4cm, quelle est la mesure du côté agrandi ?"
+- "Une figure est agrandie avec un coefficient 3. Si un côté mesure 4cm, quelle est sa mesure agrandie ?"
+- "Sur une carte à l'échelle 1/50000, deux villes sont à 3cm. Quelle est la distance réelle ?"
 Sous-thème Algorithmique Scratch :
 - "Un programme Scratch répète 4 fois : avancer de 100 pas, tourner de 90°. Quelle figure est tracée ?"
 - "Un programme met x à 3, puis ajoute 5 à x, puis multiplie x par 2. Quelle est la valeur finale de x ?"
 - "Un programme répète 6 fois : avancer de 50 pas, tourner de 60°. Quelle figure est tracée ?"
-- "Un programme : mettre n à 10, répéter 3 fois (ajouter 4 à n). Quelle est la valeur finale de n ?"
-INTERDITS ABSOLUS : boucles Python, variables Python, fonctions Python — ce domaine utilise uniquement Scratch au niveau 3ème.`
+INTERDITS ABSOLUS : Python, boucles Python, variables Python — ce domaine utilise uniquement Scratch au niveau 3ème.`
     }
 
     const niveaux = {
@@ -106,14 +108,14 @@ INTERDITS ABSOLUS : boucles Python, variables Python, fonctions Python — ce do
     const chapitres = {
       'Nombres et calculs': [
         'Fractions', 'Priorités opératoires', 'Puissances', 'Écriture scientifique',
-        'Nombres premiers', 'Divisibilité', 'PGCD', 'Pourcentages', 'Proportionnalité',
-        'Vitesse', 'Calcul littéral', 'Développement', 'Factorisation',
+        'Nombres premiers', 'Divisibilité', 'PGCD', 'Pourcentages',
+        'Calcul littéral', 'Développement', 'Factorisation',
         'Identités remarquables', 'Équations du 1er degré', 'Équations-produit'
       ],
       'Organisation et gestion de données, fonctions': [
         'Moyenne', 'Médiane', 'Étendue', 'Statistiques descriptives',
         'Probabilités simples', 'Événement contraire', 'Arbre des possibles',
-        'Proportionnalité', 'Échelles', 'Vitesse',
+        'Proportionnalité', 'Vitesse', 'Échelles', 'Fréquence relative',
         'Fonction affine', 'Fonction linéaire', 'Image et antécédent',
         'Tableau de valeurs', 'Graphique de fonction'
       ],
@@ -124,8 +126,8 @@ INTERDITS ABSOLUS : boucles Python, variables Python, fonctions Python — ce do
       ],
       'Grandeurs, mesures et algorithmique': [
         'Aires', 'Volumes', 'Conversions d\'unités', 'Vitesse',
-        'Agrandissement', 'Réduction', 'Boucles Scratch',
-        'Variables Scratch', 'Programmes de calcul'
+        'Agrandissement', 'Réduction', 'Échelles',
+        'Boucles Scratch', 'Variables Scratch', 'Programmes de calcul'
       ]
     }
 
