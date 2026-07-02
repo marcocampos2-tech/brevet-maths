@@ -1,6 +1,11 @@
+const ORIGINES_AUTORISEES = ['https://academika.fr', 'https://www.academika.fr']
+
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  
+  const origine = req.headers.origin
+  if (ORIGINES_AUTORISEES.includes(origine)) {
+    res.setHeader('Access-Control-Allow-Origin', origine)
+  }
+
   const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
   const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY
   const RESEND_KEY = process.env.RESEND_API_KEY
