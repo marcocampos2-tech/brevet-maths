@@ -336,14 +336,13 @@ async function soumettre() {
       afficherMsg('Remplis tous les champs.', 'error')
       btn.disabled = false; btn.textContent = 'Se connecter'; return
     }
-    const { data: profil, error: errProfil } = await sb
-      .from('profils').select('faux_email')
-      .eq('prenom', prenom.toLowerCase()).eq('nom', nom.toLowerCase()).limit(1)
-    if (errProfil || !profil || profil.length === 0) {
+    const { data: fauxEmailTrouve, error: errProfil } = await sb
+      .rpc('verifier_login', { p_prenom: prenom.toLowerCase(), p_nom: nom.toLowerCase() })
+    if (errProfil || !fauxEmailTrouve) {
       afficherMsg('Prénom ou nom introuvable. Vérifie ou crée un compte.', 'error')
       btn.disabled = false; btn.textContent = 'Se connecter'; return
     }
-    const { error } = await sb.auth.signInWithPassword({ email: profil[0].faux_email, password })
+    const { error } = await sb.auth.signInWithPassword({ email: fauxEmailTrouve, password })
     if (error) afficherMsg('Mot de passe incorrect. Réessaie.', 'error')
     else window.location.href = 'quiz.html'
   } else {
@@ -355,8 +354,8 @@ async function soumettre() {
     if (!nom) { afficherMsg('Entre le nom.', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
     if (!emailParent) { afficherMsg("Entre l'email des parents.", 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
     if (!password || password.length < 6) { afficherMsg('Mot de passe trop court (6 caractères min).', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
-    const { data: existe } = await sb.from('profils').select('id').eq('prenom', prenom.toLowerCase()).eq('nom', nom.toLowerCase()).limit(1)
-    if (existe && existe.length > 0) {
+    const { data: existe } = await sb.rpc('verifier_disponibilite', { p_prenom: prenom.toLowerCase(), p_nom: nom.toLowerCase() })
+    if (existe) {
       afficherMsg('Ce prénom + nom est déjà utilisé.', 'error')
       btn.disabled = false; btn.textContent = 'Créer mon compte'; return
     }
@@ -396,9 +395,9 @@ async function soumettre() {
 async function resetPassword() {
   const email = document.getElementById('reset-email').value.trim()
   if (!email) { afficherResetMsg("Entre l'email des parents.", 'error'); return }
-  const { data: profils } = await sb.from('profils').select('faux_email').eq('email_parent', email).limit(1)
-  if (!profils || profils.length === 0) { afficherResetMsg('Aucun compte trouvé avec cet email.', 'error'); return }
-  const { error } = await sb.auth.resetPasswordForEmail(profils[0].faux_email, { redirectTo: window.location.origin + '/index.html' })
+  const { data: fauxEmailTrouve } = await sb.rpc('verifier_email_parent', { p_email: email })
+  if (!fauxEmailTrouve) { afficherResetMsg('Aucun compte trouvé avec cet email.', 'error'); return }
+  const { error } = await sb.auth.resetPasswordForEmail(fauxEmailTrouve, { redirectTo: window.location.origin + '/index.html' })
   if (error) afficherResetMsg('Erreur : ' + error.message, 'error')
   else afficherResetMsg('📧 Email envoyé ! Vérifie ta boîte mail.', 'success')
 }
