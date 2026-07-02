@@ -10,278 +10,67 @@
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
 .container { max-width: 520px; margin: 0 auto; padding: 1.5rem 1rem; }
 
-/* Header */
 .header { background: #1e3a8a; border-radius: 14px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem; }
 .header-logo { font-size: 12px; color: #93c5fd; letter-spacing: 0.1em; margin-bottom: 8px; }
 .header-title { font-size: 24px; font-weight: 700; color: white; margin-bottom: 4px; }
 .header-sub { font-size: 14px; color: #fbbf24; font-weight: 600; }
 .header-math { font-size: 12px; color: #bfdbfe; margin-top: 4px; }
 
-/* Bandeau rouge */
-.bandeau { background: #dc2626; color: white; text-align: center; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 1.5rem; }
+.bandeau { background: #6b7280; color: white; text-align: center; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 1.5rem; }
 
-/* Infos */
 .infos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
-.info-card { background: white; border-radius: 10px; padding: 12px; text-align: center; border: 1px solid #e8e8e4; }
-.info-card.blue { background: #eff6ff; border-color: #bfdbfe; }
-.info-card.red { background: #fef2f2; border-color: #fca5a5; }
-.info-card.green { background: #f0fdf4; border-color: #86efac; }
-.info-title { font-size: 13px; font-weight: 700; color: #1e3a8a; margin-bottom: 2px; }
-.info-title.red { color: #dc2626; }
-.info-title.green { color: #16a34a; }
-.info-sub { font-size: 11px; color: #6b7280; }
+.info-card { background: white; border-radius: 10px; padding: 12px; text-align: center; border: 1px solid #e8e8e4; opacity: 0.55; }
+.info-title { font-size: 13px; font-weight: 700; color: #6b7280; margin-bottom: 2px; }
+.info-sub { font-size: 11px; color: #9ca3af; }
 
-/* Formulaire */
-.form-card { background: white; border-radius: 14px; border: 1px solid #e8e8e4; padding: 1.5rem; margin-bottom: 1rem; }
-.form-title { font-size: 16px; font-weight: 700; color: #1a1a1a; margin-bottom: 1.25rem; }
-.field { margin-bottom: 14px; }
-.field label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px; }
-.field input, .field select { width: 100%; padding: 10px 12px; border: 1px solid #d0d0c8; border-radius: 8px; font-size: 14px; font-family: inherit; background: white; color: #1a1a1a; transition: border-color 0.15s; }
-.field input:focus, .field select:focus { outline: none; border-color: #1e3a8a; }
-.field input.error { border-color: #dc2626; }
+.status-card { background: white; border-radius: 14px; border: 1px solid #e8e8e4; padding: 2rem 1.5rem; text-align: center; }
+.status-icon-wrap { width: 44px; height: 44px; border-radius: 50%; background: #f1efe8; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+.status-icon { font-size: 22px; }
+.status-title { font-size: 17px; font-weight: 700; color: #1a1a1a; margin-bottom: 10px; }
+.status-msg { font-size: 14px; color: #6b7280; line-height: 1.7; }
+.status-msg a { color: #1e3a8a; font-weight: 600; text-decoration: none; }
 
-/* Dates */
-.dates-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 14px; }
-.date-option { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1.5px solid #e8e8e4; border-radius: 10px; cursor: pointer; transition: all 0.15s; }
-.date-option:hover { border-color: #1e3a8a; background: #f0f7ff; }
-.date-option.selected { border-color: #1e3a8a; background: #eff6ff; }
-.date-option.full { border-color: #dc2626; background: #fef2f2; cursor: not-allowed; opacity: 0.7; }
-.date-option input[type=radio] { accent-color: #1e3a8a; width: 16px; height: 16px; flex-shrink: 0; }
-.date-label { flex: 1; }
-.date-label-main { font-size: 14px; font-weight: 600; color: #1e3a8a; }
-.date-label-sub { font-size: 11px; color: #6b7280; }
-.date-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #f0fdf4; color: #16a34a; font-weight: 600; }
-.date-badge.full { background: #fef2f2; color: #dc2626; }
-.date-badge.warn { background: #fffbeb; color: #d97706; }
-
-/* Bouton */
-.btn-submit { width: 100%; padding: 14px; background: #1e3a8a; color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.15s; font-family: inherit; }
-.btn-submit:hover { background: #1e40af; }
-.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-
-/* Messages */
-.msg-error { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #dc2626; margin-bottom: 12px; display: none; }
-.msg-error.show { display: block; }
-
-/* Succès */
-.success-card { background: white; border-radius: 14px; border: 2px solid #16a34a; padding: 2rem; text-align: center; display: none; }
-.success-card.show { display: block; }
-.success-icon { font-size: 48px; margin-bottom: 1rem; }
-.success-title { font-size: 20px; font-weight: 700; color: #16a34a; margin-bottom: 0.5rem; }
-.success-msg { font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 1rem; }
-.success-detail { background: #f0fdf4; border-radius: 8px; padding: 12px; font-size: 13px; color: #15803d; }
-
-/* Footer */
 .footer { text-align: center; padding: 1rem 0; font-size: 12px; color: #999; }
 .footer a { color: #1e3a8a; text-decoration: none; }
-
-/* Places counter */
-.places-info { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #6b7280; margin-bottom: 8px; }
-.places-bar { height: 4px; background: #e8e8e4; border-radius: 2px; margin-bottom: 14px; overflow: hidden; }
-.places-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
 </style>
 </head>
 <body>
 <div class="container">
 
-  <!-- Header -->
   <div class="header">
     <div class="header-logo">∑ ACADEMIKA</div>
-    <div class="header-title">Examen Blanc Brevet</div>
+    <div class="header-title">Examen Blanc Présentiel</div>
     <div class="header-sub">Mathématiques</div>
     <div class="header-math">Conditions réelles · Correction le jour même</div>
   </div>
 
-  <!-- Bandeau -->
-  <div class="bandeau">Places limitées — 5 élèves maximum par session</div>
+  <div class="bandeau">Session terminée</div>
 
-  <!-- Infos -->
   <div class="infos">
-    <div class="info-card blue">
+    <div class="info-card">
       <div class="info-title">17 juin</div>
-      <div class="info-sub">Mercredi · 15h00</div>
+      <div class="info-sub">Terminé</div>
     </div>
-    <div class="info-card blue">
+    <div class="info-card">
       <div class="info-title">24 juin</div>
-      <div class="info-sub">Mercredi · 15h00</div>
-    </div>
-    <div class="info-card red">
-      <div class="info-title red">77310 Ponthierry</div>
-      <div class="info-sub">Adresse sur confirmation</div>
-    </div>
-    <div class="info-card green">
-      <div class="info-title green">Gratuit</div>
-      <div class="info-sub">Inscription requise</div>
+      <div class="info-sub">Terminé</div>
     </div>
   </div>
 
-  <!-- Formulaire -->
-  <div class="form-card" id="form-card">
-    <div class="form-title">📝 Inscription</div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field">
-        <label>Prénom de l'élève *</label>
-        <input type="text" id="prenom" placeholder="Prénom">
-      </div>
-      <div class="field">
-        <label>Nom *</label>
-        <input type="text" id="nom" placeholder="Nom">
-      </div>
+  <div class="status-card">
+    <div class="status-icon-wrap"><span class="status-icon">📅</span></div>
+    <div class="status-title">Session terminée</div>
+    <div class="status-msg">
+      La session d'examen blanc du 17 et 24 juin est maintenant terminée.<br><br>
+      La prochaine date sera annoncée prochainement sur <a href="/">academika.fr</a>.
     </div>
-
-    <div class="field">
-      <label>Email des parents *</label>
-      <input type="email" id="email_parent" placeholder="email@exemple.fr">
-    </div>
-
-    <div class="field">
-      <label>Téléphone</label>
-      <input type="tel" id="telephone" placeholder="06 XX XX XX XX">
-    </div>
-
-    <div class="field">
-      <label>Date souhaitée *</label>
-      <div id="dates-container" class="dates-grid">
-        <div class="loader" style="text-align:center;color:#888;padding:1rem;font-size:13px">Chargement des places disponibles…</div>
-      </div>
-    </div>
-
-    <div class="msg-error" id="msg-error"></div>
-
-    <button class="btn-submit" id="btn-submit" onclick="soumettre()">
-      S'inscrire à l'examen blanc
-    </button>
   </div>
 
-  <!-- Succès -->
-  <div class="success-card" id="success-card">
-    <div class="success-icon">✅</div>
-    <div class="success-title" id="success-title">Inscription reçue !</div>
-    <div class="success-msg" id="success-msg"></div>
-    <div class="success-detail" id="success-detail"></div>
-  </div>
-
-  <!-- Footer -->
   <div class="footer">
     <p>Ingénieur · Cours particuliers · <a href="tel:0626539013">06 26 53 90 13</a></p>
     <p style="margin-top:4px"><a href="/">← Retour à ACADEMIKA</a></p>
   </div>
 
 </div>
-<script>
-const MAX_PLACES = 5
-
-let placesData = { '17 juin': 0, '24 juin': 0 }
-let dejaInscrit = false
-
-async function chargerPlaces() {
-  try {
-    const res = await fetch('/api/inscription-brevet?action=places')
-    const data = await res.json()
-    placesData = data.places || { '17 juin': 0, '24 juin': 0 }
-    dejaInscrit = false
-  } catch(e) {
-    console.log('Erreur chargement places:', e)
-  }
-  renderDates()
-}
-
-function renderDates() {
-  const container = document.getElementById('dates-container')
-  const dates = [
-    { value: '17 juin', label: 'Mercredi 17 juin 2025', heure: '15h00' },
-    { value: '24 juin', label: 'Mercredi 24 juin 2025', heure: '15h00' },
-  ]
-
-  let html = ''
-  dates.forEach(d => {
-    const places = placesData[d.value] || 0
-    const restantes = MAX_PLACES - places
-    const isFull = restantes <= 0
-    const badgeText = isFull ? 'Complet' : restantes === 1 ? '1 place restante' : restantes + ' places'
-    const badgeClass = isFull ? 'full' : restantes <= 2 ? 'warn' : ''
-
-    html += '<label class="date-option'+(isFull?' full':'')+'" onclick="selectDate(this,\''+d.value+'\')">'
-    html += '<input type="radio" name="date" value="'+d.value+'" '+(isFull?'disabled':'')+' style="pointer-events:none">'
-    html += '<div class="date-label">'
-    html += '<div class="date-label-main">'+d.label+'</div>'
-    html += '<div class="date-label-sub">'+d.heure+'</div>'
-    html += '</div>'
-    html += '<span class="date-badge '+badgeClass+'">'+badgeText+'</span>'
-    html += '</label>'
-  })
-
-  container.innerHTML = html
-}
-
-function selectDate(el, val) {
-  if (el.classList.contains('full')) return
-  document.querySelectorAll('.date-option').forEach(d => d.classList.remove('selected'))
-  el.classList.add('selected')
-  el.querySelector('input[type=radio]').checked = true
-}
-
-async function soumettre() {
-  const prenom = document.getElementById('prenom').value.trim()
-  const nom = document.getElementById('nom').value.trim()
-  const email_parent = document.getElementById('email_parent').value.trim()
-  const telephone = document.getElementById('telephone').value.trim()
-  const dateVal = document.querySelector('input[name="date"]:checked')?.value
-  const msgEl = document.getElementById('msg-error')
-
-  // Validation
-  if (!prenom || !nom || !email_parent || !dateVal) {
-    msgEl.textContent = '⚠️ Merci de remplir tous les champs obligatoires (*).'
-    msgEl.classList.add('show')
-    return
-  }
-  if (!email_parent.includes('@')) {
-    msgEl.textContent = '⚠️ Adresse email invalide.'
-    msgEl.classList.add('show')
-    return
-  }
-  msgEl.classList.remove('show')
-
-  const btn = document.getElementById('btn-submit')
-  btn.disabled = true
-  btn.textContent = '⏳ Inscription en cours…'
-
-  try {
-    const res = await fetch('/api/inscription-brevet', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prenom, nom, email_parent, telephone, date_choisie: dateVal })
-    })
-    const data = await res.json()
-
-    if (data.error) throw new Error(data.error)
-
-    // Afficher succès
-    document.getElementById('form-card').style.display = 'none'
-    const successCard = document.getElementById('success-card')
-    successCard.classList.add('show')
-
-    const isPrioritaire = data.prioritaire
-    document.getElementById('success-title').textContent = isPrioritaire ? '✅ Inscription confirmée !' : '📋 Inscription reçue !'
-    document.getElementById('success-msg').innerHTML = isPrioritaire
-      ? 'Votre inscription est enregistrée. Un email de confirmation a été envoyé à <strong>'+email_parent+'</strong>.<br><br>Le lieu exact vous sera communiqué par email.'
-      : 'Votre inscription est bien reçue. Vous serez contacté par email pour confirmation.<br><br>Priorité sera donnée aux nouveaux élèves.'
-    document.getElementById('success-detail').innerHTML =
-      '📅 Date : <strong>'+dateVal+'</strong> · 15h00<br>' +
-      '📍 Lieu : 77310 Ponthierry (adresse sur confirmation)<br>' +
-      '📞 Contact : 06 26 53 90 13'
-
-  } catch(e) {
-    msgEl.textContent = '❌ Erreur : ' + e.message
-    msgEl.classList.add('show')
-    btn.disabled = false
-    btn.textContent = "S'inscrire à l'examen blanc"
-  }
-}
-
-// Chargement initial
-chargerPlaces()
-</script>
 </body>
 </html>
