@@ -5,6 +5,92 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
+  // ═══════════════════════════════════════════
+  // RESET MOT DE PASSE — isolé, retour immédiat
+  // ═══════════════════════════════════════════
+  if (req.body?.type === 'reset-password') {
+    const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+    const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY
+    const RESEND_KEY = process.env.RESEND_API_KEY
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPA_KEY}`, 'apikey': SUPA_KEY }
+
+    const { email_parent } = req.body
+    if (!email_parent) return res.status(400).json({ error: 'Email requis' })
+
+    const reponseUniforme = { success: true, message: 'Si un compte existe avec cet email, un lien a été envoyé.' }
+
+    try {
+      const profilRes = await fetch(
+        `${SUPA_URL}/rest/v1/profils?email_parent=eq.${encodeURIComponent(email_parent)}&select=faux_email,derniere_demande_reset`,
+        { headers }
+      )
+      const profils = await profilRes.json()
+
+      if (!profils || profils.length === 0) {
+        return res.status(200).json(reponseUniforme)
+      }
+
+      const { faux_email, derniere_demande_reset } = profils[0]
+
+      if (derniere_demande_reset) {
+        const diffMinutes = (new Date() - new Date(derniere_demande_reset)) / 60000
+        if (diffMinutes < 3) {
+          return res.status(200).json(reponseUniforme)
+        }
+      }
+
+      const linkRes = await fetch(`${SUPA_URL}/auth/v1/admin/generate_link`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          type: 'recovery',
+          email: faux_email,
+          options: { redirectTo: 'https://www.academika.fr/index.html' }
+        })
+      })
+      const linkData = await linkRes.json()
+      const lienReset = linkData?.action_link || linkData?.properties?.action_link
+
+      if (!lienReset) {
+        console.log('Erreur génération lien:', JSON.stringify(linkData))
+        return res.status(200).json(reponseUniforme)
+      }
+
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
+        body: JSON.stringify({
+          from: 'ACADEMIKA <noreply@academika.fr>',
+          to: email_parent,
+          subject: '🔑 Réinitialisation de mot de passe — ACADEMIKA',
+          html: `
+            <h2>Réinitialisation de mot de passe</h2>
+            <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte ACADEMIKA.</p>
+            <p><a href="${lienReset}">Cliquez ici pour choisir un nouveau mot de passe</a></p>
+            <p>Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.</p>
+            <br>
+            <p>Cordialement,<br>ACADEMIKA</p>
+          `
+        })
+      })
+
+      await fetch(`${SUPA_URL}/rest/v1/profils?email_parent=eq.${encodeURIComponent(email_parent)}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ derniere_demande_reset: new Date().toISOString() })
+      })
+
+      return res.status(200).json(reponseUniforme)
+
+    } catch (e) {
+      console.log('Erreur reset-password:', e.message)
+      return res.status(200).json(reponseUniforme)
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // ALERTE DIFFICULTÉS DU JOUR — logique existante, inchangée
+  // ═══════════════════════════════════════════
   try {
     const { emailParent, prenom, nom, theme, difficulte, score, total, 
             questionsRatees, tempsSecondes, resultatsId } = req.body
