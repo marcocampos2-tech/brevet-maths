@@ -344,10 +344,10 @@ async function confirmerEtEnvoyerAdresse(id, prenom, nom, emailParent, date) {
   if (error) { alert('Erreur : '+error.message); return }
 
   try {
-    await fetch('/api/email-adresse-brevet', {
+    await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emailParent, prenom, nom, date, adresse, type: 'confirmation' })
+      body: JSON.stringify({ type: 'adresse-brevet', emailParent, prenom, nom, date, adresse })
     })
   } catch(e) { console.log('Erreur email confirmation:', e.message) }
 
@@ -358,10 +358,10 @@ async function refuserInscription(id, prenom, nom, emailParent, date) {
   if (!confirm('Refuser l\'inscription de '+prenom+' et envoyer un email à '+emailParent+' ?')) return
 
   try {
-    await fetch('/api/email-adresse-brevet', {
+    await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emailParent, prenom, nom, date, type: 'refus' })
+      body: JSON.stringify({ type: 'adresse-brevet', sousType: 'refus', emailParent, prenom, nom, date })
     })
   } catch(e) { console.log('Erreur email refus:', e.message) }
 
@@ -375,10 +375,10 @@ async function supprimerAvecEmail(id, prenom, nom, emailParent, date) {
   if (!confirm('Annuler l\'inscription confirmée de '+prenom+' et envoyer un email à '+emailParent+' ?')) return
 
   try {
-    await fetch('/api/email-adresse-brevet', {
+    await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ emailParent, prenom, nom, date, type: 'annulation' })
+      body: JSON.stringify({ type: 'adresse-brevet', sousType: 'annulation', emailParent, prenom, nom, date })
     })
   } catch(e) { console.log('Erreur email annulation:', e.message) }
 
@@ -427,10 +427,11 @@ async function envoyerAdresse() {
 
   try {
     const inscrit = INSCRIPTIONS.find(i => i.id === adresseCurrentId)
-    const res = await fetch('/api/email-adresse-brevet', {
+    const res = await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        type: 'adresse-brevet',
         emailParent: inscrit.email_parent,
         prenom: inscrit.prenom,
         nom: inscrit.nom,
@@ -485,10 +486,11 @@ async function envoyerResultats(id) {
   if (!confirm('Envoyer les résultats à '+inscrit.email_parent+' ?')) return
 
   try {
-    const res = await fetch('/api/email-resultats-brevet', {
+    const res = await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        type: 'resultats-brevet',
         emailParent: inscrit.email_parent,
         prenom: inscrit.prenom,
         nom: inscrit.nom,
@@ -805,7 +807,7 @@ async function envoyerBilan(userId) {
   rows.flatMap(r=>r.questions_ratees||[]).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1)
   const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
   try {
-    const res = await fetch('/api/email-bilan', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emailParent:e.email_parent, prenom:e.prenom, nom:e.nom, moyGlobale, totalSessions:rows.length, tempsTotal:rows.reduce((a,r)=>a+(r.temps_secondes||0),0), themes, topRatees }) })
+    const res = await fetch('/api/email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type: 'bilan', emailParent:e.email_parent, prenom:e.prenom, nom:e.nom, moyGlobale, totalSessions:rows.length, tempsTotal:rows.reduce((a,r)=>a+(r.temps_secondes||0),0), themes, topRatees }) })
     const data = await res.json()
     if (data.success) { btn.textContent='Envoyé ✓'; setTimeout(()=>{ btn.disabled=false; btn.textContent='Envoyer bilan parents' },3000) }
     else throw new Error(data.error)
