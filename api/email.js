@@ -89,6 +89,358 @@ export default async function handler(req, res) {
   }
 
   // ═══════════════════════════════════════════
+  // ADRESSE BREVET — confirmation / refus / annulation
+  // ═══════════════════════════════════════════
+  if (req.body?.type === 'adresse-brevet') {
+    const RESEND_KEY = process.env.RESEND_API_KEY
+    const { emailParent, prenom, nom, date, adresse, messageCompl, sousType } = req.body
+    if (!emailParent || !prenom) return res.status(400).json({ error: 'Champs manquants' })
+
+    let subject, html
+    if (sousType === 'refus') {
+      subject = `Inscription Examen Blanc Brevet — ${prenom}`
+      html = `
+        <h2>Inscription Examen Blanc — Information</h2>
+        <p>Bonjour,</p>
+        <p>Nous avons bien reçu la demande d'inscription de <strong>${prenom} ${nom}</strong> pour la session du <strong>${date}</strong>.</p>
+        <p>Malheureusement, cette session est complète. Nous ne pouvons pas confirmer cette inscription.</p>
+        <p>Si l'autre date vous convient, n'hésitez pas à vous réinscrire sur <strong>academika.fr</strong>.</p>
+        <p>Contact : <strong>06 26 53 90 13</strong></p>
+        <br>
+        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      `
+    } else if (sousType === 'annulation') {
+      subject = `Annulation Examen Blanc Brevet — ${prenom}`
+      html = `
+        <h2>Annulation — Examen Blanc Brevet</h2>
+        <p>Bonjour,</p>
+        <p>Nous vous informons que l'inscription de <strong>${prenom} ${nom}</strong> pour la session du <strong>${date}</strong> a été annulée.</p>
+        <p>Pour toute question, contactez-nous au <strong>06 26 53 90 13</strong>.</p>
+        <br>
+        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      `
+    } else {
+      if (!adresse) return res.status(400).json({ error: 'Adresse manquante' })
+      subject = `✅ Inscription confirmée — Examen Blanc Brevet — ${prenom}`
+      html = `
+        <h2>✅ Inscription confirmée — Adresse communiquée</h2>
+        <p>Bonjour,</p>
+        <p>L'inscription de <strong>${prenom} ${nom}</strong> pour l'examen blanc est confirmée :</p>
+        <div style="background:#f0f7ff;border-radius:8px;padding:16px;margin:16px 0">
+          <p><strong>📅 Date :</strong> ${date} · 15h00</p>
+          <p><strong>📍 Adresse :</strong> ${adresse}</p>
+          ${messageCompl ? `<p><strong>ℹ️ Infos :</strong> ${messageCompl}</p>` : ''}
+        </div>
+        <p>Merci d'arriver 5 minutes avant. Prévoir stylo et calculatrice.</p>
+        <p>Contact : <strong>06 26 53 90 13</strong></p>
+        <br>
+        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      `
+    }
+
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
+        body: JSON.stringify({ from: 'ACADEMIKA <noreply@academika.fr>', to: emailParent, subject, html })
+      })
+      return res.status(200).json({ success: true })
+    } catch(e) {
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // BILAN PARENTS (bouton "Envoyer bilan" prof.html)
+  // ═══════════════════════════════════════════
+  if (req.body?.type === 'bilan') {
+    try {
+      const { emailParent, prenom, nom, moyGlobale, totalSessions, tempsTotal, themes, topRatees } = req.body
+
+      const couleur = moyGlobale >= 80 ? '#16a34a' : moyGlobale >= 60 ? '#3730a3' : moyGlobale >= 40 ? '#f59e0b' : '#dc2626'
+      const mention = moyGlobale >= 80 ? '🌟 Excellent !' : moyGlobale >= 60 ? '👍 Bien !' : moyGlobale >= 40 ? '💪 Continue !' : '📚 À retravailler'
+
+      const h = Math.floor(tempsTotal/3600)
+      const m = Math.floor((tempsTotal%3600)/60)
+      const tempsFormat = h > 0 ? `${h}h ${m}min` : `${m} min`
+
+      const themesHTML = Object.entries(themes).map(([theme, s]) => {
+        const pct = Math.round((s.ok/s.tot)*100)
+        const couleurTheme = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
+        return `<tr>
+          <td style="padding:8px;color:#555;border-bottom:1px solid #f0f0ec">${theme}</td>
+          <td style="padding:8px;font-weight:600;color:${couleurTheme};border-bottom:1px solid #f0f0ec">${pct}%</td>
+          <td style="padding:8px;color:#999;border-bottom:1px solid #f0f0ec;font-size:12px">${s.n} session(s)</td>
+        </tr>`
+      }).join('')
+
+      const rateesHTML = topRatees && topRatees.length > 0
+        ? `<div style="margin-top:20px">
+            <p style="font-weight:600;margin-bottom:8px">📚 Points à améliorer :</p>
+            <ul style="padding-left:20px;color:#555;margin:0">
+              ${topRatees.map(([q]) => `<li style="margin-bottom:6px">${q}</li>`).join('')}
+            </ul>
+          </div>`
+        : `<p style="color:#16a34a;margin-top:20px;font-weight:600">✅ Aucune notion particulièrement en difficulté !</p>`
+
+      const html = `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+          <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+            <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Bilan de progression</div>
+          </div>
+          <p style="margin-bottom:6px;">Bonjour Madame, Monsieur,</p>
+          <p style="margin-bottom:20px;color:#444;">
+            Voici le bilan de progression de <strong>${prenom}${nom ? ' ' + nom : ''}</strong> sur ACADEMIKA.
+          </p>
+          <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
+            <div style="font-size:56px;font-weight:700;color:${couleur}">${moyGlobale}%</div>
+            <div style="font-size:18px;margin-top:8px">${mention}</div>
+            <div style="font-size:13px;color:#666;margin-top:8px">${totalSessions} sessions · ${tempsFormat} de révision</div>
+          </div>
+          <p style="color:#444;margin-bottom:16px;">
+            Bonne nouvelle : <strong>${prenom} progresse !</strong><br>
+            Encouragez-le à continuer sur les thèmes à améliorer.
+          </p>
+          <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">📊 Résultats par thème :</h3>
+          <table style="width:100%;border-collapse:collapse">${themesHTML}</table>
+          ${rateesHTML}
+          <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+            <p style="color:#444;font-size:13px;margin-bottom:16px;">
+              Pour toute question, contactez-nous : 
+              <a href="mailto:marcocampos2@gmail.com" style="color:#3730a3;text-decoration:none;font-weight:500">marcocampos2@gmail.com</a>
+            </p>
+            <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
+          </div>
+          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
+            <a href="https://academika.fr/api/desabonner?email=${emailParent}" style="color:#bbb">Se désabonner des emails automatiques</a>
+          </p>
+        </div>`
+
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+        body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `📊 Bilan de progression de ${prenom} — ACADEMIKA`, html })
+      })
+
+      const responseData = await response.json()
+      if (!response.ok) return res.status(500).json({ error: 'Erreur : ' + JSON.stringify(responseData) })
+      return res.status(200).json({ success: true })
+    } catch(e) {
+      console.log('Erreur bilan:', e.message)
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // BREVET BLANC — résultats examen (envoyé automatiquement depuis examen.html)
+  // ═══════════════════════════════════════════
+  if (req.body?.type === 'brevet-blanc') {
+    try {
+      const { emailParent, prenom, nom, score, total, pct, scoresThemes, tempsSecondes } = req.body
+
+      const couleurScore = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
+      const mention = pct >= 80 ? '🌟 Très Bien' : pct >= 70 ? '👍 Bien' : pct >= 60 ? '✅ Assez Bien' : pct >= 50 ? '📋 Admis' : '📚 Non admis'
+      const messageMotivation = pct >= 50
+        ? `Bonne nouvelle : <strong>${prenom}</strong> a réussi son examen blanc ! Encouragez-le à continuer sur les thèmes à améliorer.`
+        : `<strong>${prenom}</strong> n'a pas encore le niveau requis. C'est normal — c'est un entraînement ! Encouragez-le à continuer à réviser régulièrement.`
+
+      const m = Math.floor(tempsSecondes / 60)
+      const s = tempsSecondes % 60
+      const tempsFormat = `${m} min ${s} sec`
+
+      const themesHTML = scoresThemes ? Object.entries(scoresThemes).map(([theme, s]) => {
+        const tp = Math.round((s.ok / s.total) * 100)
+        const tc = tp >= 60 ? '#16a34a' : tp >= 40 ? '#f59e0b' : '#dc2626'
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0ec">
+          <span style="font-size:13px;color:#444">${theme}</span>
+          <span style="font-weight:700;color:${tc}">${s.ok}/${s.total} (${tp}%)</span>
+        </div>`
+      }).join('') : ''
+
+      const html = `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+          <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+            <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Examen Blanc</div>
+          </div>
+          <p style="margin-bottom:6px;">Bonjour Madame, Monsieur,</p>
+          <p style="margin-bottom:20px;color:#444;">
+            Votre enfant <strong>${prenom}${nom ? ' ' + nom : ''}</strong> vient de passer l'Examen Blanc Brevet Maths sur ACADEMIKA.
+          </p>
+          <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
+            <div style="font-size:56px;font-weight:700;color:${couleurScore}">${score}/20</div>
+            <div style="font-size:24px;font-weight:600;color:${couleurScore};margin-top:4px">${pct}%</div>
+            <div style="font-size:18px;margin-top:8px">${mention}</div>
+            <div style="font-size:13px;color:#666;margin-top:8px">⏱️ ${tempsFormat}</div>
+          </div>
+          <p style="color:#444;margin-bottom:16px;">${messageMotivation}</p>
+          ${themesHTML ? `<div style="margin-top:20px"><p style="color:#1a1a1a;font-weight:600;margin-bottom:8px">📊 RÉSULTATS PAR THÈME :</p>${themesHTML}</div>` : ''}
+          <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+            <p style="color:#444;font-size:13px;margin-bottom:16px;">
+              Pour toute question, contactez-nous : 
+              <a href="mailto:marcocampos2@gmail.com" style="color:#3730a3;text-decoration:none;font-weight:500">marcocampos2@gmail.com</a>
+            </p>
+            <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
+          </div>
+          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
+            <a href="https://academika.fr/api/desabonner?email=${emailParent}" style="color:#bbb">Se désabonner des emails automatiques</a>
+          </p>
+        </div>`
+
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+        body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `📝 ${prenom} a obtenu ${score}/20 à l'Examen Blanc — ACADEMIKA`, html })
+      })
+
+      const responseData = await response.json()
+      if (!response.ok) return res.status(500).json({ error: 'Erreur envoi email : ' + JSON.stringify(responseData) })
+      return res.status(200).json({ success: true })
+    } catch(e) {
+      console.log('Erreur brevet-blanc:', e.message)
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // INSCRIPTION — bienvenue élève + notification prof
+  // ═══════════════════════════════════════════
+  if (req.body?.type === 'inscription') {
+    try {
+      const { prenom, nom, emailParent } = req.body
+      const PROF_EMAIL = 'marcocampos2@gmail.com'
+
+      const htmlProf = `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+          <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+            <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Nouvel élève inscrit</div>
+          </div>
+          <p style="margin-bottom:16px;">Bonjour,</p>
+          <p style="margin-bottom:20px;color:#444;">Un nouvel élève vient de s'inscrire sur ACADEMIKA :</p>
+          <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0;">
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px;color:#666;border-bottom:1px solid #e8e8e4">Prénom</td><td style="padding:8px;font-weight:600;border-bottom:1px solid #e8e8e4">${prenom}</td></tr>
+              <tr><td style="padding:8px;color:#666;border-bottom:1px solid #e8e8e4">Nom</td><td style="padding:8px;font-weight:600;border-bottom:1px solid #e8e8e4">${nom}</td></tr>
+              <tr><td style="padding:8px;color:#666">Email parents</td><td style="padding:8px;font-weight:600;color:#3730a3">${emailParent}</td></tr>
+            </table>
+          </div>
+          <p style="color:#444;font-size:13px;margin-bottom:16px;">
+            Connectez-vous sur 
+            <a href="https://www.academika.fr/prof.html" style="color:#3730a3;text-decoration:none;font-weight:500">le tableau de bord</a> 
+            pour suivre sa progression.
+          </p>
+          <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+            <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
+          </div>
+        </div>`
+
+      const htmlParents = `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+          <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+            <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Bienvenue !</div>
+          </div>
+          <p style="margin-bottom:16px;">Bonjour Madame, Monsieur,</p>
+          <p style="margin-bottom:20px;color:#444;">
+            Votre enfant <strong>${prenom} ${nom}</strong> vient de s'inscrire sur ACADEMIKA, 
+            une application de révision en mathématiques pour le Brevet des collèges.
+          </p>
+          <div style="background:#eef2ff;border-radius:12px;padding:20px;margin:20px 0;">
+            <p style="font-weight:600;margin-bottom:12px;color:#3730a3">Comment ça fonctionne :</p>
+            <p style="margin-bottom:8px;font-size:14px;">🤖 Quiz générés par intelligence artificielle</p>
+            <p style="margin-bottom:8px;font-size:14px;">📝 Examen Blanc style vrai brevet</p>
+            <p style="margin-bottom:8px;font-size:14px;">📧 Vous recevez les résultats après chaque session</p>
+            <p style="margin-bottom:0;font-size:14px;">📊 Suivi de progression personnalisé</p>
+          </div>
+          <p style="color:#444;margin-bottom:20px;">
+            Votre enfant peut commencer maintenant sur :<br>
+            <a href="https://www.academika.fr" style="color:#3730a3;font-weight:600;text-decoration:none;">👉 www.academika.fr</a>
+          </p>
+          <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+            <p style="color:#444;font-size:13px;margin-bottom:8px;">
+              Pour toute question, contactez-nous : 
+              <a href="mailto:${PROF_EMAIL}" style="color:#3730a3;text-decoration:none;font-weight:500">${PROF_EMAIL}</a>
+            </p>
+            <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
+          </div>
+          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
+            <a href="https://academika.fr/api/desabonner?email=${emailParent}" style="color:#bbb">Se désabonner des emails automatiques</a>
+          </p>
+        </div>`
+
+      await Promise.all([
+        fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+          body: JSON.stringify({ from: 'noreply@academika.fr', to: PROF_EMAIL, subject: `🎓 Nouvel élève inscrit : ${prenom} ${nom} — ACADEMIKA`, html: htmlProf })
+        }),
+        fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+          body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `🎓 Bienvenue sur ACADEMIKA — ${prenom} ${nom}`, html: htmlParents })
+        })
+      ])
+
+      return res.status(200).json({ success: true })
+    } catch(e) {
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // RÉSULTATS BREVET BLANC PRÉSENTIEL (saisis manuellement par le prof)
+  // ═══════════════════════════════════════════
+  if (req.body?.type === 'resultats-brevet') {
+    const RESEND_KEY = process.env.RESEND_API_KEY
+    const { emailParent, prenom, nom, date, note, commentaire } = req.body
+    if (!emailParent || !prenom || note === undefined) return res.status(400).json({ error: 'Champs manquants' })
+
+    const pct = Math.round((note / 20) * 100)
+    let mention = ''
+    if (pct >= 80) mention = '🌟 Mention Très Bien'
+    else if (pct >= 70) mention = '👍 Mention Bien'
+    else if (pct >= 60) mention = '✅ Mention Assez Bien'
+    else if (pct >= 50) mention = '📋 Admis'
+    else mention = '📚 Non admis — À retravailler'
+    const couleur = pct >= 50 ? '#16a34a' : '#dc2626'
+
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
+        body: JSON.stringify({
+          from: 'ACADEMIKA <noreply@academika.fr>',
+          to: emailParent,
+          subject: `📝 Résultats Examen Blanc Brevet — ${prenom}`,
+          html: `
+            <h2>📝 Résultats — Examen Blanc Brevet</h2>
+            <p>Bonjour,</p>
+            <p>Voici les résultats de <strong>${prenom} ${nom}</strong> pour l'examen blanc du <strong>${date}</strong> :</p>
+            <div style="background:#f0f7ff;border-radius:8px;padding:20px;margin:16px 0;text-align:center">
+              <div style="font-size:48px;font-weight:700;color:${couleur}">${note}/20</div>
+              <div style="font-size:18px;color:${couleur};margin-top:8px">${mention}</div>
+            </div>
+            ${commentaire ? `
+            <div style="background:#f7f7f5;border-radius:8px;padding:16px;margin:16px 0">
+              <p><strong>💬 Commentaire :</strong></p>
+              <p style="color:#555">${commentaire}</p>
+            </div>` : ''}
+            <p>Continuez à réviser sur <a href="https://academika.fr">academika.fr</a> !</p>
+            <p>Contact : <strong>06 26 53 90 13</strong></p>
+            <br>
+            <p>Cordialement,<br>ACADEMIKA</p>
+          `
+        })
+      })
+      return res.status(200).json({ success: true })
+    } catch(e) {
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ═══════════════════════════════════════════
   // ALERTE DIFFICULTÉS DU JOUR — logique existante, inchangée
   // ═══════════════════════════════════════════
   try {
@@ -97,7 +449,6 @@ export default async function handler(req, res) {
 
     const pct = Math.round((score / total) * 100)
 
-    // Ne pas envoyer si score >= 40% — récap hebdo suffisant
     if (pct >= 40) {
       return res.status(200).json({ success: true, skipped: true, reason: 'score >= 40%' })
     }
@@ -110,7 +461,6 @@ export default async function handler(req, res) {
       'apikey': SUPA_KEY
     }
 
-    // Vérifier si une alerte a déjà été envoyée aujourd'hui pour cet élève
     const aujourd_hui = new Date().toISOString().split('T')[0]
     const alerteRes = await fetch(
       `${SUPA_URL}/rest/v1/resultats?email_parent=eq.${encodeURIComponent(emailParent)}&alerte_envoyee=eq.true&created_at=gte.${aujourd_hui}T00:00:00&select=id,theme,difficulte,score,total,questions_ratees`,
@@ -118,7 +468,6 @@ export default async function handler(req, res) {
     )
     const alertesAujourdhui = await alerteRes.json()
 
-    const couleurScore = '#dc2626'
     const m = Math.floor(tempsSecondes / 60)
     const s = tempsSecondes % 60
     const tempsFormat = m === 0 ? `${s} sec` : `${m} min ${s} sec`
@@ -129,7 +478,6 @@ export default async function handler(req, res) {
     let sujet = ''
 
     if (alertesAujourdhui && alertesAujourdhui.length > 0) {
-      // 2+ quiz ratés aujourd'hui — email groupé
       const toutesLesSessions = [
         ...alertesAujourdhui,
         { theme, difficulte, score, total, questions_ratees: questionsRatees }
@@ -181,7 +529,6 @@ export default async function handler(req, res) {
         </div>`
 
     } else {
-      // 1er quiz raté aujourd'hui
       sujet = `⚠️ ${prenom} a eu des difficultés aujourd'hui — ACADEMIKA`
 
       const rateesHTML = questionsRatees && questionsRatees.length > 0
@@ -233,7 +580,6 @@ export default async function handler(req, res) {
         </div>`
     }
 
-    // Envoyer l'email
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -253,7 +599,6 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Erreur email : ' + JSON.stringify(err) })
     }
 
-    // Marquer alerte_envoyee = true pour cette session
     if (resultatsId) {
       await fetch(
         `${SUPA_URL}/rest/v1/resultats?id=eq.${resultatsId}`,
