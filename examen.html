@@ -442,7 +442,8 @@ async function sauvegarder(){
     const {error}=await sb.from('examens_blancs').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',score:nbOk,total:20,temps_secondes:tempsSecondes,scores_themes:themes,questions_ratees:questionsRatees,abandonne:false,questions_posees:questionsIds})
     if(error){console.error('Erreur sauvegarde:',error.message);return}
     saved=true;console.log('✅ Examen sauvegardé')
-    if(emailParent){try{await fetch('/api/email-brevet-blanc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emailParent:emailParent,prenom:prenom||'',nom:nom||'',score:nbOk,total:20,pct:Math.round((nbOk/20)*100),scoresThemes:themes,tempsSecondes:tempsSecondes})});console.log('✅ Email envoyé')}catch(emailErr){console.error('Erreur email:',emailErr.message)}}
+    if(emailParent){try{await fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'brevet-blanc',emailParent:emailParent,prenom:prenom||'',nom:nom||'',score:nbOk,total:20,pct:Math.round((nbOk/20)*100),scoresThemes:themes,tempsSecondes:tempsSecondes})});console.log('✅ Email envoyé')}catch(emailErr){console.error('Erreur email:',emailErr.message)}}
+    
   }catch(e){console.log('Erreur:',e.message)}
 }
 
