@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1B2A4A">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ACADEMIKA">
+<title>Connexion — ACADEMIKA</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo">ACADEMIKA</a>
+  <nav class="main-nav">
+    <a href="index.html#quiz">Quiz &amp; abonnement</a>
+    <a href="cours-particuliers.html">Cours particuliers</a>
+    <a href="stages-vacances.html">Stages vacances</a>
+    <a href="index.html#methode">Méthode</a>
+    <a href="index.html#contact">Contact</a>
+  </nav>
+</header>
+
+<div class="container">
+  <div class="card form-card" id="content-card">
+    <div class="form-logo">
+      <div>∑</div>
+      <h1>ACADEMIKA</h1>
+      <p id="logo-subtitle" style="color:#666;font-size:13px;margin-top:4px">Prépare ton brevet avec des QCM</p>
+    </div>
+    <div id="login-view">
+      <div class="form-tabs">
+        <button class="form-tab active" onclick="setMode('login')">Se connecter</button>
+        <button class="form-tab" onclick="setMode('register')">Créer un compte</button>
+      </div>
+      <div id="champs-connexion">
+        <label>Prénom</label>
+        <input type="text" id="login-prenom" placeholder="Ex: Lucas">
+        <label>Nom</label>
+        <input type="text" id="login-nom" placeholder="Ex: Martin">
+        <label>Mot de passe</label>
+        <div style="position:relative">
+          <input type="password" id="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') soumettre()" style="padding-right:40px;width:100%">
+          <span onclick="toggleMdp()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil">👁️</span>
+        </div>
+        <div class="form-forgot"><a href="#" onclick="afficherReset()">Mot de passe oublié ?</a></div>
+      </div>
+      <div id="champs-inscription" style="display:none">
+        <div class="form-info-box">📋 L'inscription se fait avec les parents — l'email des parents est nécessaire pour recevoir les résultats.</div>
+        <label>Prénom de l'élève</label>
+        <input type="text" id="prenom" placeholder="Ex: Lucas">
+        <label>Nom de l'élève</label>
+        <input type="text" id="nom" placeholder="Ex: Martin">
+        <label>Email des parents</label>
+        <input type="email" id="email-parent" placeholder="parents@gmail.com">
+        <label>Mot de passe</label>
+        <div style="position:relative">
+          <input type="password" id="password-register" placeholder="••••••••" style="padding-right:40px;width:100%">
+          <span onclick="toggleMdpRegister()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil2">👁️</span>
+        </div>
+        <div id="champ-source" style="margin-top:14px;display:none">
+          <label style="margin-bottom:8px;display:block">Comment avez-vous connu Academika ? <span style="color:#999;font-size:11px">(optionnel)</span></label>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="source" value="ami" style="width:auto"> Un ami / bouche à oreille</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="source" value="internet" style="width:auto"> Recherche internet</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="source" value="reseaux" style="width:auto"> Réseaux sociaux</label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="source" value="autre" style="width:auto"> Autre</label>
+          </div>
+        </div>
+      </div>
+      <button class="form-btn" id="btn" onclick="soumettre()">Se connecter</button>
+      <div class="form-msg" id="msg"></div>
+    </div>
+    <div id="reset-view" style="display:none">
+      <p style="color:#666;font-size:14px;margin-bottom:1.5rem;line-height:1.6">Entre l'adresse email utilisée à l'inscription pour réinitialiser le mot de passe.</p>
+      <label>Email des parents</label>
+      <input type="email" id="reset-email" placeholder="parents@gmail.com">
+      <button class="form-btn" onclick="resetPassword()">📧 Envoyer le lien</button>
+      <button class="form-btn form-btn-secondary" onclick="afficherLogin()">← Retour à la connexion</button>
+      <div class="form-msg" id="reset-msg"></div>
+    </div>
+    <div id="nouveau-mdp-view" style="display:none">
+      <p style="color:#666;font-size:14px;margin-bottom:1.5rem;line-height:1.6">Entre ton nouveau mot de passe ci-dessous.</p>
+      <label>Nouveau mot de passe</label>
+      <div style="position:relative">
+        <input type="password" id="new-password" placeholder="••••••••" style="padding-right:40px;width:100%">
+        <span onclick="toggleNouveauMdp()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil3">👁️</span>
+      </div>
+      <button class="form-btn" onclick="sauvegarderNouveauMdp()">✅ Sauvegarder le mot de passe</button>
+      <div class="form-msg" id="new-msg"></div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <span class="logo">ACADEMIKA</span>
+  <div class="footer-contact">academika.fr · 📞 06 26 53 90 13</div>
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true }
+})
+let mode = 'login'
+const urlParams = new URLSearchParams(window.location.search)
+const utmSource = urlParams.get('utm_source') || ''
+
+async function init() {
+  const hash = window.location.hash
+  if (hash && hash.includes('type=recovery')) { afficherNouveauMdp(); return }
+  const { data } = await sb.auth.getSession()
+  if (data.session) window.location.href = 'quiz.html'
+}
+
+function afficherChampSource() {
+  const champ = document.getElementById('champ-source')
+  if (champ) champ.style.display = utmSource ? 'none' : 'block'
+}
+
+function genererFauxEmail(prenom, nom) {
+  const code = Math.random().toString(36).substring(2, 6)
+  const p = prenom.toLowerCase().replace(/[^a-z]/g, '')
+  const n = nom.toLowerCase().replace(/[^a-z]/g, '')
+  return `${p}_${n}_${code}@academika.app`
+}
+
+function setMode(m) {
+  mode = m
+  document.querySelectorAll('.form-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&m==='login')||(i===1&&m==='register')))
+  document.getElementById('btn').textContent = m === 'login' ? 'Se connecter' : 'Créer mon compte'
+  document.getElementById('msg').className = 'form-msg'
+  document.getElementById('champs-connexion').style.display = m === 'login' ? 'block' : 'none'
+  document.getElementById('champs-inscription').style.display = m === 'register' ? 'block' : 'none'
+  if (m === 'register') afficherChampSource()
+}
+
+async function soumettre() {
+  const btn = document.getElementById('btn')
+  btn.disabled = true
+  btn.textContent = 'Chargement...'
+  if (mode === 'login') {
+    const prenom = document.getElementById('login-prenom').value.trim()
+    const nom = document.getElementById('login-nom').value.trim()
+    const password = document.getElementById('password').value
+    if (!prenom || !nom || !password) {
+      afficherMsg('Remplis tous les champs.', 'error')
+      btn.disabled = false; btn.textContent = 'Se connecter'; return
+    }
+    const { data: fauxEmailTrouve, error: errProfil } = await sb
+      .rpc('verifier_login', { p_prenom: prenom.toLowerCase(), p_nom: nom.toLowerCase() })
+    if (errProfil || !fauxEmailTrouve) {
+      afficherMsg('Prénom ou nom introuvable. Vérifie ou crée un compte.', 'error')
+      btn.disabled = false; btn.textContent = 'Se connecter'; return
+    }
+    const { error } = await sb.auth.signInWithPassword({ email: fauxEmailTrouve, password })
+    if (error) afficherMsg('Mot de passe incorrect. Réessaie.', 'error')
+    else window.location.href = 'quiz.html'
+  } else {
+    const prenom = document.getElementById('prenom').value.trim()
+    const nom = document.getElementById('nom').value.trim()
+    const emailParent = document.getElementById('email-parent').value.trim()
+    const password = document.getElementById('password-register').value
+    if (!prenom) { afficherMsg('Entre le prénom.', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
+    if (!nom) { afficherMsg('Entre le nom.', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
+    if (!emailParent) { afficherMsg("Entre l'email des parents.", 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
+    if (!password || password.length < 6) { afficherMsg('Mot de passe trop court (6 caractères min).', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
+    const { data: existe } = await sb.rpc('verifier_disponibilite', { p_prenom: prenom.toLowerCase(), p_nom: nom.toLowerCase() })
+    if (existe) {
+      afficherMsg('Ce prénom + nom est déjà utilisé.', 'error')
+      btn.disabled = false; btn.textContent = 'Créer mon compte'; return
+    }
+    const fauxEmail = genererFauxEmail(prenom, nom)
+    const { data: signUpData, error } = await sb.auth.signUp({
+      email: fauxEmail, password,
+      options: { data: { prenom, nom, email_parent: emailParent } }
+    })
+    if (error) {
+      afficherMsg('Erreur : ' + error.message, 'error')
+    } else {
+      let source = utmSource || ''
+      if (!source) {
+        const radioChecked = document.querySelector('input[name="source"]:checked')
+        if (radioChecked) source = radioChecked.value
+      }
+      await sb.from('profils').insert({
+        user_id: signUpData.user.id,
+        prenom: prenom.toLowerCase(), nom: nom.toLowerCase(),
+        prenom_affiche: prenom, nom_affiche: nom,
+        email_parent: emailParent, faux_email: fauxEmail,
+        source: source || null
+      })
+      fetch('/api/email-inscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prenom, nom, emailParent })
+      }).catch(e => console.log(e.message))
+      afficherMsg('✅ Compte créé ! Tu peux maintenant te connecter.', 'success')
+      setTimeout(() => setMode('login'), 2000)
+    }
+  }
+  btn.disabled = false
+  btn.textContent = mode === 'login' ? 'Se connecter' : 'Créer mon compte'
+}
+
+async function resetPassword() {
+  const email = document.getElementById('reset-email').value.trim()
+  if (!email) { afficherResetMsg("Entre l'email des parents.", 'error'); return }
+  try {
+    const res = await fetch('/api/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'reset-password', email_parent: email })
+    })
+    const data = await res.json()
+    afficherResetMsg('📧 ' + data.message, 'success')
+  } catch(e) {
+    afficherResetMsg('📧 Si un compte existe avec cet email, un lien a été envoyé.', 'success')
+  }
+}
+
+function afficherNouveauMdp() {
+  document.getElementById('login-view').style.display = 'none'
+  document.getElementById('reset-view').style.display = 'none'
+  document.getElementById('nouveau-mdp-view').style.display = 'block'
+  document.getElementById('logo-subtitle').textContent = 'Créer un nouveau mot de passe'
+}
+
+async function sauvegarderNouveauMdp() {
+  const password = document.getElementById('new-password').value
+  const msg = document.getElementById('new-msg')
+  if (!password || password.length < 6) { msg.textContent = 'Le mot de passe doit faire au moins 6 caractères.'; msg.className = 'form-msg error'; return }
+  const { error } = await sb.auth.updateUser({ password })
+  if (error) { msg.textContent = 'Erreur : ' + error.message; msg.className = 'form-msg error' }
+  else { msg.textContent = '✅ Mot de passe mis à jour ! Redirection...'; msg.className = 'form-msg success'; setTimeout(() => window.location.href = 'quiz.html', 2000) }
+}
+
+function afficherReset() {
+  document.getElementById('login-view').style.display = 'none'
+  document.getElementById('reset-view').style.display = 'block'
+  document.getElementById('logo-subtitle').textContent = 'Réinitialisation du mot de passe'
+}
+
+function afficherLogin() {
+  document.getElementById('login-view').style.display = 'block'
+  document.getElementById('reset-view').style.display = 'none'
+  document.getElementById('nouveau-mdp-view').style.display = 'none'
+  document.getElementById('logo-subtitle').textContent = 'Prépare ton brevet avec des QCM'
+}
+
+function toggleMdp() {
+  const i = document.getElementById('password'), o = document.getElementById('oeil')
+  i.type = i.type === 'password' ? 'text' : 'password'
+  o.textContent = i.type === 'password' ? '👁️' : '🙈'
+}
+function toggleMdpRegister() {
+  const i = document.getElementById('password-register'), o = document.getElementById('oeil2')
+  i.type = i.type === 'password' ? 'text' : 'password'
+  o.textContent = i.type === 'password' ? '👁️' : '🙈'
+}
+function toggleNouveauMdp() {
+  const i = document.getElementById('new-password'), o = document.getElementById('oeil3')
+  i.type = i.type === 'password' ? 'text' : 'password'
+  o.textContent = i.type === 'password' ? '👁️' : '🙈'
+}
+function afficherMsg(t, type) {
+  const m = document.getElementById('msg'); m.textContent = t; m.className = 'form-msg ' + type
+}
+function afficherResetMsg(t, type) {
+  const m = document.getElementById('reset-msg'); m.textContent = t; m.className = 'form-msg ' + type
+}
+
+init()
+</script>
+</body>
+</html>
