@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1B2A4A">
+<title>Stages vacances — ACADEMIKA</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.agenda-item { display: flex; align-items: center; gap: 20px; background: var(--light-bg); border-radius: 10px; padding: 18px 22px; margin-bottom: 12px; }
+.agenda-item.revision { background: var(--navy); padding: 20px 22px; }
+.agenda-period { font-size: 11px; font-weight: 600; color: var(--bordeaux); text-transform: uppercase; letter-spacing: 0.5px; width: 90px; flex-shrink: 0; }
+.agenda-item.revision .agenda-period { color: var(--gold); }
+.agenda-sep { width: 1px; height: 28px; background: #D8D4C8; }
+.agenda-item.revision .agenda-sep { background: rgba(255,255,255,0.2); }
+.agenda-domain { font-size: 14px; font-weight: 500; color: var(--navy); }
+.agenda-item.revision .agenda-domain { color: var(--cream); }
+.agenda-sub { font-size: 12px; color: rgba(250,249,246,0.6); margin-top: 2px; }
+.badges-row { display: flex; justify-content: center; gap: 12px; margin-bottom: 40px; flex-wrap: wrap; }
+.badge-pill { background: var(--light-bg); border-radius: 20px; padding: 8px 18px; font-size: 13px; color: var(--navy); font-weight: 500; }
+.note-box { background: var(--light-bg); border-radius: 10px; padding: 20px 24px; margin: 32px 0; text-align: center; }
+.note-box p { font-size: 13px; color: var(--slate); line-height: 1.6; }
+.note-box a { color: var(--bordeaux); font-weight: 500; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <a href="index.html" class="logo">ACADEMIKA</a>
+  <nav class="main-nav">
+    <a href="index.html#quiz">Quiz &amp; abonnement</a>
+    <a href="cours-particuliers.html">Cours particuliers</a>
+    <a href="stages-vacances.html">Stages vacances</a>
+    <a href="index.html#methode">Méthode</a>
+    <a href="index.html#contact">Contact</a>
+  </nav>
+  <a href="connexion.html" class="btn-connexion">Connexion</a>
+</header>
+
+<section class="hero">
+  <div class="hero-tag">Un parcours complet sur l'année</div>
+  <div class="hero-title">Un domaine par période, jusqu'au brevet</div>
+</section>
+
+<section>
+  <div class="badges-row">
+    <span class="badge-pill">5 élèves maximum</span>
+    <span class="badge-pill">Présentiel Île-de-France</span>
+  </div>
+
+  <div class="agenda-item">
+    <div class="agenda-period">Toussaint</div>
+    <div class="agenda-sep"></div>
+    <div class="agenda-domain">Nombres et calculs</div>
+  </div>
+
+  <div class="agenda-item">
+    <div class="agenda-period">Noël</div>
+    <div class="agenda-sep"></div>
+    <div class="agenda-domain">Espace et géométrie</div>
+  </div>
+
+  <div class="agenda-item">
+    <div class="agenda-period">Hiver</div>
+    <div class="agenda-sep"></div>
+    <div class="agenda-domain">Organisation et données, fonctions</div>
+  </div>
+
+  <div class="agenda-item">
+    <div class="agenda-period">Printemps</div>
+    <div class="agenda-sep"></div>
+    <div class="agenda-domain">Grandeurs, mesures et algorithmique</div>
+  </div>
+
+  <div class="agenda-item revision">
+    <div class="agenda-period">Mai</div>
+    <div class="agenda-sep"></div>
+    <div>
+      <div class="agenda-domain">Révision générale + brevet blanc</div>
+      <div class="agenda-sub">Tous les domaines, conditions réelles d'examen</div>
+    </div>
+  </div>
+
+  <div class="note-box">
+    <p>
+      Envie d'avancer sur un sujet que tu n'as pas encore vu en classe ? C'est aussi une bonne façon de prendre de l'avance.<br>
+      Chaque domaine revient l'année suivante — et les <a href="cours-particuliers.html">cours particuliers</a> restent disponibles toute l'année pour un accompagnement ciblé.
+    </p>
+  </div>
+
+  <div style="text-align:center">
+    <a href="index.html#contact" class="btn-connexion" style="font-size:15px;padding:13px 32px">Réserver une place</a>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <span class="logo">ACADEMIKA</span>
+  <div class="footer-links">
+    <a href="index.html#quiz">Quiz &amp; abonnement</a>
+    <a href="cours-particuliers.html">Cours particuliers</a>
+    <a href="stages-vacances.html">Stages vacances</a>
+    <a href="connexion.html">Connexion</a>
+  </div>
+  <div class="footer-contact">academika.fr · 📞 06 26 53 90 13</div>
+</footer>
+
+</body>
+</html>
