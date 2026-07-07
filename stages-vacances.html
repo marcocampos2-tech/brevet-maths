@@ -10,13 +10,13 @@
 <link rel="stylesheet" href="style.css">
 <style>
 .agenda-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
-.agenda-item { display: flex; flex-direction: column; gap: 8px; background: var(--light-bg); border-radius: 10px; padding: 18px 22px; }
-.agenda-item.revision { background: var(--navy); padding: 20px 22px; flex-direction: row; align-items: center; gap: 20px; }
-.agenda-period { font-size: 11px; font-weight: 600; color: var(--bordeaux); text-transform: uppercase; letter-spacing: 0.5px; }
+.agenda-item { display: flex; align-items: center; gap: 14px; background: var(--light-bg); border-radius: 10px; padding: 12px 18px; }
+.agenda-item.revision { background: var(--navy); padding: 18px 22px; gap: 20px; }
+.agenda-period { font-size: 11px; font-weight: 600; color: var(--bordeaux); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
 .agenda-item.revision .agenda-period { color: var(--gold); width: 90px; flex-shrink: 0; }
-.agenda-sep { width: 1px; height: 28px; background: rgba(255,255,255,0.2); }
-.agenda-domain { font-size: 14px; font-weight: 500; color: var(--navy); }
-.agenda-item.revision .agenda-domain { color: var(--cream); }
+.agenda-sep { width: 1px; height: 24px; background: rgba(255,255,255,0.2); flex-shrink: 0; }
+.agenda-domain { font-size: 13px; font-weight: 500; color: var(--navy); line-height: 1.3; }
+.agenda-item.revision .agenda-domain { color: var(--cream); font-size: 14px; }
 .agenda-sub { font-size: 12px; color: rgba(250,249,246,0.6); margin-top: 2px; }
 .badges-row { display: flex; justify-content: center; gap: 12px; margin-bottom: 40px; flex-wrap: wrap; }
 .badge-pill { background: var(--light-bg); border-radius: 20px; padding: 8px 18px; font-size: 13px; color: var(--navy); font-weight: 500; }
@@ -56,21 +56,25 @@
   <div class="agenda-grid">
     <div class="agenda-item">
       <div class="agenda-period">Toussaint</div>
+      <div class="agenda-sep"></div>
       <div class="agenda-domain">Nombres et calculs</div>
     </div>
 
     <div class="agenda-item">
       <div class="agenda-period">Noël</div>
+      <div class="agenda-sep"></div>
       <div class="agenda-domain">Espace et géométrie</div>
     </div>
 
     <div class="agenda-item">
       <div class="agenda-period">Hiver</div>
+      <div class="agenda-sep"></div>
       <div class="agenda-domain">Organisation et données, fonctions</div>
     </div>
 
     <div class="agenda-item">
       <div class="agenda-period">Printemps</div>
+      <div class="agenda-sep"></div>
       <div class="agenda-domain">Grandeurs, mesures et algorithmique</div>
     </div>
   </div>
