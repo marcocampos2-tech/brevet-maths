@@ -9,12 +9,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
-.agenda-item { display: flex; align-items: center; gap: 20px; background: var(--light-bg); border-radius: 10px; padding: 18px 22px; margin-bottom: 12px; }
-.agenda-item.revision { background: var(--navy); padding: 20px 22px; }
-.agenda-period { font-size: 11px; font-weight: 600; color: var(--bordeaux); text-transform: uppercase; letter-spacing: 0.5px; width: 90px; flex-shrink: 0; }
-.agenda-item.revision .agenda-period { color: var(--gold); }
-.agenda-sep { width: 1px; height: 28px; background: #D8D4C8; }
-.agenda-item.revision .agenda-sep { background: rgba(255,255,255,0.2); }
+.agenda-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
+.agenda-item { display: flex; flex-direction: column; gap: 8px; background: var(--light-bg); border-radius: 10px; padding: 18px 22px; }
+.agenda-item.revision { background: var(--navy); padding: 20px 22px; flex-direction: row; align-items: center; gap: 20px; }
+.agenda-period { font-size: 11px; font-weight: 600; color: var(--bordeaux); text-transform: uppercase; letter-spacing: 0.5px; }
+.agenda-item.revision .agenda-period { color: var(--gold); width: 90px; flex-shrink: 0; }
+.agenda-sep { width: 1px; height: 28px; background: rgba(255,255,255,0.2); }
 .agenda-domain { font-size: 14px; font-weight: 500; color: var(--navy); }
 .agenda-item.revision .agenda-domain { color: var(--cream); }
 .agenda-sub { font-size: 12px; color: rgba(250,249,246,0.6); margin-top: 2px; }
@@ -23,6 +23,9 @@
 .note-box { background: var(--light-bg); border-radius: 10px; padding: 20px 24px; margin: 32px 0; text-align: center; }
 .note-box p { font-size: 13px; color: var(--slate); line-height: 1.6; }
 .note-box a { color: var(--bordeaux); font-weight: 500; text-decoration: none; }
+@media (max-width: 640px) {
+  .agenda-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
@@ -50,28 +53,26 @@
     <span class="badge-pill">Présentiel Île-de-France</span>
   </div>
 
-  <div class="agenda-item">
-    <div class="agenda-period">Toussaint</div>
-    <div class="agenda-sep"></div>
-    <div class="agenda-domain">Nombres et calculs</div>
-  </div>
+  <div class="agenda-grid">
+    <div class="agenda-item">
+      <div class="agenda-period">Toussaint</div>
+      <div class="agenda-domain">Nombres et calculs</div>
+    </div>
 
-  <div class="agenda-item">
-    <div class="agenda-period">Noël</div>
-    <div class="agenda-sep"></div>
-    <div class="agenda-domain">Espace et géométrie</div>
-  </div>
+    <div class="agenda-item">
+      <div class="agenda-period">Noël</div>
+      <div class="agenda-domain">Espace et géométrie</div>
+    </div>
 
-  <div class="agenda-item">
-    <div class="agenda-period">Hiver</div>
-    <div class="agenda-sep"></div>
-    <div class="agenda-domain">Organisation et données, fonctions</div>
-  </div>
+    <div class="agenda-item">
+      <div class="agenda-period">Hiver</div>
+      <div class="agenda-domain">Organisation et données, fonctions</div>
+    </div>
 
-  <div class="agenda-item">
-    <div class="agenda-period">Printemps</div>
-    <div class="agenda-sep"></div>
-    <div class="agenda-domain">Grandeurs, mesures et algorithmique</div>
+    <div class="agenda-item">
+      <div class="agenda-period">Printemps</div>
+      <div class="agenda-domain">Grandeurs, mesures et algorithmique</div>
+    </div>
   </div>
 
   <div class="agenda-item revision">
