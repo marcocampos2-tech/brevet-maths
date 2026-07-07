@@ -4,448 +4,99 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#0A2B6E">
+<meta name="theme-color" content="#1B2A4A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ACADEMIKA">
 <meta name="description" content="Révise ton Brevet de Maths avec des QCM en ligne — 100% gratuit pour les élèves de 3e">
 <title>ACADEMIKA — Brevet Maths</title>
-<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800;900&family=Barlow+Condensed:wght@700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --navy: #0A2B6E; --blue: #1456C0; --red: #CC2020; --gold: #FFCC00;
-  --white: #ffffff; --light: #EDF4FF; --gray: #F5F5F5; --text: #1a1a2e; --muted: #6B7280;
-}
-html { scroll-behavior: smooth; }
-body { font-family: 'Barlow', sans-serif; background: var(--white); color: var(--text); min-height: 100vh; }
-
-.hero { background: var(--navy); padding: 3rem 1.5rem 2.5rem; text-align: center; position: relative; overflow: hidden; }
-.hero::before { content: ''; position: absolute; top: -40px; right: -40px; width: 180px; height: 180px; background: rgba(255,255,255,0.04); border-radius: 50%; }
-.hero::after { content: ''; position: absolute; bottom: -30px; left: -30px; width: 120px; height: 120px; background: rgba(204,32,32,0.15); border-radius: 50%; }
-.hero-logo { font-family: 'Barlow Condensed', sans-serif; font-size: 2.8rem; font-weight: 900; color: var(--white); letter-spacing: 2px; line-height: 1; margin-bottom: 0.3rem; position: relative; z-index: 1; }
-.hero-redbar { width: 60px; height: 3px; background: var(--red); margin: 0.5rem auto 0.8rem; border-radius: 2px; }
-.hero-tag { font-size: 0.8rem; font-weight: 600; color: var(--gold); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 0.8rem; position: relative; z-index: 1; }
-.hero-title { font-size: 1.5rem; font-weight: 800; color: var(--white); line-height: 1.25; margin-bottom: 0.5rem; position: relative; z-index: 1; }
-.hero-title span { color: var(--gold); }
-.hero-sub { font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-bottom: 1.8rem; position: relative; z-index: 1; }
-.hero-cta { display: inline-block; background: var(--red); color: var(--white); font-family: 'Barlow', sans-serif; font-size: 1rem; font-weight: 800; padding: 0.9rem 2rem; border-radius: 50px; text-decoration: none; letter-spacing: 0.5px; box-shadow: 0 4px 20px rgba(204,32,32,0.4); transition: transform 0.15s; position: relative; z-index: 1; }
-.hero-cta:active { transform: scale(0.97); }
-.hero-free { margin-top: 1rem; font-size: 0.75rem; color: rgba(255,255,255,0.5); position: relative; z-index: 1; }
-.hero-free strong { color: #4ade80; }
-.hero-login { display: inline-block; margin-top: 0.8rem; font-size: 1rem; font-weight: 700; color: white; text-decoration: none; border-bottom: 2px solid rgba(255,255,255,0.5); padding-bottom: 2px; position: relative; z-index: 1; transition: color 0.15s; }
-.hero-login:hover { border-color: white; }
-
-.section { padding: 2rem 1.5rem; }
-.section:nth-child(even) { background: var(--light); }
-.section-title { font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem; font-weight: 900; color: var(--navy); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.5rem; }
-.section-title::after { content: ''; flex: 1; height: 2px; background: linear-gradient(90deg, var(--blue), transparent); border-radius: 1px; }
-
-.steps { display: flex; flex-direction: column; gap: 1rem; }
-.step { display: flex; align-items: center; gap: 1rem; background: var(--white); border-radius: 12px; padding: 0.9rem 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
-.step-num { width: 36px; height: 36px; border-radius: 50%; background: var(--navy); color: var(--white); font-weight: 900; font-size: 1rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.step-text { font-size: 0.9rem; font-weight: 600; color: var(--text); line-height: 1.3; }
-.step-text span { color: var(--blue); font-weight: 700; }
-
-.chapitres { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 1rem; }
-.chap { background: var(--white); border: 1.5px solid #C8D8F0; border-radius: 10px; padding: 0.7rem 0.8rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; font-weight: 700; color: var(--navy); }
-.chap-icon { font-size: 1.1rem; }
-.niveaux { display: flex; gap: 0.6rem; margin-top: 0.5rem; }
-.niv { flex: 1; text-align: center; padding: 0.4rem; border-radius: 8px; font-size: 0.75rem; font-weight: 700; }
-.niv.easy { background: #DCFCE7; color: #15803D; }
-.niv.medium { background: #FEF3C7; color: #B45309; }
-.niv.hard { background: #FEE2E2; color: #DC2626; }
-
-.brevet-card { background: var(--navy); border-radius: 14px; padding: 1.2rem; display: flex; align-items: center; gap: 1rem; margin-top: 0.5rem; }
-.brevet-icon { font-size: 2rem; flex-shrink: 0; }
-.brevet-title { font-size: 1rem; font-weight: 800; color: var(--white); margin-bottom: 0.2rem; }
-.brevet-sub { font-size: 0.78rem; color: rgba(255,255,255,0.65); }
-
-.parent-items { display: flex; flex-direction: column; gap: 0.8rem; }
-.parent-item { display: flex; align-items: flex-start; gap: 0.8rem; background: var(--white); border-radius: 12px; padding: 0.9rem 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-.parent-ico { font-size: 1.4rem; flex-shrink: 0; margin-top: 0.1rem; }
-.parent-text-title { font-size: 0.88rem; font-weight: 700; color: var(--navy); margin-bottom: 0.15rem; }
-.parent-text-sub { font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
-
-.qui-card { background: var(--white); border-left: 4px solid var(--red); border-radius: 0 12px 12px 0; padding: 1rem 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-size: 0.9rem; color: var(--text); line-height: 1.6; }
-.qui-card strong { color: var(--navy); font-weight: 800; }
-
-.cta-final { background: var(--navy); padding: 2rem 1.5rem; text-align: center; }
-.cta-final-title { font-family: 'Barlow Condensed', sans-serif; font-size: 1.4rem; font-weight: 900; color: var(--white); margin-bottom: 0.4rem; }
-.cta-final-sub { font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-bottom: 1.2rem; }
-
-#form-section { background: var(--gray); padding: 2rem 1.5rem; }
-.form-label { font-family: 'Barlow Condensed', sans-serif; font-size: 1.1rem; font-weight: 900; color: var(--navy); text-transform: uppercase; letter-spacing: 1px; text-align: center; margin-bottom: 1.2rem; }
-.card { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 1.5rem; width: 100%; max-width: 420px; margin: 0 auto; }
-.logo { text-align: center; margin-bottom: 1.5rem; }
-.logo div { font-size: 36px; margin-bottom: 6px; }
-.logo h1 { font-size: 20px; font-weight: 700; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1px; }
-.logo p { color: #666; font-size: 13px; margin-top: 4px; }
-.tabs { display: flex; gap: 8px; margin-bottom: 1.5rem; }
-.tab { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #e0e0d8; background: white; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Barlow', sans-serif; }
-.tab.active { background: var(--navy); color: white; border-color: var(--navy); }
-label { font-size: 13px; color: #666; display: block; margin-bottom: 4px; margin-top: 12px; }
-input { width: 100%; padding: 10px 14px; border: 1px solid #d0d0c8; border-radius: 8px; font-size: 14px; font-family: 'Barlow', sans-serif; }
-input:focus { outline: none; border-color: var(--navy); }
-.btn { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--navy); color: white; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 16px; font-family: 'Barlow', sans-serif; transition: background 0.15s; }
-.btn:hover { background: var(--blue); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-secondary { background: white; color: var(--navy); border: 1px solid #d0d0c8; margin-top: 8px; }
-.btn-secondary:hover { background: #f5f5f0; }
-.msg { font-size: 13px; margin-top: 10px; padding: 8px 12px; border-radius: 6px; display: none; }
-.msg.error { background: #fef2f2; color: #dc2626; display: block; }
-.msg.success { background: #f0fdf4; color: #16a34a; display: block; }
-.forgot { text-align: right; margin-top: 6px; }
-.forgot a { font-size: 12px; color: #666; text-decoration: none; }
-.reset-view { display: none; }
-.info-box { background: #eef2ff; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #3730a3; margin-top: 12px; line-height: 1.5; }
-.footer { background: #111; padding: 1.2rem 1.5rem; text-align: center; font-size: 0.75rem; color: rgba(255,255,255,0.4); }
-.footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
-@keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-.hero-logo, .hero-title, .hero-cta { animation: fadeUp 0.5s ease both; }
-.hero-title { animation-delay: 0.1s; }
-.hero-cta { animation-delay: 0.2s; }
-</style>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- HERO -->
+<header class="site-header">
+  <a href="index.html" class="logo">ACADEMIKA</a>
+  <nav class="main-nav">
+    <a href="#quiz">Quiz &amp; abonnement</a>
+    <a href="cours-particuliers.html">Cours particuliers</a>
+    <a href="stages-vacances.html">Stages vacances</a>
+    <a href="#methode">Méthode</a>
+    <a href="#contact">Contact</a>
+  </nav>
+  <a href="connexion.html" class="btn-connexion">Connexion</a>
+</header>
+
 <section class="hero">
-  <div class="hero-logo">ACADEMIKA.FR</div>
-  <div class="hero-redbar"></div>
-  <div class="hero-tag">Brevet de Maths · Élèves de 3e</div>
-  <h1 class="hero-title">Révise avec des <span>QCM en ligne</span><br>et réussis ton brevet</h1>
-  <p class="hero-sub">5 exercices par jour · Corrigés immédiats · Résultats aux parents</p>
-  <a href="#form-section" class="hero-cta" onclick="setModeAfterScroll('register')">Créer mon compte gratuit →</a>
-  <p class="hero-free"><strong>100% gratuit</strong> · Sans carte bancaire · Sans engagement</p>
-  <a href="#form-section" class="hero-login" onclick="setModeAfterScroll('login')">Déjà inscrit ? Se connecter →</a>
+  <div class="hero-tag">Brevet de maths · Élèves de 3e</div>
+  <div class="hero-title">Réussis ton brevet de maths avec un vrai prof</div>
+  <div class="hero-sub">Quiz ciblés, explications détaillées, suivi des parents</div>
+  <a href="connexion.html" class="btn-gold">Commencer gratuitement</a>
 </section>
 
-<!-- BANDEAU BREVET BLANC — désactivé temporairement, session 17/24 juin terminée
-<div class="bandeau-brevet">
-  <div class="bandeau-brevet-title">📅 EXAMEN BLANC PRÉSENTIEL — 17 &amp; 24 JUIN</div>
-  <div class="bandeau-brevet-sub">Ponthierry 77310 · 15h00 · 5 places max · Gratuit</div>
-  <a href="/brevet-blanc.html" class="bandeau-brevet-btn">S'inscrire →</a>
-</div>
--->
-
-<!-- COMMENT ÇA MARCHE -->
-<section class="section">
-  <div class="section-title">Comment ça marche</div>
-  <div class="steps">
-    <div class="step"><div class="step-num">1</div><div class="step-text">Crée ton compte en <span>2 minutes</span> avec l'email de tes parents</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text">Choisis ton <span>chapitre</span> et ton <span>niveau</span></div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text">Fais tes QCM · Reçois ton <span>score immédiatement</span></div></div>
+<section id="quiz">
+  <div class="section-label">Comment ça marche</div>
+  <div class="section-title">Trois étapes vers la réussite</div>
+  <div class="steps-grid">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-title">Crée ton compte</div>
+      <div class="step-desc">Inscription gratuite en deux minutes avec l'email des parents</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-title">Choisis ton chapitre</div>
+      <div class="step-desc">Quatre domaines du brevet, du niveau facile au niveau expert</div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-title">Progresse chaque jour</div>
+      <div class="step-desc">Correction immédiate et suivi envoyé aux parents</div>
+    </div>
   </div>
 </section>
 
-<!-- QUIZ PAR CHAPITRE -->
-<section class="section">
-  <div class="section-title">Quiz par chapitre</div>
-  <div class="chapitres">
-    <div class="chap"><span class="chap-icon">🔢</span>Nombres &amp; Calculs</div>
-    <div class="chap"><span class="chap-icon">📐</span>Géométrie</div>
-    <div class="chap"><span class="chap-icon">🔣</span>Algèbre</div>
-    <div class="chap"><span class="chap-icon">📈</span>Stats &amp; Proba</div>
-    <div class="chap"><span class="chap-icon">📉</span>Fonctions</div>
-    <div class="chap"><span class="chap-icon">💻</span>Algorithmes</div>
+<section class="alt-bg">
+  <div class="section-title">Une offre adaptée à chaque besoin</div>
+  <div class="offers-grid">
+    <div class="offer-card">
+      <div class="offer-label">Gratuit</div>
+      <div class="offer-desc">Accès limité aux quiz pour découvrir la méthode</div>
+      <div class="offer-price">0 €</div>
+    </div>
+    <div class="offer-card highlight">
+      <div class="offer-label">Abonnement</div>
+      <div class="offer-desc">Accès complet aux quiz et au suivi de progression</div>
+      <div class="offer-price">par mois</div>
+    </div>
+    <div class="offer-card">
+      <div class="offer-label">Cours particuliers</div>
+      <div class="offer-desc">Accompagnement individuel en visio ou présentiel</div>
+      <div class="offer-price">sur devis</div>
+    </div>
   </div>
-  <div class="niveaux">
-    <div class="niv easy">😊 Facile</div>
-    <div class="niv medium">😐 Moyen</div>
-    <div class="niv hard">😤 Difficile</div>
-  </div>
-  <div class="brevet-card">
-    <div class="brevet-icon">🎯</div>
+</section>
+
+<section id="methode">
+  <div class="method-block">
+    <div class="method-avatar">MC</div>
     <div>
-      <div class="brevet-title">Brevet blanc en ligne</div>
-      <div class="brevet-sub">Mesure ton niveau avec un brevet blanc complet</div>
+      <div class="section-label" style="text-align:left">La méthode</div>
+      <h2 style="font-size:24px;margin-bottom:16px">L'application qu'un ingénieur a créée pour ses propres élèves</h2>
+      <p style="font-size:14px;line-height:1.7">Méthode simple, exercices ciblés brevet, corrections claires. Un outil pensé pour progresser vite, sans se décourager.</p>
     </div>
   </div>
 </section>
 
-<!-- POUR LES PARENTS -->
-<section class="section">
-  <div class="section-title">Pour les parents</div>
-  <div class="parent-items">
-    <div class="parent-item"><div class="parent-ico">📧</div><div><div class="parent-text-title">Résultats par email après chaque session</div><div class="parent-text-sub">Vous êtes informés automatiquement des progrès de votre enfant</div></div></div>
-    <div class="parent-item"><div class="parent-ico">🔒</div><div><div class="parent-text-title">Inscription sécurisée avec votre email</div><div class="parent-text-sub">L'email des parents est requis à l'inscription</div></div></div>
-    <div class="parent-item"><div class="parent-ico">✅</div><div><div class="parent-text-title">100% gratuit · Sans carte bancaire</div><div class="parent-text-sub">Aucun abonnement · Aucun engagement</div></div></div>
+<footer class="site-footer" id="contact">
+  <span class="logo">ACADEMIKA</span>
+  <div class="footer-links">
+    <a href="#quiz">Quiz &amp; abonnement</a>
+    <a href="cours-particuliers.html">Cours particuliers</a>
+    <a href="stages-vacances.html">Stages vacances</a>
+    <a href="connexion.html">Connexion</a>
   </div>
-</section>
-
-<!-- QUI SOMMES-NOUS -->
-<section class="section">
-  <div class="section-title">Qui sommes-nous</div>
-  <div class="qui-card">
-    <strong>L'application qu'un ingénieur a créée pour ses propres élèves.</strong><br><br>
-    Méthode simple, exercices ciblés brevet, corrections claires. Un outil pensé pour progresser vite, sans se décourager.
-  </div>
-</section>
-
-<!-- CTA FINAL -->
-<section class="cta-final">
-  <div class="cta-final-title">Prêt à commencer ?</div>
-  <div class="cta-final-sub">Inscription gratuite en 2 minutes</div>
-  <a href="#form-section" class="hero-cta">Créer mon compte →</a>
-</section>
-<!-- FORMULAIRE -->
-<section id="form-section">
-<div style="background:var(--gray);padding:2rem 1.5rem;">
-  <div class="form-label">Connexion / Inscription</div>
-  <div class="card" id="content-card">
-    <div class="logo">
-      <div>∑</div>
-      <h1>ACADEMIKA</h1>
-      <p id="logo-subtitle">Prépare ton brevet avec des QCM</p>
-    </div>
-    <div id="login-view">
-      <div class="tabs">
-        <button class="tab active" onclick="setMode('login')">Se connecter</button>
-        <button class="tab" onclick="setMode('register')">Créer un compte</button>
-      </div>
-      <div id="champs-connexion">
-        <label>Prénom</label>
-        <input type="text" id="login-prenom" placeholder="Ex: Lucas">
-        <label>Nom</label>
-        <input type="text" id="login-nom" placeholder="Ex: Martin">
-        <label>Mot de passe</label>
-        <div style="position:relative">
-          <input type="password" id="password" placeholder="••••••••" onkeydown="if(event.key==='Enter') soumettre()" style="padding-right:40px;width:100%">
-          <span onclick="toggleMdp()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil">👁️</span>
-        </div>
-        <div class="forgot"><a href="#" onclick="afficherReset()">Mot de passe oublié ?</a></div>
-      </div>
-      <div id="champs-inscription" style="display:none">
-        <div class="info-box">📋 L'inscription se fait avec les parents — l'email des parents est nécessaire pour recevoir les résultats.</div>
-        <label>Prénom de l'élève</label>
-        <input type="text" id="prenom" placeholder="Ex: Lucas">
-        <label>Nom de l'élève</label>
-        <input type="text" id="nom" placeholder="Ex: Martin">
-        <label>Email des parents</label>
-        <input type="email" id="email-parent" placeholder="parents@gmail.com">
-        <label>Mot de passe</label>
-        <div style="position:relative">
-          <input type="password" id="password-register" placeholder="••••••••" style="padding-right:40px;width:100%">
-          <span onclick="toggleMdpRegister()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil2">👁️</span>
-        </div>
-        <div id="champ-source" style="margin-top:14px;display:none">
-          <label style="margin-bottom:8px;display:block">Comment avez-vous connu Academika ? <span style="color:#999;font-size:11px">(optionnel)</span></label>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="source" value="ami" style="width:auto"> Un ami / bouche à oreille</label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="source" value="internet" style="width:auto"> Recherche internet</label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="source" value="reseaux" style="width:auto"> Réseaux sociaux</label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:400;cursor:pointer"><input type="radio" name="source" value="autre" style="width:auto"> Autre</label>
-          </div>
-        </div>
-      </div>
-      <button class="btn" id="btn" onclick="soumettre()">Se connecter</button>
-      <div class="msg" id="msg"></div>
-    </div>
-    <div id="reset-view" class="reset-view">
-      <p style="color:#666;font-size:14px;margin-bottom:1.5rem;line-height:1.6">Entre l'adresse email utilisée à l'inscription pour réinitialiser le mot de passe.</p>
-      <label>Email des parents</label>
-      <input type="email" id="reset-email" placeholder="parents@gmail.com">
-      <button class="btn" onclick="resetPassword()">📧 Envoyer le lien</button>
-      <button class="btn btn-secondary" onclick="afficherLogin()">← Retour à la connexion</button>
-      <div class="msg" id="reset-msg"></div>
-    </div>
-    <div id="nouveau-mdp-view" style="display:none">
-      <p style="color:#666;font-size:14px;margin-bottom:1.5rem;line-height:1.6">Entre ton nouveau mot de passe ci-dessous.</p>
-      <label>Nouveau mot de passe</label>
-      <div style="position:relative">
-        <input type="password" id="new-password" placeholder="••••••••" style="padding-right:40px;width:100%">
-        <span onclick="toggleNouveauMdp()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="oeil3">👁️</span>
-      </div>
-      <button class="btn" onclick="sauvegarderNouveauMdp()">✅ Sauvegarder le mot de passe</button>
-      <div class="msg" id="new-msg"></div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- FOOTER -->
-<footer class="footer">
-  academika.fr · 📞 06 26 53 90 13
+  <div class="footer-contact">academika.fr · 📞 06 26 53 90 13</div>
 </footer>
 
-<script>
-const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
-const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true }
-})
-let mode = 'login'
-const urlParams = new URLSearchParams(window.location.search)
-const utmSource = urlParams.get('utm_source') || ''
-
-function setModeAfterScroll(m) { setTimeout(() => setMode(m), 400) }
-
-async function init() {
-  const hash = window.location.hash
-  if (hash && hash.includes('type=recovery')) { afficherNouveauMdp(); return }
-  const { data } = await sb.auth.getSession()
-  if (data.session) window.location.href = 'quiz.html'
-}
-
-function afficherChampSource() {
-  const champ = document.getElementById('champ-source')
-  if (champ) champ.style.display = utmSource ? 'none' : 'block'
-}
-
-function genererFauxEmail(prenom, nom) {
-  const code = Math.random().toString(36).substring(2, 6)
-  const p = prenom.toLowerCase().replace(/[^a-z]/g, '')
-  const n = nom.toLowerCase().replace(/[^a-z]/g, '')
-  return `${p}_${n}_${code}@academika.app`
-}
-
-function setMode(m) {
-  mode = m
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', (i===0&&m==='login')||(i===1&&m==='register')))
-  document.getElementById('btn').textContent = m === 'login' ? 'Se connecter' : 'Créer mon compte'
-  document.getElementById('msg').className = 'msg'
-  document.getElementById('champs-connexion').style.display = m === 'login' ? 'block' : 'none'
-  document.getElementById('champs-inscription').style.display = m === 'register' ? 'block' : 'none'
-  if (m === 'register') afficherChampSource()
-}
-
-async function soumettre() {
-  const btn = document.getElementById('btn')
-  btn.disabled = true
-  btn.textContent = 'Chargement...'
-  if (mode === 'login') {
-    const prenom = document.getElementById('login-prenom').value.trim()
-    const nom = document.getElementById('login-nom').value.trim()
-    const password = document.getElementById('password').value
-    if (!prenom || !nom || !password) {
-      afficherMsg('Remplis tous les champs.', 'error')
-      btn.disabled = false; btn.textContent = 'Se connecter'; return
-    }
-    const { data: fauxEmailTrouve, error: errProfil } = await sb
-      .rpc('verifier_login', { p_prenom: prenom.toLowerCase(), p_nom: nom.toLowerCase() })
-    if (errProfil || !fauxEmailTrouve) {
-      afficherMsg('Prénom ou nom introuvable. Vérifie ou crée un compte.', 'error')
-      btn.disabled = false; btn.textContent = 'Se connecter'; return
-    }
-    const { error } = await sb.auth.signInWithPassword({ email: fauxEmailTrouve, password })
-    if (error) afficherMsg('Mot de passe incorrect. Réessaie.', 'error')
-    else window.location.href = 'quiz.html'
-  } else {
-    const prenom = document.getElementById('prenom').value.trim()
-    const nom = document.getElementById('nom').value.trim()
-    const emailParent = document.getElementById('email-parent').value.trim()
-    const password = document.getElementById('password-register').value
-    if (!prenom) { afficherMsg('Entre le prénom.', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
-    if (!nom) { afficherMsg('Entre le nom.', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
-    if (!emailParent) { afficherMsg("Entre l'email des parents.", 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
-    if (!password || password.length < 6) { afficherMsg('Mot de passe trop court (6 caractères min).', 'error'); btn.disabled = false; btn.textContent = 'Créer mon compte'; return }
-    const { data: existe } = await sb.rpc('verifier_disponibilite', { p_prenom: prenom.toLowerCase(), p_nom: nom.toLowerCase() })
-    if (existe) {
-      afficherMsg('Ce prénom + nom est déjà utilisé.', 'error')
-      btn.disabled = false; btn.textContent = 'Créer mon compte'; return
-    }
-    const fauxEmail = genererFauxEmail(prenom, nom)
-    const { data: signUpData, error } = await sb.auth.signUp({
-      email: fauxEmail, password,
-      options: { data: { prenom, nom, email_parent: emailParent } }
-    })
-    if (error) {
-      afficherMsg('Erreur : ' + error.message, 'error')
-    } else {
-      let source = utmSource || ''
-      if (!source) {
-        const radioChecked = document.querySelector('input[name="source"]:checked')
-        if (radioChecked) source = radioChecked.value
-      }
-      await sb.from('profils').insert({
-        user_id: signUpData.user.id,
-        prenom: prenom.toLowerCase(), nom: nom.toLowerCase(),
-        prenom_affiche: prenom, nom_affiche: nom,
-        email_parent: emailParent, faux_email: fauxEmail,
-        source: source || null
-      })
-      fetch('/api/email-inscription', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prenom, nom, emailParent })
-      }).catch(e => console.log(e.message))
-      afficherMsg('✅ Compte créé ! Tu peux maintenant te connecter.', 'success')
-      setTimeout(() => setMode('login'), 2000)
-    }
-  }
-  btn.disabled = false
-  btn.textContent = mode === 'login' ? 'Se connecter' : 'Créer mon compte'
-}
-
-async function resetPassword() {
-  const email = document.getElementById('reset-email').value.trim()
-  if (!email) { afficherResetMsg("Entre l'email des parents.", 'error'); return }
-  try {
-    const res = await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'reset-password', email_parent: email })
-    })
-    const data = await res.json()
-    afficherResetMsg('📧 ' + data.message, 'success')
-  } catch(e) {
-    afficherResetMsg('📧 Si un compte existe avec cet email, un lien a été envoyé.', 'success')
-  }
-}
-
-function afficherNouveauMdp() {
-  document.getElementById('login-view').style.display = 'none'
-  document.getElementById('reset-view').style.display = 'none'
-  document.getElementById('nouveau-mdp-view').style.display = 'block'
-  document.getElementById('logo-subtitle').textContent = 'Créer un nouveau mot de passe'
-}
-
-async function sauvegarderNouveauMdp() {
-  const password = document.getElementById('new-password').value
-  const msg = document.getElementById('new-msg')
-  if (!password || password.length < 6) { msg.textContent = 'Le mot de passe doit faire au moins 6 caractères.'; msg.className = 'msg error'; return }
-  const { error } = await sb.auth.updateUser({ password })
-  if (error) { msg.textContent = 'Erreur : ' + error.message; msg.className = 'msg error' }
-  else { msg.textContent = '✅ Mot de passe mis à jour ! Redirection...'; msg.className = 'msg success'; setTimeout(() => window.location.href = 'quiz.html', 2000) }
-}
-
-function afficherReset() {
-  document.getElementById('login-view').style.display = 'none'
-  document.getElementById('reset-view').style.display = 'block'
-  document.getElementById('logo-subtitle').textContent = 'Réinitialisation du mot de passe'
-}
-
-function afficherLogin() {
-  document.getElementById('login-view').style.display = 'block'
-  document.getElementById('reset-view').style.display = 'none'
-  document.getElementById('nouveau-mdp-view').style.display = 'none'
-  document.getElementById('logo-subtitle').textContent = 'Prépare ton brevet avec des QCM'
-}
-
-function toggleMdp() {
-  const i = document.getElementById('password'), o = document.getElementById('oeil')
-  i.type = i.type === 'password' ? 'text' : 'password'
-  o.textContent = i.type === 'password' ? '👁️' : '🙈'
-}
-function toggleMdpRegister() {
-  const i = document.getElementById('password-register'), o = document.getElementById('oeil2')
-  i.type = i.type === 'password' ? 'text' : 'password'
-  o.textContent = i.type === 'password' ? '👁️' : '🙈'
-}
-function toggleNouveauMdp() {
-  const i = document.getElementById('new-password'), o = document.getElementById('oeil3')
-  i.type = i.type === 'password' ? 'text' : 'password'
-  o.textContent = i.type === 'password' ? '👁️' : '🙈'
-}
-function afficherMsg(t, type) {
-  const m = document.getElementById('msg'); m.textContent = t; m.className = 'msg ' + type
-}
-function afficherResetMsg(t, type) {
-  const m = document.getElementById('reset-msg'); m.textContent = t; m.className = 'msg ' + type
-}
-
-init()
-</script>
 </body>
 </html>
