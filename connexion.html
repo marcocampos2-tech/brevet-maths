@@ -215,10 +215,10 @@ async function soumettre() {
         email_parent: emailParent, faux_email: fauxEmail,
         source: source || null
       })
-      fetch('/api/email-inscription', {
+      fetch('/api/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prenom, nom, emailParent })
+        body: JSON.stringify({ type: 'inscription', prenom, nom, emailParent })
       }).catch(e => console.log(e.message))
       afficherMsg('✅ Compte créé ! Tu peux maintenant te connecter.', 'success')
       setTimeout(() => setMode('login'), 2000)
