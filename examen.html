@@ -116,6 +116,8 @@ let chronoInterval=null, chronoSecondes=0
 let examEnCours=false
 let heureFin=null
 let questionsIds=[]
+let correction={}
+let resultatServeur=null
 
 window.addEventListener('beforeunload', function(e) {
   if(examEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Examen en cours !'}
@@ -299,38 +301,23 @@ async function renderIntro() {
     '<button class="btn btn-primary btn-full" style="font-size:16px;padding:14px" onclick="demarrerExamen()">🚀 Commencer l\'examen</button>'+
     '</div>'
 }
+
+// ═══════════════════════════════════════════════════
+// DÉMARRAGE — appel serveur, plus jamais answer/explication ici
+// ═══════════════════════════════════════════════════
 async function demarrerExamen() {
   document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de votre examen…</div>'
   try {
-    const parties=[1,2,3,4]
-    let toutesLesQuestions=[]
-    for(let p=0;p<parties.length;p++){
-      const partie=parties[p]
-      const res=await sb.from('examen_questions').select('*').eq('partie',partie)
-      if(res.error||!res.data||res.data.length===0) throw new Error('Questions partie '+partie+' introuvables')
-      const total=res.data.length
-      const tiers=Math.floor(total/3)
-      const shuffled=res.data.sort(function(){return Math.random()-0.5})
-      const acc=shuffled.slice(0,tiers).sort(function(){return Math.random()-0.5}).slice(0,2)
-      const std=shuffled.slice(tiers,tiers*2).sort(function(){return Math.random()-0.5}).slice(0,2)
-      const exp=shuffled.slice(tiers*2).sort(function(){return Math.random()-0.5}).slice(0,1)
-      toutesLesQuestions=toutesLesQuestions.concat(acc).concat(std).concat(exp)
-    }
-    questions=toutesLesQuestions.sort(function(){return Math.random()-0.5}).map(function(q){
-      return {
-        id: q.id,
-        q: q.question,
-        opts: typeof q.opts==='string'?JSON.parse(q.opts):q.opts,
-        answer: q.answer,
-        explication: q.explication,
-        theme: q.theme,
-        chapitre: q.chapitre,
-        partie: q.partie,
-        figure: q.figure ? (typeof q.figure==='string'?JSON.parse(q.figure):q.figure) : null,
-        tableau: q.tableau ? (typeof q.tableau==='string'?JSON.parse(q.tableau):q.tableau) : null
-      }
+    const res = await fetch('/api/examen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'demarrer' })
     })
-    answers={};saved=false;examEnCours=true
+    const data = await res.json()
+    if (!data.success) throw new Error(data.error || 'Erreur de chargement')
+
+    questions = data.questions
+    answers={};saved=false;examEnCours=true;correction={};resultatServeur=null
     questionsIds=questions.map(function(q){ return q.id })
     demarrerChrono()
     renderExamen()
@@ -424,35 +411,56 @@ function confirmerTerminer(){
   terminerExamen()
 }
 
-function terminerExamen(){
+async function terminerExamen(){
   arreterChrono();examEnCours=false
   document.getElementById('chrono').style.display='none'
-  sauvegarder();renderResultats()
+  document.getElementById('main-area').innerHTML='<div class="loader">⏳ Correction en cours…</div>'
+  await sauvegarder()
+  renderResultats()
 }
 
+// ═══════════════════════════════════════════════════
+// SAUVEGARDER — appelle le serveur pour la correction, plus de calcul local
+// ═══════════════════════════════════════════════════
 async function sauvegarder(){
   if(saved||!user)return
   if(!emailParent){const {data:profil}=await sb.from('profils').select('email_parent').eq('user_id',user.id).limit(1);if(profil&&profil.length>0)emailParent=profil[0].email_parent}
-  const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
+
+  const reponses = questions.map(function(q, i) {
+    return { id: q.id, choix: answers[i] !== undefined ? answers[i] : null }
+  })
   const tempsSecondes=heureFin?Math.floor((40*60*1000-Math.max(0,heureFin-Date.now()))/1000):chronoSecondes
-  const themes={}
-  questions.forEach(function(q,i){const key=q.theme||'Partie '+q.partie;if(!themes[key])themes[key]={ok:0,total:0};themes[key].total++;if(answers[i]===q.answer)themes[key].ok++})
-  const questionsRatees=questions.filter(function(q,i){return answers[i]!==undefined&&answers[i]!==q.answer}).map(function(q){return q.theme+' — '+(q.chapitre||'')})
-  try{
-    const {error}=await sb.from('examens_blancs').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',score:nbOk,total:20,temps_secondes:tempsSecondes,scores_themes:themes,questions_ratees:questionsRatees,abandonne:false,questions_posees:questionsIds})
-    if(error){console.error('Erreur sauvegarde:',error.message);return}
+
+  try {
+    const res = await fetch('/api/examen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'corriger', reponses })
+    })
+    const data = await res.json()
+    if (!data.success) { console.error('Erreur correction:', data.error); return }
+
+    correction = data.correction
+    resultatServeur = { nbOk: data.nbOk, themes: data.themes, questionsRatees: data.questionsRatees, tempsSecondes }
+
+    const {error}=await sb.from('examens_blancs').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',score:data.nbOk,total:20,temps_secondes:tempsSecondes,scores_themes:data.themes,questions_ratees:data.questionsRatees,abandonne:false,questions_posees:questionsIds})
+    if(error){console.error('Erreur sauvegarde:',error.message)}
     saved=true;console.log('✅ Examen sauvegardé')
-    if(emailParent){try{await fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'brevet-blanc',emailParent:emailParent,prenom:prenom||'',nom:nom||'',score:nbOk,total:20,pct:Math.round((nbOk/20)*100),scoresThemes:themes,tempsSecondes:tempsSecondes})});console.log('✅ Email envoyé')}catch(emailErr){console.error('Erreur email:',emailErr.message)}}
-  }catch(e){console.log('Erreur:',e.message)}
+
+    if(emailParent){try{await fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'brevet-blanc',emailParent:emailParent,prenom:prenom||'',nom:nom||'',score:data.nbOk,total:20,pct:Math.round((data.nbOk/20)*100),scoresThemes:data.themes,tempsSecondes:tempsSecondes})});console.log('✅ Email envoyé')}catch(emailErr){console.error('Erreur email:',emailErr.message)}}
+  } catch(e){console.log('Erreur:',e.message)}
 }
 
+// ═══════════════════════════════════════════════════
+// RÉSULTATS — utilise le score reçu du serveur, plus de recalcul local
+// ═══════════════════════════════════════════════════
 function renderResultats(){
-  const nbOk=questions.filter(function(q,i){return answers[i]===q.answer}).length
+  const nbOk = resultatServeur ? resultatServeur.nbOk : 0
+  const themes = resultatServeur ? resultatServeur.themes : {}
+  const tempsSecondes = resultatServeur ? resultatServeur.tempsSecondes : chronoSecondes
   const pct=Math.round((nbOk/20)*100)
   const mention=getMention(pct)
-  const tempsSecondes=heureFin?Math.floor((40*60*1000-Math.max(0,heureFin-Date.now()))/1000):chronoSecondes
-  const themes={}
-  questions.forEach(function(q,i){const key=q.theme||'Partie '+q.partie;if(!themes[key])themes[key]={ok:0,total:0};themes[key].total++;if(answers[i]===q.answer)themes[key].ok++})
+
   let html='<div class="results-screen">'
   html+='<div class="results-score-big">'+nbOk+'/20</div>'
   html+='<div class="results-pct" style="color:'+(pct>=50?'#16a34a':'#dc2626')+'">'+pct+'%</div>'
@@ -472,15 +480,21 @@ function renderResultats(){
   window.scrollTo({top:0,behavior:'smooth'})
 }
 
+// ═══════════════════════════════════════════════════
+// CORRECTION — utilise le dictionnaire reçu du serveur, plus jamais q.answer
+// ═══════════════════════════════════════════════════
 function voirCorrection(){
   const letters=['A','B','C','D']
   let html='<div style="margin-bottom:1rem"><button class="btn btn-outline" onclick="renderResultats()">← Retour aux résultats</button></div>'
   questions.forEach(function(q,i){
     const sel=answers[i]
-    const correct=sel===q.answer
+    const infoCorrection = correction[q.id] || {}
+    const bonneReponse = infoCorrection.answer
+    const explication = infoCorrection.explication || ''
+    const correct=sel===bonneReponse
     const couleur=correct?'#16a34a':'#dc2626'
     const titre=correct?'✓ Bravo !':'✗ Pas tout à fait.'
-    const bonneRep=!correct?'<br><strong style="color:#16a34a">La bonne réponse est : '+q.opts[q.answer]+'</strong>':''
+    const bonneRep=!correct?'<br><strong style="color:#16a34a">La bonne réponse est : '+q.opts[bonneReponse]+'</strong>':''
     html+='<div class="card">'
     html+='<div class="q-meta"><span class="q-num">Question '+(i+1)+'/20</span>'
     html+='<span class="badge" style="'+(correct?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626')+'">'+(correct?'✅ Correct':'❌ Raté')+'</span>'
@@ -488,8 +502,8 @@ function voirCorrection(){
     html+='<p class="q-text">'+q.q+'</p>'
     html+=renderTableau(q.tableau)
     html+=renderFigure(q.figure)
-    q.opts.forEach(function(opt,j){let cls='option';if(j===q.answer)cls+=' correct';else if(j===sel&&sel!==q.answer)cls+=' wrong';html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'})
-    html+='<div class="explication"><strong style="color:'+couleur+'">'+titre+'</strong>'+bonneRep+'<br><br>'+q.explication+'</div>'
+    q.opts.forEach(function(opt,j){let cls='option';if(j===bonneReponse)cls+=' correct';else if(j===sel&&sel!==bonneReponse)cls+=' wrong';html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'})
+    html+='<div class="explication"><strong style="color:'+couleur+'">'+titre+'</strong>'+bonneRep+'<br><br>'+explication+'</div>'
     html+='</div>'
   })
   html+='<a href="quiz.html" class="btn btn-outline btn-full" style="margin-bottom:2rem">← Retour à l\'accueil</a>'
