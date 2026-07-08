@@ -13,7 +13,7 @@
 .agenda-item { display: flex; align-items: center; gap: 14px; background: var(--light-bg); border-radius: 10px; padding: 12px 18px; }
 .agenda-item.revision { background: var(--navy); padding: 18px 22px; gap: 20px; max-width: 480px; margin: 28px auto 0; }
 .agenda-period { font-size: 11px; font-weight: 600; color: var(--bordeaux); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-.agenda-item.revision .agenda-period { color: var(--gold); width: 90px; flex-shrink: 0; }
+.agenda-item.revision .agenda-period { color: var(--gold); width: 90px; flex-shrink: 0; text-align: center; }
 .agenda-sep { width: 1px; height: 24px; background: #D8D4C8; flex-shrink: 0; }
 .agenda-item.revision .agenda-sep { background: rgba(255,255,255,0.2); }
 .agenda-domain { font-size: 13px; font-weight: 500; color: var(--navy); line-height: 1.3; }
@@ -40,8 +40,21 @@
     <a href="index.html#methode">Méthode</a>
     <a href="index.html#contact">Contact</a>
   </nav>
-  <a href="connexion.html" class="btn-connexion">Connexion</a>
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="connexion.html" class="btn-connexion">Connexion</a>
+    <button class="burger" id="burger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </header>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="index.html#quiz">Quiz &amp; abonnement</a>
+  <a href="cours-particuliers.html">Cours particuliers</a>
+  <a href="stages-vacances.html">Stages vacances</a>
+  <a href="index.html#methode">Méthode</a>
+  <a href="index.html#contact">Contact</a>
+</div>
 
 <section class="hero">
   <div class="hero-tag">Un parcours complet sur l'année</div>
@@ -99,7 +112,7 @@
   </div>
 
   <div style="text-align:center">
-    <a href="index.html#contact" class="btn-connexion" style="font-size:15px;padding:13px 32px">Réserver une place</a>
+    <a href="mailto:contact@academika.fr" class="btn-connexion" style="font-size:15px;padding:13px 32px">Réserver une place</a>
   </div>
 </section>
 
@@ -111,8 +124,18 @@
     <a href="stages-vacances.html">Stages vacances</a>
     <a href="connexion.html">Connexion</a>
   </div>
-  <div class="footer-contact">academika.fr · 📞 06 26 53 90 13</div>
+  <div class="contact-block">
+    <a href="tel:+33626539013">📞 06 26 53 90 13</a>
+    <a href="mailto:contact@academika.fr">✉️ contact@academika.fr</a>
+  </div>
 </footer>
+
+<script>
+function toggleMenu() {
+  document.getElementById('burger').classList.toggle('open')
+  document.getElementById('mobileMenu').classList.toggle('open')
+}
+</script>
 
 </body>
 </html>
