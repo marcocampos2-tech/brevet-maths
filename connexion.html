@@ -24,7 +24,18 @@
     <a href="index.html#methode">Méthode</a>
     <a href="index.html#contact">Contact</a>
   </nav>
+  <button class="burger" id="burger" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </button>
 </header>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="index.html#quiz">Quiz &amp; abonnement</a>
+  <a href="cours-particuliers.html">Cours particuliers</a>
+  <a href="stages-vacances.html">Stages vacances</a>
+  <a href="index.html#methode">Méthode</a>
+  <a href="index.html#contact">Contact</a>
+</div>
 
 <div class="container">
   <div class="card form-card" id="content-card">
@@ -99,7 +110,10 @@
 
 <footer class="site-footer">
   <span class="logo">ACADEMIKA</span>
-  <div class="footer-contact">academika.fr · 📞 06 26 53 90 13</div>
+  <div class="contact-block">
+    <a href="tel:+33626539013">📞 06 26 53 90 13</a>
+    <a href="mailto:contact@academika.fr">✉️ contact@academika.fr</a>
+  </div>
 </footer>
 
 <script>
@@ -111,6 +125,11 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 let mode = 'login'
 const urlParams = new URLSearchParams(window.location.search)
 const utmSource = urlParams.get('utm_source') || ''
+
+function toggleMenu() {
+  document.getElementById('burger').classList.toggle('open')
+  document.getElementById('mobileMenu').classList.toggle('open')
+}
 
 async function init() {
   const hash = window.location.hash
