@@ -208,7 +208,7 @@ export default async function handler(req, res) {
           <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
             <p style="color:#444;font-size:13px;margin-bottom:16px;">
               Pour toute question, contactez-nous : 
-              <a href="mailto:marcocampos2@gmail.com" style="color:#3730a3;text-decoration:none;font-weight:500">marcocampos2@gmail.com</a>
+              <a href="mailto:contact@academika.fr" style="color:#3730a3;text-decoration:none;font-weight:500">contact@academika.fr</a>
             </p>
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
@@ -279,7 +279,7 @@ export default async function handler(req, res) {
           <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
             <p style="color:#444;font-size:13px;margin-bottom:16px;">
               Pour toute question, contactez-nous : 
-              <a href="mailto:marcocampos2@gmail.com" style="color:#3730a3;text-decoration:none;font-weight:500">marcocampos2@gmail.com</a>
+              <a href="mailto:contact@academika.fr" style="color:#3730a3;text-decoration:none;font-weight:500">contact@academika.fr</a>
             </p>
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
@@ -309,7 +309,7 @@ export default async function handler(req, res) {
   if (req.body?.type === 'inscription') {
     try {
       const { prenom, nom, emailParent } = req.body
-      const PROF_EMAIL = 'marcocampos2@gmail.com'
+      const PROF_EMAIL = 'contact@academika.fr'
 
       const htmlProf = `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
@@ -521,7 +521,7 @@ export default async function handler(req, res) {
             </a>
           </div>
           <p style="color:#888;font-size:12px;text-align:center;margin-top:24px">
-            Pour toute question : <a href="mailto:marcocampos2@gmail.com" style="color:#3730a3">marcocampos2@gmail.com</a>
+            Pour toute question : <a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a>
           </p>
           <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
             <a href="${lienDesabonnement}" style="color:#bbb">Se désabonner des emails automatiques</a>
@@ -572,7 +572,7 @@ export default async function handler(req, res) {
             </a>
           </div>
           <p style="color:#888;font-size:12px;text-align:center;margin-top:24px">
-            Pour toute question : <a href="mailto:marcocampos2@gmail.com" style="color:#3730a3">marcocampos2@gmail.com</a>
+            Pour toute question : <a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a>
           </p>
           <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
             <a href="${lienDesabonnement}" style="color:#bbb">Se désabonner des emails automatiques</a>
