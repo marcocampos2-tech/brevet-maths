@@ -173,13 +173,6 @@ footer.site-footer .logo { color: var(--cream); margin-bottom: 20px; display: bl
 .footer-links a { font-size: 13px; color: rgba(250,249,246,0.7); text-decoration: none; }
 .footer-contact { font-size: 12px; color: rgba(250,249,246,0.4); }
 
-@media (max-width: 640px) {
-  nav.main-nav { display: none; }
-  .steps-grid, .offers-grid { grid-template-columns: 1fr; }
-  .method-block { grid-template-columns: 1fr; text-align: center; }
-  .method-avatar { margin: 0 auto; }
-}
-
 /* Formulaire connexion/inscription */
 .form-card {
   background: white; border-radius: 16px; border: 1px solid var(--border);
@@ -203,3 +196,63 @@ footer.site-footer .logo { color: var(--cream); margin-bottom: 20px; display: bl
 .form-forgot { text-align: right; margin-top: 6px; }
 .form-forgot a { font-size: 12px; color: #666; text-decoration: none; }
 .form-info-box { background: #eef2ff; border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #3730a3; margin-top: 12px; line-height: 1.5; }
+
+/* Menu mobile hamburger */
+.burger {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px;
+  background: none;
+  border: none;
+}
+.burger span {
+  width: 20px;
+  height: 2px;
+  background: var(--navy);
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+.burger.open span:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); background: var(--bordeaux); }
+.burger.open span:nth-child(2) { opacity: 0; }
+.burger.open span:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); background: var(--bordeaux); }
+
+.mobile-menu {
+  display: none;
+  flex-direction: column;
+  background: var(--cream);
+  border-bottom: 1px solid var(--border);
+}
+.mobile-menu.open { display: flex; }
+.mobile-menu a {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--navy);
+  text-decoration: none;
+}
+.mobile-menu a:last-child { border-bottom: none; }
+
+/* Section contact */
+.contact-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  margin-top: 16px;
+}
+.contact-block a {
+  font-size: 14px;
+  color: rgba(250,249,246,0.85);
+  text-decoration: none;
+}
+.contact-block a:hover { color: var(--gold); }
+
+@media (max-width: 640px) {
+  .steps-grid, .offers-grid { grid-template-columns: 1fr; }
+  .method-block { grid-template-columns: 1fr; text-align: center; }
+  .method-avatar { margin: 0 auto; }
+  .burger { display: flex; }
+  nav.main-nav { display: none; }
+}
