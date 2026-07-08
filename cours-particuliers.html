@@ -8,6 +8,87 @@
 <title>Cours particuliers — ACADEMIKA</title>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+.visio-block {
+  background: var(--navy);
+  border-radius: 10px;
+  padding: 28px 24px;
+  margin: 32px auto;
+  max-width: 480px;
+  text-align: center;
+}
+.visio-block-title {
+  font-family: 'Newsreader', serif;
+  font-size: 19px;
+  color: var(--cream);
+  margin-bottom: 10px;
+}
+.visio-block-desc {
+  font-size: 13px;
+  color: rgba(250,249,246,0.75);
+  line-height: 1.6;
+}
+.presentiel-note {
+  background: var(--light-bg);
+  border-radius: 10px;
+  padding: 18px 22px;
+  margin: 0 auto 32px;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.presentiel-note-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--navy);
+}
+.presentiel-note-desc {
+  font-size: 12px;
+  color: #6B7280;
+  margin-top: 2px;
+}
+.cta-intro {
+  text-align: center;
+  font-size: 13px;
+  color: #6B7280;
+  margin-bottom: 16px;
+}
+.cta-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.btn-cta-primary {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cream);
+  background: var(--bordeaux);
+  border: none;
+  border-radius: 6px;
+  padding: 12px 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.btn-cta-secondary {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--navy);
+  background: var(--cream);
+  border: 1px solid var(--navy);
+  border-radius: 6px;
+  padding: 12px 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+</style>
 </head>
 <body>
 
@@ -38,18 +119,20 @@
 
 <section class="hero">
   <div class="hero-tag">Accompagnement individuel</div>
-  <div class="hero-title">Un vrai prof, pas juste une application</div>
+  <div class="hero-title">Un vrai prof, en visio</div>
 </section>
 
 <section>
-  <div class="offers-grid" style="grid-template-columns:repeat(2,1fr)">
-    <div class="offer-card">
-      <div class="offer-label">Visio</div>
-      <div class="offer-desc">Cours à distance depuis chez vous, même flexibilité qu'en présentiel, tableau numérique partagé en direct</div>
-    </div>
-    <div class="offer-card">
-      <div class="offer-label">Présentiel</div>
-      <div class="offer-desc">Rencontre en personne en Île-de-France, accompagnement au plus proche des besoins de l'élève</div>
+  <div class="visio-block">
+    <div class="visio-block-title">Cours en visioconférence</div>
+    <div class="visio-block-desc">Depuis chez vous, même flexibilité qu'en présentiel, tableau numérique partagé en direct</div>
+  </div>
+
+  <div class="presentiel-note">
+    <div style="font-size:20px">📍</div>
+    <div>
+      <div class="presentiel-note-title">Besoin d'un cours en présentiel ?</div>
+      <div class="presentiel-note-desc">Possible ponctuellement en Île-de-France, sur demande</div>
     </div>
   </div>
 </section>
@@ -72,8 +155,12 @@
   </div>
 </section>
 
-<section style="text-align:center">
-  <a href="mailto:contact@academika.fr" class="btn-connexion" style="font-size:15px;padding:13px 32px">Demander un premier échange</a>
+<section>
+  <div class="cta-intro">Envie d'un premier échange ?</div>
+  <div class="cta-row">
+    <a href="mailto:contact@academika.fr" class="btn-cta-primary">✉️ Écrire un email</a>
+    <a href="tel:+33626539013" class="btn-cta-secondary">📞 Appeler</a>
+  </div>
 </section>
 
 <footer class="site-footer">
