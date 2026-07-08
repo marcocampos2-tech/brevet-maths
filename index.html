@@ -23,8 +23,21 @@
     <a href="#methode">Méthode</a>
     <a href="#contact">Contact</a>
   </nav>
-  <a href="connexion.html" class="btn-connexion">Connexion</a>
+  <div style="display:flex;align-items:center;gap:12px">
+    <a href="connexion.html" class="btn-connexion">Connexion</a>
+    <button class="burger" id="burger" onclick="toggleMenu()">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </header>
+
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#quiz">Quiz &amp; abonnement</a>
+  <a href="cours-particuliers.html">Cours particuliers</a>
+  <a href="stages-vacances.html">Stages vacances</a>
+  <a href="#methode">Méthode</a>
+  <a href="#contact">Contact</a>
+</div>
 
 <section class="hero">
   <div class="hero-tag">Brevet de maths · Élèves de 3e</div>
@@ -95,8 +108,18 @@
     <a href="stages-vacances.html">Stages vacances</a>
     <a href="connexion.html">Connexion</a>
   </div>
-  <div class="footer-contact">academika.fr · 📞 06 26 53 90 13</div>
+  <div class="contact-block">
+    <a href="tel:+33626539013">📞 06 26 53 90 13</a>
+    <a href="mailto:contact@academika.fr">✉️ contact@academika.fr</a>
+  </div>
 </footer>
+
+<script>
+function toggleMenu() {
+  document.getElementById('burger').classList.toggle('open')
+  document.getElementById('mobileMenu').classList.toggle('open')
+}
+</script>
 
 </body>
 </html>
