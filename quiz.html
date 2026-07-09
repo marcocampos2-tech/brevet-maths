@@ -150,6 +150,19 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .st-row.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 .st-check { font-size: 13px; color: var(--marine); display: none; }
 .st-row.active .st-check { display: inline; }
+.focus-bar { display: none; align-items: center; gap: 12px; background: white; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 1rem; position: sticky; top: 8px; z-index: 5; box-shadow: 0 4px 16px rgba(27,42,74,0.08); }
+.focus-bar.visible { display: flex; }
+.focus-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--marine-light); color: var(--marine); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.focus-icon svg { width: 16px; height: 16px; }
+.focus-info { flex: 1; min-width: 0; }
+.focus-theme { font-size: 12.5px; font-weight: 600; color: var(--ardoise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.focus-sub { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.focus-badge { font-size: 10.5px; padding: 3px 9px; border-radius: 20px; background: var(--dore-light); color: #8a6416; font-weight: 500; flex-shrink: 0; text-transform: capitalize; }
+.focus-chrono { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--ardoise); flex-shrink: 0; }
+.focus-dot { width: 7px; height: 7px; background: var(--vert); border-radius: 50%; animation: pulse 1s infinite; }
+@media (max-width:480px){
+  .focus-sub{display:none}
+}
 @media (max-width:480px){
   .container{padding:0 1rem 1rem}
   nav{padding:1rem 0}
@@ -174,10 +187,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="nav-left">∑ Academika</div>
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
-    <div class="chrono" id="chrono" style="display:none">
-      <div class="chrono-dot"></div>
-      <span id="chrono-text">00:00</span>
-    </div>
     <a href="prof.html" class="btn" id="btn-prof" style="display:none">🎓 Prof</a>
     <a href="resultats.html" class="btn">📊 Mes résultats</a>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
@@ -230,6 +239,15 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
     <div class="banniere-examen-sub">20 questions · 40 minutes · correction complète · type QCM</div>
     <a href="examen.html" class="banniere-examen-btn">Passer l'examen blanc →</a>
   </div>
+</div>
+<div class="focus-bar" id="focus-bar">
+  <div class="focus-icon" id="focus-icon"></div>
+  <div class="focus-info">
+    <div class="focus-theme" id="focus-theme"></div>
+    <div class="focus-sub" id="focus-sub"></div>
+  </div>
+  <span class="focus-badge" id="focus-badge"></span>
+  <div class="focus-chrono"><span class="focus-dot"></span> <span id="focus-chrono-text">00:00</span></div>
 </div>
 <div id="quiz-area"></div>
 </div>
@@ -308,22 +326,27 @@ async function sauvegarderAbandonne() {
   }catch(e){console.log('Erreur abandon:',e.message)}
 }
 
+function populateFocusBar(){
+  const t = THEMES.find(x=>x.value===theme)
+  document.getElementById('focus-icon').innerHTML = t ? THEME_ICONS[t.icon] : ''
+  document.getElementById('focus-theme').textContent = t ? t.label : theme
+  document.getElementById('focus-sub').textContent = sousTheme
+  document.getElementById('focus-badge').textContent = diff
+}
+
 function bloquerConfig(){
   quizEnCours=true
-  document.getElementById('gen-btn').disabled=true
-  document.getElementById('gen-btn').innerHTML='⏳ Quiz en cours...'
-  document.querySelectorAll('.theme-card').forEach(c=>c.classList.add('disabled'))
-  document.querySelectorAll('.st-row').forEach(c=>c.classList.add('disabled'))
-  document.querySelectorAll('.niveau-card').forEach(c=>c.classList.add('disabled'))
-  document.querySelectorAll('.diff-btn').forEach(b=>b.disabled=true)
+  document.getElementById('config').style.display='none'
+  populateFocusBar()
+  document.getElementById('focus-bar').classList.add('visible')
 }
 
 function debloquerConfig(){
   quizEnCours=false
+  document.getElementById('config').style.display=''
+  document.getElementById('focus-bar').classList.remove('visible')
   document.getElementById('gen-btn').disabled=false
   document.getElementById('gen-btn').innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg> Générer 5 questions'
-  document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('disabled'))
-  document.querySelectorAll('.st-row').forEach(c=>c.classList.remove('disabled'))
   mettreAJourNiveaux()
 }
 
@@ -533,7 +556,7 @@ async function logout(){
   window.location.href='index.html'
 }
 
-function demarrerChrono(){chronoSecondes=0;document.getElementById('chrono').style.display='flex';chronoInterval=setInterval(()=>{chronoSecondes++;const m=Math.floor(chronoSecondes/60).toString().padStart(2,'0');const s=(chronoSecondes%60).toString().padStart(2,'0');document.getElementById('chrono-text').textContent=`${m}:${s}`},1000)}
+function demarrerChrono(){chronoSecondes=0;chronoInterval=setInterval(()=>{chronoSecondes++;const m=Math.floor(chronoSecondes/60).toString().padStart(2,'0');const s=(chronoSecondes%60).toString().padStart(2,'0');const el=document.getElementById('focus-chrono-text');if(el)el.textContent=`${m}:${s}`},1000)}
 function arreterChrono(){clearInterval(chronoInterval)}
 function formatTemps(secondes){const m=Math.floor(secondes/60);const s=secondes%60;if(m===0)return `${s} sec`;return `${m} min ${s} sec`}
 
@@ -541,7 +564,7 @@ async function generer() {
   const btn=document.getElementById('gen-btn')
   btn.disabled=true;btn.textContent='⏳ Chargement des questions...'
   questions=[];answers={};submitted={};saved=false;modeAffichage={};charts={}
-  arreterChrono();document.getElementById('chrono').style.display='none'
+  arreterChrono()
   document.getElementById('quiz-area').innerHTML='<div class="loader">⏳ Chargement des questions…</div>'
   try{
     const res=await fetch('/api/generer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme,sous_theme:sousTheme,difficulte:diff})})
@@ -809,7 +832,6 @@ async function nouvelleRonde(){
   questions=[];answers={};submitted={};saved=false;modeAffichage={};charts={}
   deblocageCache={}
   quizEnCours=false;arreterChrono()
-  document.getElementById('chrono').style.display='none'
   document.getElementById('quiz-area').innerHTML=''
   debloquerConfig();window.scrollTo({top:0,behavior:'smooth'})
 }
