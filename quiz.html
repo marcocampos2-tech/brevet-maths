@@ -4,148 +4,174 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a1a">
+<meta name="theme-color" content="#1B2A4A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ACADEMIKA">
 <title>ACADEMIKA — Brevet Maths</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
+:root{
+  --marine:#1B2A4A; --marine-light:#EEF1F6;
+  --bordeaux:#9E2B25; --bordeaux-light:#FBEDEC;
+  --creme:#FAF9F6; --ardoise:#41454C; --muted:#6B6E73;
+  --vert:#2F9E5C; --dore:#D4A23C; --dore-light:#FBF4E4;
+  --border:#E4E1D8;
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
-.container { max-width: 680px; margin: 0 auto; padding: 0 1rem 1rem 1rem; }
-nav { display: flex; justify-content: space-between; align-items: center; padding: 0.9rem 0; border-bottom: 3px solid #002395; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 8px; }
-.nav-left { font-size: 18px; font-weight: 700; color: #002395; letter-spacing: -0.5px; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--creme); min-height: 100vh; color: var(--ardoise); }
+.container { max-width: 700px; margin: 0 auto; padding: 0 1.25rem 1rem; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 0; border-bottom: 2px solid var(--marine); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
+.nav-left { font-family:'Newsreader',serif; font-size: 19px; font-weight: 600; color: var(--marine); letter-spacing: -0.3px; }
 .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.nav-email { font-size: 12px; color: #666; }
-.card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
-.btn:hover { background: #f5f5f0; }
-.btn-primary { background: #ED2939; color: white; border-color: #ED2939; }
-.btn-primary:hover { background: #c0212f; border-color: #c0212f; }
-.btn-green { background: #16a34a; color: white; border-color: #16a34a; font-size: 16px; padding: 16px; }
-.btn-green:hover { background: #15803d; }
-.btn-outline { background: white; color: #666; border: 1px solid #d0d0c8; font-size: 14px; padding: 12px; }
-.btn-outline:hover { background: #f5f5f0; }
+.nav-email { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.card { background: white; border-radius: 14px; border: 1px solid var(--border); padding: 1.75rem; margin-bottom: 1rem; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: white; color: var(--ardoise); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; font-family:'Inter',sans-serif; }
+.btn:hover { background: var(--creme); }
+.btn-primary { background: var(--bordeaux); color: white; border-color: var(--bordeaux); }
+.btn-primary:hover { background: #832019; }
+.btn-green { background: var(--vert); color: white; border-color: var(--vert); font-size: 16px; padding: 16px; }
+.btn-outline { background: white; color: var(--muted); border: 1px solid var(--border); font-size: 14px; padding: 12px; }
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-#btn-prof { background: #fbbf24; border-color: #f59e0b; color: #1a1a1a; }
-#btn-prof:hover { background: #f59e0b; }
+#btn-prof { background: var(--dore-light); border-color: var(--dore); color: #8a6416; }
+.btn-ghost { border: none; background: none; color: var(--muted); padding: 8px 4px; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
-.msg-accueil { background: #eef1ff; border-left: 4px solid #002395; border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 1.25rem; font-size: 13px; color: #002395; line-height: 1.6; }
+.msg-accueil { background: var(--marine-light); border-left: 3px solid var(--marine); border-radius: 0 10px 10px 0; padding: 12px 16px; margin-bottom: 2rem; font-size: 13.5px; color: var(--marine); line-height: 1.6; }
 .msg-accueil strong { font-weight: 600; }
-.section-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
-.theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 1.25rem; }
-.theme-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
-.theme-card:hover { border-color: #002395; }
-.theme-card.active { border: 2px solid #002395; background: #eef1ff; }
+.step { display: flex; align-items: baseline; gap: 6px; margin-bottom: 12px; }
+.step:not(:first-child) { margin-top: 1.75rem; }
+.step-num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); font-weight: 500; }
+.section-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+.theme-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px 14px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
+.theme-card:hover { border-color: var(--marine); }
+.theme-card.active { border: 1.5px solid var(--marine); background: var(--marine-light); }
 .theme-card.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
-.theme-icon { font-size: 22px; margin-bottom: 4px; }
-.theme-label { font-size: 12px; font-weight: 500; color: #1a1a1a; }
-.theme-card.active .theme-label { color: #002395; }
-.niveaux-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
-.niveau-card { border: 1px solid #e8e8e4; border-radius: 10px; padding: 14px 10px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; position: relative; }
-.niveau-card:hover { border-color: #002395; }
-.niveau-card.active { border: 2px solid #002395; background: #eef1ff; }
-.niveau-card.locked { background: #f9f9f7; cursor: not-allowed; opacity: 0.65; }
+.theme-icon { width: 34px; height: 34px; border-radius: 9px; background: var(--marine-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; color: var(--marine); }
+.theme-icon svg { width:18px; height:18px; }
+.theme-card.active .theme-icon { background: var(--marine); color: white; }
+.theme-label { font-size: 12.5px; font-weight: 500; color: var(--ardoise); }
+.theme-card.active .theme-label { color: var(--marine); font-weight: 600; }
+.niveaux-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 8px; }
+.niveau-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px 10px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; position: relative; }
+.niveau-card:hover { border-color: var(--marine); }
+.niveau-card.active { border: 1.5px solid var(--marine); background: var(--marine-light); }
+.niveau-card.locked { background: #FAFAF8; cursor: not-allowed; opacity: 0.75; }
 .niveau-card.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
-.niveau-icon { font-size: 22px; margin-bottom: 6px; }
-.niveau-titre { font-size: 13px; font-weight: 600; color: #1a1a1a; margin-bottom: 3px; }
-.niveau-card.active .niveau-titre { color: #002395; }
-.niveau-sous { font-size: 11px; color: #888; }
-.niveau-card.active .niveau-sous { color: #002395; opacity: 0.8; }
-.niveau-barre-wrap { margin-top: 8px; height: 4px; background: #e8e8e4; border-radius: 2px; overflow: hidden; }
-.niveau-barre-fill { height: 4px; background: #f59e0b; border-radius: 2px; transition: width 0.3s; }
+.niveau-icon { margin-bottom: 6px; color: var(--marine); display:flex; justify-content:center; }
+.niveau-icon svg { width:18px; height:18px; }
+.niveau-titre { font-size: 13px; font-weight: 600; color: var(--ardoise); margin-bottom: 2px; }
+.niveau-card.active .niveau-titre { color: var(--marine); }
+.niveau-sous { font-size: 11px; color: var(--muted); }
+.niveau-barre-wrap { margin-top: 8px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.niveau-barre-fill { height: 100%; background: var(--dore); border-radius: 2px; transition: width 0.3s; }
 .diff-row { display: none; }
-.diff-btn { display: none; }
-.diff-btn.active { }
-.diff-btn.locked { }
-.lock-msg { display: none; }
+.lock-msg { display: none; font-size: 11.5px; color: #8a6416; background: var(--dore-light); border: 1px solid var(--dore); border-radius: 8px; padding: 9px 13px; margin-top: 12px; }
 .lock-msg.visible { display: block; }
-.badge-trophee { background: #002395; border-radius: 12px; padding: 18px 16px; text-align: center; margin-top: 16px; }
-.badge-trophee-icon { font-size: 28px; margin-bottom: 8px; }
-.badge-trophee-titre { font-size: 15px; font-weight: 600; color: white; margin-bottom: 4px; }
+.badge-trophee { background: var(--marine); border-radius: 12px; padding: 18px 16px; text-align: center; margin-top: 16px; }
+.badge-trophee-icon { font-size: 26px; margin-bottom: 8px; }
+.badge-trophee-titre { font-size: 15px; font-weight: 600; color: white; margin-bottom: 4px; font-family:'Newsreader',serif; }
 .badge-trophee-sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-bottom: 12px; }
 .badge-trophee-themes { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .badge-theme-pill { background: rgba(255,255,255,0.15); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: white; }
-.banniere-examen { border: 1.5px solid #002395; border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #eef1ff; margin-top: 20px; }
-.banniere-examen.rouge { border-color: #ED2939; background: #fff5f5; }
-.banniere-examen-titre { font-size: 13px; font-weight: 600; color: #002395; margin-bottom: 3px; }
-.banniere-examen.rouge .banniere-examen-titre { color: #ED2939; }
-.banniere-examen-sub { font-size: 11px; color: #002395; opacity: 0.7; }
-.banniere-examen.rouge .banniere-examen-sub { color: #ED2939; }
-.banniere-examen-btn { padding: 9px 16px; background: #002395; color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
-.banniere-examen.rouge .banniere-examen-btn { background: #ED2939; }
-.banniere-examen-btn:hover { opacity: 0.9; }
-.separateur { height: 1px; background: #e8e8e4; margin: 20px 0; }
-.option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid #e8e8e4; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.15s; margin-bottom: 8px; }
+.sep { height: 1px; background: var(--border); margin: 2rem 0; }
+.banniere-examen { border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; text-align: center; background: var(--marine-light); }
+.banniere-examen.rouge { background: var(--bordeaux-light); }
+.banniere-examen-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--marine); color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+.banniere-examen.rouge .banniere-examen-icon { background: var(--bordeaux); }
+.banniere-examen-icon svg { width:19px; height:19px; }
+.banniere-examen-titre { font-family:'Newsreader',serif; font-size: 19px; font-weight: 600; color: var(--marine); margin-bottom: 6px; }
+.banniere-examen.rouge .banniere-examen-titre { color: var(--bordeaux); }
+.banniere-examen-sub { font-size: 13px; color: var(--ardoise); opacity: 0.8; margin-bottom: 18px; }
+.banniere-examen-btn { display:inline-block; padding: 13px 28px; background: var(--marine); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; font-family:'Inter',sans-serif; }
+.banniere-examen.rouge .banniere-examen-btn { background: var(--bordeaux); }
+.option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.15s; margin-bottom: 8px; }
 .option:hover { border-color: #999; background: #f9f9f7; }
-.option.selected { border-color: #3730a3; background: #eef2ff; }
-.option.correct { border-color: #16a34a; background: #f0fdf4; color: #15803d; }
-.option.wrong { border-color: #dc2626; background: #fef2f2; color: #dc2626; }
-.option.aucune-selected { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
-.option.aucune { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+.option.selected { border-color: var(--marine); background: var(--marine-light); }
+.option.correct { border-color: var(--vert); background: #EAF6EF; color: #1f7a45; }
+.option.wrong { border-color: var(--bordeaux); background: var(--bordeaux-light); color: var(--bordeaux); }
+.option.aucune-selected { border-color: var(--dore); background: var(--dore-light); color: #8a6416; }
+.option.aucune { border-color: var(--dore); background: var(--dore-light); color: #8a6416; }
 .letter { font-size: 12px; font-weight: 600; color: #999; min-width: 18px; }
 .option.correct .letter, .option.wrong .letter, .option.aucune .letter { color: inherit; }
-.explication { margin-top: 10px; padding: 10px 14px; background: #f5f5f0; border-radius: 8px; font-size: 13px; color: #555; border-left: 3px solid #3730a3; line-height: 1.6; }
-.explication-aucune { margin-top: 10px; padding: 10px 14px; background: #fffbeb; border-radius: 8px; font-size: 13px; color: #92400e; border-left: 3px solid #f59e0b; line-height: 1.6; }
+.explication { margin-top: 10px; padding: 10px 14px; background: var(--creme); border-radius: 8px; font-size: 13px; color: var(--ardoise); border-left: 3px solid var(--marine); line-height: 1.6; }
+.explication-aucune { margin-top: 10px; padding: 10px 14px; background: var(--dore-light); border-radius: 8px; font-size: 13px; color: #8a6416; border-left: 3px solid var(--dore); line-height: 1.6; }
 .quiz-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
 .progress-steps { display: flex; gap: 4px; flex: 1; }
-.progress-step { height: 6px; flex: 1; border-radius: 3px; background: #e0e0d8; }
-.progress-step.done { background: #002395; }
-.progress-step.current { background: #002395; opacity: 0.4; }
-.progress-label { font-size: 12px; color: #666; white-space: nowrap; }
-.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
+.progress-step { height: 6px; flex: 1; border-radius: 3px; background: var(--border); }
+.progress-step.done { background: var(--marine); }
+.progress-step.current { background: var(--marine); opacity: 0.4; }
+.progress-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--marine-light); color: var(--marine); }
 .q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.q-num { font-size: 12px; color: #999; }
-.q-text { font-size: 15px; line-height: 1.8; margin-bottom: 10px; color: #1a1a1a; }
+.q-num { font-size: 12px; color: var(--muted); }
+.q-text { font-size: 15px; line-height: 1.8; margin-bottom: 10px; color: var(--ardoise); }
 .q-tableau { border-collapse: collapse; margin: 10px 0 14px 0; font-size: 14px; width: 100%; }
-.q-tableau th { border: 1px solid #ccc; padding: 6px 14px; background: #f5f5f0; font-weight: 600; text-align: center; }
+.q-tableau th { border: 1px solid #ccc; padding: 6px 14px; background: var(--creme); font-weight: 600; text-align: center; }
 .q-tableau td { border: 1px solid #ccc; padding: 6px 14px; text-align: center; }
 .q-chart { margin: 10px 0 14px 0; position: relative; width: 100%; }
-.loader { text-align: center; padding: 3rem; color: #666; font-size: 14px; }
-.chrono { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid #e8e8e4; border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: #1a1a1a; }
-.chrono-dot { width: 8px; height: 8px; background: #16a34a; border-radius: 50%; animation: pulse 1s infinite; }
+.loader { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+.chrono { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--ardoise); }
+.chrono-dot { width: 8px; height: 8px; background: var(--vert); border-radius: 50%; animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-.badge-source-banque { font-size: 11px; color: #f59e0b; background: #fffbeb; border: 1px solid #f59e0b; border-radius: 20px; padding: 2px 10px; }
-.badge-source-ia { font-size: 11px; color: #16a34a; background: #f0fdf4; border: 1px solid #16a34a; border-radius: 20px; padding: 2px 10px; }
-.quiz-en-cours { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #92400e; margin-bottom: 1rem; text-align: center; }
-.q-figure { margin: 10px 0 14px; display: flex; justify-content: center; background: #f9f9f7; border-radius: 8px; padding: 12px; }
+.badge-source-banque { font-size: 11px; color: #8a6416; background: var(--dore-light); border: 1px solid var(--dore); border-radius: 20px; padding: 2px 10px; }
+.badge-source-ia { font-size: 11px; color: #1f7a45; background: #EAF6EF; border: 1px solid var(--vert); border-radius: 20px; padding: 2px 10px; }
+.quiz-en-cours { background: var(--dore-light); border: 1px solid var(--dore); border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #8a6416; margin-bottom: 1rem; text-align: center; }
+.q-figure { margin: 10px 0 14px; display: flex; justify-content: center; background: var(--creme); border-radius: 8px; padding: 12px; }
 .q-figure svg { max-width: 260px; height: auto; display: block; }
-.results-bande { display:flex; align-items:center; gap:14px; padding:14px 16px; background:white; border-radius:12px; border:1px solid #e8e8e4; margin-bottom:10px; }
+.results-bande { display:flex; align-items:center; gap:14px; padding:14px 16px; background:white; border-radius:12px; border:1px solid var(--border); margin-bottom:10px; }
 .results-score-col { text-align:center; min-width:52px; }
-.results-score-num { font-size:34px; font-weight:700; color:#1a1a1a; line-height:1; }
+.results-score-num { font-size:34px; font-weight:700; color:var(--ardoise); line-height:1; font-family:'Newsreader',serif; }
 .results-pct-sm { font-size:15px; font-weight:500; margin-top:2px; }
-.results-sep { width:1px; height:44px; background:#e8e8e4; flex-shrink:0; }
+.results-sep { width:1px; height:44px; background:var(--border); flex-shrink:0; }
 .results-detail { flex:1; min-width:0; }
-.results-mention-sm { font-size:14px; font-weight:500; color:#1a1a1a; margin-bottom:2px; }
-.results-meta-sm { font-size:11px; color:#888; }
-.results-saved { font-size:11px; color:#16a34a; margin-top:4px; }
-.prog-bloc { background:white; border-radius:12px; border:1px solid #e8e8e4; padding:12px 16px; margin-bottom:10px; }
-.prog-titre { font-size:11px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
+.results-mention-sm { font-size:14px; font-weight:500; color:var(--ardoise); margin-bottom:2px; }
+.results-meta-sm { font-size:11px; color:var(--muted); }
+.results-saved { font-size:11px; color:var(--vert); margin-top:4px; }
+.prog-bloc { background:white; border-radius:12px; border:1px solid var(--border); padding:12px 16px; margin-bottom:10px; }
+.prog-titre { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
 .prog-msg { border-radius:8px; padding:9px 12px; margin-bottom:8px; font-size:13px; }
-.prog-msg.reussi { background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d; }
-.prog-msg.debloque { background:#eff6ff; border:1px solid #93c5fd; color:#1d4ed8; }
-.prog-msg.info { background:#fff8e6; border:1px solid #fcd34d; color:#92400e; }
+.prog-msg.reussi { background:#EAF6EF; border:1px solid #bbf7d0; color:#1f7a45; }
+.prog-msg.debloque { background:var(--marine-light); border:1px solid #93c5fd; color:var(--marine); }
+.prog-msg.info { background:var(--dore-light); border:1px solid var(--dore); color:#8a6416; }
 .prog-ligne { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
 .prog-ligne:last-child { margin-bottom:0; }
-.prog-label { font-size:12px; color:#888; white-space:nowrap; width:52px; }
-.prog-barre-wrap { flex:1; height:6px; background:#e8e8e4; border-radius:3px; overflow:hidden; }
+.prog-label { font-size:12px; color:var(--muted); white-space:nowrap; width:52px; }
+.prog-barre-wrap { flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
 .prog-barre-fill { height:6px; border-radius:3px; transition:width 0.4s; }
 .prog-reste { font-size:12px; white-space:nowrap; min-width:52px; text-align:right; }
-.st-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1.25rem; }
-.st-row { background: white; border: 1px solid #e8e8e4; border-radius: 8px; padding: 11px 14px; font-size: 13px; font-weight: 500; color: #1a1a1a; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.15s; }
-.st-row:hover { border-color: #002395; }
-.st-row.active { border: 2px solid #002395; background: #eef1ff; color: #002395; }
+.st-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+.st-row { background: white; border: 1px solid var(--border); border-radius: 9px; padding: 11px 10px; font-size: 12.5px; font-weight: 500; color: var(--ardoise); display: flex; align-items: center; justify-content: center; gap: 5px; text-align: center; cursor: pointer; transition: all 0.15s; }
+.st-row:hover { border-color: var(--marine); }
+.st-row.active { border: 1.5px solid var(--marine); background: var(--marine-light); color: var(--marine); }
 .st-row.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
-.st-check { font-size: 14px; color: #002395; display: none; }
+.st-check { font-size: 13px; color: var(--marine); display: none; }
 .st-row.active .st-check { display: inline; }
+@media (max-width:480px){
+  .container{padding:0 1rem 1rem}
+  nav{padding:1rem 0}
+  .nav-right{gap:6px}
+  .nav-email{display:none}
+  .card{padding:1.25rem}
+  .theme-grid{gap:8px}
+  .theme-card{padding:12px 8px}
+  .theme-label{font-size:11.5px}
+  .st-list{grid-template-columns:repeat(2,1fr)}
+  .st-row{padding:10px 8px;font-size:12px}
+  .niveaux-grid{gap:8px}
+  .niveau-card{padding:12px 6px}
+  .banniere-examen{padding:18px 16px}
+  .banniere-examen-titre{font-size:16.5px}
+}
 </style>
 </head>
 <body>
 <div class="container">
 <nav>
-  <div class="nav-left">∑ ACADEMIKA</div>
+  <div class="nav-left">∑ Academika</div>
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
     <div class="chrono" id="chrono" style="display:none">
@@ -153,54 +179,56 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
       <span id="chrono-text">00:00</span>
     </div>
     <a href="prof.html" class="btn" id="btn-prof" style="display:none">🎓 Prof</a>
-    <a href="resultats.html" class="btn">Mes résultats</a>
-    <button class="btn" onclick="logout()">Déconnexion</button>
+    <a href="resultats.html" class="btn">📊 Mes résultats</a>
+    <button class="btn-ghost" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
 <div class="card" id="config">
   <div class="msg-accueil">
-    🎯 <strong>Comment ça marche ?</strong> Choisis un domaine, fais les 5 questions en <strong>Facile</strong> et débloque le niveau <strong>Moyen</strong> — puis continue pour atteindre le niveau <strong>Difficile</strong> !
+    🎯 <strong>Comment ça marche ?</strong> Choisis un domaine, un sous-thème, puis clique sur <strong>Générer 5 questions</strong> pour démarrer en <strong>Facile</strong>. Réussis pour débloquer le <strong>Moyen</strong>, puis le <strong>Difficile</strong>.
   </div>
-  <p class="section-label">Domaine</p>
+  <div class="step"><span class="step-num">01</span><span class="section-label">Domaine</span></div>
   <div class="theme-grid" id="theme-grid"></div>
-  <p class="section-label">Sous-thème</p>
+  <div class="step"><span class="step-num">02</span><span class="section-label">Sous-thème</span></div>
   <div class="st-list" id="st-list"></div>
-  <p class="section-label">Niveau</p>
+  <div class="step"><span class="step-num">03</span><span class="section-label">Niveau</span></div>
   <div class="niveaux-grid" id="niveaux-grid">
     <div class="niveau-card active" id="niveau-facile" onclick="setDiffCard(this,'facile')">
-      <div class="niveau-icon">😊</div>
+      <div class="niveau-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14 Q12 18 16 14"/><line x1="9" y1="9.5" x2="9.5" y2="9.5"/><line x1="14.5" y1="9.5" x2="15" y2="9.5"/></svg></div>
       <div class="niveau-titre">Facile</div>
       <div class="niveau-sous">Pour commencer</div>
     </div>
     <div class="niveau-card locked" id="niveau-moyen" onclick="setDiffCard(this,'moyen')">
-      <div class="niveau-icon">🔒</div>
+      <div class="niveau-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11 V7 a4 4 0 0 1 8 0 v4"/></svg></div>
       <div class="niveau-titre">Moyen</div>
       <div class="niveau-sous">On monte !</div>
       <div class="niveau-barre-wrap"><div class="niveau-barre-fill" id="barre-moyen" style="width:0%"></div></div>
     </div>
     <div class="niveau-card locked" id="niveau-difficile" onclick="setDiffCard(this,'difficile')">
-      <div class="niveau-icon">🔒</div>
+      <div class="niveau-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11 V7 a4 4 0 0 1 8 0 v4"/></svg></div>
       <div class="niveau-titre">Difficile</div>
       <div class="niveau-sous">Niveau expert</div>
       <div class="niveau-barre-wrap"><div class="niveau-barre-fill" id="barre-difficile" style="width:0%"></div></div>
     </div>
   </div>
   <div class="diff-row" id="diff-row">
-    <button class="diff-btn active" id="btn-facile" onclick="setDiff(this,'facile')">😊 Facile</button>
-    <button class="diff-btn" id="btn-moyen" onclick="setDiff(this,'moyen')">😐 Moyen</button>
-    <button class="diff-btn" id="btn-difficile" onclick="setDiff(this,'difficile')">😤 Difficile</button>
+    <button class="diff-btn active" id="btn-facile" onclick="setDiff(this,'facile')">Facile</button>
+    <button class="diff-btn" id="btn-moyen" onclick="setDiff(this,'moyen')">Moyen</button>
+    <button class="diff-btn" id="btn-difficile" onclick="setDiff(this,'difficile')">Difficile</button>
   </div>
   <div class="lock-msg" id="lock-msg"></div>
   <div id="deblocage-info"></div>
   <div id="trophee-zone"></div>
-  <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:1rem">🎲 Générer 5 questions</button>
-  <div class="separateur"></div>
+  <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:1.75rem">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+    Générer 5 questions
+  </button>
+  <div class="sep"></div>
   <div class="banniere-examen" id="banniere-examen">
-    <div class="banniere-examen-texte">
-      <div class="banniere-examen-titre">💡 Prêt à te tester en conditions réelles ?</div>
-      <div class="banniere-examen-sub">20 questions · 40 minutes · correction complète · type QCM</div>
-    </div>
-    <a href="examen.html" class="banniere-examen-btn">📝 Examen Blanc →</a>
+    <div class="banniere-examen-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M9 12 L11 14 L15.5 9"/></svg></div>
+    <div class="banniere-examen-titre">Prêt à te tester en conditions réelles ?</div>
+    <div class="banniere-examen-sub">20 questions · 40 minutes · correction complète · type QCM</div>
+    <a href="examen.html" class="banniere-examen-btn">Passer l'examen blanc →</a>
   </div>
 </div>
 <div id="quiz-area"></div>
@@ -211,13 +239,24 @@ const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const PROF_EMAIL = 'marcocampos2@gmail.com'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-// ── CHANGEMENT 1 : 4 domaines officiels DNB (était 6 thèmes) ──
 const THEMES = [
-  { label: 'Nombres et calculs',        value: 'Nombres et calculs',                          icon: '🔢' },
-  { label: 'Organisation et données',   value: 'Organisation et gestion de données, fonctions', icon: '📊' },
-  { label: 'Espace et géométrie',       value: 'Espace et géométrie',                          icon: '📐' },
-  { label: 'Grandeurs et mesures',      value: 'Grandeurs, mesures et algorithmique',           icon: '📏' },
+  { label: 'Nombres et calculs',        value: 'Nombres et calculs',                          icon: 'calc' },
+  { label: 'Organisation et données',   value: 'Organisation et gestion de données, fonctions', icon: 'bar' },
+  { label: 'Espace et géométrie',       value: 'Espace et géométrie',                          icon: 'tri' },
+  { label: 'Grandeurs et mesures',      value: 'Grandeurs, mesures et algorithmique',           icon: 'ruler' },
 ]
+
+const THEME_ICONS = {
+  calc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="9" cy="13" r="1.1"/><circle cx="15" cy="13" r="1.1"/><circle cx="9" cy="17" r="1.1"/><circle cx="15" cy="17" r="1.1"/></svg>',
+  bar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="14" width="3" height="6"/><rect x="11" y="9" width="3" height="11"/><rect x="16" y="5" width="3" height="15"/></svg>',
+  tri: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5 L5 20 L20 20 Z"/><rect x="5" y="16.5" width="3.5" height="3.5"/></svg>',
+  ruler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1" transform="rotate(-8 12 12)"/><line x1="6.5" y1="9" x2="7" y2="11.3" transform="rotate(-8 12 12)"/><line x1="10" y1="8.4" x2="10.5" y2="10.7" transform="rotate(-8 12 12)"/><line x1="13.5" y1="7.8" x2="14" y2="10.1" transform="rotate(-8 12 12)"/><line x1="17" y1="7.2" x2="17.5" y2="9.5" transform="rotate(-8 12 12)"/></svg>'
+}
+
+const ICON_SMILE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14 Q12 18 16 14"/><line x1="9" y1="9.5" x2="9.5" y2="9.5"/><line x1="14.5" y1="9.5" x2="15" y2="9.5"/></svg>'
+const ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11 V7 a4 4 0 0 1 8 0 v4"/></svg>'
+const ICON_EXAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M9 12 L11 14 L15.5 9"/></svg>'
+const ICON_TROPHY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4a2 2 0 0 0 2 3.5"/><path d="M17 6h3a2 2 0 0 1-2 3.5"/></svg>'
 
 const SOUS_THEMES = {
   'Nombres et calculs': [
@@ -251,7 +290,6 @@ window.addEventListener('beforeunload', function(e) {
   if(quizEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Si vous quittez, votre quiz sera enregistré avec un score de 0.';sauvegarderAbandonne()}
 })
 
-// ── MODIFIÉ : passe désormais par la route API sécurisée /api/quiz-resultat, envoie aussi prenom ──
 async function sauvegarderAbandonne() {
   if(saved||!user||questions.length===0)return
   try{
@@ -273,7 +311,7 @@ async function sauvegarderAbandonne() {
 function bloquerConfig(){
   quizEnCours=true
   document.getElementById('gen-btn').disabled=true
-  document.getElementById('gen-btn').textContent='⏳ Quiz en cours...'
+  document.getElementById('gen-btn').innerHTML='⏳ Quiz en cours...'
   document.querySelectorAll('.theme-card').forEach(c=>c.classList.add('disabled'))
   document.querySelectorAll('.st-row').forEach(c=>c.classList.add('disabled'))
   document.querySelectorAll('.niveau-card').forEach(c=>c.classList.add('disabled'))
@@ -283,7 +321,7 @@ function bloquerConfig(){
 function debloquerConfig(){
   quizEnCours=false
   document.getElementById('gen-btn').disabled=false
-  document.getElementById('gen-btn').textContent='🎲 Générer 5 questions'
+  document.getElementById('gen-btn').innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg> Générer 5 questions'
   document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('disabled'))
   document.querySelectorAll('.st-row').forEach(c=>c.classList.remove('disabled'))
   mettreAJourNiveaux()
@@ -320,43 +358,41 @@ async function mettreAJourNiveaux() {
   if(d.moyen){
     btnMoyen.disabled=false; btnMoyen.classList.remove('locked')
     cardMoyen.classList.remove('locked')
-    cardMoyen.querySelector('.niveau-icon').textContent='😐'
+    cardMoyen.querySelector('.niveau-icon').innerHTML=ICON_SMILE
     cardMoyen.querySelector('.niveau-sous').textContent='On monte !'
     if(barreMoyen) barreMoyen.style.width='100%'
   } else {
     btnMoyen.disabled=true; btnMoyen.classList.add('locked')
     cardMoyen.classList.add('locked')
-    cardMoyen.querySelector('.niveau-icon').textContent='🔒'
+    cardMoyen.querySelector('.niveau-icon').innerHTML=ICON_LOCK
     const pctM=Math.round((d.sessionsFacile/SEUIL_SESSIONS)*100)
     if(barreMoyen) barreMoyen.style.width=pctM+'%'
-    const restantM=SEUIL_SESSIONS-d.sessionsFacile
-    cardMoyen.querySelector('.niveau-sous').textContent=restantM+' session'+(restantM>1?'s':'')+' Facile ≥ 70%'
+    cardMoyen.querySelector('.niveau-sous').textContent=d.sessionsFacile+'/'+SEUIL_SESSIONS+' réussies'
     if(diff==='moyen'){diff='facile';btnFacile.classList.add('active');btnMoyen.classList.remove('active');cardFacile.classList.add('active');cardMoyen.classList.remove('active')}
   }
   if(d.difficile){
     btnDifficile.disabled=false; btnDifficile.classList.remove('locked')
     cardDifficile.classList.remove('locked')
-    cardDifficile.querySelector('.niveau-icon').textContent='😤'
+    cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_SMILE
     cardDifficile.querySelector('.niveau-sous').textContent='Niveau expert'
     if(barreDifficile) barreDifficile.style.width='100%'
   } else {
     btnDifficile.disabled=true; btnDifficile.classList.add('locked')
     cardDifficile.classList.add('locked')
-    cardDifficile.querySelector('.niveau-icon').textContent='🔒'
+    cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_LOCK
     const pctD=Math.round((d.sessionsMoyen/SEUIL_SESSIONS)*100)
     if(barreDifficile) barreDifficile.style.width=pctD+'%'
-    const restantD=SEUIL_SESSIONS-d.sessionsMoyen
-    cardDifficile.querySelector('.niveau-sous').textContent=restantD+' session'+(restantD>1?'s':'')+' Moyen ≥ 70%'
+    cardDifficile.querySelector('.niveau-sous').textContent=d.sessionsMoyen+'/'+SEUIL_SESSIONS+' réussies'
     if(diff==='difficile'){diff='facile';btnFacile.classList.add('active');btnDifficile.classList.remove('active');cardFacile.classList.add('active');cardDifficile.classList.remove('active')}
   }
   if(!d.moyen){
     const restant=SEUIL_SESSIONS-d.sessionsFacile
-    debInfo.innerHTML=`<div style="font-size:11px;color:#92400e;background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-top:8px">🔒 <strong>Moyen verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> — ${d.sessionsFacile}/${SEUIL_SESSIONS} réussies</div>`
+    debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Moyen verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> — ${d.sessionsFacile}/${SEUIL_SESSIONS} réussies</div>`
   } else if(!d.difficile){
     const restant=SEUIL_SESSIONS-d.sessionsMoyen
-    debInfo.innerHTML=`<div style="font-size:11px;color:#92400e;background:#fff8e6;border:1px solid #fcd34d;border-radius:8px;padding:8px 12px;margin-top:8px">🔒 <strong>Difficile verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Moyen ≥ 70%</strong> — ${d.sessionsMoyen}/${SEUIL_SESSIONS} réussies</div>`
+    debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Difficile verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Moyen ≥ 70%</strong> — ${d.sessionsMoyen}/${SEUIL_SESSIONS} réussies</div>`
   } else {
-    debInfo.innerHTML=`<div style="font-size:11px;color:#16a34a;padding:4px 0;margin-top:6px">✅ Tous les niveaux débloqués pour ce domaine !</div>`
+    debInfo.innerHTML=`<div style="font-size:11px;color:var(--vert);padding:4px 0;margin-top:6px">✅ Tous les niveaux débloqués pour ce domaine !</div>`
   }
   lockMsg.classList.remove('visible')
   await verifierTropheeGlobal()
@@ -376,16 +412,18 @@ async function verifierTropheeGlobal() {
           <div class="badge-trophee-titre">Bravo ! Tu as tout débloqué.</div>
           <div class="badge-trophee-sub">Tu maîtrises tous les domaines. Tu peux refaire des quiz pour réviser, ou te tester en conditions de vrai Brevet 👇</div>
           <div class="badge-trophee-themes">
-            ${THEMES.map(t=>`<span class="badge-theme-pill">${t.icon} ${t.label}</span>`).join('')}
+            ${THEMES.map(t=>`<span class="badge-theme-pill">${t.label}</span>`).join('')}
           </div>
         </div>`
       banniere.classList.add('rouge')
-      banniere.querySelector('.banniere-examen-titre').textContent='🎯 Tu es prêt pour le vrai Brevet !'
+      banniere.querySelector('.banniere-examen-icon').innerHTML = ICON_TROPHY
+      banniere.querySelector('.banniere-examen-titre').textContent='Tu es prêt pour le vrai Brevet !'
       banniere.querySelector('.banniere-examen-sub').textContent='Teste-toi maintenant en conditions réelles · 40 min · 20 questions'
     } else {
       zone.innerHTML=''
       banniere.classList.remove('rouge')
-      banniere.querySelector('.banniere-examen-titre').textContent='💡 Prêt à te tester en conditions réelles ?'
+      banniere.querySelector('.banniere-examen-icon').innerHTML = ICON_EXAM
+      banniere.querySelector('.banniere-examen-titre').textContent='Prêt à te tester en conditions réelles ?'
       banniere.querySelector('.banniere-examen-sub').textContent='20 questions · 40 minutes · correction complète · type QCM'
     }
   } catch(e) { console.log('Erreur trophée:', e.message) }
@@ -448,7 +486,7 @@ async function init() {
 }
 
 function renderThemes(){
-  document.getElementById('theme-grid').innerHTML=THEMES.map((t,i)=>`<div class="theme-card ${i===0?'active':''}" onclick="setTheme(this,'${t.value}')"><div class="theme-icon">${t.icon}</div><div class="theme-label">${t.label}</div></div>`).join('')
+  document.getElementById('theme-grid').innerHTML=THEMES.map((t,i)=>`<div class="theme-card ${i===0?'active':''}" onclick="setTheme(this,'${t.value}')"><div class="theme-icon">${THEME_ICONS[t.icon]}</div><div class="theme-label">${t.label}</div></div>`).join('')
 }
 
 function renderSousThemes(){
@@ -550,8 +588,8 @@ function renderGraphique(tableau,questionIndex){
   setTimeout(function(){
     var canvas=document.getElementById(chartId);if(!canvas)return
     var config={}
-    if(type==='barres'){config={type:'bar',data:{labels:labels,datasets:[{data:values,backgroundColor:'#002395',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:t.headers[0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor,stepSize:1},grid:{color:gridColor},beginAtZero:true}}}}}
-    else if(type==='fonction'){config={type:'line',data:{labels:labels,datasets:[{data:values,borderColor:'#002395',backgroundColor:'#002395',pointRadius:5,pointBackgroundColor:'#002395',tension:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'x',color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}}}}}}
+    if(type==='barres'){config={type:'bar',data:{labels:labels,datasets:[{data:values,backgroundColor:'#1B2A4A',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:t.headers[0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor,stepSize:1},grid:{color:gridColor},beginAtZero:true}}}}}
+    else if(type==='fonction'){config={type:'line',data:{labels:labels,datasets:[{data:values,borderColor:'#1B2A4A',backgroundColor:'#1B2A4A',pointRadius:5,pointBackgroundColor:'#1B2A4A',tension:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'x',color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}}}}}}
     charts[chartId]=new Chart(canvas,config)
   },50)
   return html
@@ -565,7 +603,7 @@ function renderFigure(fig){
   if(!f||!f.type)return ''
   if(f.type==='triangle_rect'&&f.base==='?'&&f.hauteur==='?')return ''
   const S=220,P=36
-  const style='<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:11px;fill:#3730a3;font-weight:600;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>'
+  const style='<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:11px;fill:#3730a3;font-weight:600;font-family:Inter,sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>'
   const open='<svg width="260" height="220" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg">'+style
   if(f.type==='triangle_rect'){
     const u=f.unite||'cm'
@@ -625,8 +663,8 @@ function renderQuiz() {
     let html='';const letters=['A','B','C','D'];const i=questions.length-1;const q=questions[i];const sel=answers[i],estAucune=submitted[i]==='aucune'
     html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
     q.opts.forEach((opt,j)=>{let cls='option';if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong';html+=`<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`})
-    if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`}
-    else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#16a34a">✓ Bravo !</strong>':`<strong style="color:#dc2626">✗ Pas tout à fait —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`}
+    if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`}
+    else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`}
     html+='</div>';area.innerHTML=html;return
   }
   let html=''
@@ -640,8 +678,8 @@ function renderQuiz() {
     html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
     q.opts.forEach((opt,j)=>{let cls='option';if(done){if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong'}else if(j===sel)cls+=' selected';html+=`<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}><span class="letter">${letters[j]}</span>${opt}</div>`})
     if(!done){const aucuneSel=sel==='aucune';html+=`<div class="option ${aucuneSel?'aucune-selected':''}" onclick="pick(${i},'aucune')" style="margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`}
-    else if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`}
-    else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#16a34a">✓ Bravo !</strong>':`<strong style="color:#dc2626">✗ Pas tout à fait —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`}
+    else if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`}
+    else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`}
     html+='</div>'
   })
   area.innerHTML=html
@@ -652,10 +690,10 @@ async function renderResultats() {
   const nbOk = Object.values(submitted).filter(v => v === 'correct').length
   const pct = Math.round((nbOk / questions.length) * 100)
   let mention = '', couleur = ''
-  if(pct >= 80){ mention = '🌟 Excellent !'; couleur = '#16a34a' }
-  else if(pct >= 60){ mention = '👍 Bien !'; couleur = '#3730a3' }
-  else if(pct >= 40){ mention = '💪 Continue !'; couleur = '#f59e0b' }
-  else { mention = '📚 À retravailler'; couleur = '#dc2626' }
+  if(pct >= 80){ mention = '🌟 Excellent !'; couleur = '#1f7a45' }
+  else if(pct >= 60){ mention = '👍 Bien !'; couleur = 'var(--marine)' }
+  else if(pct >= 40){ mention = '💪 Continue !'; couleur = '#8a6416' }
+  else { mention = '📚 À retravailler'; couleur = 'var(--bordeaux)' }
   await sauvegarder()
   delete deblocageCache[theme]
   const d = await verifierDeblocage(theme)
@@ -683,12 +721,12 @@ async function renderResultats() {
   }
   const pctBarreMoyen = Math.min(Math.round((d.sessionsFacile / SEUIL_SESSIONS) * 100), 100)
   const pctBarreDifficile = Math.min(Math.round((d.sessionsMoyen / SEUIL_SESSIONS) * 100), 100)
-  const couleurBarreMoyen = d.moyen ? '#16a34a' : '#f59e0b'
-  const couleurBarreDifficile = d.difficile ? '#16a34a' : '#f59e0b'
+  const couleurBarreMoyen = d.moyen ? '#1f7a45' : '#D4A23C'
+  const couleurBarreDifficile = d.difficile ? '#1f7a45' : '#D4A23C'
   const resteMoyen = d.moyen ? 'Débloqué' : `encore ${SEUIL_SESSIONS - d.sessionsFacile}`
   const resteDifficile = d.difficile ? 'Débloqué' : (d.moyen ? `encore ${SEUIL_SESSIONS - d.sessionsMoyen}` : 'bloqué')
-  const couleurResteMoyen = d.moyen ? '#16a34a' : '#92400e'
-  const couleurResteDifficile = d.difficile ? '#16a34a' : '#888'
+  const couleurResteMoyen = d.moyen ? '#1f7a45' : '#8a6416'
+  const couleurResteDifficile = d.difficile ? '#1f7a45' : 'var(--muted)'
   const themeCourt = THEMES.find(t => t.value === theme)?.label || theme
   let html = `
     <div class="results-bande">
@@ -721,11 +759,11 @@ async function renderResultats() {
       <button class="btn btn-green btn-full" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
       <button class="btn btn-outline btn-full" onclick="terminer()">🚪 Terminer et se déconnecter</button>
     </div>
-    <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:#1a1a1a;padding:0 4px">📋 Récapitulatif</div>`
+    <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--ardoise);padding:0 4px">📋 Récapitulatif</div>`
   const letters = ['A','B','C','D']
   questions.forEach((q, i) => {
     const estAucune = submitted[i] === 'aucune'
-    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge" style="${submitted[i]==='correct'?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626'}">${submitted[i]==='correct'?'✅ Correct':'❌ Raté'}</span></div><p class="q-text">${q.q}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
+    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge" style="${submitted[i]==='correct'?'background:#EAF6EF;color:#1f7a45':'background:var(--bordeaux-light);color:var(--bordeaux)'}">${submitted[i]==='correct'?'✅ Correct':'❌ Raté'}</span></div><p class="q-text">${q.q}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
     q.opts.forEach((opt, j) => {
       let cls = 'option'
       if(j === q.answer) cls += ' correct'
@@ -734,9 +772,9 @@ async function renderResultats() {
     })
     if(estAucune){
       html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
-      html += `<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
+      html += `<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
     } else {
-      html += `<div class="explication">${submitted[i]==='correct'?'<strong style="color:#16a34a">✓ Bravo !</strong>':`<strong style="color:#dc2626">✗ Pas tout à fait —</strong> <strong style="color:#16a34a">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`
+      html += `<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`
     }
     html += '</div>'
   })
@@ -744,10 +782,6 @@ async function renderResultats() {
   setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
 }
 
-// ── MODIFIÉ : passe désormais par la route API sécurisée /api/quiz-resultat, envoie aussi prenom ──
-// Le score n'est plus calculé côté client puis envoyé tel quel : on envoie les
-// questions + les réponses brutes, et la route serveur recalcule le score
-// elle-même avant d'insérer dans la table resultats (via service_role).
 async function sauvegarder() {
   if(saved||!user||questions.length===0)return
   const reponsesEnvoyees = {}
