@@ -70,7 +70,7 @@ export default async function handler(req, res) {
 async function insererResultat({ user_id, email, theme, difficulte, score, total, questions_ratees, temps_secondes, aucune_idee, source_questions }) {
   try {
     const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
-    const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
 
     // Récupère email_parent depuis profils
     let email_parent = ''
