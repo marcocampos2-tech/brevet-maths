@@ -251,9 +251,23 @@ window.addEventListener('beforeunload', function(e) {
   if(quizEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Si vous quittez, votre quiz sera enregistré avec un score de 0.';sauvegarderAbandonne()}
 })
 
+// ── MODIFIÉ : passe désormais par la route API sécurisée /api/quiz-resultat ──
 async function sauvegarderAbandonne() {
   if(saved||!user||questions.length===0)return
-  try{await sb.from('resultats').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',theme,difficulte:diff,score:0,total:5,questions_ratees:['Quiz abandonné'],temps_secondes:chronoSecondes,aucune_idee:0,source_questions:sourceQuestions,alerte_envoyee:false});saved=true}catch(e){console.log('Erreur abandon:',e.message)}
+  try{
+    await fetch('/api/quiz-resultat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: user.id, email: user.email,
+        theme, difficulte: diff,
+        abandonne: true,
+        temps_secondes: chronoSecondes,
+        source_questions: sourceQuestions
+      })
+    })
+    saved=true
+  }catch(e){console.log('Erreur abandon:',e.message)}
 }
 
 function bloquerConfig(){
@@ -730,17 +744,28 @@ async function renderResultats() {
   setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
 }
 
+// ── MODIFIÉ : passe désormais par la route API sécurisée /api/quiz-resultat ──
+// Le score n'est plus calculé côté client puis envoyé tel quel : on envoie les
+// questions + les réponses brutes, et la route serveur recalcule le score
+// elle-même avant d'insérer dans la table resultats (via service_role).
 async function sauvegarder() {
   if(saved||!user||questions.length===0)return
-  const nbOk=Object.values(submitted).filter(v=>v==='correct').length
-  const nbAucune=Object.values(submitted).filter(v=>v==='aucune').length
-  const ratees=questions.filter((_,i)=>submitted[i]==='wrong').map(q=>`${theme} — ${q.chapitre||q.q.substring(0,40)}`)
-  const inconnues=questions.filter((_,i)=>submitted[i]==='aucune').map(q=>`${theme} — ${q.chapitre||q.q.substring(0,40)}`)
+  const reponsesEnvoyees = {}
+  Object.keys(submitted).forEach(i => { reponsesEnvoyees[i] = answers[i] })
   try{
-    let emailFinal=emailParent
-    if(!emailFinal){const {data:profil}=await sb.from('profils').select('email_parent').eq('user_id',user.id).limit(1);if(profil&&profil.length>0){emailFinal=profil[0].email_parent;emailParent=emailFinal}}
-    const {data:inserted,error}=await sb.from('resultats').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailFinal||'',theme,difficulte:diff,score:nbOk,total:questions.length,questions_ratees:[...ratees,...inconnues.map(q=>`[Aucune idée] ${q}`)],temps_secondes:chronoSecondes,aucune_idee:nbAucune,source_questions:sourceQuestions,alerte_envoyee:false}).select('id').single()
-    if(error){console.log('Erreur insert:',error.message);return}
+    const res = await fetch('/api/quiz-resultat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: user.id, email: user.email,
+        theme, difficulte: diff,
+        questions, reponses: reponsesEnvoyees,
+        temps_secondes: chronoSecondes,
+        source_questions: sourceQuestions
+      })
+    })
+    const data = await res.json()
+    if(data.error){console.log('Erreur sauvegarde:',data.error);return}
     saved=true
     delete deblocageCache[theme]
   }catch(e){console.log('Erreur sauvegarde:',e.message)}
