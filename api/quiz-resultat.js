@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
     // ── Cas abandon : score forcé à 0, pas de recalcul nécessaire ──
     if (abandonne) {
-      const inserted = await insererResultat({
+      const result = await insererResultat({
         user_id, email, theme, difficulte,
         score: 0, total: 5,
         questions_ratees: ['Quiz abandonné'],
@@ -22,6 +22,7 @@ export default async function handler(req, res) {
         aucune_idee: 0,
         source_questions: source_questions || 'ia'
       })
+      if (result.error) return res.status(500).json({ error: result.error })
       return res.status(200).json({ success: true, score: 0, total: 5 })
     }
 
