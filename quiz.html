@@ -251,7 +251,7 @@ window.addEventListener('beforeunload', function(e) {
   if(quizEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Si vous quittez, votre quiz sera enregistré avec un score de 0.';sauvegarderAbandonne()}
 })
 
-// ── MODIFIÉ : passe désormais par la route API sécurisée /api/quiz-resultat ──
+// ── MODIFIÉ : passe désormais par la route API sécurisée /api/quiz-resultat, envoie aussi prenom ──
 async function sauvegarderAbandonne() {
   if(saved||!user||questions.length===0)return
   try{
@@ -259,7 +259,7 @@ async function sauvegarderAbandonne() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        user_id: user.id, email: user.email,
+        user_id: user.id, email: user.email, prenom,
         theme, difficulte: diff,
         abandonne: true,
         temps_secondes: chronoSecondes,
@@ -744,7 +744,7 @@ async function renderResultats() {
   setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
 }
 
-// ── MODIFIÉ : passe désormais par la route API sécurisée /api/quiz-resultat ──
+// ── MODIFIÉ : passe désormais par la route API sécurisée /api/quiz-resultat, envoie aussi prenom ──
 // Le score n'est plus calculé côté client puis envoyé tel quel : on envoie les
 // questions + les réponses brutes, et la route serveur recalcule le score
 // elle-même avant d'insérer dans la table resultats (via service_role).
@@ -757,7 +757,7 @@ async function sauvegarder() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        user_id: user.id, email: user.email,
+        user_id: user.id, email: user.email, prenom,
         theme, difficulte: diff,
         questions, reponses: reponsesEnvoyees,
         temps_secondes: chronoSecondes,
