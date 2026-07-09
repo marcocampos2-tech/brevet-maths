@@ -4,55 +4,90 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#1a1a1a">
+<meta name="theme-color" content="#1B2A4A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ACADEMIKA">
 <title>Mes résultats — ACADEMIKA</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
+:root{
+  --marine:#1B2A4A; --marine-light:#EEF1F6;
+  --bordeaux:#9E2B25; --bordeaux-light:#FBEDEC;
+  --creme:#FAF9F6; --ardoise:#41454C; --muted:#6B6E73;
+  --vert:#2F9E5C; --vert-light:#EAF6EF;
+  --dore:#D4A23C; --dore-light:#FBF4E4;
+  --border:#E4E1D8;
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
-.container { max-width: 680px; margin: 0 auto; padding: 1rem; }
-nav { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px solid #e8e8e4; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px; }
-.nav-left { font-size: 18px; font-weight: 600; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 8px; border: 1px solid #d0d0c8; background: white; color: #1a1a1a; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; }
-.btn:hover { background: #f5f5f0; }
-.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: #eef2ff; color: #3730a3; }
-.empty { text-align: center; color: #666; padding: 3rem; }
-.loader { text-align: center; color: #666; padding: 3rem; }
-.tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; background: white; border-radius: 10px; padding: 4px; border: 1px solid #e8e8e4; }
-.tab { flex: 1; padding: 8px; border-radius: 8px; border: none; background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: #666; transition: all 0.15s; }
-.tab.active { background: #1a1a1a; color: white; }
-.dashboard-header { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 1.5rem; margin-bottom: 1rem; text-align: center; }
-.dashboard-score { font-size: 56px; font-weight: 700; line-height: 1; }
-.dashboard-sub { font-size: 13px; color: #999; margin-top: 8px; }
-.dashboard-stats { display: flex; justify-content: center; gap: 24px; margin-top: 16px; }
-.dashboard-stat { text-align: center; }
-.dashboard-stat-val { font-size: 20px; font-weight: 600; color: #1a1a1a; }
-.dashboard-stat-label { font-size: 11px; color: #999; margin-top: 2px; }
-.theme-card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1rem 1.25rem; margin-bottom: 8px; }
-.theme-header { display: flex; justify-content: space-between; align-items: center; }
-.theme-nom { font-size: 14px; font-weight: 600; color: #1a1a1a; }
-.theme-bar-wrap { height: 6px; background: #e8e8e4; border-radius: 3px; margin-top: 10px; }
-.theme-bar { height: 6px; border-radius: 3px; }
-.footer-btns { display: flex; flex-direction: column; gap: 8px; margin-top: 1rem; }
-.btn-green { background: #16a34a; color: white; border-color: #16a34a; font-size: 15px; padding: 14px; justify-content: center; width: 100%; }
-.btn-green:hover { background: #15803d; }
-.hist-card { background: white; border-radius: 12px; border: 1px solid #e8e8e4; padding: 1.25rem; margin-bottom: 1rem; }
-.hist-score { font-size: 22px; font-weight: 600; }
-.hist-date { font-size: 12px; color: #999; margin-top: 4px; }
-.ratee { font-size: 12px; color: #666; padding: 4px 0; border-top: 1px solid #f0f0ec; }
-.ratee-label { font-size: 12px; color: #dc2626; margin: 8px 0 4px; }
-.insight { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
-.insight-tag { font-size: 12px; padding: 4px 10px; border-radius: 20px; }
-.insight-fort { background: #f0fdf4; color: #16a34a; border: 1px solid #dcfce7; }
-.insight-faible { background: #fef2f2; color: #dc2626; border: 1px solid #fee2e2; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--creme); min-height: 100vh; color: var(--ardoise); }
+.container { max-width: 700px; margin: 0 auto; padding: 1rem 1.25rem 3rem; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 0; border-bottom: 2px solid var(--marine); margin-bottom: 1.5rem; }
+.nav-left { font-family:'Newsreader',serif; font-size: 19px; font-weight: 600; color: var(--marine); }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: white; color: var(--ardoise); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; font-family:'Inter',sans-serif; }
+.btn:hover { background: var(--creme); }
+.empty { text-align: center; color: var(--muted); padding: 3rem; }
+.loader { text-align: center; color: var(--muted); padding: 3rem; }
+.tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; background: white; border-radius: 11px; padding: 4px; border: 1px solid var(--border); }
+.tab { flex: 1; padding: 9px; border-radius: 8px; border: none; background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--muted); transition: all 0.15s; font-family:'Inter',sans-serif; }
+.tab.active { background: var(--marine); color: white; }
+.hero { background: white; border-radius: 16px; border: 1px solid var(--border); padding: 2rem 1.5rem; margin-bottom: 1rem; text-align: center; }
+.hero-label { font-family:'IBM Plex Mono',monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+.hero-score { font-family:'Newsreader',serif; font-size: 52px; font-weight: 600; line-height: 1; color: var(--marine); }
+.hero-statut { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.hero-stats { display: flex; justify-content: center; gap: 28px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
+.hero-stat { text-align: center; }
+.hero-stat-val { font-size: 19px; font-weight: 600; color: var(--ardoise); }
+.hero-stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.insights { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
+.insight { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 6px 12px; border-radius: 20px; font-weight: 500; }
+.insight-fort { background: var(--vert-light); color: #1f7a45; }
+.insight-faible { background: var(--dore-light); color: #8a6416; }
+.section-label { font-family:'IBM Plex Mono',monospace; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 1.75rem 0 10px; }
+.theme-card { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 8px; }
+.theme-header { display: flex; align-items: center; gap: 10px; }
+.theme-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--marine-light); color: var(--marine); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.theme-icon svg { width: 16px; height: 16px; }
+.theme-nom { font-size: 13.5px; font-weight: 600; color: var(--ardoise); flex: 1; }
+.theme-score { font-size: 14px; font-weight: 600; }
+.theme-score.bon { color: var(--vert); }
+.theme-score.moyen { color: #8a6416; }
+.theme-score.faible { color: var(--bordeaux); }
+.theme-bar-wrap { height: 5px; background: var(--border); border-radius: 3px; margin-top: 10px; overflow: hidden; }
+.theme-bar { height: 100%; border-radius: 3px; }
+.footer-btns { margin-top: 1.75rem; }
+.btn-green { display: block; text-align: center; text-decoration: none; background: var(--bordeaux); color: white; font-size: 15px; font-weight: 600; padding: 15px; border-radius: 11px; }
+.jour-sep { display: flex; align-items: center; gap: 10px; margin: 1.5rem 0 10px; }
+.jour-sep:first-child { margin-top: 0; }
+.jour-sep-label { font-family:'IBM Plex Mono',monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.jour-sep-line { flex: 1; height: 1px; background: var(--border); }
+.hist-card { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 16px; margin-bottom: 10px; }
+.hist-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.hist-theme { font-size: 13.5px; font-weight: 600; color: var(--ardoise); }
+.hist-badge { display: inline-block; font-size: 10.5px; padding: 2px 8px; border-radius: 20px; background: var(--marine-light); color: var(--marine); margin-left: 6px; font-weight: 500; }
+.hist-date { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.hist-score { font-family:'Newsreader',serif; font-size: 22px; font-weight: 600; }
+.hist-score.bon { color: var(--vert); }
+.hist-score.moyen { color: #8a6416; }
+.hist-score.faible { color: var(--bordeaux); }
+.hist-ratees { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.hist-ratees-label { font-size: 11px; color: var(--bordeaux); font-weight: 600; margin-bottom: 5px; }
+.hist-ratee { font-size: 12px; color: var(--muted); padding: 2px 0; }
+@media (max-width:480px){
+  .container{padding:1rem 1rem 2rem}
+  .hero{padding:1.5rem 1.25rem}
+  .hero-score{font-size:42px}
+  .hero-stats{gap:18px}
+  .insights{gap:6px}
+  .insight{font-size:11.5px;padding:5px 10px}
+}
 </style>
 </head>
 <body>
 <div class="container">
   <nav>
-    <div class="nav-left">∑ ACADEMIKA</div>
+    <div class="nav-left">∑ Academika</div>
     <a href="quiz.html" class="btn">← Retour au quiz</a>
   </nav>
   <div class="tabs">
@@ -67,20 +102,42 @@ const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-const THEMES = ['Nombres et calculs','Géométrie','Algèbre et équations','Statistiques et probabilités','Fonctions','Algorithmique']
-const ICONS = {'Nombres et calculs':'🔢','Géométrie':'📐','Algèbre et équations':'🔣','Statistiques et probabilités':'📊','Fonctions':'📈','Algorithmique':'💻'}
+const THEMES = [
+  { label: 'Nombres et calculs',        value: 'Nombres et calculs',                          icon: 'calc' },
+  { label: 'Organisation et données',   value: 'Organisation et gestion de données, fonctions', icon: 'bar' },
+  { label: 'Espace et géométrie',       value: 'Espace et géométrie',                          icon: 'tri' },
+  { label: 'Grandeurs et mesures',      value: 'Grandeurs, mesures et algorithmique',           icon: 'ruler' },
+]
+
+const THEME_ICONS = {
+  calc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="9" cy="13" r="1.1"/><circle cx="15" cy="13" r="1.1"/><circle cx="9" cy="17" r="1.1"/><circle cx="15" cy="17" r="1.1"/></svg>',
+  bar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="14" width="3" height="6"/><rect x="11" y="9" width="3" height="11"/><rect x="16" y="5" width="3" height="15"/></svg>',
+  tri: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5 L5 20 L20 20 Z"/><rect x="5" y="16.5" width="3.5" height="3.5"/></svg>',
+  ruler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1" transform="rotate(-8 12 12)"/><line x1="6.5" y1="9" x2="7" y2="11.3" transform="rotate(-8 12 12)"/><line x1="10" y1="8.4" x2="10.5" y2="10.7" transform="rotate(-8 12 12)"/><line x1="13.5" y1="7.8" x2="14" y2="10.1" transform="rotate(-8 12 12)"/><line x1="17" y1="7.2" x2="17.5" y2="9.5" transform="rotate(-8 12 12)"/></svg>'
+}
 
 function getStatut(pct) {
-  if (pct >= 70) return { label: 'Maîtrisé', emoji: '🟢', color: '#16a34a' }
-  if (pct >= 50) return { label: 'En cours', emoji: '🟡', color: '#f59e0b' }
-  return { label: 'À retravailler', emoji: '🔴', color: '#dc2626' }
+  if (pct >= 70) return { label: 'Maîtrisé', emoji: '🟢', color: 'var(--vert)', classe: 'bon' }
+  if (pct >= 50) return { label: 'En cours', emoji: '🟡', color: '#8a6416', classe: 'moyen' }
+  return { label: 'À retravailler', emoji: '🔴', color: 'var(--bordeaux)', classe: 'faible' }
 }
 
 function formatTemps(s) {
   var h = Math.floor(s / 3600)
   var m = Math.floor((s % 3600) / 60)
-  if (h > 0) return h + 'h' + (m > 0 ? m + 'min' : '')
+  if (h > 0) return h + 'h ' + (m > 0 ? m + 'min' : '')
   return m + ' min'
+}
+
+function dayLabel(dateStr) {
+  const d = new Date(dateStr)
+  const now = new Date()
+  const dOnly = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const nOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const diffJours = Math.round((nOnly - dOnly) / 86400000)
+  if (diffJours === 0) return "Aujourd'hui"
+  if (diffJours === 1) return 'Hier'
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: dOnly.getFullYear() !== nOnly.getFullYear() ? 'numeric' : undefined })
 }
 
 function switchTab(tab) {
@@ -115,7 +172,7 @@ function renderDashboard(rows) {
   var globalStatut = getStatut(globalPct)
 
   var statsByTheme = {}
-  THEMES.forEach(function(t) { statsByTheme[t] = { score: 0, total: 0 } })
+  THEMES.forEach(function(t) { statsByTheme[t.value] = { score: 0, total: 0 } })
   rows.forEach(function(r) {
     if (statsByTheme[r.theme] !== undefined) {
       statsByTheme[r.theme].score += r.score || 0
@@ -125,73 +182,73 @@ function renderDashboard(rows) {
 
   var fortTheme = '', faibleTheme = '', fortPct = -1, faiblePct = 101
   THEMES.forEach(function(t) {
-    if (statsByTheme[t].total === 0) return
-    var pct = Math.round((statsByTheme[t].score / statsByTheme[t].total) * 100)
-    if (pct >= 70 && pct > fortPct) { fortPct = pct; fortTheme = t }
-    if (pct < faiblePct) { faiblePct = pct; faibleTheme = t }
+    if (statsByTheme[t.value].total === 0) return
+    var pct = Math.round((statsByTheme[t.value].score / statsByTheme[t.value].total) * 100)
+    if (pct >= 70 && pct > fortPct) { fortPct = pct; fortTheme = t.label }
+    if (pct < faiblePct) { faiblePct = pct; faibleTheme = t.label }
   })
 
   var html = ''
-
-  // Header global
-  html += '<div class="dashboard-header">'
-  html += '<div style="font-size:13px;color:#999;margin-bottom:4px">Score global</div>'
-  html += '<div class="dashboard-score" style="color:' + globalStatut.color + '">' + totalScore + '/' + totalTotal + '</div>'
-  html += '<div class="dashboard-sub">' + globalStatut.emoji + ' ' + globalStatut.label + '</div>'
-  html += '<div class="dashboard-stats">'
-  html += '<div class="dashboard-stat"><div class="dashboard-stat-val">' + totalSessions + '</div><div class="dashboard-stat-label">sessions</div></div>'
-  html += '<div class="dashboard-stat"><div class="dashboard-stat-val">' + formatTemps(totalSecondes) + '</div><div class="dashboard-stat-label">temps total</div></div>'
+  html += '<div class="hero">'
+  html += '<div class="hero-label">Score global</div>'
+  html += '<div class="hero-score">' + globalPct + '%</div>'
+  html += '<div class="hero-statut">' + globalStatut.emoji + ' ' + globalStatut.label + '</div>'
+  html += '<div class="hero-stats">'
+  html += '<div class="hero-stat"><div class="hero-stat-val">' + totalSessions + '</div><div class="hero-stat-label">sessions</div></div>'
+  html += '<div class="hero-stat"><div class="hero-stat-val">' + formatTemps(totalSecondes) + '</div><div class="hero-stat-label">temps total</div></div>'
   html += '</div>'
   if (fortTheme || faibleTheme) {
-    html += '<div class="insight">'
-    if (fortTheme) html += '<span class="insight-tag insight-fort">💪 Fort en : ' + fortTheme + '</span>'
-    if (faibleTheme) html += '<span class="insight-tag insight-faible">🎯 À travailler : ' + faibleTheme + '</span>'
+    html += '<div class="insights">'
+    if (fortTheme) html += '<span class="insight insight-fort">💪 Fort en ' + fortTheme + '</span>'
+    if (faibleTheme) html += '<span class="insight insight-faible">🎯 À travailler : ' + faibleTheme + '</span>'
     html += '</div>'
   }
   html += '</div>'
 
-  // Par thème
+  html += '<div class="section-label">Par domaine</div>'
   THEMES.forEach(function(t) {
-    var s = statsByTheme[t]
+    var s = statsByTheme[t.value]
     if (s.total === 0) return
     var pct = Math.round((s.score / s.total) * 100)
     var statut = getStatut(pct)
-    var icon = ICONS[t] || '📚'
     html += '<div class="theme-card">'
     html += '<div class="theme-header">'
-    html += '<div><div class="theme-nom">' + icon + ' ' + t + '</div></div>'
-    html += '<div style="text-align:right">'
-    html += '<div style="font-size:15px;font-weight:700;color:' + statut.color + '">' + s.score + '/' + s.total + ' bonnes réponses</div>'
-    html += '<div style="font-size:11px;font-weight:600;color:' + statut.color + '">' + statut.emoji + ' ' + statut.label + '</div>'
-    html += '</div>'
+    html += '<div class="theme-icon">' + THEME_ICONS[t.icon] + '</div>'
+    html += '<div class="theme-nom">' + t.label + '</div>'
+    html += '<div class="theme-score ' + statut.classe + '">' + pct + '%</div>'
     html += '</div>'
     html += '<div class="theme-bar-wrap"><div class="theme-bar" style="width:' + pct + '%;background:' + statut.color + '"></div></div>'
     html += '</div>'
   })
 
-  // Bouton
-  html += '<div class="footer-btns">'
-  html += '<a href="quiz.html" class="btn btn-green">💪 Continuer à réviser</a>'
-  html += '</div>'
+  html += '<div class="footer-btns"><a href="quiz.html" class="btn-green">💪 Continuer à réviser</a></div>'
 
   document.getElementById('tab-dashboard').innerHTML = html
 }
 
 function renderHistorique(rows) {
-  var html = rows.map(function(r) {
+  var html = ''
+  var dernierJour = null
+  rows.forEach(function(r) {
+    var jour = dayLabel(r.created_at)
+    if (jour !== dernierJour) {
+      html += '<div class="jour-sep"><span class="jour-sep-label">' + jour + '</span><span class="jour-sep-line"></span></div>'
+      dernierJour = jour
+    }
     var pct = Math.round((r.score / r.total) * 100)
     var statut = getStatut(pct)
-    var date = new Date(r.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    var heure = new Date(r.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+    var themeLabel = (THEMES.find(function(t){ return t.value === r.theme }) || {}).label || r.theme
     var ratees = ''
     if (r.questions_ratees && r.questions_ratees.length) {
-      ratees = '<div class="ratee-label">Questions ratées :</div>' + r.questions_ratees.map(function(q) { return '<div class="ratee">• ' + q + '</div>' }).join('')
+      ratees = '<div class="hist-ratees"><div class="hist-ratees-label">Question' + (r.questions_ratees.length > 1 ? 's ratées' : ' ratée') + '</div>' + r.questions_ratees.map(function(q) { return '<div class="hist-ratee">• ' + q + '</div>' }).join('') + '</div>'
     }
-    return '<div class="hist-card">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center">' +
-      '<div><strong>' + r.theme + '</strong><span class="badge" style="margin-left:6px">' + r.difficulte + '</span><div class="hist-date">' + date + '</div></div>' +
-      '<div style="text-align:right"><div class="hist-score" style="color:' + statut.color + '">' + r.score + '/' + r.total + '</div><div style="font-size:11px;font-weight:600;color:' + statut.color + '">' + statut.emoji + ' ' + statut.label + '</div></div>' +
+    html += '<div class="hist-card">' +
+      '<div class="hist-top">' +
+      '<div><span class="hist-theme">' + themeLabel + '</span><span class="hist-badge">' + r.difficulte + '</span><div class="hist-date">' + heure + '</div></div>' +
+      '<div class="hist-score ' + statut.classe + '">' + r.score + '/' + r.total + '</div>' +
       '</div>' + ratees + '</div>'
-  }).join('')
+  })
   document.getElementById('tab-historique').innerHTML = html
 }
 
