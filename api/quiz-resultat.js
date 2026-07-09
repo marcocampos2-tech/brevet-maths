@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Méthode non autorisée' }); return }
 
   try {
-    const { user_id, email, theme, difficulte, questions, reponses, temps_secondes, source_questions, abandonne } = req.body
+    const { user_id, email, prenom, theme, difficulte, questions, reponses, temps_secondes, source_questions, abandonne } = req.body
 
     if (!user_id || !theme || !difficulte) {
       return res.status(400).json({ error: 'Paramètres manquants' })
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     // ── Cas abandon : score forcé à 0, pas de recalcul nécessaire ──
     if (abandonne) {
       const result = await insererResultat({
-        user_id, email, theme, difficulte,
+        user_id, email, prenom, theme, difficulte,
         score: 0, total: 5,
         questions_ratees: ['Quiz abandonné'],
         temps_secondes: temps_secondes || 0,
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     })
 
     const result = await insererResultat({
-      user_id, email, theme, difficulte,
+      user_id, email, prenom, theme, difficulte,
       score: nbOk, total: questions.length,
       questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
       temps_secondes: temps_secondes || 0,
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function insererResultat({ user_id, email, theme, difficulte, score, total, questions_ratees, temps_secondes, aucune_idee, source_questions }) {
+async function insererResultat({ user_id, email, prenom, theme, difficulte, score, total, questions_ratees, temps_secondes, aucune_idee, source_questions }) {
   try {
     const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
     const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
@@ -94,7 +94,7 @@ async function insererResultat({ user_id, email, theme, difficulte, score, total
         'Prefer': 'return=minimal'
       },
       body: JSON.stringify({
-        user_id, email: email || '', prenom: '', email_parent,
+        user_id, email: email || '', prenom: prenom || '', email_parent,
         theme, difficulte, score, total,
         questions_ratees, temps_secondes, aucune_idee,
         source_questions, alerte_envoyee: false
