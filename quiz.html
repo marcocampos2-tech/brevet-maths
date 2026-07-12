@@ -390,13 +390,12 @@ async function mettreAJourNiveaux() {
     cardMoyen.querySelector('.niveau-icon').innerHTML=ICON_SMILE
     const sessionsMoyenAffiche = Math.min(d.sessionsMoyen, SEUIL_SESSIONS)
     cardMoyen.querySelector('.niveau-sous').textContent=sessionsMoyenAffiche+'/'+SEUIL_SESSIONS
-    if(barreMoyen) barreMoyen.style.width=Math.min((d.sessionsMoyen/SEUIL_SESSIONS)*100,100)+'%'
+    if(barreMoyen){ barreMoyen.parentElement.style.display=''; barreMoyen.style.width=Math.min((d.sessionsMoyen/SEUIL_SESSIONS)*100,100)+'%' }
   } else {
     btnMoyen.disabled=true; btnMoyen.classList.add('locked')
     cardMoyen.classList.add('locked')
     cardMoyen.querySelector('.niveau-icon').innerHTML=ICON_LOCK
-    const pctM=Math.round((d.sessionsFacile/SEUIL_SESSIONS)*100)
-    if(barreMoyen) barreMoyen.style.width=Math.min(pctM,100)+'%'
+    if(barreMoyen) barreMoyen.parentElement.style.display='none'
     cardMoyen.querySelector('.niveau-sous').textContent='bloqué'
     if(diff==='moyen'){diff='facile';btnFacile.classList.add('active');btnMoyen.classList.remove('active');cardFacile.classList.add('active');cardMoyen.classList.remove('active')}
   }
@@ -410,13 +409,12 @@ async function mettreAJourNiveaux() {
       cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_SMILE
       cardDifficile.querySelector('.niveau-sous').textContent=d.sessionsDifficile+'/'+SEUIL_SESSIONS
     }
-    if(barreDifficile) barreDifficile.style.width=Math.min((d.sessionsDifficile/SEUIL_SESSIONS)*100,100)+'%'
+    if(barreDifficile){ barreDifficile.parentElement.style.display=''; barreDifficile.style.width=Math.min((d.sessionsDifficile/SEUIL_SESSIONS)*100,100)+'%' }
   } else {
     btnDifficile.disabled=true; btnDifficile.classList.add('locked')
     cardDifficile.classList.add('locked')
     cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_LOCK
-    const pctD=Math.round((d.sessionsMoyen/SEUIL_SESSIONS)*100)
-    if(barreDifficile) barreDifficile.style.width=Math.min(pctD,100)+'%'
+    if(barreDifficile) barreDifficile.parentElement.style.display='none'
     cardDifficile.querySelector('.niveau-sous').textContent='bloqué'
     if(diff==='difficile'){diff='facile';btnFacile.classList.add('active');btnDifficile.classList.remove('active');cardFacile.classList.add('active');cardDifficile.classList.remove('active')}
   }
