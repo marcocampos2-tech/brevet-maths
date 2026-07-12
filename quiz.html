@@ -354,13 +354,14 @@ async function verifierDeblocage(t) {
   if(deblocageCache[t]) return deblocageCache[t]
   try {
     const { data } = await sb.from('resultats').select('difficulte, score, total').eq('user_id', user.id).eq('theme', t)
-    if (!data) { deblocageCache[t] = { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0 }; return deblocageCache[t] }
+    if (!data) { deblocageCache[t] = { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }; return deblocageCache[t] }
     const sessionsFacile = data.filter(r => r.difficulte === 'facile' && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
     const sessionsMoyen  = data.filter(r => r.difficulte === 'moyen'  && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
-    deblocageCache[t] = { moyen: sessionsFacile >= SEUIL_SESSIONS, difficile: sessionsMoyen >= SEUIL_SESSIONS, sessionsFacile, sessionsMoyen }
+    const sessionsDifficile = data.filter(r => r.difficulte === 'difficile' && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
+    deblocageCache[t] = { moyen: sessionsFacile >= SEUIL_SESSIONS, difficile: sessionsMoyen >= SEUIL_SESSIONS, sessionsFacile, sessionsMoyen, sessionsDifficile }
     return deblocageCache[t]
   } catch(e) {
-    return { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0 }
+    return { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }
   }
 }
 
@@ -378,44 +379,58 @@ async function mettreAJourNiveaux() {
   const barreDifficile=document.getElementById('barre-difficile')
   if(!btnFacile||!btnMoyen||!btnDifficile)return
   btnFacile.disabled=false; btnFacile.classList.remove('locked')
+
+  // Facile : toujours actif, compte ses propres sessions réussies, plafonné à 5/5
+  const sessionsFacileAffiche = Math.min(d.sessionsFacile, SEUIL_SESSIONS)
+  cardFacile.querySelector('.niveau-sous').textContent=sessionsFacileAffiche+'/'+SEUIL_SESSIONS
+
   if(d.moyen){
     btnMoyen.disabled=false; btnMoyen.classList.remove('locked')
     cardMoyen.classList.remove('locked')
     cardMoyen.querySelector('.niveau-icon').innerHTML=ICON_SMILE
-    cardMoyen.querySelector('.niveau-sous').textContent='On monte !'
-    if(barreMoyen) barreMoyen.style.width='100%'
+    const sessionsMoyenAffiche = Math.min(d.sessionsMoyen, SEUIL_SESSIONS)
+    cardMoyen.querySelector('.niveau-sous').textContent=sessionsMoyenAffiche+'/'+SEUIL_SESSIONS
+    if(barreMoyen) barreMoyen.style.width=Math.min((d.sessionsMoyen/SEUIL_SESSIONS)*100,100)+'%'
   } else {
     btnMoyen.disabled=true; btnMoyen.classList.add('locked')
     cardMoyen.classList.add('locked')
     cardMoyen.querySelector('.niveau-icon').innerHTML=ICON_LOCK
     const pctM=Math.round((d.sessionsFacile/SEUIL_SESSIONS)*100)
-    if(barreMoyen) barreMoyen.style.width=pctM+'%'
-    cardMoyen.querySelector('.niveau-sous').textContent=d.sessionsFacile+'/'+SEUIL_SESSIONS+' réussies'
+    if(barreMoyen) barreMoyen.style.width=Math.min(pctM,100)+'%'
+    cardMoyen.querySelector('.niveau-sous').textContent='bloqué'
     if(diff==='moyen'){diff='facile';btnFacile.classList.add('active');btnMoyen.classList.remove('active');cardFacile.classList.add('active');cardMoyen.classList.remove('active')}
   }
   if(d.difficile){
     btnDifficile.disabled=false; btnDifficile.classList.remove('locked')
     cardDifficile.classList.remove('locked')
-    cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_SMILE
-    cardDifficile.querySelector('.niveau-sous').textContent='Niveau expert'
-    if(barreDifficile) barreDifficile.style.width='100%'
+    if(d.sessionsDifficile >= SEUIL_SESSIONS){
+      cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_TROPHY
+      cardDifficile.querySelector('.niveau-sous').textContent='Niveau maîtrisé'
+    } else {
+      cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_SMILE
+      cardDifficile.querySelector('.niveau-sous').textContent=d.sessionsDifficile+'/'+SEUIL_SESSIONS
+    }
+    if(barreDifficile) barreDifficile.style.width=Math.min((d.sessionsDifficile/SEUIL_SESSIONS)*100,100)+'%'
   } else {
     btnDifficile.disabled=true; btnDifficile.classList.add('locked')
     cardDifficile.classList.add('locked')
     cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_LOCK
     const pctD=Math.round((d.sessionsMoyen/SEUIL_SESSIONS)*100)
-    if(barreDifficile) barreDifficile.style.width=pctD+'%'
-    cardDifficile.querySelector('.niveau-sous').textContent=d.sessionsMoyen+'/'+SEUIL_SESSIONS+' réussies'
+    if(barreDifficile) barreDifficile.style.width=Math.min(pctD,100)+'%'
+    cardDifficile.querySelector('.niveau-sous').textContent='bloqué'
     if(diff==='difficile'){diff='facile';btnFacile.classList.add('active');btnDifficile.classList.remove('active');cardFacile.classList.add('active');cardDifficile.classList.remove('active')}
   }
+
+  // Messages de réassurance permanents sous les cartes
   if(!d.moyen){
     const restant=SEUIL_SESSIONS-d.sessionsFacile
     debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Moyen verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> — ${d.sessionsFacile}/${SEUIL_SESSIONS} réussies</div>`
   } else if(!d.difficile){
     const restant=SEUIL_SESSIONS-d.sessionsMoyen
-    debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Difficile verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Moyen ≥ 70%</strong> — ${d.sessionsMoyen}/${SEUIL_SESSIONS} réussies</div>`
+    debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Difficile verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Moyen ≥ 70%</strong> — ${d.sessionsMoyen}/${SEUIL_SESSIONS} réussies</div>
+      <div style="font-size:11px;color:var(--vert);padding:6px 0 0">✅ Tu peux continuer à réviser le niveau Facile si tu veux — rien ne t'en empêche.</div>`
   } else {
-    debInfo.innerHTML=`<div style="font-size:11px;color:var(--vert);padding:4px 0;margin-top:6px">✅ Tous les niveaux débloqués pour ce domaine !</div>`
+    debInfo.innerHTML=`<div style="font-size:11px;color:var(--vert);padding:4px 0;margin-top:6px">✅ Tous les niveaux sont accessibles — reviens sur Facile ou Moyen quand tu veux.</div>`
   }
   lockMsg.classList.remove('visible')
   await verifierTropheeGlobal()
@@ -726,6 +741,11 @@ async function renderResultats() {
       progMsg = `<div class="prog-msg debloque">🔓 Niveau Moyen débloqué ! Tu peux maintenant le choisir.</div>`
     } else if(diff === 'moyen' && d.sessionsMoyen === SEUIL_SESSIONS) {
       progMsg = `<div class="prog-msg debloque">🔓 Niveau Difficile débloqué ! Tu es au top.</div>`
+    } else if(diff === 'difficile' && d.sessionsDifficile === SEUIL_SESSIONS) {
+      progMsg = `<div class="prog-msg debloque">🏆 Niveau Difficile maîtrisé ! Tu peux continuer à t'entraîner si tu veux.</div>`
+    } else if(diff === 'difficile') {
+      const restant = SEUIL_SESSIONS - d.sessionsDifficile
+      progMsg = `<div class="prog-msg reussi">✅ Session réussie ! ${d.sessionsDifficile}/${SEUIL_SESSIONS} sessions Difficile ≥ 70% — encore ${restant} pour maîtriser ce niveau</div>`
     } else {
       const sessions = diff === 'facile' ? d.sessionsFacile : d.sessionsMoyen
       const restant = SEUIL_SESSIONS - sessions
@@ -736,6 +756,9 @@ async function renderResultats() {
         progMsg = `<div class="prog-msg reussi">✅ Session réussie !</div>`
       }
     }
+  } else if(diff === 'difficile') {
+    const restant = SEUIL_SESSIONS - d.sessionsDifficile
+    progMsg = `<div class="prog-msg info">💪 Score insuffisant cette fois. ${d.sessionsDifficile}/${SEUIL_SESSIONS} sessions ≥ 70% — encore ${restant} pour maîtriser ce niveau</div>`
   } else {
     const sessions = diff === 'facile' ? d.sessionsFacile : d.sessionsMoyen
     const restant = SEUIL_SESSIONS - sessions
