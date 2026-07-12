@@ -765,14 +765,14 @@ async function renderResultats() {
     const niveauSuivant = diff === 'facile' ? 'Moyen' : 'Difficile'
     progMsg = `<div class="prog-msg info">💪 Score insuffisant cette fois. ${sessions}/${SEUIL_SESSIONS} sessions ≥ 70% — encore ${restant} pour débloquer le ${niveauSuivant}</div>`
   }
-  const pctBarreMoyen = Math.min(Math.round((d.sessionsFacile / SEUIL_SESSIONS) * 100), 100)
-  const pctBarreDifficile = Math.min(Math.round((d.sessionsMoyen / SEUIL_SESSIONS) * 100), 100)
-  const couleurBarreMoyen = d.moyen ? '#1f7a45' : '#D4A23C'
-  const couleurBarreDifficile = d.difficile ? '#1f7a45' : '#D4A23C'
-  const resteMoyen = d.moyen ? 'Débloqué' : `encore ${SEUIL_SESSIONS - d.sessionsFacile}`
-  const resteDifficile = d.difficile ? 'Débloqué' : (d.moyen ? `encore ${SEUIL_SESSIONS - d.sessionsMoyen}` : 'bloqué')
-  const couleurResteMoyen = d.moyen ? '#1f7a45' : '#8a6416'
-  const couleurResteDifficile = d.difficile ? '#1f7a45' : 'var(--muted)'
+  const sessionsMoyenAffiche = Math.min(d.sessionsMoyen, SEUIL_SESSIONS)
+  const sessionsDifficileAffiche = Math.min(d.sessionsDifficile, SEUIL_SESSIONS)
+  const ligneMoyen = d.moyen
+    ? `<div class="prog-barre-wrap"><div class="prog-barre-fill" style="width:${Math.min(Math.round((d.sessionsMoyen/SEUIL_SESSIONS)*100),100)}%;background:#D4A23C"></div></div><span class="prog-reste" style="color:var(--ardoise)">${sessionsMoyenAffiche}/${SEUIL_SESSIONS}</span>`
+    : `<span class="prog-reste" style="color:var(--muted);flex:1;text-align:left">bloqué</span>`
+  const ligneDifficile = d.difficile
+    ? `<div class="prog-barre-wrap"><div class="prog-barre-fill" style="width:${Math.min(Math.round((d.sessionsDifficile/SEUIL_SESSIONS)*100),100)}%;background:#D4A23C"></div></div><span class="prog-reste" style="color:var(--ardoise)">${sessionsDifficileAffiche}/${SEUIL_SESSIONS}</span>`
+    : `<span class="prog-reste" style="color:var(--muted);flex:1;text-align:left">bloqué</span>`
   const themeCourt = THEMES.find(t => t.value === theme)?.label || theme
   let html = `
     <div class="results-bande">
@@ -792,13 +792,11 @@ async function renderResultats() {
       ${progMsg}
       <div class="prog-ligne">
         <span class="prog-label">Moyen</span>
-        <div class="prog-barre-wrap"><div class="prog-barre-fill" style="width:${pctBarreMoyen}%;background:${couleurBarreMoyen}"></div></div>
-        <span class="prog-reste" style="color:${couleurResteMoyen}">${resteMoyen}</span>
+        ${ligneMoyen}
       </div>
       <div class="prog-ligne">
         <span class="prog-label">Difficile</span>
-        <div class="prog-barre-wrap"><div class="prog-barre-fill" style="width:${pctBarreDifficile}%;background:${couleurBarreDifficile}"></div></div>
-        <span class="prog-reste" style="color:${couleurResteDifficile}">${resteDifficile}</span>
+        ${ligneDifficile}
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
