@@ -120,14 +120,25 @@ let correction={}
 let resultatServeur=null
 
 window.addEventListener('beforeunload', function(e) {
-  if(examEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Examen en cours !'}
+  if(examEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Examen en cours !';sauvegarderAbandonne()}
 })
 
-function retourAccueil() {
+async function sauvegarderAbandonne() {
+  if(saved||!user||questions.length===0)return
+  try{
+    const tempsSecondes=heureFin?Math.floor((40*60*1000-Math.max(0,heureFin-Date.now()))/1000):chronoSecondes
+    const {error}=await sb.from('examens_blancs').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',score:0,total:20,temps_secondes:tempsSecondes,scores_themes:{},questions_ratees:[],abandonne:true,questions_posees:questionsIds})
+    if(error){console.log('Erreur abandon:',error.message);return}
+    saved=true
+  }catch(e){console.log('Erreur abandon:',e.message)}
+}
+
+async function retourAccueil() {
   if(examEnCours&&!saved){
     const ok=confirm('⚠️ Examen en cours. Si tu quittes, tu perdras ta progression. Continuer quand même ?')
     if(!ok)return
     examEnCours=false
+    await sauvegarderAbandonne()
   }
   window.location.href='quiz.html'
 }
@@ -517,6 +528,7 @@ async function logout(){
     const ok=confirm('⚠️ Examen en cours. Tes résultats seront perdus. Continuer ?')
     if(!ok)return
     examEnCours=false
+    await sauvegarderAbandonne()
   }
   await sb.auth.signOut()
   window.location.href='index.html'
