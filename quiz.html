@@ -227,7 +227,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   </div>
   <div class="lock-msg" id="lock-msg"></div>
   <div id="deblocage-info"></div>
-  <div id="trophee-zone"></div>
   <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:1.75rem">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
     Générer 5 questions
@@ -316,7 +315,7 @@ async function sauvegarderAbandonne() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         user_id: user.id, email: user.email, prenom,
-        theme, difficulte: diff,
+        theme, sous_theme: sousTheme, difficulte: diff,
         abandonne: true,
         temps_secondes: chronoSecondes,
         source_questions: sourceQuestions
@@ -350,23 +349,26 @@ function debloquerConfig(){
   mettreAJourNiveaux()
 }
 
-async function verifierDeblocage(t) {
-  if(deblocageCache[t]) return deblocageCache[t]
+function cleDeblocage(t, st){ return t + '||' + st }
+
+async function verifierDeblocage(t, st) {
+  const cle = cleDeblocage(t, st)
+  if(deblocageCache[cle]) return deblocageCache[cle]
   try {
-    const { data } = await sb.from('resultats').select('difficulte, score, total').eq('user_id', user.id).eq('theme', t)
-    if (!data) { deblocageCache[t] = { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }; return deblocageCache[t] }
+    const { data } = await sb.from('resultats').select('difficulte, score, total').eq('user_id', user.id).eq('theme', t).eq('sous_theme', st)
+    if (!data) { deblocageCache[cle] = { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }; return deblocageCache[cle] }
     const sessionsFacile = data.filter(r => r.difficulte === 'facile' && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
     const sessionsMoyen  = data.filter(r => r.difficulte === 'moyen'  && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
     const sessionsDifficile = data.filter(r => r.difficulte === 'difficile' && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
-    deblocageCache[t] = { moyen: sessionsFacile >= SEUIL_SESSIONS, difficile: sessionsMoyen >= SEUIL_SESSIONS, sessionsFacile, sessionsMoyen, sessionsDifficile }
-    return deblocageCache[t]
+    deblocageCache[cle] = { moyen: sessionsFacile >= SEUIL_SESSIONS, difficile: sessionsMoyen >= SEUIL_SESSIONS, sessionsFacile, sessionsMoyen, sessionsDifficile }
+    return deblocageCache[cle]
   } catch(e) {
     return { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }
   }
 }
 
 async function mettreAJourNiveaux() {
-  const d = await verifierDeblocage(theme)
+  const d = await verifierDeblocage(theme, sousTheme)
   const btnFacile=document.getElementById('btn-facile')
   const btnMoyen=document.getElementById('btn-moyen')
   const btnDifficile=document.getElementById('btn-difficile')
@@ -431,39 +433,8 @@ async function mettreAJourNiveaux() {
     debInfo.innerHTML=`<div style="font-size:11px;color:var(--vert);padding:4px 0;margin-top:6px">✅ Tous les niveaux sont accessibles — reviens sur Facile ou Moyen quand tu veux.</div>`
   }
   lockMsg.classList.remove('visible')
-  await verifierTropheeGlobal()
 }
 
-async function verifierTropheeGlobal() {
-  const zone = document.getElementById('trophee-zone')
-  const banniere = document.getElementById('banniere-examen')
-  if(!zone||!banniere) return
-  try {
-    const resultats = await Promise.all(THEMES.map(t => verifierDeblocage(t.value)))
-    const toutDebloque = resultats.every(d => d.difficile)
-    if(toutDebloque) {
-      zone.innerHTML = `
-        <div class="badge-trophee">
-          <div class="badge-trophee-icon">🏆</div>
-          <div class="badge-trophee-titre">Bravo ! Tu as tout débloqué.</div>
-          <div class="badge-trophee-sub">Tu maîtrises tous les domaines. Tu peux refaire des quiz pour réviser, ou te tester en conditions de vrai Brevet 👇</div>
-          <div class="badge-trophee-themes">
-            ${THEMES.map(t=>`<span class="badge-theme-pill">${t.label}</span>`).join('')}
-          </div>
-        </div>`
-      banniere.classList.add('rouge')
-      banniere.querySelector('.banniere-examen-icon').innerHTML = ICON_TROPHY
-      banniere.querySelector('.banniere-examen-titre').textContent='Tu es prêt pour le vrai Brevet !'
-      banniere.querySelector('.banniere-examen-sub').textContent='Teste-toi maintenant en conditions réelles · 40 min · 20 questions'
-    } else {
-      zone.innerHTML=''
-      banniere.classList.remove('rouge')
-      banniere.querySelector('.banniere-examen-icon').innerHTML = ICON_EXAM
-      banniere.querySelector('.banniere-examen-titre').textContent='Prêt à te tester en conditions réelles ?'
-      banniere.querySelector('.banniere-examen-sub').textContent='20 questions · 40 minutes · correction complète · type QCM'
-    }
-  } catch(e) { console.log('Erreur trophée:', e.message) }
-}
 
 function setDiffCard(el, val) {
   if(quizEnCours) return
@@ -535,11 +506,12 @@ function renderSousThemes(){
   sousTheme = liste[0] || ''
 }
 
-function setSousTheme(el, val){
+async function setSousTheme(el, val){
   if(quizEnCours) return
   document.querySelectorAll('.st-row').forEach(r=>r.classList.remove('active'))
   el.classList.add('active')
   sousTheme = val
+  await mettreAJourNiveaux()
 }
 
 async function setTheme(el,val){
@@ -731,8 +703,8 @@ async function renderResultats() {
   else if(pct >= 40){ mention = '💪 Continue !'; couleur = '#8a6416' }
   else { mention = '📚 À retravailler'; couleur = 'var(--bordeaux)' }
   await sauvegarder()
-  delete deblocageCache[theme]
-  const d = await verifierDeblocage(theme)
+  delete deblocageCache[cleDeblocage(theme,sousTheme)]
+  const d = await verifierDeblocage(theme, sousTheme)
   let progMsg = ''
   if(pct >= SEUIL_PCT) {
     if(diff === 'facile' && d.sessionsFacile === SEUIL_SESSIONS) {
@@ -834,7 +806,7 @@ async function sauvegarder() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         user_id: user.id, email: user.email, prenom,
-        theme, difficulte: diff,
+        theme, sous_theme: sousTheme, difficulte: diff,
         questions, reponses: reponsesEnvoyees,
         temps_secondes: chronoSecondes,
         source_questions: sourceQuestions
@@ -843,7 +815,7 @@ async function sauvegarder() {
     const data = await res.json()
     if(data.error){console.log('Erreur sauvegarde:',data.error);return}
     saved=true
-    delete deblocageCache[theme]
+    delete deblocageCache[cleDeblocage(theme,sousTheme)]
   }catch(e){console.log('Erreur sauvegarde:',e.message)}
 }
 
