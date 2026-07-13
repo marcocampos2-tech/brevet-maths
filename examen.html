@@ -127,6 +127,7 @@ function retourAccueil() {
   if(examEnCours&&!saved){
     const ok=confirm('⚠️ Examen en cours. Si tu quittes, tu perdras ta progression. Continuer quand même ?')
     if(!ok)return
+    examEnCours=false
   }
   window.location.href='quiz.html'
 }
@@ -512,7 +513,11 @@ function voirCorrection(){
 }
 
 async function logout(){
-  if(examEnCours&&!saved){const ok=confirm('⚠️ Examen en cours. Tes résultats seront perdus. Continuer ?');if(!ok)return}
+  if(examEnCours&&!saved){
+    const ok=confirm('⚠️ Examen en cours. Tes résultats seront perdus. Continuer ?')
+    if(!ok)return
+    examEnCours=false
+  }
   await sb.auth.signOut()
   window.location.href='index.html'
 }
