@@ -187,8 +187,8 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="nav-left">∑ Academika</div>
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
-    <a href="prof.html" class="btn" id="btn-prof" style="display:none">🎓 Prof</a>
-    <a href="resultats.html" class="btn" onclick="return allerResultats(event)">📊 Mes résultats</a>
+    <a href="prof.html" class="btn" id="btn-prof" style="display:none" onclick="return allerVersLien(event,'prof.html')">🎓 Prof</a>
+    <a href="resultats.html" class="btn" onclick="return allerVersLien(event,'resultats.html')">📊 Mes résultats</a>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
@@ -325,13 +325,13 @@ async function sauvegarderAbandonne() {
   }catch(e){console.log('Erreur abandon:',e.message)}
 }
 
-async function allerResultats(e) {
+async function allerVersLien(e, url) {
   if(quizEnCours&&!saved){
     e.preventDefault()
     const ok=confirm('⚠️ Tu as un quiz en cours. Si tu te déconnectes, il sera enregistré avec un score de 0. Continuer ?')
     if(!ok)return false
     await sauvegarderAbandonne()
-    window.location.href='resultats.html'
+    window.location.href=url
     return false
   }
   return true
