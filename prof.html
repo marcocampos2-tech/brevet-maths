@@ -275,10 +275,15 @@ async function chargerInscriptions() {
 
   INSCRIPTIONS = data || []
 
-  const places = { '17 juin': 0, '24 juin': 0 }
+  // Dates dynamiques : dérivées des inscriptions réelles plutôt que codées en dur.
+  // Préserve l'ordre chronologique (INSCRIPTIONS est déjà trié par created_at ascendant).
+  const datesUniques = []
+  INSCRIPTIONS.forEach(i => { if (i.date_choisie && !datesUniques.includes(i.date_choisie)) datesUniques.push(i.date_choisie) })
+
+  const places = {}
+  datesUniques.forEach(d => { places[d] = 0 })
   INSCRIPTIONS.forEach(i => {
-    if (i.date_choisie === '17 juin') places['17 juin']++
-    else if (i.date_choisie === '24 juin') places['24 juin']++
+    if (places[i.date_choisie] !== undefined) places[i.date_choisie]++
   })
 
   let html = ''
@@ -289,8 +294,13 @@ async function chargerInscriptions() {
   html += '<textarea id="adresse-lieu" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:\'Inter\',sans-serif;font-size:13px;resize:vertical;min-height:52px;background:white;color:var(--text)">'+adresseActuelle+'</textarea>'
   html += '</div>'
 
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem">'
-  ;['17 juin', '24 juin'].forEach(date => {
+  if (!INSCRIPTIONS.length) {
+    el.innerHTML = html + '<div class="empty">Aucune inscription pour le moment.</div>'
+    return
+  }
+
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:1.5rem">'
+  datesUniques.forEach(date => {
     const nb = places[date]
     const pctPlaces = Math.round(nb/MAX_PLACES*100)
     const fillClass = pctPlaces >= 100 ? 'full' : pctPlaces >= 60 ? 'warn' : ''
@@ -302,12 +312,7 @@ async function chargerInscriptions() {
   })
   html += '</div>'
 
-  if (!INSCRIPTIONS.length) {
-    el.innerHTML = html + '<div class="empty">Aucune inscription pour le moment.</div>'
-    return
-  }
-
-  ;['17 juin', '24 juin'].forEach(date => {
+  datesUniques.forEach(date => {
     const inscrits = INSCRIPTIONS.filter(i => i.date_choisie === date)
     if (!inscrits.length) return
 
