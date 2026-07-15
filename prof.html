@@ -761,7 +761,7 @@ function openFiche(userId) {
     if (r.difficulte && themes[r.theme].niveaux[r.difficulte]) { themes[r.theme].niveaux[r.difficulte].ok += r.score; themes[r.theme].niveaux[r.difficulte].tot += r.total }
   })
   const chapitresRates = {}
-  rows.forEach(r => { (r.questions_ratees||[]).forEach(q => { if (!chapitresRates[r.theme]) chapitresRates[r.theme]={}; chapitresRates[r.theme][q]=(chapitresRates[r.theme][q]||0)+1 }) })
+  rows.forEach(r => { (r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q => { if (!chapitresRates[r.theme]) chapitresRates[r.theme]={}; chapitresRates[r.theme][q]=(chapitresRates[r.theme][q]||0)+1 }) })
   const niveauEmoji = { facile: '😊 Facile', moyen: '😐 Moyen', difficile: '😤 Difficile' }
   document.getElementById('fiche-titre').textContent = e.prenom + ' ' + e.nom
   let body = ''
@@ -825,7 +825,7 @@ async function envoyerBilan(userId) {
   const themes = {}
   rows.forEach(r => { if (!themes[r.theme]) themes[r.theme]={ok:0,tot:0,n:0}; themes[r.theme].ok+=r.score; themes[r.theme].tot+=r.total; themes[r.theme].n++ })
   const rateeMap = {}
-  rows.flatMap(r=>r.questions_ratees||[]).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1)
+  rows.flatMap(r=>r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1)
   const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
   try {
     const res = await fetch('/api/email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type: 'bilan', emailParent:e.email_parent, prenom:e.prenom, nom:e.nom, moyGlobale, totalSessions:rows.length, tempsTotal:rows.reduce((a,r)=>a+(r.temps_secondes||0),0), themes, topRatees }) })
@@ -869,7 +869,7 @@ function render() {
   const themeStats={}
   ROWS.forEach(r=>{ if (!themeStats[r.theme]) themeStats[r.theme]={ok:0,tot:0,n:0}; themeStats[r.theme].ok+=r.score; themeStats[r.theme].tot+=r.total; themeStats[r.theme].n++ })
   const rateeMap={}
-  ROWS.forEach(r=>(r.questions_ratees||[]).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1))
+  ROWS.forEach(r=>(r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1))
   const topRatees=Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
   const examMap={}
   EXAMENS.filter(e=>!e.abandonne).forEach(e=>{ if(!examMap[e.user_id]) examMap[e.user_id]=e })
