@@ -5,1097 +5,882 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#1B2A4A">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ACADEMIKA">
-<title>Prof — ACADEMIKA</title>
+<title>ACADEMIKA — Brevet Maths</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
-:root {
-  --bg: #FAF9F6; --surface: #ffffff; --border: #E4E1D8; --text: #41454C; --muted: #6B6E73;
-  --green: #2F9E5C; --blue: #1B2A4A; --amber: #D4A23C; --red: #9E2B25;
-  --green-bg: #EAF6EF; --blue-bg: #EEF1F6; --amber-bg: #FBF4E4; --red-bg: #FBEDEC;
-  --radius: 10px;
+:root{
+  --marine:#1B2A4A; --marine-light:#EEF1F6;
+  --bordeaux:#9E2B25; --bordeaux-light:#FBEDEC;
+  --creme:#FAF9F6; --ardoise:#41454C; --muted:#6B6E73;
+  --vert:#2F9E5C; --dore:#D4A23C; --dore-light:#FBF4E4;
+  --border:#E4E1D8;
 }
-.wrap { max-width: 960px; margin: 0 auto; padding: 1.25rem 1rem; }
-nav { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.25rem; border-bottom: 2px solid var(--blue); margin-bottom: 1.5rem; }
-.logo { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: .08em; color: var(--blue); }
-.btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; text-decoration: none; white-space: nowrap; }
-.btn:hover { background: var(--bg); }
-.btn-sm { padding: 4px 10px; font-size: 11px; }
-.btn-red { background: var(--red-bg); color: var(--red); border-color: var(--red); }
-.btn-red:hover { background: var(--red); color: white; }
-.btn-blue { background: var(--blue-bg); color: var(--blue); border-color: var(--blue); }
-.btn-blue:hover { background: var(--blue); color: white; }
-.btn-green { background: var(--green-bg); color: var(--green); border-color: var(--green); }
-.btn-green:hover { background: var(--green); color: white; }
-.btn-amber { background: var(--amber-bg); color: #8a6416; border-color: var(--amber); }
-.btn-amber:hover { background: var(--amber); color: white; }
-.btn:disabled { opacity: .5; cursor: default; pointer-events: none; }
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 1.5rem; }
-.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 12px; }
-.stat-icon { width: 34px; height: 34px; border-radius: 9px; background: var(--blue-bg); color: var(--blue); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.stat-icon svg { width: 16px; height: 16px; }
-.stat-val { font-family: 'Newsreader', serif; font-size: 24px; font-weight: 600; line-height: 1; color: var(--blue); }
-.stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; }
-.stat-green .stat-icon { background: var(--green-bg); color: var(--green); }
-.stat-green .stat-val { color: var(--green); }
-.stat-blue .stat-icon { background: var(--blue-bg); color: var(--blue); }
-.stat-amber .stat-icon { background: var(--amber); color: white; }
-.stat-amber .stat-val { color: #8a6416; }
-.tabs { display: flex; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; }
-.tab { padding: 7px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; color: var(--text); }
-.tab:hover { background: var(--bg); }
-.tab.active { background: var(--blue); color: white; border-color: var(--blue); }
-.section { display: none; }
-.section.active { display: block; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.25rem; margin-bottom: 1rem; }
-.card-title { font-family: 'Newsreader', serif; font-size: 15px; font-weight: 600; margin-bottom: 1rem; color: var(--blue); }
-.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tbl th { text-align: left; padding: 7px 10px; font-size: 11px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
-.tbl td { padding: 9px 10px; border-bottom: 1px solid #F3F1EA; vertical-align: middle; }
-.tbl tr:last-child td { border-bottom: none; }
-.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
-.badge-ia { background: var(--green-bg); color: var(--green); }
-.badge-banque { background: var(--amber-bg); color: #8a6416; }
-.badge-blue { background: var(--blue-bg); color: var(--blue); }
-.badge-tb { background: var(--green-bg); color: var(--green); border: 1px solid #86efac; }
-.badge-b { background: var(--blue-bg); color: var(--blue); border: 1px solid #93c5fd; }
-.badge-ab { background: var(--amber-bg); color: #8a6416; border: 1px solid var(--amber); }
-.badge-admis { background: #f5f5f5; color: #555; border: 1px solid #ccc; }
-.badge-insuf { background: var(--red-bg); color: var(--red); border: 1px solid #fca5a5; }
-.overlay { display: none; position: fixed; inset: 0; background: rgba(27,42,74,.45); z-index: 200; align-items: center; justify-content: center; }
-.overlay.active { display: flex; }
-.modal { background: white; border-radius: 16px; padding: 1.75rem; max-width: 620px; width: 92%; max-height: 88vh; overflow-y: auto; }
-.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-.modal-title { font-family: 'Newsreader', serif; font-size: 17px; font-weight: 600; color: var(--blue); }
-.modal-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); line-height: 1; }
-.modal-close:hover { color: var(--text); }
-.field { margin-bottom: 12px; }
-.field label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
-.field input, .field textarea, .field select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 13px; background: white; color: var(--text); transition: border-color .15s; }
-.field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--blue); }
-.field textarea { resize: vertical; min-height: 65px; }
-.opt-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.opt-row label { font-size: 12px; color: var(--muted); width: 18px; flex-shrink: 0; font-weight: 600; }
-.opt-row input[type=text] { flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 13px; }
-.opt-row input[type=text]:focus { outline: none; border-color: var(--blue); }
-.opt-row .radio-label { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); cursor: pointer; white-space: nowrap; }
-.opt-row input[type=radio] { cursor: pointer; }
-.loader { text-align: center; color: var(--muted); padding: 4rem 1rem; font-size: 13px; }
-.denied { text-align: center; color: var(--red); padding: 4rem 1rem; font-size: 14px; }
-.empty { color: var(--muted); font-size: 13px; padding: .5rem 0; }
-.dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.dash-table th { padding: 8px 6px; font-size: 10px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); text-align: center; text-transform: uppercase; letter-spacing: .03em; }
-.dash-table th:first-child { text-align: left; }
-.dash-table th.global { color: var(--blue); font-weight: 700; }
-.dash-table td { padding: 8px 6px; border-bottom: 1px solid #F3F1EA; text-align: center; vertical-align: middle; }
-.dash-table td:first-child { text-align: left; }
-.dash-table tr:last-child td { border-bottom: none; }
-.eleve-cell { display: flex; align-items: center; gap: 8px; }
-.avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--blue-bg); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; flex-shrink: 0; }
-.pct-global { font-size: 14px; }
-.q-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
-.q-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
-.q-card-text { font-size: 13px; color: var(--text); line-height: 1.6; flex: 1; }
-.q-card-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
-.q-figure { margin: 8px 0; display: flex; justify-content: center; background: white; border-radius: 8px; padding: 10px; border: 1px solid var(--border); }
-.q-figure svg { max-width: 200px; height: auto; }
-.q-figure img { max-width: 200px; height: auto; border-radius: 6px; }
-.q-tableau { border-collapse: collapse; margin: 8px 0; font-size: 12px; width: 100%; }
-.q-tableau th { border: 1px solid #ccc; padding: 4px 10px; background: var(--bg); font-weight: 600; text-align: center; }
-.q-tableau td { border: 1px solid #ccc; padding: 4px 10px; text-align: center; }
-.banque-filters { display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
-.banque-filters select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; background: white; }
-.banque-filters input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; flex: 1; min-width: 160px; }
-.pagination { display: flex; gap: 6px; align-items: center; margin-top: 1rem; justify-content: center; font-size: 12px; }
-.inscrit-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
-.inscrit-card.confirme { border-color: #86efac; background: var(--green-bg); }
-.inscrit-card.attente { border-color: var(--amber); background: var(--amber-bg); }
-.inscrit-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-.inscrit-name { font-size: 15px; font-weight: 600; }
-.inscrit-info { font-size: 12px; color: var(--muted); margin-top: 4px; }
-.inscrit-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
-.places-bar-wrap { background: var(--border); border-radius: 4px; height: 6px; margin-bottom: 4px; }
-.places-bar-fill { height: 6px; border-radius: 4px; background: var(--green); transition: width 0.3s; }
-.places-bar-fill.warn { background: var(--amber); }
-.places-bar-fill.full { background: var(--red); }
-@media (max-width: 600px) {
-  .stats { grid-template-columns: repeat(2, 1fr); }
-  .dash-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .dash-table th, .dash-table td { white-space: nowrap; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--creme); min-height: 100vh; color: var(--ardoise); }
+.container { max-width: 700px; margin: 0 auto; padding: 0 1.25rem 1rem; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 0; border-bottom: 2px solid var(--marine); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
+.nav-left { font-family:'Newsreader',serif; font-size: 19px; font-weight: 600; color: var(--marine); letter-spacing: -0.3px; }
+.nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nav-email { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.card { background: white; border-radius: 14px; border: 1px solid var(--border); padding: 1.75rem; margin-bottom: 1rem; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: white; color: var(--ardoise); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; font-family:'Inter',sans-serif; }
+.btn:hover { background: var(--creme); }
+.btn-primary { background: var(--bordeaux); color: white; border-color: var(--bordeaux); }
+.btn-primary:hover { background: #832019; }
+.btn-green { background: var(--vert); color: white; border-color: var(--vert); font-size: 16px; padding: 16px; }
+.btn-outline { background: white; color: var(--muted); border: 1px solid var(--border); font-size: 14px; padding: 12px; }
+.btn-full { width: 100%; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+#btn-prof { background: var(--dore-light); border-color: var(--dore); color: #8a6416; }
+.btn-ghost { border: none; background: none; color: var(--muted); padding: 8px 4px; }
+h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
+.msg-accueil { background: var(--marine-light); border-left: 3px solid var(--marine); border-radius: 0 10px 10px 0; padding: 12px 16px; margin-bottom: 2rem; font-size: 13.5px; color: var(--marine); line-height: 1.6; }
+.msg-accueil strong { font-weight: 600; }
+.step { display: flex; align-items: baseline; gap: 6px; margin-bottom: 12px; }
+.step:not(:first-child) { margin-top: 1.75rem; }
+.step-num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); font-weight: 500; }
+.section-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.theme-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+.theme-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px 14px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; }
+.theme-card:hover { border-color: var(--marine); }
+.theme-card.active { border: 1.5px solid var(--marine); background: var(--marine-light); }
+.theme-card.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.theme-icon { width: 34px; height: 34px; border-radius: 9px; background: var(--marine-light); display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; color: var(--marine); }
+.theme-icon svg { width:18px; height:18px; }
+.theme-card.active .theme-icon { background: var(--marine); color: white; }
+.theme-label { font-size: 12.5px; font-weight: 500; color: var(--ardoise); }
+.theme-card.active .theme-label { color: var(--marine); font-weight: 600; }
+.niveaux-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 8px; }
+.niveau-card { border: 1px solid var(--border); border-radius: 12px; padding: 16px 10px; text-align: center; cursor: pointer; transition: all 0.15s; background: white; position: relative; }
+.niveau-card:hover { border-color: var(--marine); }
+.niveau-card.active { border: 1.5px solid var(--marine); background: var(--marine-light); }
+.niveau-card.locked { background: #FAFAF8; cursor: not-allowed; opacity: 0.75; }
+.niveau-card.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.niveau-icon { margin-bottom: 6px; color: var(--marine); display:flex; justify-content:center; }
+.niveau-icon svg { width:18px; height:18px; }
+.niveau-titre { font-size: 13px; font-weight: 600; color: var(--ardoise); margin-bottom: 2px; }
+.niveau-card.active .niveau-titre { color: var(--marine); }
+.niveau-sous { font-size: 11px; color: var(--muted); }
+.niveau-barre-wrap { margin-top: 8px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.niveau-barre-fill { height: 100%; background: var(--dore); border-radius: 2px; transition: width 0.3s; }
+.diff-row { display: none; }
+.lock-msg { display: none; font-size: 11.5px; color: #8a6416; background: var(--dore-light); border: 1px solid var(--dore); border-radius: 8px; padding: 9px 13px; margin-top: 12px; }
+.lock-msg.visible { display: block; }
+.badge-trophee { background: var(--marine); border-radius: 12px; padding: 18px 16px; text-align: center; margin-top: 16px; }
+.badge-trophee-icon { font-size: 26px; margin-bottom: 8px; }
+.badge-trophee-titre { font-size: 15px; font-weight: 600; color: white; margin-bottom: 4px; font-family:'Newsreader',serif; }
+.badge-trophee-sub { font-size: 12px; color: rgba(255,255,255,0.75); margin-bottom: 12px; }
+.badge-trophee-themes { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.badge-theme-pill { background: rgba(255,255,255,0.15); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: white; }
+.sep { height: 1px; background: var(--border); margin: 2rem 0; }
+.banniere-examen { border: 1px solid var(--border); border-radius: 14px; padding: 22px 24px; text-align: center; background: var(--marine-light); }
+.banniere-examen.rouge { background: var(--bordeaux-light); }
+.banniere-examen-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--marine); color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+.banniere-examen.rouge .banniere-examen-icon { background: var(--bordeaux); }
+.banniere-examen-icon svg { width:19px; height:19px; }
+.banniere-examen-titre { font-family:'Newsreader',serif; font-size: 19px; font-weight: 600; color: var(--marine); margin-bottom: 6px; }
+.banniere-examen.rouge .banniere-examen-titre { color: var(--bordeaux); }
+.banniere-examen-sub { font-size: 13px; color: var(--ardoise); opacity: 0.8; margin-bottom: 18px; }
+.banniere-examen-btn { display:inline-block; padding: 13px 28px; background: var(--marine); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; font-family:'Inter',sans-serif; }
+.banniere-examen.rouge .banniere-examen-btn { background: var(--bordeaux); }
+.option { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; font-size: 14px; transition: all 0.15s; margin-bottom: 8px; }
+.option:hover { border-color: #999; background: #f9f9f7; }
+.option.selected { border-color: var(--marine); background: var(--marine-light); }
+.option.correct { border-color: var(--vert); background: #EAF6EF; color: #1f7a45; }
+.option.wrong { border-color: var(--bordeaux); background: var(--bordeaux-light); color: var(--bordeaux); }
+.option.aucune-selected { border-color: var(--dore); background: var(--dore-light); color: #8a6416; }
+.option.aucune { border-color: var(--dore); background: var(--dore-light); color: #8a6416; }
+.letter { font-size: 12px; font-weight: 600; color: #999; min-width: 18px; }
+.option.correct .letter, .option.wrong .letter, .option.aucune .letter { color: inherit; }
+.explication { margin-top: 10px; padding: 10px 14px; background: var(--creme); border-radius: 8px; font-size: 13px; color: var(--ardoise); border-left: 3px solid var(--marine); line-height: 1.6; }
+.explication-aucune { margin-top: 10px; padding: 10px 14px; background: var(--dore-light); border-radius: 8px; font-size: 13px; color: #8a6416; border-left: 3px solid var(--dore); line-height: 1.6; }
+.quiz-progress { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+.progress-steps { display: flex; gap: 4px; flex: 1; }
+.progress-step { height: 6px; flex: 1; border-radius: 3px; background: var(--border); }
+.progress-step.done { background: var(--marine); }
+.progress-step.current { background: var(--marine); opacity: 0.4; }
+.progress-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--marine-light); color: var(--marine); }
+.q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.q-num { font-size: 12px; color: var(--muted); }
+.q-text { font-size: 15px; line-height: 1.8; margin-bottom: 10px; color: var(--ardoise); }
+.q-tableau { border-collapse: collapse; margin: 10px 0 14px 0; font-size: 14px; width: 100%; }
+.q-tableau th { border: 1px solid #ccc; padding: 6px 14px; background: var(--creme); font-weight: 600; text-align: center; }
+.q-tableau td { border: 1px solid #ccc; padding: 6px 14px; text-align: center; }
+.q-chart { margin: 10px 0 14px 0; position: relative; width: 100%; }
+.loader { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+.chrono { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--ardoise); }
+.chrono-dot { width: 8px; height: 8px; background: var(--vert); border-radius: 50%; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.badge-source-banque { font-size: 11px; color: #8a6416; background: var(--dore-light); border: 1px solid var(--dore); border-radius: 20px; padding: 2px 10px; }
+.badge-source-ia { font-size: 11px; color: #1f7a45; background: #EAF6EF; border: 1px solid var(--vert); border-radius: 20px; padding: 2px 10px; }
+.quiz-en-cours { background: var(--dore-light); border: 1px solid var(--dore); border-radius: 10px; padding: 10px 14px; font-size: 12px; color: #8a6416; margin-bottom: 1rem; text-align: center; }
+.q-figure { margin: 10px 0 14px; display: flex; justify-content: center; background: var(--creme); border-radius: 8px; padding: 12px; }
+.q-figure svg { max-width: 260px; height: auto; display: block; }
+.results-bande { display:flex; align-items:center; gap:14px; padding:14px 16px; background:white; border-radius:12px; border:1px solid var(--border); margin-bottom:10px; }
+.results-score-col { text-align:center; min-width:52px; }
+.results-score-num { font-size:34px; font-weight:700; color:var(--ardoise); line-height:1; font-family:'Newsreader',serif; }
+.results-pct-sm { font-size:15px; font-weight:500; margin-top:2px; }
+.results-sep { width:1px; height:44px; background:var(--border); flex-shrink:0; }
+.results-detail { flex:1; min-width:0; }
+.results-mention-sm { font-size:14px; font-weight:500; color:var(--ardoise); margin-bottom:2px; }
+.results-meta-sm { font-size:11px; color:var(--muted); }
+.results-saved { font-size:11px; color:var(--vert); margin-top:4px; }
+.prog-bloc { background:white; border-radius:12px; border:1px solid var(--border); padding:12px 16px; margin-bottom:10px; }
+.prog-titre { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
+.prog-msg { border-radius:8px; padding:9px 12px; margin-bottom:8px; font-size:13px; }
+.prog-msg.reussi { background:#EAF6EF; border:1px solid #bbf7d0; color:#1f7a45; }
+.prog-msg.debloque { background:var(--marine-light); border:1px solid #93c5fd; color:var(--marine); }
+.prog-msg.info { background:var(--dore-light); border:1px solid var(--dore); color:#8a6416; }
+.prog-ligne { display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+.prog-ligne:last-child { margin-bottom:0; }
+.prog-label { font-size:12px; color:var(--muted); white-space:nowrap; width:52px; }
+.prog-barre-wrap { flex:1; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+.prog-barre-fill { height:6px; border-radius:3px; transition:width 0.4s; }
+.prog-reste { font-size:12px; white-space:nowrap; min-width:52px; text-align:right; }
+.st-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+.st-row { background: white; border: 1px solid var(--border); border-radius: 9px; padding: 11px 10px; font-size: 12.5px; font-weight: 500; color: var(--ardoise); display: flex; align-items: center; justify-content: center; gap: 5px; text-align: center; cursor: pointer; transition: all 0.15s; }
+.st-row:hover { border-color: var(--marine); }
+.st-row.active { border: 1.5px solid var(--marine); background: var(--marine-light); color: var(--marine); }
+.st-row.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+.st-check { font-size: 13px; color: var(--marine); display: none; }
+.st-row.active .st-check { display: inline; }
+.focus-bar { display: none; align-items: center; gap: 12px; background: white; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 1rem; position: sticky; top: 8px; z-index: 5; box-shadow: 0 4px 16px rgba(27,42,74,0.08); }
+.focus-bar.visible { display: flex; }
+.focus-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--marine-light); color: var(--marine); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.focus-icon svg { width: 16px; height: 16px; }
+.focus-info { flex: 1; min-width: 0; }
+.focus-theme { font-size: 12.5px; font-weight: 600; color: var(--ardoise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.focus-sub { font-size: 11px; color: var(--muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.focus-badge { font-size: 10.5px; padding: 3px 9px; border-radius: 20px; background: var(--dore-light); color: #8a6416; font-weight: 500; flex-shrink: 0; text-transform: capitalize; }
+.focus-chrono { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--ardoise); flex-shrink: 0; }
+.focus-dot { width: 7px; height: 7px; background: var(--vert); border-radius: 50%; animation: pulse 1s infinite; }
+@media (max-width:480px){
+  .focus-sub{display:none}
+}
+@media (max-width:480px){
+  .container{padding:0 1rem 1rem}
+  nav{padding:1rem 0}
+  .nav-right{gap:6px}
+  .nav-email{display:none}
+  .card{padding:1.25rem}
+  .theme-grid{gap:8px}
+  .theme-card{padding:12px 8px}
+  .theme-label{font-size:11.5px}
+  .st-list{grid-template-columns:repeat(2,1fr)}
+  .st-row{padding:10px 8px;font-size:12px}
+  .niveaux-grid{gap:8px}
+  .niveau-card{padding:12px 6px}
+  .banniere-examen{padding:18px 16px}
+  .banniere-examen-titre{font-size:16.5px}
 }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <nav>
-    <div class="logo">ACADEMIKA — PROF</div>
-    <button class="btn" onclick="logout()">Déconnexion</button>
-  </nav>
-  <div id="root"><div class="loader">Chargement…</div></div>
-</div>
-
-<div class="overlay" id="overlay">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title" id="fiche-titre"></div>
-      <button class="modal-close" onclick="closeFiche()">✕</button>
+<div class="container">
+<nav>
+  <div class="nav-left">∑ Academika</div>
+  <div class="nav-right">
+    <span class="nav-email" id="user-email"></span>
+    <a href="prof.html" class="btn" id="btn-prof" style="display:none" onclick="return allerVersLien(event,'prof.html')">🎓 Prof</a>
+    <a href="resultats.html" class="btn" onclick="return allerVersLien(event,'resultats.html')">📊 Mes résultats</a>
+    <button class="btn-ghost" onclick="logout()">Déconnexion</button>
+  </div>
+</nav>
+<div class="card" id="config">
+  <div class="msg-accueil">
+    🎯 <strong>Comment ça marche ?</strong> Choisis un domaine, un sous-thème, puis clique sur <strong>Générer 5 questions</strong> pour démarrer en <strong>Facile</strong>. Réussis pour débloquer le <strong>Moyen</strong>, puis le <strong>Difficile</strong>.
+  </div>
+  <div class="step"><span class="step-num">01</span><span class="section-label">Domaine</span></div>
+  <div class="theme-grid" id="theme-grid"></div>
+  <div class="step"><span class="step-num">02</span><span class="section-label">Sous-thème</span></div>
+  <div class="st-list" id="st-list"></div>
+  <div class="step"><span class="step-num">03</span><span class="section-label">Niveau</span></div>
+  <div class="niveaux-grid" id="niveaux-grid">
+    <div class="niveau-card active" id="niveau-facile" onclick="setDiffCard(this,'facile')">
+      <div class="niveau-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14 Q12 18 16 14"/><line x1="9" y1="9.5" x2="9.5" y2="9.5"/><line x1="14.5" y1="9.5" x2="15" y2="9.5"/></svg></div>
+      <div class="niveau-titre">Facile</div>
+      <div class="niveau-sous">Pour commencer</div>
     </div>
-    <div id="fiche-body"></div>
+    <div class="niveau-card locked" id="niveau-moyen" onclick="setDiffCard(this,'moyen')">
+      <div class="niveau-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11 V7 a4 4 0 0 1 8 0 v4"/></svg></div>
+      <div class="niveau-titre">Moyen</div>
+      <div class="niveau-sous">On monte !</div>
+      <div class="niveau-barre-wrap"><div class="niveau-barre-fill" id="barre-moyen" style="width:0%"></div></div>
+    </div>
+    <div class="niveau-card locked" id="niveau-difficile" onclick="setDiffCard(this,'difficile')">
+      <div class="niveau-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11 V7 a4 4 0 0 1 8 0 v4"/></svg></div>
+      <div class="niveau-titre">Difficile</div>
+      <div class="niveau-sous">Niveau expert</div>
+      <div class="niveau-barre-wrap"><div class="niveau-barre-fill" id="barre-difficile" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div class="diff-row" id="diff-row">
+    <button class="diff-btn active" id="btn-facile" onclick="setDiff(this,'facile')">Facile</button>
+    <button class="diff-btn" id="btn-moyen" onclick="setDiff(this,'moyen')">Moyen</button>
+    <button class="diff-btn" id="btn-difficile" onclick="setDiff(this,'difficile')">Difficile</button>
+  </div>
+  <div class="lock-msg" id="lock-msg"></div>
+  <div id="deblocage-info"></div>
+  <button class="btn btn-primary btn-full" id="gen-btn" onclick="generer()" style="margin-top:1.75rem">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg>
+    Générer 5 questions
+  </button>
+  <div class="sep"></div>
+  <div class="banniere-examen" id="banniere-examen">
+    <div class="banniere-examen-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M9 12 L11 14 L15.5 9"/></svg></div>
+    <div class="banniere-examen-titre">Prêt à te tester en conditions réelles ?</div>
+    <div class="banniere-examen-sub">20 questions · 40 minutes · correction complète · type QCM</div>
+    <a href="examen.html" class="banniere-examen-btn">Passer l'examen blanc →</a>
+  </div>
+  <div class="banniere-examen rouge" id="banniere-examen-presentiel" style="display:none;margin-top:1rem">
+    <div class="banniere-examen-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+    <div class="banniere-examen-titre">Prêt à te tester en conditions réelles ?</div>
+    <div class="banniere-examen-sub" id="banniere-presentiel-sub">Examen blanc en présentiel</div>
+    <a href="brevet-blanc.html" class="banniere-examen-btn">Voir les dates et s'inscrire →</a>
   </div>
 </div>
-
-<div class="overlay" id="overlay-edit">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title">✏️ Modifier la question</div>
-      <button class="modal-close" onclick="closeEdit()">✕</button>
-    </div>
-    <div id="edit-body"></div>
+<div class="focus-bar" id="focus-bar">
+  <div class="focus-icon" id="focus-icon"></div>
+  <div class="focus-info">
+    <div class="focus-theme" id="focus-theme"></div>
+    <div class="focus-sub" id="focus-sub"></div>
   </div>
+  <span class="focus-badge" id="focus-badge"></span>
+  <div class="focus-chrono"><span class="focus-dot"></span> <span id="focus-chrono-text">00:00</span></div>
 </div>
-
-<div class="overlay" id="overlay-note">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title" id="note-titre">📝 Saisir la note</div>
-      <button class="modal-close" onclick="closeNote()">✕</button>
-    </div>
-    <div id="note-body"></div>
-  </div>
+<div id="quiz-area"></div>
 </div>
-
-<div class="overlay" id="overlay-adresse">
-  <div class="modal">
-    <div class="modal-head">
-      <div class="modal-title">📍 Envoyer l'adresse</div>
-      <button class="modal-close" onclick="closeAdresse()">✕</button>
-    </div>
-    <div id="adresse-body"></div>
-  </div>
-</div>
-
 <script>
-const SB_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
-const SB_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
-const PROF   = 'marcocampos2@gmail.com'
-const sb     = supabase.createClient(SB_URL, SB_KEY)
+const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+const PROF_EMAIL = 'marcocampos2@gmail.com'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const THEMES = [
-  'Nombres et calculs',
-  'Organisation et gestion de données, fonctions',
-  'Espace et géométrie',
-  'Grandeurs, mesures et algorithmique'
+  { label: 'Nombres et calculs',        value: 'Nombres et calculs',                          icon: 'calc' },
+  { label: 'Organisation et données',   value: 'Organisation et gestion de données, fonctions', icon: 'bar' },
+  { label: 'Espace et géométrie',       value: 'Espace et géométrie',                          icon: 'tri' },
+  { label: 'Grandeurs et mesures',      value: 'Grandeurs, mesures et algorithmique',           icon: 'ruler' },
 ]
-const THEMES_SHORT = ['Nombres', 'Organisation', 'Géométrie', 'Grandeurs']
 
-let ROWS = [], EXAMENS = [], PROFILS = {}, ELEVES = []
-let INSCRIPTIONS = [], SESSIONS = []
-let BANQUE_DATA = []
-let banqueFiltre = { theme: '', diff: '', search: '', page: 0 }
-const PER_PAGE = 20
-let editCurrentId = null
-let editCurrentTable = 'questions_banque'
-let noteCurrentId = null
-let adresseCurrentId = null
-
-const pct      = (ok, tot) => tot ? Math.round(ok / tot * 100) : 0
-const color    = p => p >= 70 ? '#2F9E5C' : p >= 50 ? '#8a6416' : '#9E2B25'
-const emoji    = p => p >= 70 ? '🟢' : p >= 50 ? '🟡' : '🔴'
-const fmt      = (m, s) => m+'min '+s+'s'
-const fmtTemps = s => { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60); return h ? h+'h '+m+'min' : m+' min' }
-const dateStr  = d => new Date(d).toLocaleDateString('fr-FR')
-const initiales = (prenom, nom) => ((prenom||'?')[0] + (nom||'')[0]).toUpperCase()
-
-// Échappe une chaîne pour une insertion sûre à l'intérieur d'un attribut onclick="...('...')"
-// (protège contre les apostrophes dans les prénoms/noms composés : D'Angelo, N'Diaye...)
-function esc(s) {
-  return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+const THEME_ICONS = {
+  calc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="9" cy="13" r="1.1"/><circle cx="15" cy="13" r="1.1"/><circle cx="9" cy="17" r="1.1"/><circle cx="15" cy="17" r="1.1"/></svg>',
+  bar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="14" width="3" height="6"/><rect x="11" y="9" width="3" height="11"/><rect x="16" y="5" width="3" height="15"/></svg>',
+  tri: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5 L5 20 L20 20 Z"/><rect x="5" y="16.5" width="3.5" height="3.5"/></svg>',
+  ruler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1" transform="rotate(-8 12 12)"/><line x1="6.5" y1="9" x2="7" y2="11.3" transform="rotate(-8 12 12)"/><line x1="10" y1="8.4" x2="10.5" y2="10.7" transform="rotate(-8 12 12)"/><line x1="13.5" y1="7.8" x2="14" y2="10.1" transform="rotate(-8 12 12)"/><line x1="17" y1="7.2" x2="17.5" y2="9.5" transform="rotate(-8 12 12)"/></svg>'
 }
 
-function getStatut(p) {
-  if (p >= 70) return { label: 'Maîtrisé', emoji: '✅', color: '#2F9E5C' }
-  if (p >= 50) return { label: 'En cours', emoji: '⚠️', color: '#8a6416' }
-  return { label: 'À retravailler', emoji: '❌', color: '#9E2B25' }
+const ICON_SMILE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 14 Q12 18 16 14"/><line x1="9" y1="9.5" x2="9.5" y2="9.5"/><line x1="14.5" y1="9.5" x2="15" y2="9.5"/></svg>'
+const ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11 V7 a4 4 0 0 1 8 0 v4"/></svg>'
+const ICON_EXAM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M9 12 L11 14 L15.5 9"/></svg>'
+const ICON_TROPHY = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M7 6H4a2 2 0 0 0 2 3.5"/><path d="M17 6h3a2 2 0 0 1-2 3.5"/></svg>'
+
+const SOUS_THEMES = {
+  'Nombres et calculs': [
+    'Équations', 'Calcul littéral', 'Fractions',
+    'Pourcentages', 'Puissances', 'Arithmétique', 'Proportionnalité'
+  ],
+  'Organisation et gestion de données, fonctions': [
+    'Fonctions', 'Probabilités', 'Statistiques', 'Proportionnalité'
+  ],
+  'Espace et géométrie': [
+    'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie',
+    'Volumes', 'Aires et périmètres', 'Transformations'
+  ],
+  'Grandeurs, mesures et algorithmique': [
+    'Algorithmique', 'Aires et volumes', 'Conversions', 'Agrandissement'
+  ]
 }
 
-function mentionBadge(p) {
-  if (p >= 80) return '<span class="badge badge-tb">Très Bien</span>'
-  if (p >= 70) return '<span class="badge badge-b">Bien</span>'
-  if (p >= 60) return '<span class="badge badge-ab">Assez Bien</span>'
-  if (p >= 50) return '<span class="badge badge-admis">Admis</span>'
-  return '<span class="badge badge-insuf">Non admis</span>'
-}
+const SEUIL_SESSIONS = 5
+const SEUIL_PCT = 70
 
-function mentionLabel(p) {
-  if (p >= 80) return 'Très Bien'
-  if (p >= 70) return 'Bien'
-  if (p >= 60) return 'Assez Bien'
-  if (p >= 50) return 'Admis'
-  return 'Non admis'
-}
+let user=null, prenom='', emailParent=''
+let theme='Nombres et calculs', diff='facile', sousTheme='Équations'
+let questions=[], answers={}, submitted={}, saved=false
+let chronoInterval=null, chronoSecondes=0, sourceQuestions='ia'
+let quizEnCours=false
+let modeAffichage={}, charts={}
+let deblocageCache={}
 
-function scoresExamen(th) {
-  const sc = key => {
-    const k = Object.keys(th).find(k => k.toLowerCase().includes(key))
-    return k ? th[k].ok+'/'+th[k].total : '—'
-  }
-  return { nombres: sc('nombre'), geo: sc('espace')||sc('geom'), stats: sc('organisation')||sc('stat'), grandeurs: sc('grandeur')||sc('algo') }
-}
+window.addEventListener('beforeunload', function(e) {
+  if(quizEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Si vous quittez, votre quiz sera enregistré avec un score de 0.';sauvegarderAbandonne()}
+})
 
-async function logout() { await sb.auth.signOut(); location.href = 'index.html' }
-
-function setTab(id) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id))
-  document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === 'sec-'+id))
-  if (id === 'banque') { banqueFiltre = { theme: '', diff: '', search: '', page: 0 }; chargerBanque() }
-  if (id === 'inscriptions') chargerInscriptions()
-}
-
-function miniStat(val, label, col) {
-  return '<div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center"><div style="font-family:\'Newsreader\',serif;font-size:24px;font-weight:700;color:'+col+'">'+val+'</div><div style="font-size:11px;color:var(--muted);margin-top:4px">'+label+'</div></div>'
-}
-
-// ═══════════════════════════════════════════════════
-// INSCRIPTIONS BREVET BLANC — SESSIONS DYNAMIQUES
-// ═══════════════════════════════════════════════════
-async function chargerInscriptions() {
-  const el = document.getElementById('inscriptions-list')
-  if (!el) return
-  el.innerHTML = '<div class="loader">Chargement…</div>'
-
-  const [rSessions, rInscriptions] = await Promise.all([
-    sb.from('sessions_examen_blanc').select('*').order('date_session', { ascending: true }),
-    sb.from('inscriptions_brevet').select('*').order('created_at', { ascending: true })
-  ])
-  if (rSessions.error) { el.innerHTML = '<div class="empty">Erreur : '+rSessions.error.message+'</div>'; return }
-  if (rInscriptions.error) { el.innerHTML = '<div class="empty">Erreur : '+rInscriptions.error.message+'</div>'; return }
-
-  SESSIONS = rSessions.data || []
-  INSCRIPTIONS = rInscriptions.data || []
-
-  const aujourdHui = new Date().toISOString().split('T')[0]
-
-  let html = ''
-
-  // Adresse (globale, toutes sessions au même lieu)
-  const adresseActuelle = document.getElementById('adresse-lieu')?.value || '77310 Ponthierry'
-  html += '<div class="card" style="margin-bottom:1rem">'
-  html += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px">📍 Adresse du lieu d\'examen — incluse dans l\'email de confirmation</div>'
-  html += '<textarea id="adresse-lieu" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:\'Inter\',sans-serif;font-size:13px;resize:vertical;min-height:52px;background:white;color:var(--text)">'+adresseActuelle+'</textarea>'
-  html += '</div>'
-
-  // Formulaire création de session
-  html += '<div class="card" style="margin-bottom:1.5rem">'
-  html += '<div class="card-title" style="margin-bottom:12px">➕ Créer une session</div>'
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
-  html += '<div class="field" style="margin-bottom:0"><label>Date</label><input type="date" id="session-date"></div>'
-  html += '<div class="field" style="margin-bottom:0"><label>Heure</label><input type="text" id="session-heure" placeholder="15h00" value="15h00"></div>'
-  html += '</div>'
-  html += '<button class="btn btn-green" onclick="creerSession()">➕ Créer la session</button>'
-  html += '<div id="session-creation-msg" style="margin-top:10px;font-size:13px"></div>'
-  html += '</div>'
-
-  if (!SESSIONS.length) {
-    el.innerHTML = html + '<div class="empty">Aucune session créée pour le moment.</div>'
-    return
-  }
-
-  const sessionsActives = SESSIONS.filter(s => !s.annulee)
-  if (!sessionsActives.length) {
-    el.innerHTML = html + '<div class="empty">Aucune session active (toutes annulées).</div>'
-    return
-  }
-
-  sessionsActives.forEach(s => {
-    const inscrits = INSCRIPTIONS.filter(i => i.session_id === s.id)
-    const nb = inscrits.length
-    const pctPlaces = Math.round(nb / s.max_places * 100)
-    const fillClass = pctPlaces >= 100 ? 'full' : pctPlaces >= 60 ? 'warn' : ''
-    const estPassee = s.date_session < aujourdHui
-    const dateAffichee = new Date(s.date_session + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
-
-    html += '<div class="card" style="margin-bottom:1rem">'
-    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
-    html += '<div>'
-    html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">📅 '+dateAffichee+' · '+s.heure+(estPassee?' <span class="badge badge-admis">Terminée</span>':'')+'</div>'
-    html += '<div class="places-bar-wrap" style="margin-top:8px;width:180px"><div class="places-bar-fill '+fillClass+'" style="width:'+Math.min(pctPlaces,100)+'%"></div></div>'
-    html += '<div style="font-size:12px;color:var(--muted);margin-top:4px">'+nb+' / '+s.max_places+' places — '+(s.max_places-nb)+' disponibles</div>'
-    html += '</div>'
-    html += '<button class="btn btn-sm btn-red" onclick="annulerSession(\''+esc(s.id)+'\',\''+esc(dateAffichee)+'\','+nb+')">🗑 Annuler la session</button>'
-    html += '</div>'
-
-    if (!inscrits.length) {
-      html += '<div class="empty">Aucun inscrit sur cette session.</div>'
-    } else {
-      inscrits.forEach(i => {
-        const isConfirme = i.confirme
-        const hasNote = i.note !== null
-        const cardClass = isConfirme ? 'confirme' : 'attente'
-        const dateInscription = dateStr(i.created_at)
-
-        html += '<div class="inscrit-card '+cardClass+'">'
-        html += '<div class="inscrit-header">'
-        html += '<div>'
-        html += '<div class="inscrit-name">'+i.prenom+' '+i.nom+'</div>'
-        html += '<div class="inscrit-info">📧 '+i.email_parent+(i.telephone?' · 📞 '+i.telephone:'')+'</div>'
-        html += '<div class="inscrit-info">Inscrit le '+dateInscription+'</div>'
-        html += '</div>'
-        html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
-        if (isConfirme) html += '<span class="badge badge-tb">✅ Confirmé</span>'
-        else html += '<span class="badge badge-ab">⏳ En attente</span>'
-        if (hasNote) html += '<span class="badge badge-blue">📝 Note : '+i.note+'/20</span>'
-        if (i.resultats_envoyes) html += '<span class="badge badge-tb">📤 Résultats envoyés</span>'
-        html += '</div>'
-        html += '</div>'
-
-        html += '<div class="inscrit-actions">'
-        if (!isConfirme) {
-          html += '<button class="btn btn-sm btn-green" onclick="confirmerEtEnvoyerAdresse(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">✅ Confirmer + adresse</button>'
-          html += '<button class="btn btn-sm btn-red" onclick="refuserInscription(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">❌ Refuser</button>'
-        }
-        if (isConfirme && !hasNote) {
-          html += '<button class="btn btn-sm btn-amber" onclick="ouvrirNote(\''+esc(i.id)+'\',\''+esc(i.prenom+' '+i.nom)+'\')">📝 Saisir note</button>'
-        }
-        if (isConfirme && hasNote && !i.resultats_envoyes) {
-          html += '<button class="btn btn-sm btn-green" onclick="envoyerResultats(\''+esc(i.id)+'\')">📤 Envoyer résultats</button>'
-        }
-        if (isConfirme) {
-          html += '<button class="btn btn-sm btn-red" onclick="supprimerAvecEmail(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">❌ Annuler</button>'
-        }
-        html += '</div>'
-        html += '</div>'
+async function sauvegarderAbandonne() {
+  if(saved||!user||questions.length===0)return
+  try{
+    await fetch('/api/quiz-resultat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: user.id, email: user.email, prenom,
+        theme, sous_theme: sousTheme, difficulte: diff,
+        abandonne: true,
+        temps_secondes: chronoSecondes,
+        source_questions: sourceQuestions
       })
-    }
-    html += '</div>'
-  })
-
-  el.innerHTML = html
+    })
+    saved=true
+  }catch(e){console.log('Erreur abandon:',e.message)}
 }
 
-async function creerSession() {
-  const date = document.getElementById('session-date').value
-  const heure = document.getElementById('session-heure').value.trim() || '15h00'
-  const msg = document.getElementById('session-creation-msg')
-  if (!date) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Sélectionne une date.</span>'; return }
-  msg.innerHTML = '<span style="color:#888">Création…</span>'
-  const { error } = await sb.from('sessions_examen_blanc').insert({ date_session: date, heure })
-  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; return }
-  msg.innerHTML = '<span style="color:#2F9E5C">✅ Session créée !</span>'
-  setTimeout(() => chargerInscriptions(), 800)
+async function allerVersLien(e, url) {
+  if(quizEnCours&&!saved){
+    e.preventDefault()
+    const ok=confirm('⚠️ Tu as un quiz en cours. Si tu te déconnectes, il sera enregistré avec un score de 0. Continuer ?')
+    if(!ok)return false
+    await sauvegarderAbandonne()
+    window.location.href=url
+    return false
+  }
+  return true
 }
 
-async function annulerSession(sessionId, dateAffichee, nbInscrits) {
-  if (nbInscrits > 0) {
-    if (!confirm('Il y a '+nbInscrits+' inscrit'+(nbInscrits>1?'s':'')+' sur la session du '+dateAffichee+'. Annuler quand même ? Un email sera envoyé à chaque inscrit.')) return
+function populateFocusBar(){
+  const t = THEMES.find(x=>x.value===theme)
+  document.getElementById('focus-icon').innerHTML = t ? THEME_ICONS[t.icon] : ''
+  document.getElementById('focus-theme').textContent = t ? t.label : theme
+  document.getElementById('focus-sub').textContent = sousTheme
+  document.getElementById('focus-badge').textContent = diff
+}
+
+function bloquerConfig(){
+  quizEnCours=true
+  document.getElementById('config').style.display='none'
+  populateFocusBar()
+  document.getElementById('focus-bar').classList.add('visible')
+}
+
+function debloquerConfig(){
+  quizEnCours=false
+  document.getElementById('config').style.display=''
+  document.getElementById('focus-bar').classList.remove('visible')
+  document.getElementById('gen-btn').disabled=false
+  document.getElementById('gen-btn').innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="9" cy="15" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="15" r="1.2" fill="currentColor" stroke="none"/></svg> Générer 5 questions'
+  mettreAJourNiveaux()
+}
+
+function cleDeblocage(t, st){ return t + '||' + st }
+
+async function verifierDeblocage(t, st) {
+  const cle = cleDeblocage(t, st)
+  if(deblocageCache[cle]) return deblocageCache[cle]
+  try {
+    const { data } = await sb.from('resultats').select('difficulte, score, total').eq('user_id', user.id).eq('theme', t).eq('sous_theme', st)
+    if (!data) { deblocageCache[cle] = { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }; return deblocageCache[cle] }
+    const sessionsFacile = data.filter(r => r.difficulte === 'facile' && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
+    const sessionsMoyen  = data.filter(r => r.difficulte === 'moyen'  && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
+    const sessionsDifficile = data.filter(r => r.difficulte === 'difficile' && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
+    deblocageCache[cle] = { moyen: sessionsFacile >= SEUIL_SESSIONS, difficile: sessionsMoyen >= SEUIL_SESSIONS, sessionsFacile, sessionsMoyen, sessionsDifficile }
+    return deblocageCache[cle]
+  } catch(e) {
+    return { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }
+  }
+}
+
+async function mettreAJourNiveaux() {
+  const d = await verifierDeblocage(theme, sousTheme)
+  const btnFacile=document.getElementById('btn-facile')
+  const btnMoyen=document.getElementById('btn-moyen')
+  const btnDifficile=document.getElementById('btn-difficile')
+  const lockMsg=document.getElementById('lock-msg')
+  const debInfo=document.getElementById('deblocage-info')
+  const cardFacile=document.getElementById('niveau-facile')
+  const cardMoyen=document.getElementById('niveau-moyen')
+  const cardDifficile=document.getElementById('niveau-difficile')
+  const barreMoyen=document.getElementById('barre-moyen')
+  const barreDifficile=document.getElementById('barre-difficile')
+  if(!btnFacile||!btnMoyen||!btnDifficile)return
+  btnFacile.disabled=false; btnFacile.classList.remove('locked')
+
+  const sessionsFacileAffiche = Math.min(d.sessionsFacile, SEUIL_SESSIONS)
+  cardFacile.querySelector('.niveau-sous').textContent=sessionsFacileAffiche+'/'+SEUIL_SESSIONS
+
+  if(d.moyen){
+    btnMoyen.disabled=false; btnMoyen.classList.remove('locked')
+    cardMoyen.classList.remove('locked')
+    cardMoyen.querySelector('.niveau-icon').innerHTML=ICON_SMILE
+    const sessionsMoyenAffiche = Math.min(d.sessionsMoyen, SEUIL_SESSIONS)
+    cardMoyen.querySelector('.niveau-sous').textContent=sessionsMoyenAffiche+'/'+SEUIL_SESSIONS
+    if(barreMoyen){ barreMoyen.parentElement.style.display=''; barreMoyen.style.width=Math.min((d.sessionsMoyen/SEUIL_SESSIONS)*100,100)+'%' }
   } else {
-    if (!confirm('Annuler la session du '+dateAffichee+' ?')) return
+    btnMoyen.disabled=true; btnMoyen.classList.add('locked')
+    cardMoyen.classList.add('locked')
+    cardMoyen.querySelector('.niveau-icon').innerHTML=ICON_LOCK
+    if(barreMoyen) barreMoyen.parentElement.style.display='none'
+    cardMoyen.querySelector('.niveau-sous').textContent='bloqué'
+    if(diff==='moyen'){diff='facile';btnFacile.classList.add('active');btnMoyen.classList.remove('active');cardFacile.classList.add('active');cardMoyen.classList.remove('active')}
+  }
+  if(d.difficile){
+    btnDifficile.disabled=false; btnDifficile.classList.remove('locked')
+    cardDifficile.classList.remove('locked')
+    if(d.sessionsDifficile >= SEUIL_SESSIONS){
+      cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_TROPHY
+      cardDifficile.querySelector('.niveau-sous').textContent='Niveau maîtrisé'
+    } else {
+      cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_SMILE
+      cardDifficile.querySelector('.niveau-sous').textContent=d.sessionsDifficile+'/'+SEUIL_SESSIONS
+    }
+    if(barreDifficile){ barreDifficile.parentElement.style.display=''; barreDifficile.style.width=Math.min((d.sessionsDifficile/SEUIL_SESSIONS)*100,100)+'%' }
+  } else {
+    btnDifficile.disabled=true; btnDifficile.classList.add('locked')
+    cardDifficile.classList.add('locked')
+    cardDifficile.querySelector('.niveau-icon').innerHTML=ICON_LOCK
+    if(barreDifficile) barreDifficile.parentElement.style.display='none'
+    cardDifficile.querySelector('.niveau-sous').textContent='bloqué'
+    if(diff==='difficile'){diff='facile';btnFacile.classList.add('active');btnDifficile.classList.remove('active');cardFacile.classList.add('active');cardDifficile.classList.remove('active')}
   }
 
-  const inscritsSession = INSCRIPTIONS.filter(i => i.session_id === sessionId)
-  for (const i of inscritsSession) {
-    try {
-      await fetch('/api/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'adresse-brevet', sousType: 'annulation', emailParent: i.email_parent, prenom: i.prenom, nom: i.nom, date: dateAffichee })
-      })
-    } catch(e) { console.log('Erreur email annulation session:', e.message) }
+  if(!d.moyen){
+    const restant=SEUIL_SESSIONS-d.sessionsFacile
+    debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Moyen verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> — ${d.sessionsFacile}/${SEUIL_SESSIONS} réussies</div>`
+  } else if(!d.difficile){
+    const restant=SEUIL_SESSIONS-d.sessionsMoyen
+    debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Difficile verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Moyen ≥ 70%</strong> — ${d.sessionsMoyen}/${SEUIL_SESSIONS} réussies</div>
+      <div style="font-size:11px;color:var(--vert);padding:6px 0 0">✅ Tu peux continuer à réviser le niveau Facile si tu veux — rien ne t'en empêche.</div>`
+  } else {
+    debInfo.innerHTML=`<div style="font-size:11px;color:var(--vert);padding:4px 0;margin-top:6px">✅ Tous les niveaux sont accessibles — reviens sur Facile ou Moyen quand tu veux.</div>`
   }
-
-  const { error } = await sb.from('sessions_examen_blanc').update({ annulee: true }).eq('id', sessionId)
-  if (error) { alert('Erreur : '+error.message); return }
-  chargerInscriptions()
+  lockMsg.classList.remove('visible')
 }
 
-async function confirmerEtEnvoyerAdresse(id, prenom, nom, emailParent, date) {
-  const adresse = document.getElementById('adresse-lieu')?.value?.trim()
-  if (!adresse) { alert('⚠️ Saisis l\'adresse du lieu avant de confirmer.'); return }
-  if (!confirm('Confirmer l\'inscription de '+prenom+' et envoyer l\'adresse à '+emailParent+' ?')) return
 
-  const { error } = await sb.from('inscriptions_brevet').update({ confirme: true, lieu_envoye: true }).eq('id', id)
-  if (error) { alert('Erreur : '+error.message); return }
+function setDiffCard(el, val) {
+  if(quizEnCours) return
+  const cardMoyen=document.getElementById('niveau-moyen')
+  const cardDifficile=document.getElementById('niveau-difficile')
+  if(val==='moyen' && cardMoyen.classList.contains('locked')) return
+  if(val==='difficile' && cardDifficile.classList.contains('locked')) return
+  document.querySelectorAll('.niveau-card').forEach(c=>c.classList.remove('active'))
+  el.classList.add('active')
+  diff=val
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'))
+  const btn=document.getElementById('btn-'+val)
+  if(btn) btn.classList.add('active')
+}
 
+async function envoyerRecapJournalier() {
+  if (!emailParent || !user) return
   try {
+    const aujourd_hui = new Date().toISOString().split('T')[0]
+    const { data: sessions } = await sb.from('resultats')
+      .select('theme, difficulte, score, total, temps_secondes, questions_ratees, created_at')
+      .eq('user_id', user.id)
+      .gte('created_at', aujourd_hui + 'T00:00:00')
+      .order('created_at', { ascending: true })
+    if (!sessions || sessions.length === 0) return
+    const totalSessions = sessions.length
+    const moyGlobale = Math.round((sessions.reduce((a,s) => a + s.score/s.total, 0) / totalSessions) * 100)
+    const tempsTot = sessions.reduce((a,s) => a + (s.temps_secondes||0), 0)
     await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'adresse-brevet', emailParent, prenom, nom, date, adresse })
-    })
-  } catch(e) { console.log('Erreur email confirmation:', e.message) }
-
-  chargerInscriptions()
-}
-
-async function refuserInscription(id, prenom, nom, emailParent, date) {
-  if (!confirm('Refuser l\'inscription de '+prenom+' et envoyer un email à '+emailParent+' ?')) return
-
-  try {
-    await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'adresse-brevet', sousType: 'refus', emailParent, prenom, nom, date })
-    })
-  } catch(e) { console.log('Erreur email refus:', e.message) }
-
-  const { error } = await sb.from('inscriptions_brevet').delete().eq('id', id)
-  if (error) { alert('Erreur suppression : '+error.message); return }
-
-  chargerInscriptions()
-}
-
-async function supprimerAvecEmail(id, prenom, nom, emailParent, date) {
-  if (!confirm('Annuler l\'inscription confirmée de '+prenom+' et envoyer un email à '+emailParent+' ?')) return
-
-  try {
-    await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'adresse-brevet', sousType: 'annulation', emailParent, prenom, nom, date })
-    })
-  } catch(e) { console.log('Erreur email annulation:', e.message) }
-
-  const { error } = await sb.from('inscriptions_brevet').delete().eq('id', id)
-  if (error) { alert('Erreur suppression : '+error.message); return }
-
-  chargerInscriptions()
-}
-
-async function confirmerInscription(id) {
-  const { error } = await sb.from('inscriptions_brevet').update({ confirme: true }).eq('id', id)
-  if (error) { alert('Erreur : '+error.message); return }
-  chargerInscriptions()
-}
-
-async function supprimerInscription(id) {
-  if (!confirm('Supprimer cette inscription ?')) return
-  const { error } = await sb.from('inscriptions_brevet').delete().eq('id', id)
-  if (error) { alert('Erreur : '+error.message); return }
-  chargerInscriptions()
-}
-
-function ouvrirAdresse(id, prenom, email) {
-  adresseCurrentId = id
-  let html = ''
-  html += '<p style="font-size:13px;color:#555;margin-bottom:1rem">Envoi de l\'adresse à <strong>'+prenom+'</strong> ('+email+')</p>'
-  html += '<div class="field"><label>Adresse complète</label><textarea id="adresse-text" placeholder="Ex: 12 rue des Lilas, 77310 Ponthierry" style="min-height:80px"></textarea></div>'
-  html += '<div class="field"><label>Message complémentaire (optionnel)</label><textarea id="adresse-msg" placeholder="Ex: Sonnez au 2ème étage, parking disponible…" style="min-height:60px"></textarea></div>'
-  html += '<div style="display:flex;gap:8px;margin-top:10px">'
-  html += '<button class="btn btn-green" onclick="envoyerAdresse()">📍 Envoyer l\'adresse</button>'
-  html += '<button class="btn" onclick="closeAdresse()">Annuler</button>'
-  html += '</div>'
-  html += '<div id="adresse-msg-result" style="margin-top:10px;font-size:13px"></div>'
-  document.getElementById('adresse-body').innerHTML = html
-  document.getElementById('overlay-adresse').classList.add('active')
-}
-
-function closeAdresse() { document.getElementById('overlay-adresse').classList.remove('active') }
-
-async function envoyerAdresse() {
-  const adresse = document.getElementById('adresse-text').value.trim()
-  const msg = document.getElementById('adresse-msg').value.trim()
-  const msgEl = document.getElementById('adresse-msg-result')
-  if (!adresse) { msgEl.innerHTML = '<span style="color:#9E2B25">⚠ Saisis l\'adresse.</span>'; return }
-  msgEl.innerHTML = '<span style="color:#888">Envoi…</span>'
-
-  try {
-    const inscrit = INSCRIPTIONS.find(i => i.id === adresseCurrentId)
-    const res = await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        type: 'adresse-brevet',
-        emailParent: inscrit.email_parent,
-        prenom: inscrit.prenom,
-        nom: inscrit.nom,
-        date: inscrit.date_choisie,
-        adresse,
-        messageCompl: msg
+        emailParent, prenom: prenom||'', nom: user.user_metadata?.nom||'',
+        theme: sessions[sessions.length-1].theme, difficulte: sessions[sessions.length-1].difficulte,
+        score: sessions.reduce((a,s) => a+s.score, 0), total: sessions.reduce((a,s) => a+s.total, 0),
+        questionsRatees: sessions.flatMap(s => s.questions_ratees||[]).filter(q => !q.includes('abandonné')),
+        tempsSecondes: tempsTot, resultatsId: null, recap: true, totalSessions, moyGlobale
       })
     })
-    const data = await res.json()
-    if (data.success) {
-      await sb.from('inscriptions_brevet').update({ lieu_envoye: true }).eq('id', adresseCurrentId)
-      msgEl.innerHTML = '<span style="color:#2F9E5C">✅ Adresse envoyée !</span>'
-      setTimeout(() => { closeAdresse(); chargerInscriptions() }, 1500)
-    } else throw new Error(data.error)
-  } catch(e) {
-    msgEl.innerHTML = '<span style="color:#9E2B25">Erreur : '+e.message+'</span>'
-  }
+  } catch(e) { console.log('Erreur email récap:', e.message) }
 }
 
-function ouvrirNote(id, nom) {
-  noteCurrentId = id
-  document.getElementById('note-titre').textContent = '📝 Note — '+nom
-  let html = ''
-  html += '<div class="field"><label>Note /20</label><input type="number" id="note-val" min="0" max="20" placeholder="Ex: 14"></div>'
-  html += '<div class="field"><label>Commentaire</label><textarea id="note-commentaire" placeholder="Bon travail en algèbre, à retravailler la géométrie…" style="min-height:80px"></textarea></div>'
-  html += '<div style="display:flex;gap:8px;margin-top:10px">'
-  html += '<button class="btn btn-green" onclick="sauvegarderNote()">💾 Sauvegarder</button>'
-  html += '<button class="btn" onclick="closeNote()">Annuler</button>'
-  html += '</div>'
-  html += '<div id="note-msg" style="margin-top:10px;font-size:13px"></div>'
-  document.getElementById('note-body').innerHTML = html
-  document.getElementById('overlay-note').classList.add('active')
-}
-
-function closeNote() { document.getElementById('overlay-note').classList.remove('active') }
-
-async function sauvegarderNote() {
-  const note = parseInt(document.getElementById('note-val').value)
-  const commentaire = document.getElementById('note-commentaire').value.trim()
-  const msgEl = document.getElementById('note-msg')
-  if (isNaN(note) || note < 0 || note > 20) { msgEl.innerHTML = '<span style="color:#9E2B25">⚠ Note entre 0 et 20.</span>'; return }
-  msgEl.innerHTML = '<span style="color:#888">Sauvegarde…</span>'
-  const { error } = await sb.from('inscriptions_brevet').update({ note, commentaire }).eq('id', noteCurrentId)
-  if (error) { msgEl.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; return }
-  msgEl.innerHTML = '<span style="color:#2F9E5C">✅ Note sauvegardée !</span>'
-  setTimeout(() => { closeNote(); chargerInscriptions() }, 1000)
-}
-
-async function envoyerResultats(id) {
-  const inscrit = INSCRIPTIONS.find(i => i.id === id)
-  if (!inscrit || inscrit.note === null) { alert('Saisis la note d\'abord.'); return }
-  if (!confirm('Envoyer les résultats à '+inscrit.email_parent+' ?')) return
-
+async function afficherBanniereExamenPresentiel() {
   try {
-    const res = await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'resultats-brevet',
-        emailParent: inscrit.email_parent,
-        prenom: inscrit.prenom,
-        nom: inscrit.nom,
-        date: inscrit.date_choisie,
-        note: inscrit.note,
-        commentaire: inscrit.commentaire || ''
-      })
-    })
+    const res = await fetch('/api/inscription-brevet?action=sessions')
     const data = await res.json()
-    if (data.success) {
-      await sb.from('inscriptions_brevet').update({ resultats_envoyes: true }).eq('id', id)
-      chargerInscriptions()
-    } else throw new Error(data.error)
-  } catch(e) {
-    alert('Erreur : '+e.message)
-  }
+    const sessions = (data.sessions || []).filter(s => !s.complet)
+    if (sessions.length === 0) return
+    const banniere = document.getElementById('banniere-examen-presentiel')
+    const sub = document.getElementById('banniere-presentiel-sub')
+    sub.textContent = sessions.length + ' session' + (sessions.length > 1 ? 's' : '') + ' disponible' + (sessions.length > 1 ? 's' : '')
+    banniere.style.display = ''
+  } catch(e) { console.log('Erreur chargement bandeau présentiel:', e.message) }
 }
-// ═══════════════════════════════════════════════════
-// FIGURE SVG
-// ═══════════════════════════════════════════════════
-function renderFigureSVG(fig) {
-  if (!fig || !fig.type) return ''
-  var f = fig
-  if (typeof f === 'string') { try { f = JSON.parse(f) } catch(e) { return '' } }
-  if (!f || !f.type) return ''
-  if (f.type === 'triangle_rect' && f.base === '?' && f.hauteur === '?') return ''
-  const S = 180, P = 28
-  const style = '<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:10px;fill:#3730a3;font-weight:600;font-family:sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>'
-  const open = '<svg width="180" height="180" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg">'+style
-  if (f.type === 'triangle_rect') {
+
+async function init() {
+  const {data}=await sb.auth.getSession()
+  if(!data.session){window.location.href='index.html';return}
+  user=data.session.user
+  prenom=user.user_metadata?.prenom||''
+  emailParent=user.user_metadata?.email_parent||''
+  const {data:profil}=await sb.from('profils').select('prenom_affiche,email_parent').eq('user_id',user.id).limit(1)
+  if(profil&&profil.length>0){prenom=prenom||profil[0].prenom_affiche||'';emailParent=emailParent||profil[0].email_parent||''}
+  document.getElementById('user-email').textContent=prenom||user.email
+  if(user.user_metadata?.email_parent===PROF_EMAIL||emailParent===PROF_EMAIL)document.getElementById('btn-prof').style.display='inline-flex'
+  renderThemes()
+  renderSousThemes()
+  await mettreAJourNiveaux()
+  afficherBanniereExamenPresentiel()
+}
+
+function renderThemes(){
+  document.getElementById('theme-grid').innerHTML=THEMES.map((t,i)=>`<div class="theme-card ${i===0?'active':''}" onclick="setTheme(this,'${t.value}')"><div class="theme-icon">${THEME_ICONS[t.icon]}</div><div class="theme-label">${t.label}</div></div>`).join('')
+}
+
+function renderSousThemes(){
+  const liste = SOUS_THEMES[theme] || []
+  document.getElementById('st-list').innerHTML = liste.map((st,i) =>
+    `<div class="st-row ${i===0?'active':''}" onclick="setSousTheme(this,'${st.replace(/'/g,"\\'")}')">
+      <span>${st}</span><span class="st-check">✓</span>
+    </div>`
+  ).join('')
+  sousTheme = liste[0] || ''
+}
+
+async function setSousTheme(el, val){
+  if(quizEnCours) return
+  document.querySelectorAll('.st-row').forEach(r=>r.classList.remove('active'))
+  el.classList.add('active')
+  sousTheme = val
+  await mettreAJourNiveaux()
+}
+
+async function setTheme(el,val){
+  if(quizEnCours)return
+  document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('active'))
+  el.classList.add('active'); theme=val; deblocageCache={}
+  renderSousThemes()
+  await mettreAJourNiveaux()
+}
+
+function setDiff(el,val){
+  if(quizEnCours)return
+  const btn=document.getElementById('btn-'+val)
+  if(btn&&(btn.disabled||btn.classList.contains('locked')))return
+  document.querySelectorAll('.diff-btn').forEach(b=>b.classList.remove('active'))
+  el.classList.add('active'); diff=val
+}
+
+async function logout(){
+  if(quizEnCours&&!saved){
+    const ok=confirm('⚠️ Tu as un quiz en cours. Si tu te déconnectes, il sera enregistré avec un score de 0. Continuer ?')
+    if(!ok)return
+    await sauvegarderAbandonne()
+  }
+  await envoyerRecapJournalier()
+  await sb.auth.signOut()
+  window.location.href='index.html'
+}
+
+function demarrerChrono(){chronoSecondes=0;chronoInterval=setInterval(()=>{chronoSecondes++;const m=Math.floor(chronoSecondes/60).toString().padStart(2,'0');const s=(chronoSecondes%60).toString().padStart(2,'0');const el=document.getElementById('focus-chrono-text');if(el)el.textContent=`${m}:${s}`},1000)}
+function arreterChrono(){clearInterval(chronoInterval)}
+function formatTemps(secondes){const m=Math.floor(secondes/60);const s=secondes%60;if(m===0)return `${s} sec`;return `${m} min ${s} sec`}
+
+async function generer() {
+  const btn=document.getElementById('gen-btn')
+  btn.disabled=true;btn.textContent='⏳ Chargement des questions...'
+  questions=[];answers={};submitted={};saved=false;modeAffichage={};charts={}
+  arreterChrono()
+  document.getElementById('quiz-area').innerHTML='<div class="loader">⏳ Chargement des questions…</div>'
+  try{
+    const res=await fetch('/api/generer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme,sous_theme:sousTheme,difficulte:diff})})
+    const data=await res.json()
+    if(data.error)throw new Error(data.error)
+    questions=data.questions;sourceQuestions=data.source||'ia'
+    questions.forEach(function(q,i){const type=detecterTypeGraphique(q.tableau);if(type){modeAffichage[i]=Math.random()<0.5?'tableau':'graphique'}else{modeAffichage[i]='tableau'}})
+    bloquerConfig();demarrerChrono();renderQuiz()
+    setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
+  }catch(e){document.getElementById('quiz-area').innerHTML='<div class="loader">❌ '+e.message+'</div>';debloquerConfig()}
+}
+
+function detecterTypeGraphique(tableau){
+  if(!tableau)return null
+  var t=tableau;if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return null}}
+  if(!t||!t.headers||!t.rows||t.rows.length===0)return null
+  var premierHeader=(t.headers[0]||'').toLowerCase()
+  var premiereRow=(t.rows[0][0]||'').toLowerCase()
+  if(premierHeader==='x'&&premiereRow.includes('f(x)'))return 'fonction'
+  if(premiereRow==='effectif')return 'barres'
+  if(premiereRow==='fréquence'||premiereRow==='frequence')return 'barres'
+  return null
+}
+
+function renderTableau(tableau){
+  if(!tableau)return ''
+  var t=tableau;if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return ''}}
+  if(!t||!t.headers||!t.rows)return ''
+  return '<table class="q-tableau"><tr>'+t.headers.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr>'+t.rows.map(function(row){return '<tr>'+row.map(function(cell){return '<td>'+cell+'</td>'}).join('')+'</tr>'}).join('')+'</table>'
+}
+
+function renderGraphique(tableau,questionIndex){
+  if(!tableau)return ''
+  var t=tableau;if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return ''}}
+  if(!t||!t.headers||!t.rows||t.rows.length===0)return ''
+  var type=detecterTypeGraphique(t);if(!type)return renderTableau(tableau)
+  var chartId='chart-q-'+questionIndex
+  var labels=t.headers.slice(1);var values=t.rows[0].slice(1).map(function(v){return parseFloat(v)||0})
+  var isDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches
+  var textColor=isDark?'#ccc':'#555';var gridColor=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)'
+  var height=type==='fonction'?200:160
+  if(charts[chartId]){charts[chartId].destroy();delete charts[chartId]}
+  var html='<div class="q-chart" style="height:'+height+'px"><canvas id="'+chartId+'"></canvas></div>'
+  setTimeout(function(){
+    var canvas=document.getElementById(chartId);if(!canvas)return
+    var config={}
+    if(type==='barres'){config={type:'bar',data:{labels:labels,datasets:[{data:values,backgroundColor:'#1B2A4A',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:t.headers[0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor,stepSize:1},grid:{color:gridColor},beginAtZero:true}}}}}
+    else if(type==='fonction'){config={type:'line',data:{labels:labels,datasets:[{data:values,borderColor:'#1B2A4A',backgroundColor:'#1B2A4A',pointRadius:5,pointBackgroundColor:'#1B2A4A',tension:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'x',color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}}}}}}
+    charts[chartId]=new Chart(canvas,config)
+  },50)
+  return html
+}
+
+function renderVisuel(q,i){if(!q.tableau)return '';var mode=modeAffichage[i]||'tableau';if(mode==='graphique')return renderGraphique(q.tableau,i);return renderTableau(q.tableau)}
+
+function renderFigure(fig){
+  if(!fig||!fig.type)return ''
+  var f=fig;if(typeof f==='string'){try{f=JSON.parse(f)}catch(e){return ''}}
+  if(!f||!f.type)return ''
+  if(f.type==='triangle_rect'&&f.base==='?'&&f.hauteur==='?')return ''
+  const S=220,P=36
+  const style='<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:11px;fill:#3730a3;font-weight:600;font-family:Inter,sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>'
+  const open='<svg width="260" height="220" viewBox="0 0 '+S+' '+S+'" xmlns="http://www.w3.org/2000/svg">'+style
+  if(f.type==='triangle_rect'){
     const u=f.unite||'cm'
     const baseVal=f.base==='?'?(Number(f.hauteur)||4):Number(f.base)
     const hautVal=f.hauteur==='?'?(Number(f.base)||4):Number(f.hauteur)
     const sc=Math.min((S-2*P)/baseVal,(S-2*P)/hautVal)*0.85
-    const W=baseVal*sc,H=hautVal*sc,ox=P+8,oy=S-P,sq=9
-    const bL=f.base==='?'?'?':f.base+' '+u
-    const hL=f.hauteur==='?'?'?':f.hauteur+' '+u
-    return open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ox+','+(oy-H)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+bL+'</text><text class="fig-lb" x="'+(ox-7)+'" y="'+(oy-H/2+4)+'" text-anchor="end">'+hL+'</text></svg>'
+    const W=baseVal*sc,H=hautVal*sc,ox=P+10,oy=S-P,sq=10
+    const baseLabel=f.base==='?'?'?':f.base+' '+u
+    const hautLabel=f.hauteur==='?'?'?':f.hauteur+' '+u
+    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ox+','+(oy-H)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+baseLabel+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy-H/2+4)+'" text-anchor="end">'+hautLabel+'</text></svg></div>'
   }
-  if (f.type === 'rectangle') {
-    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.largeur,(S-2*P)/f.hauteur)*0.85
-    const W=f.largeur*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=(S-H)/2
-    return open+'<rect class="fig-sh" x="'+ox+'" y="'+oy+'" width="'+W+'" height="'+H+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+H+14)+'" text-anchor="middle">'+f.largeur+' '+u+'</text><text class="fig-lb" x="'+(ox-7)+'" y="'+(oy+H/2+4)+'" text-anchor="end">'+f.hauteur+' '+u+'</text></svg>'
-  }
-  if (f.type === 'cercle') {
-    const u=f.unite||'cm',R=(S-2*P)/2*0.82,cx=S/2,cy=S/2
-    return open+'<circle class="fig-sh" cx="'+cx+'" cy="'+cy+'" r="'+R+'"/><line class="fig-dm" x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R)+'" y2="'+cy+'"/><circle class="fig-dot" cx="'+cx+'" cy="'+cy+'" r="2.5"/><text class="fig-lb" x="'+(cx+R/2)+'" y="'+(cy-7)+'" text-anchor="middle">r='+f.rayon+' '+u+'</text></svg>'
-  }
-  if (f.type === 'pythagore') {
+  if(f.type==='triangle'){const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85;const W=f.base*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=S-P,ax=ox+W*0.38,ay=oy-H;return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ax+','+ay+'"/><line class="fig-dm" x1="'+ax+'" y1="'+ay+'" x2="'+ax+'" y2="'+oy+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+f.base+' '+u+'</text><text class="fig-lb" x="'+(ax+9)+'" y="'+((ay+oy)/2+4)+'" text-anchor="start">'+f.hauteur+' '+u+'</text></svg></div>'}
+  if(f.type==='rectangle'){const u=f.unite||'cm',sc=Math.min((S-2*P)/f.largeur,(S-2*P)/f.hauteur)*0.85;const W=f.largeur*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=(S-H)/2;return '<div class="q-figure">'+open+'<rect class="fig-sh" x="'+ox+'" y="'+oy+'" width="'+W+'" height="'+H+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+H+17)+'" text-anchor="middle">'+f.largeur+' '+u+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy+H/2+4)+'" text-anchor="end">'+f.hauteur+' '+u+'</text></svg></div>'}
+  if(f.type==='cercle'){const u=f.unite||'cm',R=(S-2*P)/2*0.82,cx=S/2,cy=S/2;return '<div class="q-figure">'+open+'<circle class="fig-sh" cx="'+cx+'" cy="'+cy+'" r="'+R+'"/><line class="fig-dm" x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R)+'" y2="'+cy+'"/><circle class="fig-dot" cx="'+cx+'" cy="'+cy+'" r="2.5"/><text class="fig-lb" x="'+(cx+R/2)+'" y="'+(cy-8)+'" text-anchor="middle">r = '+f.rayon+' '+u+'</text></svg></div>'}
+  if(f.type==='pythagore'){
     const u=f.unite||'cm'
     const aVal=(f.a&&f.a!=='?'&&f.a!==null)?Number(f.a):null
     const bVal=(f.b&&f.b!=='?'&&f.b!==null)?Number(f.b):null
     const refVal=aVal||bVal||4
     const sc2=Math.min((S-2*P)/(refVal+4),(S-2*P)/(refVal+4))*0.72
-    const A=(aVal||refVal)*sc2,B=(bVal||refVal)*sc2,sq=9,ox=P+8,oy=S-P
-    const aL=aVal?aVal+' '+u:'?',bL=bVal?bVal+' '+u:'?',cL=(f.c&&f.c!=='?')?f.c+' '+u:'?'
-    return open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+bL+'</text><text class="fig-lb" x="'+(ox-7)+'" y="'+(oy-A/2+4)+'" text-anchor="end">'+aL+'</text><text class="fig-lb" x="'+(ox+B/2+12)+'" y="'+(oy-A/2-5)+'" text-anchor="start">'+cL+'</text></svg>'
+    const A=(aVal||refVal)*sc2,B=(bVal||refVal)*sc2,sq=10,ox=P+10,oy=S-P
+    const aLabel=aVal?aVal+' '+u:'?';const bLabel=bVal?bVal+' '+u:'?';const hypLabel=(f.c&&f.c!=='?'&&f.c!==null)?f.c+' '+u:'?'
+    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+bLabel+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy-A/2+4)+'" text-anchor="end">'+aLabel+'</text><text class="fig-lb" x="'+(ox+B/2+14)+'" y="'+(oy-A/2-6)+'" text-anchor="start">'+hypLabel+'</text></svg></div>'
   }
-  if (f.type === 'triangle') {
-    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85
-    const W=f.base*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=S-P,ax=ox+W*0.38,ay=oy-H
-    return open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ax+','+ay+'"/><line class="fig-dm" x1="'+ax+'" y1="'+ay+'" x2="'+ax+'" y2="'+oy+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+f.base+' '+u+'</text><text class="fig-lb" x="'+(ax+7)+'" y="'+((ay+oy)/2+4)+'" text-anchor="start">'+f.hauteur+' '+u+'</text></svg>'
+  if(f.type==='thales'){
+    const ox=S/2,oy=P+10
+    const abVal=f.ab==='?'?6:Number(f.ab)||6
+    const amVal=f.am==='?'?3:Number(f.am)||3
+    const ratio=Math.min(Math.max(amVal/abVal,0.2),0.8)
+    const H=S-2*P,W=H*0.75
+    const A={x:ox,y:oy},B={x:ox-W/2,y:oy+H},C={x:ox+W/2,y:oy+H}
+    const D={x:ox-(W/2)*ratio,y:oy+H*ratio},E={x:ox+(W/2)*ratio,y:oy+H*ratio}
+    return '<div class="q-figure">'+open+
+      '<polygon class="fig-sh" points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'"/>'+
+      '<line class="fig-lnb" x1="'+D.x+'" y1="'+D.y+'" x2="'+E.x+'" y2="'+E.y+'"/>'+
+      '<line class="fig-lng" x1="'+B.x+'" y1="'+B.y+'" x2="'+C.x+'" y2="'+C.y+'"/>'+
+      '<circle class="fig-dot" cx="'+A.x+'" cy="'+A.y+'" r="3"/>'+
+      '<circle class="fig-dot" cx="'+D.x+'" cy="'+D.y+'" r="3"/>'+
+      '<circle class="fig-dot" cx="'+B.x+'" cy="'+B.y+'" r="3"/>'+
+      '<circle class="fig-dotg" cx="'+E.x+'" cy="'+E.y+'" r="3"/>'+
+      '<circle class="fig-dotg" cx="'+C.x+'" cy="'+C.y+'" r="3"/>'+
+      '<text class="fig-lb" x="'+A.x+'" y="'+(A.y-7)+'" text-anchor="middle">A</text>'+
+      '<text class="fig-lb" x="'+(B.x-7)+'" y="'+(B.y+4)+'" text-anchor="end">B</text>'+
+      '<text class="fig-lb" x="'+(C.x+7)+'" y="'+(C.y+4)+'" text-anchor="start">C</text>'+
+      '</svg></div>'
   }
-  if (f.type === 'trapeze') {
-    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.grande_base,(S-2*P)/f.hauteur)*0.82
-    const GB=f.grande_base*sc,PB=f.petite_base*sc,H=f.hauteur*sc,ox=(S-GB)/2,oy=S-P,off=(GB-PB)/2
-    return open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+GB)+','+oy+' '+(ox+GB-off)+','+(oy-H)+' '+(ox+off)+','+(oy-H)+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+f.grande_base+' '+u+'</text></svg>'
-  }
-  if (f.type === 'parallelogramme') {
-    const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.78
-    const W=f.base*sc,H=f.hauteur*sc,sh=H*0.5,ox=P,oy=S-P
-    return open+'<polygon class="fig-sh" points="'+(ox+sh)+','+(oy-H)+' '+(ox+sh+W)+','+(oy-H)+' '+(ox+W)+','+oy+' '+ox+','+oy+'"/><text class="fig-lb" x="'+(ox+sh/2+W/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+f.base+' '+u+'</text></svg>'
-  }
+  if(f.type==='trapeze'){const u=f.unite||'cm',sc=Math.min((S-2*P)/f.grande_base,(S-2*P)/f.hauteur)*0.82;const GB=f.grande_base*sc,PB=f.petite_base*sc,H=f.hauteur*sc,ox=(S-GB)/2,oy=S-P,off=(GB-PB)/2;return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+GB)+','+oy+' '+(ox+GB-off)+','+(oy-H)+' '+(ox+off)+','+(oy-H)+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+f.grande_base+' '+u+'</text><text class="fig-lb" x="'+(S/2)+'" y="'+(oy-H-7)+'" text-anchor="middle">'+f.petite_base+' '+u+'</text></svg></div>'}
+  if(f.type==='parallelogramme'){const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.78;const W=f.base*sc,H=f.hauteur*sc,sh=H*0.5,ox=P,oy=S-P;return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+(ox+sh)+','+(oy-H)+' '+(ox+sh+W)+','+(oy-H)+' '+(ox+W)+','+oy+' '+ox+','+oy+'"/><text class="fig-lb" x="'+(ox+sh/2+W/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+f.base+' '+u+'</text></svg></div>'}
   return ''
 }
 
-function renderTableauHTML(tableau) {
-  if (!tableau) return ''
-  var t = tableau
-  if (typeof t === 'string') { try { t = JSON.parse(t) } catch(e) { return '' } }
-  if (!t || !t.headers || !t.rows) return ''
-  return '<table class="q-tableau"><tr>'+t.headers.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+t.rows.map(row=>'<tr>'+row.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>').join('')+'</table>'
-}
-
-// ═══════════════════════════════════════════════════
-// BANQUE
-// ═══════════════════════════════════════════════════
-async function chargerBanque() {
-  const el = document.getElementById('banque-list')
-  if (!el) return
-  el.innerHTML = '<div class="loader">Chargement…</div>'
-  let query = sb.from('questions_banque').select('*').order('theme').order('difficulte')
-  if (banqueFiltre.theme) query = query.eq('theme', banqueFiltre.theme)
-  if (banqueFiltre.diff)  query = query.eq('difficulte', banqueFiltre.diff)
-  const { data, error } = await query
-  if (error) { el.innerHTML='<div class="empty">Erreur : '+error.message+'</div>'; return }
-  let filtered = data || []
-  if (banqueFiltre.search) {
-    const s = banqueFiltre.search.toLowerCase()
-    filtered = filtered.filter(q => q.question.toLowerCase().includes(s))
+function renderQuiz() {
+  const area=document.getElementById('quiz-area')
+  const nbDone=Object.keys(submitted).length
+  const toutFini=nbDone===questions.length&&questions.length>0
+  if(toutFini){
+    let html='';const letters=['A','B','C','D'];const i=questions.length-1;const q=questions[i];const sel=answers[i],estAucune=submitted[i]==='aucune'
+    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
+    q.opts.forEach((opt,j)=>{let cls='option';if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong';html+=`<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`})
+    if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`}
+    else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`}
+    html+='</div>';area.innerHTML=html;return
   }
-  BANQUE_DATA = filtered
-  const total = filtered.length
-  const start = banqueFiltre.page * PER_PAGE
-  const page  = filtered.slice(start, start + PER_PAGE)
-  if (!page.length) { el.innerHTML='<div class="empty">Aucune question trouvée.</div>'; return }
-  let html = ''
-  page.forEach(q => {
-    const opts = typeof q.opts === 'string' ? JSON.parse(q.opts) : (q.opts || [])
-    const letters = ['A','B','C','D']
-    const hasFigSVG = q.figure && q.figure.type
-    const hasFigURL = q.figure_url
-    const hasTab    = q.tableau
-    html += '<div class="q-card" id="qcard-'+q.id+'">'
-    html += '<div class="q-card-header"><div>'
-    html += '<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">'
-    html += '<span class="badge badge-blue">'+q.theme+'</span>'
-    html += '<span class="badge '+(q.difficulte==='facile'?'badge-tb':q.difficulte==='moyen'?'badge-ab':'badge-insuf')+'">'+q.difficulte+'</span>'
-    if (hasFigSVG) html += '<span class="badge" style="background:#f0f0ff;color:#3730a3">🔷 Figure SVG</span>'
-    if (hasFigURL) html += '<span class="badge" style="background:#fff0f0;color:#9E2B25">🖼 Image</span>'
-    if (hasTab)    html += '<span class="badge badge-banque">📊 Tableau</span>'
-    html += '</div>'
-    html += '<div class="q-card-text">'+q.question+'</div>'
-    html += '</div>'
-    html += '<div class="q-card-actions">'
-    html += '<button class="btn btn-sm btn-blue" onclick="ouvrirEdit('+q.id+',\'questions_banque\')">✏️ Modifier</button>'
-    html += '<label class="btn btn-sm btn-amber" style="cursor:pointer">🖼 Image<input type="file" accept="image/*" style="display:none" onchange="uploadFigure(event,'+q.id+',\'questions_banque\')"></label>'
-    if (hasFigSVG || hasFigURL) html += '<button class="btn btn-sm btn-red" onclick="supprimerFigure('+q.id+',\'questions_banque\')">🗑 Figure</button>'
-    html += '</div></div>'
-    if (hasFigSVG) { const svg = renderFigureSVG(q.figure); if (svg) html += '<div class="q-figure">'+svg+'</div>' }
-    if (hasFigURL) html += '<div class="q-figure"><img src="'+q.figure_url+'" alt="figure"></div>'
-    if (hasTab)    html += renderTableauHTML(q.tableau)
-    html += '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px">'
-    opts.forEach((opt, i) => {
-      const correct = i === q.answer
-      html += '<div style="font-size:11px;padding:4px 8px;border-radius:6px;background:'+(correct?'#EAF6EF':'#F7F6F1')+';color:'+(correct?'#2F9E5C':'#555')+';border:1px solid '+(correct?'#86efac':'#e8e8e4')+'">'
-      html += '<strong>'+letters[i]+'.</strong> '+opt+(correct?' ✓':'')+'</div>'
-    })
-    html += '</div></div>'
+  let html=''
+  html+=`<div class="quiz-en-cours">⚠️ Quiz en cours — Ne quitte pas la page !</div>`
+  if(sourceQuestions==='banque'){html+=`<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-banque">⚡ Questions depuis la banque locale</span></div>`}
+  else{html+=`<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-ia">✨ Questions générées par IA</span></div>`}
+  html+=`<div class="quiz-progress"><div class="progress-steps">${questions.map((_,i)=>{let cls='progress-step';if(submitted[i]!==undefined)cls+=' done';else if(i===nbDone)cls+=' current';return `<div class="${cls}"></div>`}).join('')}</div><span class="progress-label">Question ${Math.min(nbDone+1,questions.length)}/${questions.length}</span></div>`
+  const letters=['A','B','C','D']
+  questions.forEach((q,i)=>{
+    const sel=answers[i],done=submitted[i]!==undefined,estAucune=submitted[i]==='aucune'
+    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
+    q.opts.forEach((opt,j)=>{let cls='option';if(done){if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong'}else if(j===sel)cls+=' selected';html+=`<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}><span class="letter">${letters[j]}</span>${opt}</div>`})
+    if(!done){const aucuneSel=sel==='aucune';html+=`<div class="option ${aucuneSel?'aucune-selected':''}" onclick="pick(${i},'aucune')" style="margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`}
+    else if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`}
+    else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`}
+    html+='</div>'
   })
-  const totalPages = Math.ceil(total / PER_PAGE)
-  html += '<div class="pagination">'
-  html += '<button class="btn btn-sm" onclick="banquePage(-1)" '+(banqueFiltre.page===0?'disabled':'')+'>← Préc</button>'
-  html += '<span style="color:var(--muted)">Page '+(banqueFiltre.page+1)+' / '+totalPages+' ('+total+' questions)</span>'
-  html += '<button class="btn btn-sm" onclick="banquePage(1)" '+(banqueFiltre.page>=totalPages-1?'disabled':'')+'>Suiv →</button>'
-  html += '</div>'
-  el.innerHTML = html
+  area.innerHTML=html
 }
 
-function banquePage(dir) { banqueFiltre.page += dir; chargerBanque() }
-
-function filtrerBanque() {
-  banqueFiltre.theme  = document.getElementById('filtre-theme').value
-  banqueFiltre.diff   = document.getElementById('filtre-diff').value
-  banqueFiltre.search = document.getElementById('filtre-search').value.trim()
-  banqueFiltre.page   = 0
-  chargerBanque()
-}
-
-async function uploadFigure(event, id, table) {
-  const file = event.target.files[0]
-  if (!file) return
-  const ext = file.name.split('.').pop()
-  const path = table+'/'+id+'.'+ext
-  const { error: upErr } = await sb.storage.from('figures').upload(path, file, { upsert: true })
-  if (upErr) { alert('Erreur upload : '+upErr.message); return }
-  const { data: urlData } = sb.storage.from('figures').getPublicUrl(path)
-  const url = urlData.publicUrl
-  const { error: dbErr } = await sb.from(table).update({ figure_url: url }).eq('id', id)
-  if (dbErr) { alert('Erreur sauvegarde : '+dbErr.message); return }
-  alert('✅ Image uploadée !')
-  chargerBanque()
-}
-
-async function supprimerFigure(id, table) {
-  if (!confirm('⚠️ Supprimer UNIQUEMENT la figure (pas la question) ?')) return
-  const { data, error } = await sb.from(table).update({ figure: null, figure_url: null }).eq('id', id).select('id, question')
-  if (error) { alert('Erreur : '+error.message); return }
-  if (!data || data.length === 0) { alert('⚠️ Mise à jour impossible — vérifier les permissions Supabase'); return }
-  chargerBanque()
-}
-
-async function ouvrirEdit(id, table) {
-  editCurrentId = id; editCurrentTable = table
-  const { data, error } = await sb.from(table).select('*').eq('id', id).single()
-  if (error || !data) { alert('Erreur chargement question'); return }
-  const opts = typeof data.opts === 'string' ? JSON.parse(data.opts) : (data.opts || ['','','',''])
-  const letters = ['A','B','C','D']
-  let html = ''
-  html += '<div class="field"><label>Question</label><textarea id="edit-question" style="min-height:80px">'+data.question+'</textarea></div>'
-  html += '<div style="margin-bottom:12px">'
-  letters.forEach((l,i) => {
-    html += '<div class="opt-row"><label>'+l+'</label><input type="text" id="edit-opt'+l+'" value="'+esc(opts[i]||'').replace(/"/g,'&quot;')+'"><label class="radio-label"><input type="radio" name="edit-bonne" value="'+i+'" '+(data.answer===i?'checked':'')+'>  Bonne</label></div>'
-  })
-  html += '</div>'
-  html += '<div class="field"><label>Explication</label><textarea id="edit-explication" style="min-height:80px">'+data.explication+'</textarea></div>'
-  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
-  html += '<button class="btn btn-green" onclick="sauvegarderEdit()">💾 Sauvegarder</button>'
-  html += '<button class="btn btn-red" onclick="supprimerQuestion()">🗑 Supprimer la question</button>'
-  html += '<button class="btn" onclick="closeEdit()">Annuler</button>'
-  html += '</div>'
-  html += '<div id="edit-msg" style="margin-top:10px;font-size:13px"></div>'
-  document.getElementById('edit-body').innerHTML = html
-  document.getElementById('overlay-edit').classList.add('active')
-}
-
-function closeEdit() { document.getElementById('overlay-edit').classList.remove('active') }
-
-async function sauvegarderEdit() {
-  const question = document.getElementById('edit-question').value.trim()
-  const explication = document.getElementById('edit-explication').value.trim()
-  const bonneVal = document.querySelector('input[name="edit-bonne"]:checked')?.value
-  const letters = ['A','B','C','D']
-  const opts = letters.map(l => document.getElementById('edit-opt'+l).value.trim())
-  const msg = document.getElementById('edit-msg')
-  if (!question || opts.some(o=>!o) || bonneVal === undefined || !explication) {
-    msg.innerHTML = '<span style="color:#9E2B25">⚠ Remplis tous les champs.</span>'; return
-  }
-  msg.innerHTML = '<span style="color:#888">Sauvegarde…</span>'
-  const { error } = await sb.from(editCurrentTable).update({ question, opts: JSON.stringify(opts), answer: parseInt(bonneVal), explication }).eq('id', editCurrentId)
-  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>' }
-  else { msg.innerHTML = '<span style="color:#2F9E5C">✓ Sauvegardé !</span>'; setTimeout(() => { closeEdit(); chargerBanque() }, 1000) }
-}
-
-async function supprimerQuestion() {
-  if (!confirm('⚠️ Supprimer DÉFINITIVEMENT cette question ?')) return
-  if (!confirm('Dernière confirmation — supprimer la question ID '+editCurrentId+' ?')) return
-  const { error } = await sb.from(editCurrentTable).delete().eq('id', editCurrentId)
-  if (error) { alert('Erreur : '+error.message); return }
-  closeEdit(); chargerBanque()
-}
-
-// ═══════════════════════════════════════════════════
-// FICHE ÉLÈVE
-// ═══════════════════════════════════════════════════
-function openFiche(userId) {
-  const e = ELEVES.find(x => x.user_id === userId)
-  if (!e) return
-  const rows = ROWS.filter(r => r.user_id === userId)
-  if (!rows.length) { alert('Pas encore de données pour cet élève.'); return }
-  const moyPct = Math.round((rows.reduce((a,r) => a + r.score/r.total, 0)/rows.length)*100)
-  const tempsTot = rows.reduce((a,r) => a + (r.temps_secondes||0), 0)
-  const themes = {}
-  rows.forEach(r => {
-    if (!themes[r.theme]) themes[r.theme] = { ok:0, tot:0, n:0, niveaux: { facile:{ok:0,tot:0}, moyen:{ok:0,tot:0}, difficile:{ok:0,tot:0} } }
-    themes[r.theme].ok += r.score; themes[r.theme].tot += r.total; themes[r.theme].n++
-    if (r.difficulte && themes[r.theme].niveaux[r.difficulte]) { themes[r.theme].niveaux[r.difficulte].ok += r.score; themes[r.theme].niveaux[r.difficulte].tot += r.total }
-  })
-  const chapitresRates = {}
-  rows.forEach(r => { (r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q => { if (!chapitresRates[r.theme]) chapitresRates[r.theme]={}; chapitresRates[r.theme][q]=(chapitresRates[r.theme][q]||0)+1 }) })
-  const niveauEmoji = { facile: '😊 Facile', moyen: '😐 Moyen', difficile: '😤 Difficile' }
-  document.getElementById('fiche-titre').textContent = e.prenom + ' ' + e.nom
-  let body = ''
-  body += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem">'
-  body += miniStat(moyPct+'%', 'Moyenne quiz', color(moyPct))
-  body += miniStat(rows.length, 'Sessions', 'var(--blue)')
-  body += miniStat(fmtTemps(tempsTot), 'Temps total', 'var(--blue)')
-  body += '</div>'
-  const examMap = {}
-  EXAMENS.filter(e=>!e.abandonne).forEach(e=>{ if(!examMap[e.user_id]) examMap[e.user_id]=e })
-  const exam = examMap[userId]
-  if (exam) {
-    const ep = pct(exam.score, exam.total)
-    body += '<div style="background:var(--blue-bg);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">'
-    body += '<div style="font-size:13px;font-weight:700;color:var(--blue)">📝 Dernier examen blanc</div>'
-    body += '<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+color(ep)+'">'+exam.score+'/20</div>'
-    body += '<div style="font-size:11px;color:'+color(ep)+';font-weight:600">'+mentionLabel(ep)+'</div></div></div>'
-  }
-  THEMES.forEach(t => {
-    const s = themes[t]; if (!s) return
-    const p = pct(s.ok, s.tot), statut = getStatut(p)
-    body += '<div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:10px">'
-    body += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-    body += '<div style="font-size:13px;font-weight:700;color:var(--text)">'+t+'</div>'
-    body += '<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:'+statut.color+'">'+s.ok+'/'+s.tot+' bonnes réponses</div>'
-    body += '<div style="font-size:11px;color:'+statut.color+';font-weight:600">'+statut.emoji+' '+statut.label+'</div></div></div>'
-    ;['facile','moyen','difficile'].forEach(niv => {
-      const n = s.niveaux[niv]; if (n.tot === 0) return
-      const np = pct(n.ok, n.tot), ns = getStatut(np)
-      body += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0 5px 12px;font-size:12px;border-top:1px solid #e8e8e4">'
-      body += '<span style="color:#666">'+niveauEmoji[niv]+'</span>'
-      body += '<span style="color:'+ns.color+';font-weight:600">'+ns.emoji+' '+ns.label+' — '+n.ok+'/'+n.tot+'</span></div>'
-    })
-    const chaps = chapitresRates[t]
-    if (chaps && Object.keys(chaps).length > 0) {
-      const topChaps = Object.entries(chaps).sort((a,b) => b[1]-a[1]).slice(0,3)
-      body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e8e8e4">'
-      body += '<div style="font-size:11px;color:#9E2B25;font-weight:600;margin-bottom:4px">Chapitres ratés :</div>'
-      topChaps.forEach(([chap, nb]) => { body += '<div style="font-size:11px;color:#666;padding:2px 0">• '+chap.replace(t+' — ','')+' <span style="color:#9E2B25;font-weight:600">('+nb+'×)</span></div>' })
-      body += '</div>'
+async function renderResultats() {
+  const area = document.getElementById('quiz-area')
+  const nbOk = Object.values(submitted).filter(v => v === 'correct').length
+  const pct = Math.round((nbOk / questions.length) * 100)
+  let mention = '', couleur = ''
+  if(pct >= 80){ mention = '🌟 Excellent !'; couleur = '#1f7a45' }
+  else if(pct >= 60){ mention = '👍 Bien !'; couleur = 'var(--marine)' }
+  else if(pct >= 40){ mention = '💪 Continue !'; couleur = '#8a6416' }
+  else { mention = '📚 À retravailler'; couleur = 'var(--bordeaux)' }
+  await sauvegarder()
+  delete deblocageCache[cleDeblocage(theme,sousTheme)]
+  const d = await verifierDeblocage(theme, sousTheme)
+  let progMsg = ''
+  if(pct >= SEUIL_PCT) {
+    if(diff === 'facile' && d.sessionsFacile === SEUIL_SESSIONS) {
+      progMsg = `<div class="prog-msg debloque">🔓 Niveau Moyen débloqué ! Tu peux maintenant le choisir.</div>`
+    } else if(diff === 'moyen' && d.sessionsMoyen === SEUIL_SESSIONS) {
+      progMsg = `<div class="prog-msg debloque">🔓 Niveau Difficile débloqué ! Tu es au top.</div>`
+    } else if(diff === 'difficile' && d.sessionsDifficile === SEUIL_SESSIONS) {
+      progMsg = `<div class="prog-msg debloque">🏆 Niveau Difficile maîtrisé ! Tu peux continuer à t'entraîner si tu veux.</div>`
+    } else if(diff === 'difficile') {
+      const restant = SEUIL_SESSIONS - d.sessionsDifficile
+      progMsg = `<div class="prog-msg reussi">✅ Session réussie ! ${d.sessionsDifficile}/${SEUIL_SESSIONS} sessions Difficile ≥ 70% — encore ${restant} pour maîtriser ce niveau</div>`
+    } else {
+      const sessions = diff === 'facile' ? d.sessionsFacile : d.sessionsMoyen
+      const restant = SEUIL_SESSIONS - sessions
+      const niveauSuivant = diff === 'facile' ? 'Moyen' : 'Difficile'
+      if(restant > 0) {
+        progMsg = `<div class="prog-msg reussi">✅ Session réussie ! ${sessions}/${SEUIL_SESSIONS} sessions ${diff.charAt(0).toUpperCase()+diff.slice(1)} ≥ 70% — encore ${restant} pour débloquer le ${niveauSuivant}</div>`
+      } else {
+        progMsg = `<div class="prog-msg reussi">✅ Session réussie !</div>`
+      }
     }
-    body += '</div>'
+  } else if(diff === 'difficile') {
+    const restant = SEUIL_SESSIONS - d.sessionsDifficile
+    progMsg = `<div class="prog-msg info">💪 Score insuffisant cette fois. ${d.sessionsDifficile}/${SEUIL_SESSIONS} sessions ≥ 70% — encore ${restant} pour maîtriser ce niveau</div>`
+  } else {
+    const sessions = diff === 'facile' ? d.sessionsFacile : d.sessionsMoyen
+    const restant = SEUIL_SESSIONS - sessions
+    const niveauSuivant = diff === 'facile' ? 'Moyen' : 'Difficile'
+    progMsg = `<div class="prog-msg info">💪 Score insuffisant cette fois. ${sessions}/${SEUIL_SESSIONS} sessions ≥ 70% — encore ${restant} pour débloquer le ${niveauSuivant}</div>`
+  }
+  const sessionsMoyenAffiche = Math.min(d.sessionsMoyen, SEUIL_SESSIONS)
+  const sessionsDifficileAffiche = Math.min(d.sessionsDifficile, SEUIL_SESSIONS)
+  const ligneMoyen = d.moyen
+    ? `<div class="prog-barre-wrap"><div class="prog-barre-fill" style="width:${Math.min(Math.round((d.sessionsMoyen/SEUIL_SESSIONS)*100),100)}%;background:#D4A23C"></div></div><span class="prog-reste" style="color:var(--ardoise)">${sessionsMoyenAffiche}/${SEUIL_SESSIONS}</span>`
+    : `<span class="prog-reste" style="color:var(--muted);flex:1;text-align:left">bloqué</span>`
+  const ligneDifficile = d.difficile
+    ? `<div class="prog-barre-wrap"><div class="prog-barre-fill" style="width:${Math.min(Math.round((d.sessionsDifficile/SEUIL_SESSIONS)*100),100)}%;background:#D4A23C"></div></div><span class="prog-reste" style="color:var(--ardoise)">${sessionsDifficileAffiche}/${SEUIL_SESSIONS}</span>`
+    : `<span class="prog-reste" style="color:var(--muted);flex:1;text-align:left">bloqué</span>`
+  const themeCourt = THEMES.find(t => t.value === theme)?.label || theme
+  let html = `
+    <div class="results-bande">
+      <div class="results-score-col">
+        <div class="results-score-num">${nbOk}/${questions.length}</div>
+        <div class="results-pct-sm" style="color:${couleur}">${pct}%</div>
+      </div>
+      <div class="results-sep"></div>
+      <div class="results-detail">
+        <div class="results-mention-sm">${mention}</div>
+        <div class="results-meta-sm">${themeCourt} · ${diff} · ${formatTemps(chronoSecondes)}</div>
+        <div class="results-saved">✅ Résultats enregistrés</div>
+      </div>
+    </div>
+    <div class="prog-bloc">
+      <div class="prog-titre">Progression — ${themeCourt}</div>
+      ${progMsg}
+      <div class="prog-ligne">
+        <span class="prog-label">Moyen</span>
+        ${ligneMoyen}
+      </div>
+      <div class="prog-ligne">
+        <span class="prog-label">Difficile</span>
+        ${ligneDifficile}
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+      <button class="btn btn-green btn-full" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
+      <button class="btn btn-outline btn-full" onclick="terminer()">🚪 Terminer et se déconnecter</button>
+    </div>
+    <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--ardoise);padding:0 4px">📋 Récapitulatif</div>`
+  const letters = ['A','B','C','D']
+  questions.forEach((q, i) => {
+    const estAucune = submitted[i] === 'aucune'
+    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge" style="${submitted[i]==='correct'?'background:#EAF6EF;color:#1f7a45':'background:var(--bordeaux-light);color:var(--bordeaux)'}">${submitted[i]==='correct'?'✅ Correct':'❌ Raté'}</span></div><p class="q-text">${q.q}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
+    q.opts.forEach((opt, j) => {
+      let cls = 'option'
+      if(j === q.answer) cls += ' correct'
+      else if(j === answers[i] && answers[i] !== 'aucune') cls += ' wrong'
+      html += `<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`
+    })
+    if(estAucune){
+      html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
+      html += `<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
+    } else {
+      html += `<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`
+    }
+    html += '</div>'
   })
-  body += '<div style="margin-top:1.5rem;display:flex;gap:8px;flex-wrap:wrap">'
-  body += '<button class="btn btn-green" id="btn-bilan" onclick="envoyerBilan(\''+userId+'\')">Envoyer bilan parents</button>'
-  body += '<button class="btn" onclick="closeFiche()">Fermer</button>'
-  body += '</div>'
-  document.getElementById('fiche-body').innerHTML = body
-  document.getElementById('overlay').classList.add('active')
+  area.innerHTML = html
+  setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
 }
 
-function closeFiche() { document.getElementById('overlay').classList.remove('active') }
-
-async function envoyerBilan(userId) {
-  const e = ELEVES.find(x => x.user_id === userId)
-  if (!e?.email_parent || e.email_parent === '—') { alert("Pas d'email parent pour cet élève."); return }
-  const btn = document.getElementById('btn-bilan')
-  btn.disabled = true; btn.textContent = 'Envoi…'
-  const rows = ROWS.filter(r => r.user_id === userId)
-  const moyGlobale = Math.round((rows.reduce((a,r)=>a+r.score/r.total,0)/rows.length)*100)
-  const themes = {}
-  rows.forEach(r => { if (!themes[r.theme]) themes[r.theme]={ok:0,tot:0,n:0}; themes[r.theme].ok+=r.score; themes[r.theme].tot+=r.total; themes[r.theme].n++ })
-  const rateeMap = {}
-  rows.flatMap(r=>r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1)
-  const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
-  try {
-    const res = await fetch('/api/email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type: 'bilan', emailParent:e.email_parent, prenom:e.prenom, nom:e.nom, moyGlobale, totalSessions:rows.length, tempsTotal:rows.reduce((a,r)=>a+(r.temps_secondes||0),0), themes, topRatees }) })
+async function sauvegarder() {
+  if(saved||!user||questions.length===0)return
+  const reponsesEnvoyees = {}
+  Object.keys(submitted).forEach(i => { reponsesEnvoyees[i] = answers[i] })
+  try{
+    const res = await fetch('/api/quiz-resultat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: user.id, email: user.email, prenom,
+        theme, sous_theme: sousTheme, difficulte: diff,
+        questions, reponses: reponsesEnvoyees,
+        temps_secondes: chronoSecondes,
+        source_questions: sourceQuestions
+      })
+    })
     const data = await res.json()
-    if (data.success) { btn.textContent='Envoyé ✓'; setTimeout(()=>{ btn.disabled=false; btn.textContent='Envoyer bilan parents' },3000) }
-    else throw new Error(data.error)
-  } catch(err) { alert('Erreur : '+err.message); btn.disabled=false; btn.textContent='Envoyer bilan parents' }
+    if(data.error){console.log('Erreur sauvegarde:',data.error);return}
+    saved=true
+    delete deblocageCache[cleDeblocage(theme,sousTheme)]
+  }catch(e){console.log('Erreur sauvegarde:',e.message)}
 }
 
-async function ajouterQuestion() {
-  const theme=document.getElementById('bq-theme').value, difficulte=document.getElementById('bq-diff').value
-  const question=document.getElementById('bq-question').value.trim()
-  const optA=document.getElementById('bq-optA').value.trim(), optB=document.getElementById('bq-optB').value.trim()
-  const optC=document.getElementById('bq-optC').value.trim(), optD=document.getElementById('bq-optD').value.trim()
-  const bonne=document.querySelector('input[name="bq-bonne"]:checked')?.value
-  const explication=document.getElementById('bq-explication').value.trim()
-  const msg=document.getElementById('bq-msg')
-  if (!question||!optA||!optB||!optC||!optD||!bonne||!explication) { msg.innerHTML='<span style="color:#9E2B25">⚠ Remplis tous les champs.</span>'; return }
-  const opts=[optA,optB,optC,optD], answer=['A','B','C','D'].indexOf(bonne)
-  msg.innerHTML='<span style="color:#888">Enregistrement…</span>'
-  const { error } = await sb.from('questions_banque').insert({ theme, difficulte, question, opts: JSON.stringify(opts), answer, explication, tableau: null, figure: null })
-  if (error) { msg.innerHTML='<span style="color:#9E2B25">Erreur : '+error.message+'</span>' }
-  else {
-    msg.innerHTML='<span style="color:#2F9E5C">✓ Question ajoutée !</span>'
-    ;['question','optA','optB','optC','optD','explication'].forEach(id => { document.getElementById('bq-'+id).value='' })
-    document.querySelectorAll('input[name="bq-bonne"]').forEach(r=>r.checked=false)
-    setTimeout(()=>msg.innerHTML='',3000)
-  }
+async function nouvelleRonde(){
+  questions=[];answers={};submitted={};saved=false;modeAffichage={};charts={}
+  deblocageCache={}
+  quizEnCours=false;arreterChrono()
+  document.getElementById('quiz-area').innerHTML=''
+  debloquerConfig();window.scrollTo({top:0,behavior:'smooth'})
 }
 
-// ═══════════════════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════════════════
-function render() {
-  const nbEleves=[...new Set(ROWS.map(r=>r.user_id))].length
-  const moyGlo=ROWS.length?Math.round((ROWS.reduce((a,r)=>a+r.score/r.total,0)/ROWS.length)*100):0
-  const nbIA=ROWS.filter(r=>!r.source_questions||r.source_questions==='ia').length
-  const nbBanque=ROWS.filter(r=>r.source_questions==='banque').length
-  const nbExamens=EXAMENS.filter(e=>!e.abandonne).length
-  const pctIA=ROWS.length?Math.round(nbIA/ROWS.length*100):0
-  const themeStats={}
-  ROWS.forEach(r=>{ if (!themeStats[r.theme]) themeStats[r.theme]={ok:0,tot:0,n:0}; themeStats[r.theme].ok+=r.score; themeStats[r.theme].tot+=r.total; themeStats[r.theme].n++ })
-  const rateeMap={}
-  ROWS.forEach(r=>(r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1))
-  const topRatees=Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
-  const examMap={}
-  EXAMENS.filter(e=>!e.abandonne).forEach(e=>{ if(!examMap[e.user_id]) examMap[e.user_id]=e })
-  const nbInscrits=INSCRIPTIONS.length
-
-  const ICONS = {
-    eleves: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><circle cx="17" cy="9" r="2.8"/><path d="M15 20c0-2.8 1-5 3.5-5.5"/></svg>',
-    sessions: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><circle cx="8.5" cy="9" r="1"/><circle cx="12" cy="9" r="1"/><circle cx="8.5" cy="13" r="1"/><circle cx="12" cy="13" r="1"/></svg>',
-    moyenne: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="14" width="3" height="6"/><rect x="11" y="9" width="3" height="11"/><rect x="16" y="5" width="3" height="15"/></svg>',
-    examens: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M9 12 L11 14 L15.5 9"/></svg>',
-    inscrits: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h8l6 6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M14 3v6h6"/></svg>',
-    banque: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>'
-  }
-
-  let h=''
-  h+='<div class="stats">'
-  h+='<div class="stat"><div class="stat-icon">'+ICONS.eleves+'</div><div><div class="stat-val">'+nbEleves+'</div><div class="stat-label">Élèves actifs</div></div></div>'
-  h+='<div class="stat"><div class="stat-icon">'+ICONS.sessions+'</div><div><div class="stat-val">'+ROWS.length+'</div><div class="stat-label">Sessions quiz</div></div></div>'
-  h+='<div class="stat"><div class="stat-icon">'+ICONS.moyenne+'</div><div><div class="stat-val">'+moyGlo+'%</div><div class="stat-label">Moyenne générale</div></div></div>'
-  h+='<div class="stat stat-blue"><div class="stat-icon">'+ICONS.examens+'</div><div><div class="stat-val">'+nbExamens+'</div><div class="stat-label">Examens blancs</div></div></div>'
-  h+='<div class="stat stat-green"><div class="stat-icon">'+ICONS.inscrits+'</div><div><div class="stat-val">'+nbInscrits+'</div><div class="stat-label">Inscrits brevet</div></div></div>'
-  h+='<div class="stat stat-amber"><div class="stat-icon">'+ICONS.banque+'</div><div><div class="stat-val">'+nbBanque+'</div><div class="stat-label">Sessions banque</div></div></div>'
-  h+='</div>'
-
-  h+='<div class="tabs">'
-  h+='<button class="tab active" data-tab="dashboard" onclick="setTab(\'dashboard\')">📊 Dashboard</button>'
-  h+='<button class="tab" data-tab="eleves" onclick="setTab(\'eleves\')">Élèves</button>'
-  h+='<button class="tab" data-tab="examens" onclick="setTab(\'examens\')">Examens blancs</button>'
-  h+='<button class="tab" data-tab="inscriptions" onclick="setTab(\'inscriptions\')">📋 Inscriptions</button>'
-  h+='<button class="tab" data-tab="themes" onclick="setTab(\'themes\')">Thèmes</button>'
-  h+='<button class="tab" data-tab="sessions" onclick="setTab(\'sessions\')">Sessions</button>'
-  h+='<button class="tab" data-tab="ratees" onclick="setTab(\'ratees\')">Questions ratées</button>'
-  h+='<button class="tab" data-tab="banque" onclick="setTab(\'banque\')">📚 Banque</button>'
-  h+='</div>'
-
-  // DASHBOARD
-  h+='<div class="section active" id="sec-dashboard"><div class="card">'
-  h+='<div class="card-title">Tableau comparatif — tous les élèves</div>'
-  h+='<div style="overflow-x:auto"><table class="dash-table"><thead><tr><th>Élève</th><th class="global">Global</th>'
-  THEMES_SHORT.forEach(t => { h+='<th>'+t+'</th>' })
-  h+='<th>Examen blanc</th></tr></thead><tbody>'
-  ELEVES.forEach(e => {
-    const rows=ROWS.filter(r=>r.user_id===e.user_id), exam=examMap[e.user_id]
-    const nomCell = '<div class="eleve-cell"><div class="avatar">'+initiales(e.prenom,e.nom)+'</div><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></div>'
-    const examCell=!exam?'<td style="color:#999;font-size:11px">—</td>':(()=>{ const ep=pct(exam.score,exam.total); return '<td><span style="color:'+color(ep)+';font-weight:700">'+exam.score+'/20</span><br><span style="font-size:10px;color:'+color(ep)+'">'+mentionLabel(ep)+'</span></td>' })()
-    if (!rows.length) { h+='<tr><td>'+nomCell+'</td><td style="color:#999">—</td>'; THEMES.forEach(()=>{h+='<td style="color:#999">—</td>'}); h+=examCell+'</tr>'; return }
-    const gS=rows.reduce((a,r)=>a+r.score,0),gT=rows.reduce((a,r)=>a+r.total,0),gP=pct(gS,gT)
-    h+='<tr><td>'+nomCell+'</td>'
-    h+='<td><strong class="pct-global" style="color:'+color(gP)+'">'+gP+'%</strong></td>'
-    THEMES.forEach(t => {
-      const tr=rows.filter(r=>r.theme===t)
-      if (!tr.length) { h+='<td style="color:#999;font-size:11px">—</td>'; return }
-      const ok=tr.reduce((a,r)=>a+r.score,0),tot=tr.reduce((a,r)=>a+r.total,0),p=pct(ok,tot)
-      h+='<td><span style="color:'+color(p)+';font-weight:600">'+emoji(p)+' '+p+'%</span></td>'
-    })
-    h+=examCell+'</tr>'
-  })
-  h+='</tbody></table></div>'
-  h+='<p style="font-size:11px;color:#888;margin-top:10px">🟢 ≥70% Maîtrisé | 🟡 50-69% En cours | 🔴 &lt;50% À retravailler</p>'
-  h+='</div></div>'
-
-  // ÉLÈVES
-  h+='<div class="section" id="sec-eleves"><div class="card"><div class="card-title">Liste des élèves</div>'
-  h+='<table class="tbl"><thead><tr><th>Élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th><th>Examen</th><th>Actions</th></tr></thead><tbody>'
-  ELEVES.forEach(e=>{
-    const p=e.totalQ>0?pct(e.totalScore,e.totalQ):0, exam=examMap[e.user_id]
-    const examCell=exam?mentionBadge(pct(exam.score,exam.total))+' <span style="font-size:12px">'+exam.score+'/20</span>':'<span style="color:#999;font-size:12px">—</span>'
-    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+initiales(e.prenom,e.nom)+'</div><strong>'+e.prenom+' '+e.nom+'</strong></div></td><td style="color:var(--blue);font-size:12px">'+e.email_parent+'</td><td>'+e.sessions+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td><td>'+examCell+'</td>'
-    h+='<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">Fiche</button></td></tr>'
-  })
-  h+='</tbody></table></div></div>'
-
-  // EXAMENS BLANCS
-  const examensValides=EXAMENS.filter(e=>!e.abandonne)
-  h+='<div class="section" id="sec-examens"><div class="card"><div class="card-title">Résultats Examens Blancs</div>'
-  if (!examensValides.length) { h+='<p class="empty">Aucun examen passé.</p>' }
-  else {
-    h+='<table class="tbl"><thead><tr><th>Élève</th><th>Score</th><th>Mention</th><th>Temps</th><th>Nombres</th><th>Organisation</th><th>Géométrie</th><th>Grandeurs</th></tr></thead><tbody>'
-    examensValides.forEach(e=>{
-      const p=pct(e.score,e.total),th=e.scores_themes||{},sc=scoresExamen(th)
-      const mins=Math.floor(e.temps_secondes/60),secs=e.temps_secondes%60
-      const profil=PROFILS[e.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:e.prenom||'—'
-      h+='<tr><td><strong>'+nom+'</strong></td><td><strong>'+e.score+'/20</strong> <span style="font-size:11px;color:'+(p>=50?'#2F9E5C':'#9E2B25')+'">'+p+'%</span></td>'
-      h+='<td>'+mentionBadge(p)+'</td><td style="font-size:12px">'+fmt(mins,secs)+'</td>'
-      h+='<td style="text-align:center;font-size:12px">'+sc.nombres+'</td><td style="text-align:center;font-size:12px">'+sc.stats+'</td>'
-      h+='<td style="text-align:center;font-size:12px">'+sc.geo+'</td><td style="text-align:center;font-size:12px">'+sc.grandeurs+'</td></tr>'
-    })
-    h+='</tbody></table>'
-  }
-  h+='</div></div>'
-
-  // INSCRIPTIONS
-  h+='<div class="section" id="sec-inscriptions"><div class="card"><div class="card-title">📋 Inscriptions Examen Blanc Présentiel</div>'
-  h+='<div id="inscriptions-list"><div class="loader">Chargement…</div></div>'
-  h+='</div></div>'
-
-  // THÈMES
-  h+='<div class="section" id="sec-themes"><div class="card"><div class="card-title">Résultats par domaine</div>'
-  h+='<table class="tbl"><thead><tr><th>Domaine</th><th>Sessions</th><th>Moyenne</th></tr></thead><tbody>'
-  Object.entries(themeStats).forEach(([t,s])=>{ const p=pct(s.ok,s.tot); h+='<tr><td>'+t+'</td><td>'+s.n+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td></tr>' })
-  h+='</tbody></table></div></div>'
-
-  // SESSIONS
-  h+='<div class="section" id="sec-sessions"><div class="card"><div class="card-title">30 dernières activités</div>'
-  h+='<table class="tbl"><thead><tr><th>Élève</th><th>Type</th><th>Détail</th><th>Score</th><th>Date</th></tr></thead><tbody>'
-  const toutesActivites=[...ROWS.map(r=>({user_id:r.user_id,type:'quiz',detail:r.theme+' — '+r.difficulte,score:r.score,total:r.total,created_at:r.created_at})),...EXAMENS.filter(e=>!e.abandonne).map(e=>({user_id:e.user_id,type:'examen',detail:'Examen blanc',score:e.score,total:e.total,created_at:e.created_at}))]
-  toutesActivites.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,30).forEach(r=>{
-    const profil=PROFILS[r.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:'—',p=pct(r.score,r.total)
-    const typeBadge=r.type==='examen'?'<span class="badge badge-blue">📝 Examen blanc</span>':'<span class="badge badge-banque">🎲 Quiz</span>'
-    h+='<tr><td><strong>'+nom+'</strong></td><td>'+typeBadge+'</td><td style="font-size:12px;color:#555">'+r.detail+'</td>'
-    h+='<td><strong style="color:'+color(p)+'">'+r.score+'/'+r.total+'</strong></td><td style="font-size:12px;color:#999">'+dateStr(r.created_at)+'</td></tr>'
-  })
-  h+='</tbody></table></div></div>'
-
-  // QUESTIONS RATÉES
-  h+='<div class="section" id="sec-ratees"><div class="card"><div class="card-title">Questions les plus ratées</div>'
-  if (topRatees.length) { topRatees.forEach(([q,n])=>{ h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="color:#444">'+q+'</span><span style="color:#9E2B25;font-weight:600;margin-left:12px;white-space:nowrap">'+n+'× raté</span></div>' }) }
-  else { h+='<p class="empty">Pas encore de données.</p>' }
-  h+='</div></div>'
-
-  // BANQUE
-  h+='<div class="section" id="sec-banque">'
-  h+='<div class="card"><div class="banque-filters">'
-  h+='<select id="filtre-theme" onchange="filtrerBanque()"><option value="">Tous les domaines</option>'+THEMES.map(t=>'<option value="'+t+'">'+t+'</option>').join('')+'</select>'
-  h+='<select id="filtre-diff" onchange="filtrerBanque()"><option value="">Toutes difficultés</option><option value="facile">Facile</option><option value="moyen">Moyen</option><option value="difficile">Difficile</option></select>'
-  h+='<input type="text" id="filtre-search" placeholder="🔍 Rechercher…" oninput="filtrerBanque()">'
-  h+='</div></div>'
-  h+='<div class="card"><div class="card-title">Questions de la banque</div><div id="banque-list"><div class="loader">Chargement…</div></div></div>'
-  h+='<div class="card"><div class="card-title">➕ Ajouter une question</div>'
-  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
-  h+='<div class="field"><label>Domaine</label><select id="bq-theme">'+THEMES.map(t=>'<option>'+t+'</option>').join('')+'</select></div>'
-  h+='<div class="field"><label>Difficulté</label><select id="bq-diff"><option value="facile">Facile</option><option value="moyen" selected>Moyen</option><option value="difficile">Difficile</option></select></div>'
-  h+='</div>'
-  h+='<div class="field"><label>Question</label><textarea id="bq-question" placeholder="Énoncé complet…"></textarea></div>'
-  h+=['A','B','C','D'].map(l=>'<div class="opt-row"><label>'+l+'</label><input type="text" id="bq-opt'+l+'" placeholder="Option '+l+'"><label class="radio-label"><input type="radio" name="bq-bonne" value="'+l+'"> Bonne réponse</label></div>').join('')
-  h+='<div class="field" style="margin-top:10px"><label>Explication</label><textarea id="bq-explication" placeholder="Correction étape par étape…"></textarea></div>'
-  h+='<button class="btn btn-green" onclick="ajouterQuestion()">➕ Ajouter la question</button>'
-  h+='<div id="bq-msg" style="margin-top:10px;font-size:13px"></div></div>'
-  h+='</div>'
-
-  document.getElementById('root').innerHTML = h
+async function terminer(){
+  await envoyerRecapJournalier()
+  await sb.auth.signOut()
+  window.location.href='index.html'
 }
 
-// ═══════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════
-async function init() {
-  const { data: { session } } = await sb.auth.getSession()
-  if (!session) { location.href='index.html'; return }
-  const meta = session.user.user_metadata || {}
-  if (meta.email_parent !== PROF) {
-    const { data: p } = await sb.from('profils').select('email_parent').eq('user_id',session.user.id).single()
-    if (!p || p.email_parent !== PROF) { document.getElementById('root').innerHTML='<div class="denied">Accès réservé au professeur.</div>'; return }
+function pick(qi,oi){if(submitted[qi]!==undefined)return;answers[qi]=oi;renderQuiz()}
+
+async function valider(qi) {
+  if(answers[qi] === undefined) return
+  const sel = answers[qi]
+  submitted[qi] = sel === 'aucune' ? 'aucune' : (sel === questions[qi].answer ? 'correct' : 'wrong')
+  const toutFini = Object.keys(submitted).length === questions.length
+  if(toutFini) {
+    arreterChrono()
+    await renderResultats()
+  } else {
+    renderQuiz()
+    setTimeout(() => {
+      const cards = document.querySelectorAll('.card')
+      const nextCard = cards[qi + 1]
+      if(nextCard) nextCard.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 300)
   }
-  const [r1,r2,r3,r4,r5] = await Promise.all([
-    sb.from('resultats').select('*').order('created_at',{ascending:false}),
-    sb.from('examens_blancs').select('*').order('created_at',{ascending:false}),
-    sb.from('profils').select('*'),
-    sb.from('inscriptions_brevet').select('*').order('created_at',{ascending:true}),
-    sb.from('sessions_examen_blanc').select('*').order('date_session',{ascending:true})
-  ])
-  ROWS=r1.data||[]; EXAMENS=r2.data||[]
-  const profils=r3.data||[]
-  PROFILS={}; profils.forEach(p=>PROFILS[p.user_id]=p)
-  ELEVES=profils.map(p=>({user_id:p.user_id,prenom:p.prenom_affiche||'—',nom:p.nom_affiche||'',email_parent:p.email_parent||'—',sessions:0,totalScore:0,totalQ:0}))
-  ROWS.forEach(r=>{ const e=ELEVES.find(x=>x.user_id===r.user_id); if(e){ e.sessions++; e.totalScore+=r.score; e.totalQ+=r.total } })
-  INSCRIPTIONS=r4.data||[]
-  SESSIONS=r5.data||[]
-  render()
 }
 
 init()
