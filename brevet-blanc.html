@@ -1,82 +1,192 @@
 <!DOCTYPE html>
-<!--
-  NOTE : cette page a été neutralisée (session 17/24 juin terminée).
-  Le formulaire d'inscription original existe et est archivé dans une
-  conversation Claude (juillet 2026). Pour réactiver une nouvelle session :
-  redemander le formulaire complet à Claude en mentionnant "réactiver brevet blanc".
--->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#1e3a8a">
+<meta name="theme-color" content="#1B2A4A">
 <title>Inscription — Examen Blanc Brevet | ACADEMIKA</title>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+:root{
+  --marine:#1B2A4A; --marine-light:#EEF1F6;
+  --bordeaux:#9E2B25; --bordeaux-light:#FBEDEC;
+  --creme:#FAF9F6; --ardoise:#41454C; --muted:#6B6E73;
+  --vert:#2F9E5C; --dore:#D4A23C; --dore-light:#FBF4E4;
+  --border:#E4E1D8;
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
+body { font-family: 'Inter', -apple-system, sans-serif; background: var(--creme); min-height: 100vh; color: var(--ardoise); }
 .container { max-width: 520px; margin: 0 auto; padding: 1.5rem 1rem; }
-
-.header { background: #1e3a8a; border-radius: 14px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem; }
+.header { background: var(--marine); border-radius: 14px; padding: 1.5rem; text-align: center; margin-bottom: 1.5rem; }
 .header-logo { font-size: 12px; color: #93c5fd; letter-spacing: 0.1em; margin-bottom: 8px; }
-.header-title { font-size: 24px; font-weight: 700; color: white; margin-bottom: 4px; }
-.header-sub { font-size: 14px; color: #fbbf24; font-weight: 600; }
+.header-title { font-size: 24px; font-weight: 600; color: white; margin-bottom: 4px; font-family:'Newsreader',serif; }
+.header-sub { font-size: 14px; color: var(--dore); font-weight: 600; }
 .header-math { font-size: 12px; color: #bfdbfe; margin-top: 4px; }
-
-.bandeau { background: #6b7280; color: white; text-align: center; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 600; margin-bottom: 1.5rem; }
-
-.infos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
-.info-card { background: white; border-radius: 10px; padding: 12px; text-align: center; border: 1px solid #e8e8e4; opacity: 0.55; }
-.info-title { font-size: 13px; font-weight: 700; color: #6b7280; margin-bottom: 2px; }
-.info-sub { font-size: 11px; color: #9ca3af; }
-
-.status-card { background: white; border-radius: 14px; border: 1px solid #e8e8e4; padding: 2rem 1.5rem; text-align: center; }
+.bandeau-info { background: var(--bordeaux-light); border: 1px solid var(--bordeaux); color: var(--bordeaux); text-align: center; padding: 12px; border-radius: 10px; font-size: 13px; font-weight: 500; margin-bottom: 1.5rem; }
+.session-card { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 10px; cursor: pointer; transition: all 0.15s; }
+.session-card:hover { border-color: var(--marine); }
+.session-card.selected { border: 1.5px solid var(--marine); background: var(--marine-light); }
+.session-card.complet { opacity: 0.55; cursor: not-allowed; }
+.session-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.session-date { font-size: 15px; font-weight: 600; color: var(--marine); font-family:'Newsreader',serif; }
+.session-badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; }
+.session-badge.dispo { background: #EAF6EF; color: #1f7a45; }
+.session-badge.complet-badge { background: var(--bordeaux-light); color: var(--bordeaux); }
+.session-heure { font-size: 13px; color: var(--muted); }
+.loader { text-align: center; padding: 2rem; color: var(--muted); font-size: 14px; }
+.status-card { background: white; border-radius: 14px; border: 1px solid var(--border); padding: 2rem 1.5rem; text-align: center; }
 .status-icon-wrap { width: 44px; height: 44px; border-radius: 50%; background: #f1efe8; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
 .status-icon { font-size: 22px; }
-.status-title { font-size: 17px; font-weight: 700; color: #1a1a1a; margin-bottom: 10px; }
-.status-msg { font-size: 14px; color: #6b7280; line-height: 1.7; }
-.status-msg a { color: #1e3a8a; font-weight: 600; text-decoration: none; }
-
+.status-title { font-size: 17px; font-weight: 600; color: #1a1a1a; margin-bottom: 10px; }
+.status-msg { font-size: 14px; color: var(--muted); line-height: 1.7; }
+.status-msg a { color: var(--marine); font-weight: 600; text-decoration: none; }
+.form-card { background: white; border-radius: 14px; border: 1px solid var(--border); padding: 1.5rem; margin-top: 1.5rem; display: none; }
+.form-card.visible { display: block; }
+.form-card label { display: block; font-size: 13px; font-weight: 500; color: var(--ardoise); margin-bottom: 6px; margin-top: 14px; }
+.form-card label:first-child { margin-top: 0; }
+.form-card input { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 15px; font-family: 'Inter', sans-serif; }
+.form-card input:focus { outline: none; border-color: var(--marine); }
+.btn-submit { width: 100%; margin-top: 20px; padding: 14px; background: var(--bordeaux); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.form-msg { margin-top: 12px; font-size: 13px; text-align: center; padding: 10px; border-radius: 8px; display: none; }
+.form-msg.erreur { display: block; background: var(--bordeaux-light); color: var(--bordeaux); }
+.form-msg.succes { display: block; background: #EAF6EF; color: #1f7a45; }
 .footer { text-align: center; padding: 1rem 0; font-size: 12px; color: #999; }
-.footer a { color: #1e3a8a; text-decoration: none; }
+.footer a { color: var(--marine); text-decoration: none; }
 </style>
 </head>
 <body>
 <div class="container">
-
   <div class="header">
     <div class="header-logo">∑ ACADEMIKA</div>
     <div class="header-title">Examen Blanc Présentiel</div>
     <div class="header-sub">Mathématiques</div>
     <div class="header-math">Conditions réelles · Correction le jour même</div>
   </div>
+  <div class="bandeau-info">Sujet type brevet · Places limitées à 5 par session</div>
 
-  <div class="bandeau">Session terminée</div>
-
-  <div class="infos">
-    <div class="info-card">
-      <div class="info-title">17 juin</div>
-      <div class="info-sub">Terminé</div>
-    </div>
-    <div class="info-card">
-      <div class="info-title">24 juin</div>
-      <div class="info-sub">Terminé</div>
-    </div>
+  <div id="sessions-area">
+    <div class="loader">Chargement des sessions…</div>
   </div>
 
-  <div class="status-card">
-    <div class="status-icon-wrap"><span class="status-icon">📅</span></div>
-    <div class="status-title">Session terminée</div>
-    <div class="status-msg">
-      La session d'examen blanc du 17 et 24 juin est maintenant terminée.<br><br>
-      La prochaine date sera annoncée prochainement sur <a href="/">academika.fr</a>.
-    </div>
+  <div class="form-card" id="form-card">
+    <label>Prénom de l'élève</label>
+    <input type="text" id="f-prenom" placeholder="Prénom">
+    <label>Nom de l'élève</label>
+    <input type="text" id="f-nom" placeholder="Nom">
+    <label>Email des parents</label>
+    <input type="email" id="f-email" placeholder="parent@exemple.fr">
+    <label>Téléphone (facultatif)</label>
+    <input type="tel" id="f-telephone" placeholder="06 00 00 00 00">
+    <button class="btn-submit" id="btn-submit" onclick="envoyerInscription()">S'inscrire à cette session</button>
+    <div class="form-msg" id="form-msg"></div>
   </div>
 
   <div class="footer">
     <p>Ingénieur · Cours particuliers · <a href="tel:0626539013">06 26 53 90 13</a></p>
     <p style="margin-top:4px"><a href="/">← Retour à ACADEMIKA</a></p>
   </div>
-
 </div>
+
+<script>
+let sessions = []
+let sessionChoisie = null
+
+async function chargerSessions() {
+  try {
+    const res = await fetch('/api/inscription-brevet?action=sessions')
+    const data = await res.json()
+    sessions = data.sessions || []
+    renderSessions()
+  } catch(e) {
+    document.getElementById('sessions-area').innerHTML = '<div class="status-card"><div class="status-title">Erreur de chargement</div><div class="status-msg">Réessayez dans quelques instants.</div></div>'
+  }
+}
+
+function renderSessions() {
+  const area = document.getElementById('sessions-area')
+  if (sessions.length === 0) {
+    area.innerHTML = `
+      <div class="status-card">
+        <div class="status-icon-wrap"><span class="status-icon">📅</span></div>
+        <div class="status-title">Aucune session prévue actuellement</div>
+        <div class="status-msg">Revenez bientôt — les prochaines dates seront annoncées sur <a href="/">academika.fr</a>.</div>
+      </div>`
+    return
+  }
+  area.innerHTML = sessions.map(s => `
+    <div class="session-card ${s.complet ? 'complet' : ''}" ${s.complet ? '' : `onclick="choisirSession('${s.id}')"`} id="session-${s.id}">
+      <div class="session-top">
+        <span class="session-date">${s.date_formatee}</span>
+        <span class="session-badge ${s.complet ? 'complet-badge' : 'dispo'}">${s.complet ? 'Complet' : s.places_restantes + ' place' + (s.places_restantes > 1 ? 's' : '') + ' dispo'}</span>
+      </div>
+      <div class="session-heure">${s.heure} · 77310 Ponthierry</div>
+    </div>
+  `).join('')
+}
+
+function choisirSession(id) {
+  sessionChoisie = id
+  document.querySelectorAll('.session-card').forEach(c => c.classList.remove('selected'))
+  document.getElementById('session-' + id).classList.add('selected')
+  document.getElementById('form-card').classList.add('visible')
+  document.getElementById('form-card').scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+async function envoyerInscription() {
+  const prenom = document.getElementById('f-prenom').value.trim()
+  const nom = document.getElementById('f-nom').value.trim()
+  const email = document.getElementById('f-email').value.trim()
+  const telephone = document.getElementById('f-telephone').value.trim()
+  const msg = document.getElementById('form-msg')
+  const btn = document.getElementById('btn-submit')
+
+  if (!prenom || !nom || !email) {
+    msg.className = 'form-msg erreur'
+    msg.textContent = 'Merci de remplir tous les champs obligatoires.'
+    return
+  }
+  if (!sessionChoisie) {
+    msg.className = 'form-msg erreur'
+    msg.textContent = 'Merci de sélectionner une session.'
+    return
+  }
+
+  btn.disabled = true
+  btn.textContent = 'Inscription en cours…'
+  msg.className = 'form-msg'
+  msg.style.display = 'none'
+
+  try {
+    const res = await fetch('/api/inscription-brevet', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prenom, nom, email_parent: email, telephone, session_id: sessionChoisie })
+    })
+    const data = await res.json()
+    if (data.error) {
+      msg.className = 'form-msg erreur'
+      msg.textContent = data.error
+      btn.disabled = false
+      btn.textContent = "S'inscrire à cette session"
+      return
+    }
+    msg.className = 'form-msg succes'
+    msg.textContent = '✅ Inscription reçue ! Vous recevrez un email de confirmation.'
+    btn.textContent = 'Inscription envoyée'
+    document.getElementById('f-prenom').disabled = true
+    document.getElementById('f-nom').disabled = true
+    document.getElementById('f-email').disabled = true
+    document.getElementById('f-telephone').disabled = true
+  } catch(e) {
+    msg.className = 'form-msg erreur'
+    msg.textContent = 'Erreur réseau — réessayez.'
+    btn.disabled = false
+    btn.textContent = "S'inscrire à cette session"
+  }
+}
+
+chargerSessions()
+</script>
 </body>
 </html>
