@@ -193,10 +193,9 @@ const THEMES = [
   'Grandeurs, mesures et algorithmique'
 ]
 const THEMES_SHORT = ['Nombres', 'Organisation', 'Géométrie', 'Grandeurs']
-const MAX_PLACES = 5
 
 let ROWS = [], EXAMENS = [], PROFILS = {}, ELEVES = []
-let INSCRIPTIONS = []
+let INSCRIPTIONS = [], SESSIONS = []
 let BANQUE_DATA = []
 let banqueFiltre = { theme: '', diff: '', search: '', page: 0 }
 const PER_PAGE = 20
@@ -263,102 +262,155 @@ function miniStat(val, label, col) {
 }
 
 // ═══════════════════════════════════════════════════
-// INSCRIPTIONS BREVET BLANC
+// INSCRIPTIONS BREVET BLANC — SESSIONS DYNAMIQUES
 // ═══════════════════════════════════════════════════
 async function chargerInscriptions() {
   const el = document.getElementById('inscriptions-list')
   if (!el) return
   el.innerHTML = '<div class="loader">Chargement…</div>'
 
-  const { data, error } = await sb.from('inscriptions_brevet').select('*').order('created_at', { ascending: true })
-  if (error) { el.innerHTML = '<div class="empty">Erreur : '+error.message+'</div>'; return }
+  const [rSessions, rInscriptions] = await Promise.all([
+    sb.from('sessions_examen_blanc').select('*').order('date_session', { ascending: true }),
+    sb.from('inscriptions_brevet').select('*').order('created_at', { ascending: true })
+  ])
+  if (rSessions.error) { el.innerHTML = '<div class="empty">Erreur : '+rSessions.error.message+'</div>'; return }
+  if (rInscriptions.error) { el.innerHTML = '<div class="empty">Erreur : '+rInscriptions.error.message+'</div>'; return }
 
-  INSCRIPTIONS = data || []
+  SESSIONS = rSessions.data || []
+  INSCRIPTIONS = rInscriptions.data || []
 
-  // Dates dynamiques : dérivées des inscriptions réelles plutôt que codées en dur.
-  // Préserve l'ordre chronologique (INSCRIPTIONS est déjà trié par created_at ascendant).
-  const datesUniques = []
-  INSCRIPTIONS.forEach(i => { if (i.date_choisie && !datesUniques.includes(i.date_choisie)) datesUniques.push(i.date_choisie) })
-
-  const places = {}
-  datesUniques.forEach(d => { places[d] = 0 })
-  INSCRIPTIONS.forEach(i => {
-    if (places[i.date_choisie] !== undefined) places[i.date_choisie]++
-  })
+  const aujourdHui = new Date().toISOString().split('T')[0]
 
   let html = ''
 
-  const adresseActuelle = document.getElementById('adresse-lieu')?.value || '12 rue des Lilas, 77310 Ponthierry'
+  // Adresse (globale, toutes sessions au même lieu)
+  const adresseActuelle = document.getElementById('adresse-lieu')?.value || '77310 Ponthierry'
   html += '<div class="card" style="margin-bottom:1rem">'
   html += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px">📍 Adresse du lieu d\'examen — incluse dans l\'email de confirmation</div>'
   html += '<textarea id="adresse-lieu" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-family:\'Inter\',sans-serif;font-size:13px;resize:vertical;min-height:52px;background:white;color:var(--text)">'+adresseActuelle+'</textarea>'
   html += '</div>'
 
-  if (!INSCRIPTIONS.length) {
-    el.innerHTML = html + '<div class="empty">Aucune inscription pour le moment.</div>'
+  // Formulaire création de session
+  html += '<div class="card" style="margin-bottom:1.5rem">'
+  html += '<div class="card-title" style="margin-bottom:12px">➕ Créer une session</div>'
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+  html += '<div class="field" style="margin-bottom:0"><label>Date</label><input type="date" id="session-date"></div>'
+  html += '<div class="field" style="margin-bottom:0"><label>Heure</label><input type="text" id="session-heure" placeholder="15h00" value="15h00"></div>'
+  html += '</div>'
+  html += '<button class="btn btn-green" onclick="creerSession()">➕ Créer la session</button>'
+  html += '<div id="session-creation-msg" style="margin-top:10px;font-size:13px"></div>'
+  html += '</div>'
+
+  if (!SESSIONS.length) {
+    el.innerHTML = html + '<div class="empty">Aucune session créée pour le moment.</div>'
     return
   }
 
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:1.5rem">'
-  datesUniques.forEach(date => {
-    const nb = places[date]
-    const pctPlaces = Math.round(nb/MAX_PLACES*100)
+  const sessionsActives = SESSIONS.filter(s => !s.annulee)
+  if (!sessionsActives.length) {
+    el.innerHTML = html + '<div class="empty">Aucune session active (toutes annulées).</div>'
+    return
+  }
+
+  sessionsActives.forEach(s => {
+    const inscrits = INSCRIPTIONS.filter(i => i.session_id === s.id)
+    const nb = inscrits.length
+    const pctPlaces = Math.round(nb / s.max_places * 100)
     const fillClass = pctPlaces >= 100 ? 'full' : pctPlaces >= 60 ? 'warn' : ''
-    html += '<div class="card" style="margin-bottom:0">'
-    html += '<div style="font-size:13px;font-weight:600;margin-bottom:8px">📅 '+date+' · 15h00</div>'
-    html += '<div class="places-bar-wrap"><div class="places-bar-fill '+fillClass+'" style="width:'+Math.min(pctPlaces,100)+'%"></div></div>'
-    html += '<div style="font-size:12px;color:var(--muted)">'+nb+' / '+MAX_PLACES+' places — '+(MAX_PLACES-nb)+' disponibles</div>'
+    const estPassee = s.date_session < aujourdHui
+    const dateAffichee = new Date(s.date_session + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+
+    html += '<div class="card" style="margin-bottom:1rem">'
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
+    html += '<div>'
+    html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">📅 '+dateAffichee+' · '+s.heure+(estPassee?' <span class="badge badge-admis">Terminée</span>':'')+'</div>'
+    html += '<div class="places-bar-wrap" style="margin-top:8px;width:180px"><div class="places-bar-fill '+fillClass+'" style="width:'+Math.min(pctPlaces,100)+'%"></div></div>'
+    html += '<div style="font-size:12px;color:var(--muted);margin-top:4px">'+nb+' / '+s.max_places+' places — '+(s.max_places-nb)+' disponibles</div>'
     html += '</div>'
-  })
-  html += '</div>'
+    html += '<button class="btn btn-sm btn-red" onclick="annulerSession(\''+esc(s.id)+'\',\''+esc(dateAffichee)+'\','+nb+')">🗑 Annuler la session</button>'
+    html += '</div>'
 
-  datesUniques.forEach(date => {
-    const inscrits = INSCRIPTIONS.filter(i => i.date_choisie === date)
-    if (!inscrits.length) return
+    if (!inscrits.length) {
+      html += '<div class="empty">Aucun inscrit sur cette session.</div>'
+    } else {
+      inscrits.forEach(i => {
+        const isConfirme = i.confirme
+        const hasNote = i.note !== null
+        const cardClass = isConfirme ? 'confirme' : 'attente'
+        const dateInscription = dateStr(i.created_at)
 
-    html += '<div style="font-size:13px;font-weight:600;color:#555;margin-bottom:8px;margin-top:8px">📅 '+date+' · 15h00</div>'
+        html += '<div class="inscrit-card '+cardClass+'">'
+        html += '<div class="inscrit-header">'
+        html += '<div>'
+        html += '<div class="inscrit-name">'+i.prenom+' '+i.nom+'</div>'
+        html += '<div class="inscrit-info">📧 '+i.email_parent+(i.telephone?' · 📞 '+i.telephone:'')+'</div>'
+        html += '<div class="inscrit-info">Inscrit le '+dateInscription+'</div>'
+        html += '</div>'
+        html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
+        if (isConfirme) html += '<span class="badge badge-tb">✅ Confirmé</span>'
+        else html += '<span class="badge badge-ab">⏳ En attente</span>'
+        if (hasNote) html += '<span class="badge badge-blue">📝 Note : '+i.note+'/20</span>'
+        if (i.resultats_envoyes) html += '<span class="badge badge-tb">📤 Résultats envoyés</span>'
+        html += '</div>'
+        html += '</div>'
 
-    inscrits.forEach(i => {
-      const isConfirme = i.confirme
-      const hasNote = i.note !== null
-      const cardClass = isConfirme ? 'confirme' : 'attente'
-      const dateInscription = dateStr(i.created_at)
-
-      html += '<div class="inscrit-card '+cardClass+'">'
-      html += '<div class="inscrit-header">'
-      html += '<div>'
-      html += '<div class="inscrit-name">'+i.prenom+' '+i.nom+'</div>'
-      html += '<div class="inscrit-info">📧 '+i.email_parent+(i.telephone?' · 📞 '+i.telephone:'')+'</div>'
-      html += '<div class="inscrit-info">Inscrit le '+dateInscription+'</div>'
-      html += '</div>'
-      html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
-      if (isConfirme) html += '<span class="badge badge-tb">✅ Confirmé</span>'
-      else html += '<span class="badge badge-ab">⏳ En attente</span>'
-      if (hasNote) html += '<span class="badge badge-blue">📝 Note : '+i.note+'/20</span>'
-      if (i.resultats_envoyes) html += '<span class="badge badge-tb">📤 Résultats envoyés</span>'
-      html += '</div>'
-      html += '</div>'
-
-      html += '<div class="inscrit-actions">'
-      if (!isConfirme) {
-        html += '<button class="btn btn-sm btn-green" onclick="confirmerEtEnvoyerAdresse(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(i.date_choisie)+'\')">✅ Confirmer + adresse</button>'
-        html += '<button class="btn btn-sm btn-red" onclick="refuserInscription(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(i.date_choisie)+'\')">❌ Refuser</button>'
-      }
-      if (isConfirme && !hasNote) {
-        html += '<button class="btn btn-sm btn-amber" onclick="ouvrirNote(\''+esc(i.id)+'\',\''+esc(i.prenom+' '+i.nom)+'\')">📝 Saisir note</button>'
-      }
-      if (isConfirme && hasNote && !i.resultats_envoyes) {
-        html += '<button class="btn btn-sm btn-green" onclick="envoyerResultats(\''+esc(i.id)+'\')">📤 Envoyer résultats</button>'
-      }
-      if (isConfirme) {
-        html += '<button class="btn btn-sm btn-red" onclick="supprimerAvecEmail(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(i.date_choisie)+'\')">❌ Annuler</button>'
-      }
-      html += '</div>'
-      html += '</div>'
-    })
+        html += '<div class="inscrit-actions">'
+        if (!isConfirme) {
+          html += '<button class="btn btn-sm btn-green" onclick="confirmerEtEnvoyerAdresse(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">✅ Confirmer + adresse</button>'
+          html += '<button class="btn btn-sm btn-red" onclick="refuserInscription(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">❌ Refuser</button>'
+        }
+        if (isConfirme && !hasNote) {
+          html += '<button class="btn btn-sm btn-amber" onclick="ouvrirNote(\''+esc(i.id)+'\',\''+esc(i.prenom+' '+i.nom)+'\')">📝 Saisir note</button>'
+        }
+        if (isConfirme && hasNote && !i.resultats_envoyes) {
+          html += '<button class="btn btn-sm btn-green" onclick="envoyerResultats(\''+esc(i.id)+'\')">📤 Envoyer résultats</button>'
+        }
+        if (isConfirme) {
+          html += '<button class="btn btn-sm btn-red" onclick="supprimerAvecEmail(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">❌ Annuler</button>'
+        }
+        html += '</div>'
+        html += '</div>'
+      })
+    }
+    html += '</div>'
   })
 
   el.innerHTML = html
+}
+
+async function creerSession() {
+  const date = document.getElementById('session-date').value
+  const heure = document.getElementById('session-heure').value.trim() || '15h00'
+  const msg = document.getElementById('session-creation-msg')
+  if (!date) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Sélectionne une date.</span>'; return }
+  msg.innerHTML = '<span style="color:#888">Création…</span>'
+  const { error } = await sb.from('sessions_examen_blanc').insert({ date_session: date, heure })
+  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; return }
+  msg.innerHTML = '<span style="color:#2F9E5C">✅ Session créée !</span>'
+  setTimeout(() => chargerInscriptions(), 800)
+}
+
+async function annulerSession(sessionId, dateAffichee, nbInscrits) {
+  if (nbInscrits > 0) {
+    if (!confirm('Il y a '+nbInscrits+' inscrit'+(nbInscrits>1?'s':'')+' sur la session du '+dateAffichee+'. Annuler quand même ? Un email sera envoyé à chaque inscrit.')) return
+  } else {
+    if (!confirm('Annuler la session du '+dateAffichee+' ?')) return
+  }
+
+  const inscritsSession = INSCRIPTIONS.filter(i => i.session_id === sessionId)
+  for (const i of inscritsSession) {
+    try {
+      await fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'adresse-brevet', sousType: 'annulation', emailParent: i.email_parent, prenom: i.prenom, nom: i.nom, date: dateAffichee })
+      })
+    } catch(e) { console.log('Erreur email annulation session:', e.message) }
+  }
+
+  const { error } = await sb.from('sessions_examen_blanc').update({ annulee: true }).eq('id', sessionId)
+  if (error) { alert('Erreur : '+error.message); return }
+  chargerInscriptions()
 }
 
 async function confirmerEtEnvoyerAdresse(id, prenom, nom, emailParent, date) {
@@ -1029,11 +1081,12 @@ async function init() {
     const { data: p } = await sb.from('profils').select('email_parent').eq('user_id',session.user.id).single()
     if (!p || p.email_parent !== PROF) { document.getElementById('root').innerHTML='<div class="denied">Accès réservé au professeur.</div>'; return }
   }
-  const [r1,r2,r3,r4] = await Promise.all([
+  const [r1,r2,r3,r4,r5] = await Promise.all([
     sb.from('resultats').select('*').order('created_at',{ascending:false}),
     sb.from('examens_blancs').select('*').order('created_at',{ascending:false}),
     sb.from('profils').select('*'),
-    sb.from('inscriptions_brevet').select('*').order('created_at',{ascending:true})
+    sb.from('inscriptions_brevet').select('*').order('created_at',{ascending:true}),
+    sb.from('sessions_examen_blanc').select('*').order('date_session',{ascending:true})
   ])
   ROWS=r1.data||[]; EXAMENS=r2.data||[]
   const profils=r3.data||[]
@@ -1041,6 +1094,7 @@ async function init() {
   ELEVES=profils.map(p=>({user_id:p.user_id,prenom:p.prenom_affiche||'—',nom:p.nom_affiche||'',email_parent:p.email_parent||'—',sessions:0,totalScore:0,totalQ:0}))
   ROWS.forEach(r=>{ const e=ELEVES.find(x=>x.user_id===r.user_id); if(e){ e.sessions++; e.totalScore+=r.score; e.totalQ+=r.total } })
   INSCRIPTIONS=r4.data||[]
+  SESSIONS=r5.data||[]
   render()
 }
 
