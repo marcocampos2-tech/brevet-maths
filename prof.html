@@ -782,6 +782,7 @@ function filtrerBanque() {
 }
 
 function onChangeFiltreTheme() {
+  banqueFiltre.theme = document.getElementById('filtre-theme').value
   banqueFiltre.sousTheme = ''
   renderFiltreSousTheme()
   filtrerBanque()
