@@ -306,10 +306,11 @@ async function chargerInscriptions() {
     return
   }
 
-  const sessionsActives = SESSIONS.filter(s => !s.annulee)
+  const sessionsActives = SESSIONS.filter(s => !s.annulee && s.date_session >= aujourdHui)
+  const sessionsHistorique = SESSIONS.filter(s => s.annulee || s.date_session < aujourdHui)
+
   if (!sessionsActives.length) {
-    el.innerHTML = html + '<div class="empty">Aucune session active (toutes annulées).</div>'
-    return
+    html += '<div class="empty">Aucune session active pour le moment.</div>'
   }
 
   sessionsActives.forEach(s => {
@@ -317,13 +318,12 @@ async function chargerInscriptions() {
     const nb = inscrits.length
     const pctPlaces = Math.round(nb / s.max_places * 100)
     const fillClass = pctPlaces >= 100 ? 'full' : pctPlaces >= 60 ? 'warn' : ''
-    const estPassee = s.date_session < aujourdHui
     const dateAffichee = new Date(s.date_session + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
 
     html += '<div class="card" style="margin-bottom:1rem">'
     html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
     html += '<div>'
-    html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">📅 '+dateAffichee+' · '+s.heure+(estPassee?' <span class="badge badge-admis">Terminée</span>':'')+'</div>'
+    html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">📅 '+dateAffichee+' · '+s.heure+'</div>'
     html += '<div class="places-bar-wrap" style="margin-top:8px;width:180px"><div class="places-bar-fill '+fillClass+'" style="width:'+Math.min(pctPlaces,100)+'%"></div></div>'
     html += '<div style="font-size:12px;color:var(--muted);margin-top:4px">'+nb+' / '+s.max_places+' places — '+(s.max_places-nb)+' disponibles</div>'
     html += '</div>'
@@ -375,7 +375,40 @@ async function chargerInscriptions() {
     html += '</div>'
   })
 
+  // Historique : sessions passées (non annulées) OU annulées — lecture seule, repliable
+  if (sessionsHistorique.length) {
+    html += '<div class="card" style="margin-bottom:1rem">'
+    html += '<div style="cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="toggleHistoriqueSessions()">'
+    html += '<div class="card-title" style="margin-bottom:0">📁 Historique (' + sessionsHistorique.length + ')</div>'
+    html += '<span id="historique-chevron" style="font-size:12px;color:var(--muted)">'+(historiqueSessionsOuvert?'▲':'▼')+'</span>'
+    html += '</div>'
+    html += '<div id="historique-sessions-body" style="display:'+(historiqueSessionsOuvert?'block':'none')+';margin-top:12px">'
+    sessionsHistorique
+      .slice()
+      .sort((a,b) => b.date_session.localeCompare(a.date_session))
+      .forEach(s => {
+        const inscrits = INSCRIPTIONS.filter(i => i.session_id === s.id)
+        const dateAffichee = new Date(s.date_session + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+        const statutLabel = s.annulee ? '<span class="badge badge-insuf">Annulée</span>' : '<span class="badge badge-admis">Terminée</span>'
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #F3F1EA;font-size:13px">'
+        html += '<span>📅 '+dateAffichee+' · '+s.heure+' — '+inscrits.length+' inscrit'+(inscrits.length>1?'s':'')+'</span>'
+        html += statutLabel
+        html += '</div>'
+      })
+    html += '</div>'
+    html += '</div>'
+  }
+
   el.innerHTML = html
+}
+
+let historiqueSessionsOuvert = false
+function toggleHistoriqueSessions() {
+  historiqueSessionsOuvert = !historiqueSessionsOuvert
+  const body = document.getElementById('historique-sessions-body')
+  const chevron = document.getElementById('historique-chevron')
+  if (body) body.style.display = historiqueSessionsOuvert ? 'block' : 'none'
+  if (chevron) chevron.textContent = historiqueSessionsOuvert ? '▲' : '▼'
 }
 
 async function creerSession() {
