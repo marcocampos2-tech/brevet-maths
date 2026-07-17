@@ -507,6 +507,7 @@ export default async function handler(req, res) {
           <p style="margin-bottom:10px">Bonjour,</p>
           <p style="font-size:15px;font-weight:600;margin:0 0 4px">${messagePrincipal}.</p>
           <p style="font-size:12px;color:#888;margin:0 0 20px">${totalSessions} session${totalSessions>1?'s':''} · ${tempsFormat} · moyenne ${moyGlobale}%</p>
+          <p style="color:#aaa;font-size:11px;margin:0 0 14px">Acquis : au moins 70% de bonnes réponses aujourd'hui sur ce sous-thème. À revoir : moins de 70%.</p>
           ${badgesHTML}
           <p style="color:#444;line-height:1.6;margin-top:14px">${phraseSynthese}</p>
           <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
@@ -516,8 +517,7 @@ export default async function handler(req, res) {
             </p>
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
-          <p style="color:#aaa;font-size:11px;text-align:center;margin-top:16px">Acquis : au moins 70% de bonnes réponses aujourd'hui sur ce sous-thème. À revoir : moins de 70%.</p>
-          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:4px">
+          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:16px">
             <a href="${lienDesabonnement}" style="color:#bbb">Se désabonner des emails automatiques</a>
           </p>
         </div>`
