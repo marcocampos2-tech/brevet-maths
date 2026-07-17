@@ -480,11 +480,15 @@ async function envoyerRecapJournalier() {
     const moyGlobale = Math.round((sessions.reduce((a,s) => a + s.score/s.total, 0) / totalSessions) * 100)
     const tempsTot = sessions.reduce((a,s) => a + (s.temps_secondes||0), 0)
     const sousThemesDetail = {}
+    const ORDRE_NIVEAUX = { facile: 1, moyen: 2, difficile: 3 }
     sessions.forEach(s => {
       if (!s.sous_theme) return
-      if (!sousThemesDetail[s.sous_theme]) sousThemesDetail[s.sous_theme] = { ok: 0, total: 0 }
+      if (!sousThemesDetail[s.sous_theme]) sousThemesDetail[s.sous_theme] = { ok: 0, total: 0, niveau: s.difficulte }
       sousThemesDetail[s.sous_theme].ok += s.score
       sousThemesDetail[s.sous_theme].total += s.total
+      if (ORDRE_NIVEAUX[s.difficulte] > ORDRE_NIVEAUX[sousThemesDetail[s.sous_theme].niveau]) {
+        sousThemesDetail[s.sous_theme].niveau = s.difficulte
+      }
     })
     await fetch('/api/email', {
       method: 'POST',
