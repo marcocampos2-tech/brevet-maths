@@ -468,7 +468,7 @@ export default async function handler(req, res) {
       const entries = Object.entries(sousThemesDetail || {})
       const badgesData = entries.map(([nom, d]) => {
         const p = Math.round((d.ok / d.total) * 100)
-        return { nom, pct: p, acquis: p >= 70 }
+        return { nom, pct: p, acquis: p >= 70, niveau: d.niveau }
       })
       const nbAcquis = badgesData.filter(b => b.acquis).length
       const nbARevoir = badgesData.length - nbAcquis
@@ -476,12 +476,14 @@ export default async function handler(req, res) {
         ? `${prenom} a travaillé aujourd'hui`
         : (nbAcquis >= badgesData.length / 2 ? `${prenom} a bien travaillé aujourd'hui` : `${prenom} a un peu buté aujourd'hui`)
 
+      const NIVEAU_LABEL = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
       const badgesHTML = badgesData.map(b => {
         const bg = b.acquis ? '#EAF6EF' : '#FBF4E4'
         const fg = b.acquis ? '#1f7a45' : '#8a6416'
         const label = b.acquis ? 'Acquis' : 'À revoir'
+        const niveauLabel = NIVEAU_LABEL[b.niveau] || ''
         return `<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr style="background:${bg};border-radius:8px">
-          <td style="padding:10px 12px;font-size:13px;color:${fg}">${b.nom}</td>
+          <td style="padding:10px 12px;font-size:13px;color:${fg}">${b.nom}${niveauLabel ? ` <span style="font-size:11px;opacity:0.75">· ${niveauLabel}</span>` : ''}</td>
           <td style="padding:10px 12px;font-size:12px;font-weight:600;color:${fg};text-align:right;white-space:nowrap">${label}</td>
         </tr></table>`
       }).join('')
