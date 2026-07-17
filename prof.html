@@ -194,10 +194,27 @@ const THEMES = [
 ]
 const THEMES_SHORT = ['Nombres', 'Organisation', 'Géométrie', 'Grandeurs']
 
+const SOUS_THEMES = {
+  'Nombres et calculs': [
+    'Équations', 'Calcul littéral', 'Fractions',
+    'Pourcentages', 'Puissances', 'Arithmétique', 'Proportionnalité'
+  ],
+  'Organisation et gestion de données, fonctions': [
+    'Fonctions', 'Probabilités', 'Statistiques', 'Proportionnalité'
+  ],
+  'Espace et géométrie': [
+    'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie',
+    'Volumes', 'Aires et périmètres', 'Transformations'
+  ],
+  'Grandeurs, mesures et algorithmique': [
+    'Algorithmique', 'Aires et volumes', 'Conversions', 'Agrandissement'
+  ]
+}
+
 let ROWS = [], EXAMENS = [], PROFILS = {}, ELEVES = []
 let INSCRIPTIONS = [], SESSIONS = []
 let BANQUE_DATA = []
-let banqueFiltre = { theme: '', diff: '', search: '', page: 0 }
+let banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0 }
 const PER_PAGE = 20
 let editCurrentId = null
 let editCurrentTable = 'questions_banque'
@@ -253,7 +270,7 @@ async function logout() { await sb.auth.signOut(); location.href = 'index.html' 
 function setTab(id) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id))
   document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === 'sec-'+id))
-  if (id === 'banque') { banqueFiltre = { theme: '', diff: '', search: '', page: 0 }; chargerBanque() }
+  if (id === 'banque') { banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0 }; chargerBanque() }
   if (id === 'inscriptions') chargerInscriptions()
 }
 
@@ -695,6 +712,7 @@ async function chargerBanque() {
   el.innerHTML = '<div class="loader">Chargement…</div>'
   let query = sb.from('questions_banque').select('*').order('theme').order('difficulte')
   if (banqueFiltre.theme) query = query.eq('theme', banqueFiltre.theme)
+  if (banqueFiltre.sousTheme) query = query.eq('sous_theme', banqueFiltre.sousTheme)
   if (banqueFiltre.diff)  query = query.eq('difficulte', banqueFiltre.diff)
   const { data, error } = await query
   if (error) { el.innerHTML='<div class="empty">Erreur : '+error.message+'</div>'; return }
@@ -719,6 +737,7 @@ async function chargerBanque() {
     html += '<div class="q-card-header"><div>'
     html += '<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">'
     html += '<span class="badge badge-blue">'+q.theme+'</span>'
+    if (q.sous_theme) html += '<span class="badge" style="background:#f0f0f5;color:#555">'+q.sous_theme+'</span>'
     html += '<span class="badge '+(q.difficulte==='facile'?'badge-tb':q.difficulte==='moyen'?'badge-ab':'badge-insuf')+'">'+q.difficulte+'</span>'
     if (hasFigSVG) html += '<span class="badge" style="background:#f0f0ff;color:#3730a3">🔷 Figure SVG</span>'
     if (hasFigURL) html += '<span class="badge" style="background:#fff0f0;color:#9E2B25">🖼 Image</span>'
@@ -755,10 +774,25 @@ function banquePage(dir) { banqueFiltre.page += dir; chargerBanque() }
 
 function filtrerBanque() {
   banqueFiltre.theme  = document.getElementById('filtre-theme').value
+  banqueFiltre.sousTheme = document.getElementById('filtre-sous-theme').value
   banqueFiltre.diff   = document.getElementById('filtre-diff').value
   banqueFiltre.search = document.getElementById('filtre-search').value.trim()
   banqueFiltre.page   = 0
   chargerBanque()
+}
+
+function onChangeFiltreTheme() {
+  banqueFiltre.sousTheme = ''
+  renderFiltreSousTheme()
+  filtrerBanque()
+}
+
+function renderFiltreSousTheme() {
+  const sel = document.getElementById('filtre-sous-theme')
+  if (!sel) return
+  const liste = SOUS_THEMES[banqueFiltre.theme] || []
+  sel.innerHTML = '<option value="">Tous les sous-thèmes</option>' + liste.map(st => '<option value="'+st+'">'+st+'</option>').join('')
+  sel.disabled = !banqueFiltre.theme
 }
 
 async function uploadFigure(event, id, table) {
@@ -1083,7 +1117,8 @@ function render() {
   // BANQUE
   h+='<div class="section" id="sec-banque">'
   h+='<div class="card"><div class="banque-filters">'
-  h+='<select id="filtre-theme" onchange="filtrerBanque()"><option value="">Tous les domaines</option>'+THEMES.map(t=>'<option value="'+t+'">'+t+'</option>').join('')+'</select>'
+  h+='<select id="filtre-theme" onchange="onChangeFiltreTheme()"><option value="">Tous les domaines</option>'+THEMES.map(t=>'<option value="'+t+'">'+t+'</option>').join('')+'</select>'
+  h+='<select id="filtre-sous-theme" onchange="filtrerBanque()" disabled><option value="">Tous les sous-thèmes</option></select>'
   h+='<select id="filtre-diff" onchange="filtrerBanque()"><option value="">Toutes difficultés</option><option value="facile">Facile</option><option value="moyen">Moyen</option><option value="difficile">Difficile</option></select>'
   h+='<input type="text" id="filtre-search" placeholder="🔍 Rechercher…" oninput="filtrerBanque()">'
   h+='</div></div>'
