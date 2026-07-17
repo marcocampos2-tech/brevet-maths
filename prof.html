@@ -160,7 +160,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   </div>
 </div>
 
-  
 <div class="overlay" id="overlay-note">
   <div class="modal">
     <div class="modal-head">
@@ -366,7 +365,7 @@ async function chargerInscriptions() {
         if (isConfirme && hasNote && !i.resultats_envoyes) {
           html += '<button class="btn btn-sm btn-green" onclick="envoyerResultats(\''+esc(i.id)+'\')">📤 Envoyer résultats</button>'
         }
-        if (isConfirme) {
+        if (isConfirme && !i.resultats_envoyes) {
           html += '<button class="btn btn-sm btn-red" onclick="supprimerAvecEmail(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">❌ Annuler</button>'
         }
         html += '</div>'
