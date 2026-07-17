@@ -480,10 +480,10 @@ export default async function handler(req, res) {
         const bg = b.acquis ? '#EAF6EF' : '#FBF4E4'
         const fg = b.acquis ? '#1f7a45' : '#8a6416'
         const label = b.acquis ? 'Acquis' : 'À revoir'
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:${bg};border-radius:8px;margin-bottom:8px">
-          <span style="font-size:13px;color:${fg}">${b.nom}</span>
-          <span style="font-size:12px;font-weight:600;color:${fg}">${label}</span>
-        </div>`
+        return `<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr style="background:${bg};border-radius:8px">
+          <td style="padding:10px 12px;font-size:13px;color:${fg}">${b.nom}</td>
+          <td style="padding:10px 12px;font-size:12px;font-weight:600;color:${fg};text-align:right;white-space:nowrap">${label}</td>
+        </tr></table>`
       }).join('')
 
       const listeAcquis = badgesData.filter(b => b.acquis).map(b => b.nom).join(', ')
@@ -516,7 +516,8 @@ export default async function handler(req, res) {
             </p>
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
-          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
+          <p style="color:#aaa;font-size:11px;text-align:center;margin-top:16px">Acquis : au moins 70% de bonnes réponses aujourd'hui sur ce sous-thème. À revoir : moins de 70%.</p>
+          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:4px">
             <a href="${lienDesabonnement}" style="color:#bbb">Se désabonner des emails automatiques</a>
           </p>
         </div>`
