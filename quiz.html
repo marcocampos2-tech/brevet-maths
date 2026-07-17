@@ -479,14 +479,20 @@ async function envoyerRecapJournalier() {
     const totalSessions = sessions.length
     const moyGlobale = Math.round((sessions.reduce((a,s) => a + s.score/s.total, 0) / totalSessions) * 100)
     const tempsTot = sessions.reduce((a,s) => a + (s.temps_secondes||0), 0)
-    const sousThemesJour = [...new Set(sessions.map(s => s.sous_theme).filter(Boolean))]
+    const sousThemesDetail = {}
+    sessions.forEach(s => {
+      if (!s.sous_theme) return
+      if (!sousThemesDetail[s.sous_theme]) sousThemesDetail[s.sous_theme] = { ok: 0, total: 0 }
+      sousThemesDetail[s.sous_theme].ok += s.score
+      sousThemesDetail[s.sous_theme].total += s.total
+    })
     await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         emailParent, prenom: prenom||'', nom: user.user_metadata?.nom||'',
         theme: sessions[sessions.length-1].theme, difficulte: sessions[sessions.length-1].difficulte,
-        sousThemes: sousThemesJour,
+        sousThemesDetail,
         score: sessions.reduce((a,s) => a+s.score, 0), total: sessions.reduce((a,s) => a+s.total, 0),
         questionsRatees: sessions.flatMap(s => s.questions_ratees||[]).filter(q => !q.includes('abandonné')),
         tempsSecondes: tempsTot, resultatsId: null, recap: true, totalSessions, moyGlobale
