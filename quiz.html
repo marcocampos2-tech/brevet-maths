@@ -440,10 +440,10 @@ async function mettreAJourNiveaux() {
 
   if(!d.moyen){
     const restant=SEUIL_SESSIONS-d.sessionsFacile
-    debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Moyen verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Facile ≥ 70%</strong> — ${d.sessionsFacile}/${SEUIL_SESSIONS} réussies</div>`
+    debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Moyen verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Facile avec au moins 4 bonnes réponses sur 5</strong> — ${d.sessionsFacile}/${SEUIL_SESSIONS} réussies</div>`
   } else if(!d.difficile){
     const restant=SEUIL_SESSIONS-d.sessionsMoyen
-    debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Difficile verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Moyen ≥ 70%</strong> — ${d.sessionsMoyen}/${SEUIL_SESSIONS} réussies</div>
+    debInfo.innerHTML=`<div class="lock-msg visible">🔒 <strong>Difficile verrouillé</strong> — encore <strong>${restant} session${restant>1?'s':''} Moyen avec au moins 4 bonnes réponses sur 5</strong> — ${d.sessionsMoyen}/${SEUIL_SESSIONS} réussies</div>
       <div style="font-size:11px;color:var(--vert);padding:6px 0 0">✅ Tu peux continuer à réviser le niveau Facile si tu veux — rien ne t'en empêche.</div>`
   } else {
     debInfo.innerHTML=`<div style="font-size:11px;color:var(--vert);padding:4px 0;margin-top:6px">✅ Tous les niveaux sont accessibles — reviens sur Facile ou Moyen quand tu veux.</div>`
@@ -756,25 +756,25 @@ async function renderResultats() {
       progMsg = `<div class="prog-msg debloque">🏆 Niveau Difficile maîtrisé ! Tu peux continuer à t'entraîner si tu veux.</div>`
     } else if(diff === 'difficile') {
       const restant = SEUIL_SESSIONS - d.sessionsDifficile
-      progMsg = `<div class="prog-msg reussi">✅ Session réussie ! ${d.sessionsDifficile}/${SEUIL_SESSIONS} sessions Difficile ≥ 70% — encore ${restant} pour maîtriser ce niveau</div>`
+      progMsg = `<div class="prog-msg reussi">✅ Session réussie ! ${d.sessionsDifficile}/${SEUIL_SESSIONS} sessions Difficile avec au moins 4 bonnes réponses sur 5 — encore ${restant} pour maîtriser ce niveau</div>`
     } else {
       const sessions = diff === 'facile' ? d.sessionsFacile : d.sessionsMoyen
       const restant = SEUIL_SESSIONS - sessions
       const niveauSuivant = diff === 'facile' ? 'Moyen' : 'Difficile'
       if(restant > 0) {
-        progMsg = `<div class="prog-msg reussi">✅ Session réussie ! ${sessions}/${SEUIL_SESSIONS} sessions ${diff.charAt(0).toUpperCase()+diff.slice(1)} ≥ 70% — encore ${restant} pour débloquer le ${niveauSuivant}</div>`
+        progMsg = `<div class="prog-msg reussi">✅ Session réussie ! ${sessions}/${SEUIL_SESSIONS} sessions ${diff.charAt(0).toUpperCase()+diff.slice(1)} avec au moins 4 bonnes réponses sur 5 — encore ${restant} pour débloquer le ${niveauSuivant}</div>`
       } else {
         progMsg = `<div class="prog-msg reussi">✅ Session réussie !</div>`
       }
     }
   } else if(diff === 'difficile') {
     const restant = SEUIL_SESSIONS - d.sessionsDifficile
-    progMsg = `<div class="prog-msg info">💪 Score insuffisant cette fois. ${d.sessionsDifficile}/${SEUIL_SESSIONS} sessions ≥ 70% — encore ${restant} pour maîtriser ce niveau</div>`
+    progMsg = `<div class="prog-msg info">💪 Score insuffisant cette fois. ${d.sessionsDifficile}/${SEUIL_SESSIONS} sessions avec au moins 4 bonnes réponses sur 5 — encore ${restant} pour maîtriser ce niveau</div>`
   } else {
     const sessions = diff === 'facile' ? d.sessionsFacile : d.sessionsMoyen
     const restant = SEUIL_SESSIONS - sessions
     const niveauSuivant = diff === 'facile' ? 'Moyen' : 'Difficile'
-    progMsg = `<div class="prog-msg info">💪 Score insuffisant cette fois. ${sessions}/${SEUIL_SESSIONS} sessions ≥ 70% — encore ${restant} pour débloquer le ${niveauSuivant}</div>`
+    progMsg = `<div class="prog-msg info">💪 Score insuffisant cette fois. ${sessions}/${SEUIL_SESSIONS} sessions avec au moins 4 bonnes réponses sur 5 — encore ${restant} pour débloquer le ${niveauSuivant}</div>`
   }
   const sessionsMoyenAffiche = Math.min(d.sessionsMoyen, SEUIL_SESSIONS)
   const sessionsDifficileAffiche = Math.min(d.sessionsDifficile, SEUIL_SESSIONS)
