@@ -93,7 +93,7 @@ export default async function handler(req, res) {
   // ═══════════════════════════════════════════
   if (req.body?.type === 'adresse-brevet') {
     const RESEND_KEY = process.env.RESEND_API_KEY
-    const { emailParent, prenom, nom, date, adresse, messageCompl, sousType } = req.body
+    const { emailParent, prenom, nom, date, heure, adresse, messageCompl, sousType } = req.body
     if (!emailParent || !prenom) return res.status(400).json({ error: 'Champs manquants' })
 
     let subject, html
@@ -127,7 +127,7 @@ export default async function handler(req, res) {
         <p>Bonjour,</p>
         <p>L'inscription de <strong>${prenom} ${nom}</strong> pour l'examen blanc est confirmée :</p>
         <div style="background:#f0f7ff;border-radius:8px;padding:16px;margin:16px 0">
-          <p><strong>📅 Date :</strong> ${date} · 15h00</p>
+          <p><strong>📅 Date :</strong> ${date} · ${heure || '15h00'}</p>
           <p><strong>📍 Adresse :</strong> ${adresse}</p>
           ${messageCompl ? `<p><strong>ℹ️ Infos :</strong> ${messageCompl}</p>` : ''}
         </div>
@@ -242,7 +242,7 @@ export default async function handler(req, res) {
       const couleurScore = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
       const mention = pct >= 80 ? '🌟 Excellent' : pct >= 70 ? '👍 Très bon' : pct >= 60 ? '✅ Bon' : pct >= 50 ? '📋 Correct' : '📚 À retravailler'
       const messageMotivation = pct >= 50
-        ? `Bonne nouvelle : <strong>${prenom}</strong> a réussi son examen blanc ! Encouragez-le à continuer sur les thèmes à améliorer.`
+        ? `Bonne nouvelle : <strong>${prenom}</strong> a réussi son examen en ligne ! Encouragez-le à continuer sur les thèmes à améliorer.`
         : `<strong>${prenom}</strong> n'a pas encore le niveau requis. C'est normal — c'est un entraînement ! Encouragez-le à continuer à réviser régulièrement.`
 
       const m = Math.floor(tempsSecondes / 60)
@@ -262,11 +262,11 @@ export default async function handler(req, res) {
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
           <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
             <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
-            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Examen Blanc</div>
+            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Examen en ligne</div>
           </div>
           <p style="margin-bottom:6px;">Bonjour Madame, Monsieur,</p>
           <p style="margin-bottom:20px;color:#444;">
-            Votre enfant <strong>${prenom}${nom ? ' ' + nom : ''}</strong> vient de passer l'Examen Blanc Brevet Maths sur ACADEMIKA.
+            Votre enfant <strong>${prenom}${nom ? ' ' + nom : ''}</strong> vient de passer l'Examen en ligne Brevet Maths sur ACADEMIKA.
           </p>
           <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
             <div style="font-size:56px;font-weight:700;color:${couleurScore}">${score}/20</div>
@@ -291,7 +291,7 @@ export default async function handler(req, res) {
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
-        body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `📝 ${prenom} a obtenu ${score}/20 à l'Examen Blanc — ACADEMIKA`, html })
+        body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `📝 ${prenom} a obtenu ${score}/20 à l'Examen en ligne — ACADEMIKA`, html })
       })
 
       const responseData = await response.json()
