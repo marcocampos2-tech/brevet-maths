@@ -901,7 +901,7 @@ function openFiche(userId) {
   if (exam) {
     const ep = pct(exam.score, exam.total)
     body += '<div style="background:var(--blue-bg);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">'
-    body += '<div style="font-size:13px;font-weight:700;color:var(--blue)">📝 Dernier examen blanc</div>'
+    body += '<div style="font-size:13px;font-weight:700;color:var(--blue)">📝 Dernier examen en ligne</div>'
     body += '<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+color(ep)+'">'+exam.score+'/20</div>'
     body += '<div style="font-size:11px;color:'+color(ep)+';font-weight:600">'+mentionLabel(ep)+'</div></div></div>'
   }
@@ -1014,7 +1014,7 @@ function render() {
   h+='<div class="stat"><div class="stat-icon">'+ICONS.eleves+'</div><div><div class="stat-val">'+nbEleves+'</div><div class="stat-label">Élèves actifs</div></div></div>'
   h+='<div class="stat"><div class="stat-icon">'+ICONS.sessions+'</div><div><div class="stat-val">'+ROWS.length+'</div><div class="stat-label">Sessions quiz</div></div></div>'
   h+='<div class="stat"><div class="stat-icon">'+ICONS.moyenne+'</div><div><div class="stat-val">'+moyGlo+'%</div><div class="stat-label">Moyenne générale</div></div></div>'
-  h+='<div class="stat stat-blue"><div class="stat-icon">'+ICONS.examens+'</div><div><div class="stat-val">'+nbExamens+'</div><div class="stat-label">Examens blancs</div></div></div>'
+  h+='<div class="stat stat-blue"><div class="stat-icon">'+ICONS.examens+'</div><div><div class="stat-val">'+nbExamens+'</div><div class="stat-label">Examens en ligne</div></div></div>'
   h+='<div class="stat stat-green"><div class="stat-icon">'+ICONS.inscrits+'</div><div><div class="stat-val">'+nbInscrits+'</div><div class="stat-label">Inscrits brevet</div></div></div>'
   h+='<div class="stat stat-amber"><div class="stat-icon">'+ICONS.banque+'</div><div><div class="stat-val">'+nbBanque+'</div><div class="stat-label">Sessions banque</div></div></div>'
   h+='</div>'
@@ -1022,7 +1022,7 @@ function render() {
   h+='<div class="tabs">'
   h+='<button class="tab active" data-tab="dashboard" onclick="setTab(\'dashboard\')">📊 Dashboard</button>'
   h+='<button class="tab" data-tab="eleves" onclick="setTab(\'eleves\')">Élèves</button>'
-  h+='<button class="tab" data-tab="examens" onclick="setTab(\'examens\')">Examens blancs</button>'
+  h+='<button class="tab" data-tab="examens" onclick="setTab(\'examens\')">Examens en ligne</button>'
   h+='<button class="tab" data-tab="inscriptions" onclick="setTab(\'inscriptions\')">📋 Inscriptions</button>'
   h+='<button class="tab" data-tab="themes" onclick="setTab(\'themes\')">Thèmes</button>'
   h+='<button class="tab" data-tab="sessions" onclick="setTab(\'sessions\')">Sessions</button>'
@@ -1035,7 +1035,7 @@ function render() {
   h+='<div class="card-title">Tableau comparatif — tous les élèves</div>'
   h+='<div style="overflow-x:auto"><table class="dash-table"><thead><tr><th>Élève</th><th class="global">Global</th>'
   THEMES_SHORT.forEach(t => { h+='<th>'+t+'</th>' })
-  h+='<th>Examen blanc</th></tr></thead><tbody>'
+  h+='<th>Examen en ligne</th></tr></thead><tbody>'
   ELEVES.forEach(e => {
     const rows=ROWS.filter(r=>r.user_id===e.user_id), exam=examMap[e.user_id]
     const nomCell = '<div class="eleve-cell"><div class="avatar">'+initiales(e.prenom,e.nom)+'</div><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></div>'
@@ -1069,7 +1069,7 @@ function render() {
 
   // EXAMENS BLANCS
   const examensValides=EXAMENS.filter(e=>!e.abandonne)
-  h+='<div class="section" id="sec-examens"><div class="card"><div class="card-title">Résultats Examens Blancs</div>'
+  h+='<div class="section" id="sec-examens"><div class="card"><div class="card-title">Résultats Examens En Ligne</div>'
   if (!examensValides.length) { h+='<p class="empty">Aucun examen passé.</p>' }
   else {
     h+='<table class="tbl"><thead><tr><th>Élève</th><th>Score</th><th>Mention</th><th>Temps</th><th>Nombres</th><th>Organisation</th><th>Géométrie</th><th>Grandeurs</th></tr></thead><tbody>'
@@ -1103,7 +1103,7 @@ function render() {
   const toutesActivites=[...ROWS.map(r=>({user_id:r.user_id,type:'quiz',detail:r.theme+' — '+r.difficulte,score:r.score,total:r.total,created_at:r.created_at})),...EXAMENS.filter(e=>!e.abandonne).map(e=>({user_id:e.user_id,type:'examen',detail:'Examen blanc',score:e.score,total:e.total,created_at:e.created_at}))]
   toutesActivites.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,30).forEach(r=>{
     const profil=PROFILS[r.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:'—',p=pct(r.score,r.total)
-    const typeBadge=r.type==='examen'?'<span class="badge badge-blue">📝 Examen blanc</span>':'<span class="badge badge-banque">🎲 Quiz</span>'
+    const typeBadge=r.type==='examen'?'<span class="badge badge-blue">📝 Examen en ligne</span>':'<span class="badge badge-banque">🎲 Quiz</span>'
     h+='<tr><td><strong>'+nom+'</strong></td><td>'+typeBadge+'</td><td style="font-size:12px;color:#555">'+r.detail+'</td>'
     h+='<td><strong style="color:'+color(p)+'">'+r.score+'/'+r.total+'</strong></td><td style="font-size:12px;color:#999">'+dateStr(r.created_at)+'</td></tr>'
   })
