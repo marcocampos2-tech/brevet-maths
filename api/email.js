@@ -240,7 +240,7 @@ export default async function handler(req, res) {
       const { emailParent, prenom, nom, score, total, pct, scoresThemes, tempsSecondes } = req.body
 
       const couleurScore = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
-      const mention = pct >= 80 ? '🌟 Très Bien' : pct >= 70 ? '👍 Bien' : pct >= 60 ? '✅ Assez Bien' : pct >= 50 ? '📋 Admis' : '📚 Non admis'
+      const mention = pct >= 80 ? '🌟 Excellent' : pct >= 70 ? '👍 Très bon' : pct >= 60 ? '✅ Bon' : pct >= 50 ? '📋 Correct' : '📚 À retravailler'
       const messageMotivation = pct >= 50
         ? `Bonne nouvelle : <strong>${prenom}</strong> a réussi son examen blanc ! Encouragez-le à continuer sur les thèmes à améliorer.`
         : `<strong>${prenom}</strong> n'a pas encore le niveau requis. C'est normal — c'est un entraînement ! Encouragez-le à continuer à réviser régulièrement.`
@@ -399,11 +399,11 @@ export default async function handler(req, res) {
 
     const pct = Math.round((note / 20) * 100)
     let mention = ''
-    if (pct >= 80) mention = '🌟 Mention Très Bien'
-    else if (pct >= 70) mention = '👍 Mention Bien'
-    else if (pct >= 60) mention = '✅ Mention Assez Bien'
-    else if (pct >= 50) mention = '📋 Admis'
-    else mention = '📚 Non admis — À retravailler'
+    if (pct >= 80) mention = '🌟 Excellent'
+    else if (pct >= 70) mention = '👍 Très bon'
+    else if (pct >= 60) mention = '✅ Bon'
+    else if (pct >= 50) mention = '📋 Correct'
+    else mention = '📚 À retravailler'
     const couleur = pct >= 50 ? '#16a34a' : '#dc2626'
 
     try {
