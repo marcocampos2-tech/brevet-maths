@@ -351,10 +351,9 @@ export default async function handler(req, res) {
           </p>
           <div style="background:#eef2ff;border-radius:12px;padding:20px;margin:20px 0;">
             <p style="font-weight:600;margin-bottom:12px;color:#3730a3">Comment ça fonctionne :</p>
-            <p style="margin-bottom:8px;font-size:14px;">🤖 Quiz générés par intelligence artificielle</p>
-            <p style="margin-bottom:8px;font-size:14px;">📝 Examen Blanc style vrai brevet</p>
-            <p style="margin-bottom:8px;font-size:14px;">📧 Vous recevez les résultats après chaque session</p>
-            <p style="margin-bottom:0;font-size:14px;">📊 Suivi de progression personnalisé</p>
+            <p style="margin-bottom:8px;font-size:14px;">🎯 Quiz ciblés par sous-thème, corrections détaillées</p>
+            <p style="margin-bottom:8px;font-size:14px;">📝 Examen en ligne, façon QCM du brevet</p>
+            <p style="margin-bottom:0;font-size:14px;">🔓 Niveaux Facile, Moyen, Difficile à débloquer progressivement</p>
           </div>
           <p style="color:#444;margin-bottom:20px;">
             Votre enfant peut commencer maintenant sur :<br>
