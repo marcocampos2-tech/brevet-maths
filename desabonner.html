@@ -25,28 +25,27 @@ const params = new URLSearchParams(window.location.search)
 const success = params.get('success')
 const error   = params.get('error')
 const content = document.getElementById('content')
-
 if (success) {
   content.innerHTML =
     '<div class="icon">✅</div>' +
     '<div class="title">Désabonnement confirmé</div>' +
     '<div class="subtitle">Vous ne recevrez plus d\'emails automatiques d\'ACADEMIKA.</div>' +
     '<div class="note">Pour vous réabonner, contactez-nous :<br>' +
-    '<a href="mailto:marcocampos2@gmail.com" style="color:#3730a3">marcocampos2@gmail.com</a></div>'
+    '<a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a></div>'
 } else if (error) {
   content.innerHTML =
     '<div class="icon">❌</div>' +
     '<div class="title">Une erreur est survenue</div>' +
     '<div class="subtitle">Impossible de traiter votre demande.</div>' +
     '<div class="note">Contactez-nous directement :<br>' +
-    '<a href="mailto:marcocampos2@gmail.com" style="color:#3730a3">marcocampos2@gmail.com</a></div>'
+    '<a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a></div>'
 } else {
   content.innerHTML =
     '<div class="icon">📧</div>' +
     '<div class="title">Lien invalide</div>' +
     '<div class="subtitle">Ce lien de désabonnement n\'est pas valide.</div>' +
     '<div class="note">Contactez-nous directement :<br>' +
-    '<a href="mailto:marcocampos2@gmail.com" style="color:#3730a3">marcocampos2@gmail.com</a></div>'
+    '<a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a></div>'
 }
 </script>
 </body>
