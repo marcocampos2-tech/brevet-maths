@@ -169,6 +169,7 @@ function renderDashboard(rows) {
   var totalScore = rows.reduce(function(s, r) { return s + (r.score || 0) }, 0)
   var totalTotal = rows.reduce(function(s, r) { return s + (r.total || 5) }, 0)
   var globalPct = totalTotal > 0 ? Math.round((totalScore / totalTotal) * 100) : 0
+  var globalNote20 = totalTotal > 0 ? (totalScore / totalTotal * 20).toFixed(1).replace('.0', '') : 0
   var globalStatut = getStatut(globalPct)
 
   var statsByTheme = {}
@@ -191,8 +192,8 @@ function renderDashboard(rows) {
   var html = ''
   html += '<div class="hero">'
   html += '<div class="hero-label">Score global</div>'
-  html += '<div class="hero-score">' + globalPct + '%</div>'
-  html += '<div class="hero-statut">' + globalStatut.emoji + ' ' + globalStatut.label + '</div>'
+  html += '<div class="hero-score">' + globalNote20 + '<span style="font-size:22px;color:var(--muted)">/20</span></div>'
+  html += '<div class="hero-statut">' + globalStatut.emoji + ' ' + globalStatut.label + ' — ' + globalPct + '%</div>'
   html += '<div class="hero-stats">'
   html += '<div class="hero-stat"><div class="hero-stat-val">' + totalSessions + '</div><div class="hero-stat-label">sessions</div></div>'
   html += '<div class="hero-stat"><div class="hero-stat-val">' + formatTemps(totalSecondes) + '</div><div class="hero-stat-label">temps total</div></div>'
@@ -210,12 +211,13 @@ function renderDashboard(rows) {
     var s = statsByTheme[t.value]
     if (s.total === 0) return
     var pct = Math.round((s.score / s.total) * 100)
+    var note20 = (s.score / s.total * 20).toFixed(1).replace('.0', '')
     var statut = getStatut(pct)
     html += '<div class="theme-card">'
     html += '<div class="theme-header">'
     html += '<div class="theme-icon">' + THEME_ICONS[t.icon] + '</div>'
     html += '<div class="theme-nom">' + t.label + '</div>'
-    html += '<div class="theme-score ' + statut.classe + '">' + pct + '%</div>'
+    html += '<div class="theme-score ' + statut.classe + '">' + note20 + '/20</div>'
     html += '</div>'
     html += '<div class="theme-bar-wrap"><div class="theme-bar" style="width:' + pct + '%;background:' + statut.color + '"></div></div>'
     html += '</div>'
