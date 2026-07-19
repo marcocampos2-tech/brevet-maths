@@ -156,6 +156,7 @@ export default async function handler(req, res) {
   if (req.body?.type === 'bilan') {
     try {
       const { emailParent, prenom, nom, moyGlobale, totalSessions, tempsTotal, themes, topRatees } = req.body
+      const moyNote20 = (moyGlobale / 100 * 20).toFixed(1).replace('.0', '')
 
       const couleur = moyGlobale >= 80 ? '#16a34a' : moyGlobale >= 60 ? '#3730a3' : moyGlobale >= 40 ? '#f59e0b' : '#dc2626'
       const mention = moyGlobale >= 80 ? '🌟 Excellent !' : moyGlobale >= 60 ? '👍 Bien !' : moyGlobale >= 40 ? '💪 Continue !' : '📚 À retravailler'
@@ -173,6 +174,10 @@ export default async function handler(req, res) {
           <td style="padding:8px;color:#999;border-bottom:1px solid #f0f0ec;font-size:12px">${s.n} session(s)</td>
         </tr>`
       }).join('')
+
+      const messageMotivation = moyGlobale >= 40
+        ? `Bonne nouvelle : <strong>${prenom} progresse !</strong><br>Encouragez-le à continuer sur les thèmes à améliorer.`
+        : `<strong>${prenom}</strong> traverse une période plus difficile sur ces notions.<br>Un encouragement et un peu de temps supplémentaire sur les thèmes ci-dessous peuvent faire la différence.`
 
       const rateesHTML = topRatees && topRatees.length > 0
         ? `<div style="margin-top:20px">
@@ -194,14 +199,11 @@ export default async function handler(req, res) {
             Voici le bilan de progression de <strong>${prenom}${nom ? ' ' + nom : ''}</strong> sur ACADEMIKA.
           </p>
           <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
-            <div style="font-size:56px;font-weight:700;color:${couleur}">${moyGlobale}%</div>
-            <div style="font-size:18px;margin-top:8px">${mention}</div>
+            <div style="font-size:56px;font-weight:700;color:${couleur}">${moyNote20}<span style="font-size:24px;color:#999">/20</span></div>
+            <div style="font-size:18px;margin-top:8px">${mention} — ${moyGlobale}%</div>
             <div style="font-size:13px;color:#666;margin-top:8px">${totalSessions} sessions · ${tempsFormat} de révision</div>
           </div>
-          <p style="color:#444;margin-bottom:16px;">
-            Bonne nouvelle : <strong>${prenom} progresse !</strong><br>
-            Encouragez-le à continuer sur les thèmes à améliorer.
-          </p>
+          <p style="color:#444;margin-bottom:16px;">${messageMotivation}</p>
           <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">📊 Résultats par thème :</h3>
           <table style="width:100%;border-collapse:collapse">${themesHTML}</table>
           ${rateesHTML}
