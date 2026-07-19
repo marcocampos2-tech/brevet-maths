@@ -161,11 +161,11 @@ async function init() {
 }
 
 function getMention(pct){
-  if(pct>=80)return{label:'🌟 Très Bien',cls:'mention-tb',officiel:'Mention Très Bien'}
-  if(pct>=70)return{label:'👍 Bien',cls:'mention-b',officiel:'Mention Bien'}
-  if(pct>=60)return{label:'✅ Assez Bien',cls:'mention-ab',officiel:'Mention Assez Bien'}
-  if(pct>=50)return{label:'📋 Admis',cls:'mention-admis',officiel:'Admis'}
-  return{label:'📚 À retravailler',cls:'mention-insuffisant',officiel:'Non admis'}
+  if(pct>=80)return{label:'🌟 Excellent',cls:'mention-tb',officiel:'Excellent'}
+  if(pct>=70)return{label:'👍 Très bon',cls:'mention-b',officiel:'Très bon'}
+  if(pct>=60)return{label:'✅ Bon',cls:'mention-ab',officiel:'Bon'}
+  if(pct>=50)return{label:'📋 Correct',cls:'mention-admis',officiel:'Correct'}
+  return{label:'📚 À retravailler',cls:'mention-insuffisant',officiel:'À retravailler'}
 }
 
 function formatTemps(s){
@@ -301,13 +301,14 @@ async function renderIntro() {
     '<div class="intro-card">'+
     '<div class="intro-icon">📝</div>'+
     '<div class="intro-title">Examen Blanc Brevet</div>'+
-    '<div class="intro-sub">Teste-toi dans les conditions du vrai brevet !<br>20 questions tirées aléatoirement sur tous les thèmes du programme.</div>'+
+    '<div class="intro-sub">Évalue tes connaissances sur toutes les notions de 3ème !<br>20 questions tirées aléatoirement sur tous les thèmes du programme.</div>'+
     '<div class="intro-deroulement"><p>📋 <strong>Déroulement :</strong> Tu vas répondre à 20 questions QCM réparties sur les 4 parties du programme. Tu as <strong>40 minutes</strong> pour tout répondre. La correction complète s\'affiche à la fin. Les questions changent à chaque passage !</p></div>'+
     '<div class="intro-rules">'+
     '<li>⏱️ <strong>40 minutes</strong> — 2 min par question</li>'+
     '<li>📋 <strong>20 questions</strong> sur les 4 parties</li>'+
     '<li>🔀 <strong>Questions différentes</strong> à chaque passage</li>'+
     '<li>🔕 <strong>Pas de correction</strong> pendant l\'examen</li>'+
+    '<li>🔔 <strong>Des rappels</strong> s\'afficheront à 10, 5 et 1 minute restantes</li>'+
     '</div>'+
     historiqueHTML+
     '<button class="btn btn-primary btn-full" style="font-size:16px;padding:14px" onclick="demarrerExamen()">🚀 Commencer l\'examen</button>'+
@@ -318,7 +319,7 @@ async function renderIntro() {
 // DÉMARRAGE — appel serveur, plus jamais answer/explication ici
 // ═══════════════════════════════════════════════════
 async function demarrerExamen() {
-  document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de votre examen…</div>'
+  document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de ton examen…</div>'
   try {
     const res = await fetch('/api/examen', {
       method: 'POST',
