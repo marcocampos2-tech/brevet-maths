@@ -234,7 +234,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="sep"></div>
   <div class="banniere-examen" id="banniere-examen">
     <div class="banniere-examen-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2.5" width="6" height="3" rx="1"/><path d="M9 12 L11 14 L15.5 9"/></svg></div>
-    <div class="banniere-examen-titre">Prêt à évaluer tes connaissances sur tout le programme de 3ème?</div>
+    <div class="banniere-examen-titre">Prêt à évaluer tes connaissances sur toutes les notions de 3ème ?</div>
     <div class="banniere-examen-sub">20 questions · 40 minutes · correction complète · type QCM</div>
     <a href="examen.html" class="banniere-examen-btn">Passer l'examen blanc →</a>
   </div>
@@ -719,8 +719,7 @@ function renderQuiz() {
   }
   let html=''
   html+=`<div class="quiz-en-cours">⚠️ Quiz en cours — Ne quitte pas la page !</div>`
-  if(sourceQuestions==='banque'){html+=`<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-banque">⚡ Questions depuis la banque locale</span></div>`}
-  else{html+=`<div style="text-align:center;margin-bottom:1rem"><span class="badge-source-ia">✨ Questions générées par IA</span></div>`}
+  // Badge source retiré (détail technique sans intérêt pour l'élève) — sourceQuestions reste utilisé en interne (sauvegarde, stats)
   html+=`<div class="quiz-progress"><div class="progress-steps">${questions.map((_,i)=>{let cls='progress-step';if(submitted[i]!==undefined)cls+=' done';else if(i===nbDone)cls+=' current';return `<div class="${cls}"></div>`}).join('')}</div><span class="progress-label">Question ${Math.min(nbDone+1,questions.length)}/${questions.length}</span></div>`
   const letters=['A','B','C','D']
   questions.forEach((q,i)=>{
