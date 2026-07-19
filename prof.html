@@ -242,19 +242,19 @@ function getStatut(p) {
 }
 
 function mentionBadge(p) {
-  if (p >= 80) return '<span class="badge badge-tb">Très Bien</span>'
-  if (p >= 70) return '<span class="badge badge-b">Bien</span>'
-  if (p >= 60) return '<span class="badge badge-ab">Assez Bien</span>'
-  if (p >= 50) return '<span class="badge badge-admis">Admis</span>'
-  return '<span class="badge badge-insuf">Non admis</span>'
+  if (p >= 80) return '<span class="badge badge-tb">Excellent</span>'
+  if (p >= 70) return '<span class="badge badge-b">Très bon</span>'
+  if (p >= 60) return '<span class="badge badge-ab">Bon</span>'
+  if (p >= 50) return '<span class="badge badge-admis">Correct</span>'
+  return '<span class="badge badge-insuf">À retravailler</span>'
 }
 
 function mentionLabel(p) {
-  if (p >= 80) return 'Très Bien'
-  if (p >= 70) return 'Bien'
-  if (p >= 60) return 'Assez Bien'
-  if (p >= 50) return 'Admis'
-  return 'Non admis'
+  if (p >= 80) return 'Excellent'
+  if (p >= 70) return 'Très bon'
+  if (p >= 60) return 'Bon'
+  if (p >= 50) return 'Correct'
+  return 'À retravailler'
 }
 
 function scoresExamen(th) {
