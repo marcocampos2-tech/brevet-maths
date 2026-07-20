@@ -622,17 +622,20 @@ function toggleHistoriqueStages() {
 }
 
 async function creerSessionStage() {
+  const btn = event?.target
+  if (btn && btn.disabled) return
+  if (btn) btn.disabled = true
   const periode = document.getElementById('stage-periode').value
   const domaine = document.getElementById('stage-domaine').value.trim()
   const dateDebut = document.getElementById('stage-date-debut').value
   const dateFin = document.getElementById('stage-date-fin').value
   const heure = document.getElementById('stage-heure').value.trim() || '14h00'
   const msg = document.getElementById('stage-creation-msg')
-  if (!dateDebut || !dateFin) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Sélectionne les dates de début et fin.</span>'; return }
-  if (!domaine) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Le domaine est requis.</span>'; return }
+  if (!dateDebut || !dateFin) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Sélectionne les dates de début et fin.</span>'; if(btn) btn.disabled = false; return }
+  if (!domaine) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Le domaine est requis.</span>'; if(btn) btn.disabled = false; return }
   msg.innerHTML = '<span style="color:#888">Création…</span>'
   const { error } = await sb.from('sessions_stages').insert({ periode, domaine, date_debut: dateDebut, date_fin: dateFin, heure })
-  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; return }
+  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; if(btn) btn.disabled = false; return }
   msg.innerHTML = '<span style="color:#2F9E5C">✅ Stage créé !</span>'
   setTimeout(() => chargerStages(), 800)
 }
