@@ -151,6 +151,62 @@ export default async function handler(req, res) {
   }
 
   // ═══════════════════════════════════════════
+  // STAGE — confirmation / refus / annulation
+  // ═══════════════════════════════════════════
+  if (req.body?.type === 'stage') {
+    const RESEND_KEY = process.env.RESEND_API_KEY
+    const { emailParent, prenom, nom, libelle, sousType } = req.body
+    if (!emailParent || !prenom) return res.status(400).json({ error: 'Champs manquants' })
+
+    let subject, html
+    if (sousType === 'refus') {
+      subject = `Inscription stage — ${prenom}`
+      html = `
+        <h2>Inscription stage — Information</h2>
+        <p>Bonjour,</p>
+        <p>Nous avons bien reçu la demande d'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong>.</p>
+        <p>Malheureusement, ce stage est complet. Nous ne pouvons pas confirmer cette inscription.</p>
+        <p>N'hésitez pas à vous inscrire à une autre période sur <strong>academika.fr</strong>.</p>
+        <p>Contact : <strong>06 26 53 90 13</strong></p>
+        <br>
+        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      `
+    } else if (sousType === 'annulation') {
+      subject = `Annulation stage — ${prenom}`
+      html = `
+        <h2>Annulation — Stage vacances</h2>
+        <p>Bonjour,</p>
+        <p>Nous vous informons que l'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong> a été annulée.</p>
+        <p>Pour toute question, contactez-nous au <strong>06 26 53 90 13</strong>.</p>
+        <br>
+        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      `
+    } else {
+      subject = `✅ Inscription confirmée — Stage — ${prenom}`
+      html = `
+        <h2>✅ Inscription confirmée</h2>
+        <p>Bonjour,</p>
+        <p>L'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong> est confirmée.</p>
+        <p>Nous vous recontacterons prochainement pour les modalités pratiques (lien de connexion visio, etc.).</p>
+        <p>Contact : <strong>06 26 53 90 13</strong></p>
+        <br>
+        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      `
+    }
+
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
+        body: JSON.stringify({ from: 'ACADEMIKA <noreply@academika.fr>', to: emailParent, subject, html })
+      })
+      return res.status(200).json({ success: true })
+    } catch(e) {
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ═══════════════════════════════════════════
   // BILAN PARENTS (bouton "Envoyer bilan" prof.html)
   // ═══════════════════════════════════════════
   if (req.body?.type === 'bilan') {
