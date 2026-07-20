@@ -272,6 +272,7 @@ function setTab(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === 'sec-'+id))
   if (id === 'banque') { banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0 }; chargerBanque() }
   if (id === 'inscriptions') chargerInscriptions()
+  if (id === 'stages') chargerStages()
 }
 
 function miniStat(val, label, col) {
@@ -373,7 +374,7 @@ async function chargerInscriptions() {
 
         html += '<div class="inscrit-actions">'
         if (!isConfirme) {
-          html += '<button class="btn btn-sm btn-green" onclick="confirmerEtEnvoyerAdresse(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">✅ Confirmer + adresse</button>'
+          html += '<button class="btn btn-sm btn-green" onclick="confirmerEtEnvoyerAdresse(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\',\''+esc(s.heure)+'\')">✅ Confirmer + adresse</button>'
           html += '<button class="btn btn-sm btn-red" onclick="refuserInscription(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">❌ Refuser</button>'
         }
         if (isConfirme && !hasNote) {
@@ -463,7 +464,237 @@ async function annulerSession(sessionId, dateAffichee, nbInscrits) {
   chargerInscriptions()
 }
 
-async function confirmerEtEnvoyerAdresse(id, prenom, nom, emailParent, date) {
+// ═══════════════════════════════════════════════════
+// STAGES VACANCES
+// ═══════════════════════════════════════════════════
+let SESSIONS_STAGES = [], INSCRIPTIONS_STAGES = []
+
+const DOMAINES_PAR_PERIODE = {
+  'Toussaint': 'Nombres et calculs',
+  'Noël': 'Organisation et gestion de données',
+  'Hiver': 'Espace et géométrie',
+  'Printemps': 'Grandeurs, mesures et algorithmique',
+  'Mai': 'Révision générale + brevet blanc'
+}
+
+function preRemplirDomaine() {
+  const periode = document.getElementById('stage-periode').value
+  const domaineInput = document.getElementById('stage-domaine')
+  if (domaineInput && DOMAINES_PAR_PERIODE[periode]) domaineInput.value = DOMAINES_PAR_PERIODE[periode]
+}
+
+async function chargerStages() {
+  const el = document.getElementById('stages-list')
+  if (!el) return
+  el.innerHTML = '<div class="loader">Chargement…</div>'
+
+  const [rSessions, rInscriptions] = await Promise.all([
+    sb.from('sessions_stages').select('*').order('date_debut', { ascending: true }),
+    sb.from('inscriptions_stages').select('*').order('created_at', { ascending: true })
+  ])
+  if (rSessions.error) { el.innerHTML = '<div class="empty">Erreur : '+rSessions.error.message+'</div>'; return }
+  if (rInscriptions.error) { el.innerHTML = '<div class="empty">Erreur : '+rInscriptions.error.message+'</div>'; return }
+
+  SESSIONS_STAGES = rSessions.data || []
+  INSCRIPTIONS_STAGES = rInscriptions.data || []
+
+  const aujourdHui = new Date().toISOString().split('T')[0]
+
+  let html = ''
+
+  // Formulaire création
+  html += '<div class="card" style="margin-bottom:1.5rem">'
+  html += '<div class="card-title" style="margin-bottom:12px">➕ Créer un stage</div>'
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'
+  html += '<div class="field" style="margin-bottom:0"><label>Période</label><select id="stage-periode" onchange="preRemplirDomaine()">'
+  html += Object.keys(DOMAINES_PAR_PERIODE).map(p => '<option value="'+p+'">'+p+'</option>').join('')
+  html += '</select></div>'
+  html += '<div class="field" style="margin-bottom:0"><label>Domaine</label><input type="text" id="stage-domaine" value="Nombres et calculs"></div>'
+  html += '</div>'
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">'
+  html += '<div class="field" style="margin-bottom:0"><label>Date début</label><input type="date" id="stage-date-debut"></div>'
+  html += '<div class="field" style="margin-bottom:0"><label>Date fin</label><input type="date" id="stage-date-fin"></div>'
+  html += '<div class="field" style="margin-bottom:0"><label>Heure</label><input type="text" id="stage-heure" placeholder="14h00" value="14h00"></div>'
+  html += '</div>'
+  html += '<button class="btn btn-green" onclick="creerSessionStage()">➕ Créer le stage</button>'
+  html += '<div id="stage-creation-msg" style="margin-top:10px;font-size:13px"></div>'
+  html += '</div>'
+
+  if (!SESSIONS_STAGES.length) {
+    el.innerHTML = html + '<div class="empty">Aucun stage créé pour le moment.</div>'
+    return
+  }
+
+  const stagesActifs = SESSIONS_STAGES.filter(s => !s.annulee && s.date_debut >= aujourdHui)
+  const stagesHistorique = SESSIONS_STAGES.filter(s => s.annulee || s.date_debut < aujourdHui)
+
+  if (!stagesActifs.length) {
+    html += '<div class="empty">Aucun stage actif pour le moment.</div>'
+  }
+
+  stagesActifs.forEach(s => {
+    const inscrits = INSCRIPTIONS_STAGES.filter(i => i.session_id === s.id)
+    const nb = inscrits.length
+    const pctPlaces = Math.round(nb / s.max_places * 100)
+    const fillClass = pctPlaces >= 100 ? 'full' : pctPlaces >= 60 ? 'warn' : ''
+    const dateDebutAff = new Date(s.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+    const dateFinAff = new Date(s.date_fin + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+
+    html += '<div class="card" style="margin-bottom:1rem">'
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
+    html += '<div>'
+    html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">🎒 '+s.periode+' — '+s.domaine+'</div>'
+    html += '<div style="font-size:12px;color:var(--muted);margin-top:2px">Du '+dateDebutAff+' au '+dateFinAff+' · '+s.heure+'</div>'
+    html += '<div class="places-bar-wrap" style="margin-top:8px;width:180px"><div class="places-bar-fill '+fillClass+'" style="width:'+Math.min(pctPlaces,100)+'%"></div></div>'
+    html += '<div style="font-size:12px;color:var(--muted);margin-top:4px">'+nb+' / '+s.max_places+' places — '+(s.max_places-nb)+' disponibles</div>'
+    html += '</div>'
+    html += '<button class="btn btn-sm btn-red" onclick="annulerSessionStage(\''+esc(s.id)+'\',\''+esc(s.periode)+' — '+esc(s.domaine)+'\','+nb+')">🗑 Annuler le stage</button>'
+    html += '</div>'
+
+    if (!inscrits.length) {
+      html += '<div class="empty">Aucun inscrit sur ce stage.</div>'
+    } else {
+      inscrits.forEach(i => {
+        const isConfirme = i.confirme
+        const cardClass = isConfirme ? 'confirme' : 'attente'
+        const dateInscription = dateStr(i.created_at)
+
+        html += '<div class="inscrit-card '+cardClass+'">'
+        html += '<div class="inscrit-header">'
+        html += '<div>'
+        html += '<div class="inscrit-name">'+i.prenom+' '+i.nom+'</div>'
+        html += '<div class="inscrit-info">📧 '+i.email_parent+(i.telephone?' · 📞 '+i.telephone:'')+'</div>'
+        html += '<div class="inscrit-info">Inscrit le '+dateInscription+'</div>'
+        html += '</div>'
+        html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
+        if (isConfirme) html += '<span class="badge badge-tb">✅ Confirmé</span>'
+        else html += '<span class="badge badge-ab">⏳ En attente</span>'
+        html += '</div>'
+        html += '</div>'
+
+        html += '<div class="inscrit-actions">'
+        if (!isConfirme) {
+          html += '<button class="btn btn-sm btn-green" onclick="confirmerInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">✅ Confirmer</button>'
+          html += '<button class="btn btn-sm btn-red" onclick="refuserInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">❌ Refuser</button>'
+        } else {
+          html += '<button class="btn btn-sm btn-red" onclick="annulerInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">❌ Annuler l\'inscription</button>'
+        }
+        html += '</div>'
+        html += '</div>'
+      })
+    }
+    html += '</div>'
+  })
+
+  if (stagesHistorique.length) {
+    html += '<div class="card" style="margin-bottom:1rem">'
+    html += '<div style="cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="toggleHistoriqueStages()">'
+    html += '<div class="card-title" style="margin-bottom:0">📁 Historique (' + stagesHistorique.length + ')</div>'
+    html += '<span id="historique-stages-chevron" style="font-size:12px;color:var(--muted)">'+(historiqueStagesOuvert?'▲':'▼')+'</span>'
+    html += '</div>'
+    html += '<div id="historique-stages-body" style="display:'+(historiqueStagesOuvert?'block':'none')+';margin-top:12px">'
+    stagesHistorique
+      .slice()
+      .sort((a,b) => b.date_debut.localeCompare(a.date_debut))
+      .forEach(s => {
+        const inscrits = INSCRIPTIONS_STAGES.filter(i => i.session_id === s.id)
+        const dateDebutAff = new Date(s.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
+        const statutLabel = s.annulee ? '<span class="badge badge-insuf">Annulé</span>' : '<span class="badge badge-admis">Terminé</span>'
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #F3F1EA;font-size:13px">'
+        html += '<span>🎒 '+s.periode+' — '+s.domaine+' · '+dateDebutAff+' — '+inscrits.length+' inscrit'+(inscrits.length>1?'s':'')+'</span>'
+        html += statutLabel
+        html += '</div>'
+      })
+    html += '</div>'
+    html += '</div>'
+  }
+
+  el.innerHTML = html
+}
+
+let historiqueStagesOuvert = false
+function toggleHistoriqueStages() {
+  historiqueStagesOuvert = !historiqueStagesOuvert
+  const body = document.getElementById('historique-stages-body')
+  const chevron = document.getElementById('historique-stages-chevron')
+  if (body) body.style.display = historiqueStagesOuvert ? 'block' : 'none'
+  if (chevron) chevron.textContent = historiqueStagesOuvert ? '▲' : '▼'
+}
+
+async function creerSessionStage() {
+  const periode = document.getElementById('stage-periode').value
+  const domaine = document.getElementById('stage-domaine').value.trim()
+  const dateDebut = document.getElementById('stage-date-debut').value
+  const dateFin = document.getElementById('stage-date-fin').value
+  const heure = document.getElementById('stage-heure').value.trim() || '14h00'
+  const msg = document.getElementById('stage-creation-msg')
+  if (!dateDebut || !dateFin) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Sélectionne les dates de début et fin.</span>'; return }
+  if (!domaine) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Le domaine est requis.</span>'; return }
+  msg.innerHTML = '<span style="color:#888">Création…</span>'
+  const { error } = await sb.from('sessions_stages').insert({ periode, domaine, date_debut: dateDebut, date_fin: dateFin, heure })
+  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; return }
+  msg.innerHTML = '<span style="color:#2F9E5C">✅ Stage créé !</span>'
+  setTimeout(() => chargerStages(), 800)
+}
+
+async function confirmerInscriptionStage(id, prenom, nom, emailParent) {
+  if (!confirm('Confirmer l\'inscription de '+prenom+' au stage ?')) return
+  const inscrit = INSCRIPTIONS_STAGES.find(i => i.id === id)
+  const session = SESSIONS_STAGES.find(s => s.id === inscrit?.session_id)
+  const libelle = session ? (session.periode+' — '+session.domaine) : 'stage'
+  const { error } = await sb.from('inscriptions_stages').update({ confirme: true }).eq('id', id)
+  if (error) { alert('Erreur : '+error.message); return }
+  try {
+    await fetch('/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'stage', emailParent, prenom, nom, libelle }) })
+  } catch(e) { console.log('Erreur email confirmation stage:', e.message) }
+  chargerStages()
+}
+
+async function refuserInscriptionStage(id, prenom, nom, emailParent) {
+  if (!confirm('Refuser l\'inscription de '+prenom+' ?')) return
+  const inscrit = INSCRIPTIONS_STAGES.find(i => i.id === id)
+  const session = SESSIONS_STAGES.find(s => s.id === inscrit?.session_id)
+  const libelle = session ? (session.periode+' — '+session.domaine) : 'stage'
+  try {
+    await fetch('/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'stage', sousType: 'refus', emailParent, prenom, nom, libelle }) })
+  } catch(e) { console.log('Erreur email refus stage:', e.message) }
+  const { error } = await sb.from('inscriptions_stages').delete().eq('id', id)
+  if (error) { alert('Erreur : '+error.message); return }
+  chargerStages()
+}
+
+async function annulerInscriptionStage(id, prenom, nom, emailParent) {
+  if (!confirm('Annuler l\'inscription confirmée de '+prenom+' ?')) return
+  const inscrit = INSCRIPTIONS_STAGES.find(i => i.id === id)
+  const session = SESSIONS_STAGES.find(s => s.id === inscrit?.session_id)
+  const libelle = session ? (session.periode+' — '+session.domaine) : 'stage'
+  try {
+    await fetch('/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'stage', sousType: 'annulation', emailParent, prenom, nom, libelle }) })
+  } catch(e) { console.log('Erreur email annulation stage:', e.message) }
+  const { error } = await sb.from('inscriptions_stages').delete().eq('id', id)
+  if (error) { alert('Erreur : '+error.message); return }
+  chargerStages()
+}
+
+async function annulerSessionStage(sessionId, libelle, nbInscrits) {
+  if (nbInscrits > 0) {
+    if (!confirm('Il y a '+nbInscrits+' inscrit'+(nbInscrits>1?'s':'')+' sur '+libelle+'. Annuler quand même ? Un email sera envoyé à chaque inscrit.')) return
+  } else {
+    if (!confirm('Annuler '+libelle+' ?')) return
+  }
+  const inscritsStage = INSCRIPTIONS_STAGES.filter(i => i.session_id === sessionId)
+  for (const i of inscritsStage) {
+    try {
+      await fetch('/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'stage', sousType: 'annulation', emailParent: i.email_parent, prenom: i.prenom, nom: i.nom, libelle }) })
+    } catch(e) { console.log('Erreur email annulation session stage:', e.message) }
+  }
+  const { error } = await sb.from('sessions_stages').update({ annulee: true }).eq('id', sessionId)
+  if (error) { alert('Erreur : '+error.message); return }
+  chargerStages()
+}
+
+
+async function confirmerEtEnvoyerAdresse(id, prenom, nom, emailParent, date, heure) {
   const adresse = document.getElementById('adresse-lieu')?.value?.trim()
   if (!adresse) { alert('⚠️ Saisis l\'adresse du lieu avant de confirmer.'); return }
   if (!confirm('Confirmer l\'inscription de '+prenom+' et envoyer l\'adresse à '+emailParent+' ?')) return
@@ -475,7 +706,7 @@ async function confirmerEtEnvoyerAdresse(id, prenom, nom, emailParent, date) {
     await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'adresse-brevet', emailParent, prenom, nom, date, adresse })
+      body: JSON.stringify({ type: 'adresse-brevet', emailParent, prenom, nom, date, heure, adresse })
     })
   } catch(e) { console.log('Erreur email confirmation:', e.message) }
 
@@ -1024,6 +1255,7 @@ function render() {
   h+='<button class="tab" data-tab="eleves" onclick="setTab(\'eleves\')">Élèves</button>'
   h+='<button class="tab" data-tab="examens" onclick="setTab(\'examens\')">Examens en ligne</button>'
   h+='<button class="tab" data-tab="inscriptions" onclick="setTab(\'inscriptions\')">📋 Inscriptions</button>'
+  h+='<button class="tab" data-tab="stages" onclick="setTab(\'stages\')">🎒 Stages</button>'
   h+='<button class="tab" data-tab="themes" onclick="setTab(\'themes\')">Thèmes</button>'
   h+='<button class="tab" data-tab="sessions" onclick="setTab(\'sessions\')">Sessions</button>'
   h+='<button class="tab" data-tab="ratees" onclick="setTab(\'ratees\')">Questions ratées</button>'
@@ -1089,6 +1321,11 @@ function render() {
   // INSCRIPTIONS
   h+='<div class="section" id="sec-inscriptions"><div class="card"><div class="card-title">📋 Inscriptions Examen Blanc Présentiel</div>'
   h+='<div id="inscriptions-list"><div class="loader">Chargement…</div></div>'
+  h+='</div></div>'
+
+  // STAGES
+  h+='<div class="section" id="sec-stages"><div class="card"><div class="card-title">🎒 Stages Vacances</div>'
+  h+='<div id="stages-list"><div class="loader">Chargement…</div></div>'
   h+='</div></div>'
 
   // THÈMES
