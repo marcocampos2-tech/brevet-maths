@@ -68,41 +68,8 @@
     <span class="badge-pill">Une semaine · 2h/jour</span>
   </div>
 
-  <div class="agenda-row">
-    <div class="agenda-item">
-      <div class="agenda-period">Toussaint</div>
-      <div class="agenda-sep"></div>
-      <div class="agenda-domain">Nombres et calculs</div>
-    </div>
-
-    <div class="agenda-item">
-      <div class="agenda-period">Noël</div>
-      <div class="agenda-sep"></div>
-      <div class="agenda-domain">Organisation et gestion de données</div>
-    </div>
-  </div>
-
-  <div class="agenda-row">
-    <div class="agenda-item">
-      <div class="agenda-period">Hiver</div>
-      <div class="agenda-sep"></div>
-      <div class="agenda-domain">Espace et géométrie</div>
-    </div>
-
-    <div class="agenda-item">
-      <div class="agenda-period">Printemps</div>
-      <div class="agenda-sep"></div>
-      <div class="agenda-domain">Grandeurs, mesures et algorithmique</div>
-    </div>
-  </div>
-
-  <div class="agenda-item revision">
-    <div class="agenda-period">Mai</div>
-    <div class="agenda-sep"></div>
-    <div>
-      <div class="agenda-domain">Révision générale + brevet blanc</div>
-      <div class="agenda-sub">Tous les domaines revus, brevet blanc en fin de stage</div>
-    </div>
+  <div id="stages-area">
+    <div class="loader" style="text-align:center;padding:2rem;color:#6B7280;font-size:14px">Chargement des stages…</div>
   </div>
 
   <div class="note-box">
@@ -112,8 +79,17 @@
     </p>
   </div>
 
-  <div style="text-align:center">
-    <a href="mailto:contact@academika.fr" class="btn-connexion" style="font-size:15px;padding:13px 32px">Réserver une place</a>
+  <div class="form-stage-card" id="form-stage-card" style="display:none;background:white;border:1px solid #e8e8e4;border-radius:12px;padding:1.5rem;margin:0 auto 2rem;max-width:480px">
+    <label style="display:block;font-size:13px;font-weight:500;color:var(--navy);margin-bottom:6px">Prénom de l'élève</label>
+    <input type="text" id="stage-f-prenom" placeholder="Prénom" style="width:100%;padding:11px 14px;border:1px solid #e8e8e4;border-radius:8px;font-size:15px;box-sizing:border-box;margin-bottom:14px">
+    <label style="display:block;font-size:13px;font-weight:500;color:var(--navy);margin-bottom:6px">Nom de l'élève</label>
+    <input type="text" id="stage-f-nom" placeholder="Nom" style="width:100%;padding:11px 14px;border:1px solid #e8e8e4;border-radius:8px;font-size:15px;box-sizing:border-box;margin-bottom:14px">
+    <label style="display:block;font-size:13px;font-weight:500;color:var(--navy);margin-bottom:6px">Email des parents</label>
+    <input type="email" id="stage-f-email" placeholder="parent@exemple.fr" style="width:100%;padding:11px 14px;border:1px solid #e8e8e4;border-radius:8px;font-size:15px;box-sizing:border-box;margin-bottom:14px">
+    <label style="display:block;font-size:13px;font-weight:500;color:var(--navy);margin-bottom:6px">Téléphone (facultatif)</label>
+    <input type="tel" id="stage-f-telephone" placeholder="06 00 00 00 00" style="width:100%;padding:11px 14px;border:1px solid #e8e8e4;border-radius:8px;font-size:15px;box-sizing:border-box;margin-bottom:20px">
+    <button onclick="envoyerInscriptionStage()" id="stage-btn-submit" style="width:100%;padding:14px;background:var(--bordeaux);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer">Réserver cette place</button>
+    <div id="stage-form-msg" style="margin-top:12px;font-size:13px;text-align:center;display:none"></div>
   </div>
 </section>
 
@@ -136,6 +112,110 @@ function toggleMenu() {
   document.getElementById('burger').classList.toggle('open')
   document.getElementById('mobileMenu').classList.toggle('open')
 }
+
+let stagesSessions = []
+let stageChoisi = null
+
+async function chargerStages() {
+  try {
+    const res = await fetch('/api/inscription-stage?action=sessions')
+    const data = await res.json()
+    stagesSessions = data.sessions || []
+    renderStages()
+  } catch(e) {
+    document.getElementById('stages-area').innerHTML = '<div style="text-align:center;padding:2rem;color:#6B7280">Erreur de chargement. Réessayez dans quelques instants.</div>'
+  }
+}
+
+function renderStages() {
+  const area = document.getElementById('stages-area')
+  if (stagesSessions.length === 0) {
+    area.innerHTML = '<div style="text-align:center;padding:2rem 1rem;background:var(--light-bg);border-radius:12px;margin-bottom:2rem"><p style="font-size:14px;color:#6B7280">Aucun stage prévu actuellement. Revenez bientôt — les prochaines dates seront annoncées ici.</p></div>'
+    return
+  }
+  area.innerHTML = stagesSessions.map(s => {
+    const estRevision = s.periode === 'Mai'
+    return `<div class="agenda-item ${estRevision ? 'revision' : ''} ${s.complet ? '' : 'agenda-clickable'}"
+      style="cursor:${s.complet ? 'not-allowed' : 'pointer'};opacity:${s.complet ? '0.55' : '1'};margin-bottom:12px;max-width:480px;margin-left:auto;margin-right:auto"
+      ${s.complet ? '' : `onclick="choisirStage('${s.id}')"`} id="stage-${s.id}">
+      <div class="agenda-period">${s.periode}</div>
+      <div class="agenda-sep"></div>
+      <div>
+        <div class="agenda-domain">${s.domaine}</div>
+        <div class="agenda-sub" style="${estRevision ? '' : 'color:#6B7280'}">Du ${s.date_debut_formatee} au ${s.date_fin_formatee} · ${s.heure} — ${s.complet ? 'Complet' : s.places_restantes + ' place' + (s.places_restantes > 1 ? 's' : '') + ' dispo'}</div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+function choisirStage(id) {
+  stageChoisi = id
+  document.querySelectorAll('.agenda-item').forEach(el => el.style.outline = '')
+  const carte = document.getElementById('stage-' + id)
+  if (carte) carte.style.outline = '2px solid var(--navy)'
+  const form = document.getElementById('form-stage-card')
+  form.style.display = 'block'
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+async function envoyerInscriptionStage() {
+  const prenom = document.getElementById('stage-f-prenom').value.trim()
+  const nom = document.getElementById('stage-f-nom').value.trim()
+  const email = document.getElementById('stage-f-email').value.trim()
+  const telephone = document.getElementById('stage-f-telephone').value.trim()
+  const msg = document.getElementById('stage-form-msg')
+  const btn = document.getElementById('stage-btn-submit')
+
+  if (!prenom || !nom || !email) {
+    msg.style.display = 'block'
+    msg.style.color = 'var(--bordeaux)'
+    msg.textContent = 'Merci de remplir tous les champs obligatoires.'
+    return
+  }
+  if (!stageChoisi) {
+    msg.style.display = 'block'
+    msg.style.color = 'var(--bordeaux)'
+    msg.textContent = 'Merci de sélectionner un stage.'
+    return
+  }
+
+  btn.disabled = true
+  btn.textContent = 'Envoi en cours…'
+  msg.style.display = 'none'
+
+  try {
+    const res = await fetch('/api/inscription-stage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prenom, nom, email_parent: email, telephone, session_id: stageChoisi })
+    })
+    const data = await res.json()
+    if (data.error) {
+      msg.style.display = 'block'
+      msg.style.color = 'var(--bordeaux)'
+      msg.textContent = data.error
+      btn.disabled = false
+      btn.textContent = 'Réserver cette place'
+      return
+    }
+    msg.style.display = 'block'
+    msg.style.color = '#1f7a45'
+    msg.textContent = '✅ Inscription reçue ! Vous recevrez un email de confirmation.'
+    btn.textContent = 'Inscription envoyée'
+    document.getElementById('stage-f-prenom').disabled = true
+    document.getElementById('stage-f-nom').disabled = true
+    document.getElementById('stage-f-email').disabled = true
+    document.getElementById('stage-f-telephone').disabled = true
+  } catch(e) {
+    msg.style.display = 'block'
+    msg.style.color = 'var(--bordeaux)'
+    msg.textContent = 'Erreur réseau — réessayez.'
+    btn.disabled = false
+    btn.textContent = 'Réserver cette place'
+  }
+}
+
+chargerStages()
 </script>
 
 </body>
