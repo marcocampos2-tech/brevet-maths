@@ -39,7 +39,6 @@ export default async function handler(req, res) {
       const aujourdHui = new Date().toISOString().split('T')[0]
 
       const sessionsAvecPlaces = sessions
-        .filter(s => s.date_debut >= aujourdHui)
         .map(s => ({
           id: s.id,
           periode: s.periode,
@@ -52,7 +51,8 @@ export default async function handler(req, res) {
           max_places: s.max_places,
           places_prises: compteur[s.id] || 0,
           places_restantes: s.max_places - (compteur[s.id] || 0),
-          complet: (compteur[s.id] || 0) >= s.max_places
+          complet: (compteur[s.id] || 0) >= s.max_places,
+          termine: s.date_debut < aujourdHui
         }))
 
       return res.status(200).json({ sessions: sessionsAvecPlaces })
