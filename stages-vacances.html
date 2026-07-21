@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="style.css">
 <style>
 .agenda-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px; max-width: 480px; margin-left: auto; margin-right: auto; }
-.agenda-item { display: flex; align-items: center; gap: 14px; background: var(--light-bg); border-radius: 10px; padding: 12px 18px; position: relative; overflow: hidden; min-height: 76px; box-sizing: border-box; }
+.agenda-item { display: flex; align-items: center; gap: 14px; background: var(--light-bg); border-radius: 10px; padding: 12px 18px; position: relative; overflow: hidden; box-sizing: border-box; }
 .agenda-item-content { position: relative; z-index: 1; }
 .agenda-filigrane { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 0; }
 .agenda-filigrane span { color: rgba(107,114,128,0.22); font-size: 20px; font-weight: 600; letter-spacing: 2px; transform: rotate(-25deg); text-transform: uppercase; white-space: nowrap; }
@@ -163,7 +163,25 @@ function renderStages() {
     html += stageMai.map(s => carteHTML(s, true)).join('')
   }
   area.innerHTML = html
+  requestAnimationFrame(harmoniserHauteurCartes)
 }
+
+function harmoniserHauteurCartes() {
+  const cartes = document.querySelectorAll('.agenda-row .agenda-item')
+  if (!cartes.length) return
+  cartes.forEach(c => c.style.height = 'auto')
+  if (window.innerWidth <= 640) return
+  let max = 0
+  cartes.forEach(c => { if (c.offsetHeight > max) max = c.offsetHeight })
+  cartes.forEach(c => c.style.height = max + 'px')
+}
+
+let redimensionnementTimeout
+window.addEventListener('resize', () => {
+  clearTimeout(redimensionnementTimeout)
+  redimensionnementTimeout = setTimeout(harmoniserHauteurCartes, 150)
+})
+window.addEventListener('load', harmoniserHauteurCartes)
 
 function choisirStage(id) {
   stageChoisi = id
