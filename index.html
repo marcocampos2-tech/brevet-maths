@@ -45,15 +45,20 @@
   font-size: 14px; font-weight: 600; text-decoration: none;
   font-family: 'Inter', sans-serif;
 }
-.voir-tarifs-link {
-  display: block;
+.voir-tarifs-btn {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--cream);
+  background: var(--bordeaux);
+  padding: 12px 24px;
+  border-radius: 6px;
+  text-decoration: none;
+}
+.voir-tarifs-wrap {
   text-align: center;
   margin-top: 24px;
-  font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--navy);
-  text-decoration: none;
 }
 </style>
 </head>
@@ -144,7 +149,7 @@
       <div class="offer-price">sur devis</div>
     </div>
   </div>
-  <a href="tarifs.html" class="voir-tarifs-link">Voir tous les tarifs →</a>
+  <div class="voir-tarifs-wrap"><a href="tarifs.html" class="voir-tarifs-btn">Voir le détail des tarifs →</a></div>
 </section>
 
 <section id="methode">
