@@ -81,6 +81,126 @@
   color: rgba(250,249,246,0.8);
   line-height: 1.6;
 }
+.guide-row {
+  background: var(--light-bg);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  max-width: 520px;
+  margin: 0 auto 8px;
+}
+.guide-row-label {
+  font-size: 12.5px;
+  color: var(--navy);
+  font-weight: 500;
+}
+.guide-row-btn {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--navy);
+  border: 1px solid var(--navy);
+  padding: 7px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  white-space: nowrap;
+  background: transparent;
+  cursor: pointer;
+}
+.form-cours-card {
+  max-width: 400px;
+  margin: 32px auto 0;
+  background: white;
+  border: 1px solid #e8e8e4;
+  border-radius: 12px;
+  padding: 24px;
+  display: none;
+}
+.form-cours-title {
+  font-family: 'Newsreader', serif;
+  font-size: 17px;
+  color: var(--navy);
+  margin-bottom: 16px;
+}
+.form-cours-label {
+  font-size: 11px;
+  color: #6B7280;
+  margin-bottom: 4px;
+  margin-top: 12px;
+}
+.form-cours-label:first-of-type { margin-top: 0; }
+.form-cours-input, .form-cours-select, .form-cours-textarea {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #e8e8e4;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  box-sizing: border-box;
+  background: var(--light-bg);
+}
+.form-cours-textarea { resize: vertical; min-height: 50px; }
+.format-toggle {
+  display: flex;
+  gap: 8px;
+}
+.format-btn {
+  flex: 1;
+  text-align: center;
+  padding: 9px;
+  border: 1.5px solid #e8e8e4;
+  color: #6B7280;
+  border-radius: 6px;
+  font-size: 11.5px;
+  cursor: pointer;
+  background: white;
+}
+.format-btn.active {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: var(--cream);
+}
+.dispo-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--navy);
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+.form-cours-section-label {
+  font-size: 10px;
+  color: #9CA3AF;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-top: 1px solid var(--light-bg);
+  padding-top: 14px;
+  margin-top: 14px;
+}
+.form-cours-submit {
+  width: 100%;
+  background: var(--bordeaux);
+  color: var(--cream);
+  text-align: center;
+  padding: 11px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  margin-top: 16px;
+  font-family: 'Inter', sans-serif;
+}
+.form-cours-msg {
+  margin-top: 10px;
+  font-size: 12px;
+  text-align: center;
+  display: none;
+}
 .cta-intro {
   text-align: center;
   font-size: 13px;
@@ -167,7 +287,7 @@
       <div class="tarif-desc">Quiz corrigés étape par étape</div>
     </div>
 
-    <div class="tarif-card">
+    <div class="tarif-card" id="carte-suivi">
       <div class="tarif-nom">Suivi</div>
       <div class="tarif-prix">7,90€<span>/mois</span></div>
       <div class="tarif-desc">Notes par email + examen blanc QCM</div>
@@ -190,7 +310,7 @@
     <div class="tarif-card">
       <div class="tarif-nom">Stage vacances</div>
       <div class="tarif-prix">200€<span>/semaine</span></div>
-      <div class="tarif-desc">Groupe 5, 20€/h</div>
+      <div class="tarif-desc">Une semaine, 2h/jour, un domaine du Brevet, groupe 5 max. Le stage de mai inclut un brevet blanc écrit.</div>
       <div class="tarif-badge">Suivi inclus</div>
     </div>
 
@@ -201,6 +321,69 @@
   <div class="suivi-explain">
     <div class="suivi-explain-title">C'est quoi le suivi ?</div>
     <div class="suivi-explain-desc">Un email avec les notes de votre enfant, à chaque session de quiz. Inclus avec l'abonnement Suivi, ou automatiquement pendant les cours particuliers et les stages.</div>
+  </div>
+</section>
+
+<section class="alt-bg">
+  <div class="section-title" style="margin-bottom:20px">Quelle offre choisir ?</div>
+
+  <div class="guide-row">
+    <div class="guide-row-label">Réviser seul, à son rythme</div>
+    <a href="connexion.html" class="guide-row-btn">Créer un compte</a>
+  </div>
+  <div class="guide-row">
+    <div class="guide-row-label">Suivre les progrès sans cours</div>
+    <a href="#carte-suivi" class="guide-row-btn">Voir le Suivi</a>
+  </div>
+  <div class="guide-row">
+    <div class="guide-row-label">Approfondir un point, chaque semaine</div>
+    <button type="button" class="guide-row-btn" onclick="ouvrirFormulaireCours()">Demander un cours</button>
+  </div>
+  <div class="guide-row">
+    <div class="guide-row-label">Consolider un domaine avant la rentrée</div>
+    <a href="stages-vacances.html" class="guide-row-btn">Voir les stages</a>
+  </div>
+
+  <div class="form-cours-card" id="form-cours-card">
+    <div class="form-cours-title">Demander un cours particulier</div>
+
+    <div class="form-cours-label">Prénom de l'élève</div>
+    <input type="text" id="fc-prenom" class="form-cours-input" placeholder="Prénom">
+
+    <div class="form-cours-label">Niveau</div>
+    <select id="fc-niveau" class="form-cours-select">
+      <option value="3ème">3ème</option>
+      <option value="4ème">4ème</option>
+      <option value="2nde">2nde</option>
+      <option value="Autre">Autre</option>
+    </select>
+
+    <div class="form-cours-label">Format</div>
+    <div class="format-toggle">
+      <div class="format-btn active" id="fc-format-visio" onclick="choisirFormat('visio')">Visio</div>
+      <div class="format-btn" id="fc-format-presentiel" onclick="choisirFormat('presentiel')">Présentiel</div>
+    </div>
+
+    <div class="form-cours-label">Disponibilités</div>
+    <label class="dispo-check"><input type="checkbox" id="fc-dispo-semaine"> Semaine, 18h-20h</label>
+    <label class="dispo-check"><input type="checkbox" id="fc-dispo-dimanche"> Dimanche</label>
+
+    <div class="form-cours-section-label">Vos coordonnées</div>
+
+    <div class="form-cours-label">Votre prénom et nom</div>
+    <input type="text" id="fc-parent-nom" class="form-cours-input" placeholder="Prénom et nom">
+
+    <div class="form-cours-label">Votre email</div>
+    <input type="email" id="fc-parent-email" class="form-cours-input" placeholder="parent@exemple.fr">
+
+    <div class="form-cours-label">Téléphone (optionnel)</div>
+    <input type="tel" id="fc-parent-telephone" class="form-cours-input" placeholder="06 00 00 00 00">
+
+    <div class="form-cours-label">Précisions (optionnel)</div>
+    <textarea id="fc-precisions" class="form-cours-textarea" placeholder="Disponibilités particulières, matière à approfondir..."></textarea>
+
+    <button type="button" class="form-cours-submit" id="fc-submit" onclick="envoyerDemandeCours()">Envoyer la demande</button>
+    <div class="form-cours-msg" id="fc-msg"></div>
   </div>
 </section>
 
@@ -231,6 +414,87 @@
 function toggleMenu() {
   document.getElementById('burger').classList.toggle('open')
   document.getElementById('mobileMenu').classList.toggle('open')
+}
+
+let formatCoursChoisi = 'visio'
+
+function ouvrirFormulaireCours() {
+  const carte = document.getElementById('form-cours-card')
+  carte.style.display = 'block'
+  carte.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+function choisirFormat(format) {
+  formatCoursChoisi = format
+  document.getElementById('fc-format-visio').classList.toggle('active', format === 'visio')
+  document.getElementById('fc-format-presentiel').classList.toggle('active', format === 'presentiel')
+}
+
+async function envoyerDemandeCours() {
+  const prenomEleve = document.getElementById('fc-prenom').value.trim()
+  const niveau = document.getElementById('fc-niveau').value
+  const dispoSemaine = document.getElementById('fc-dispo-semaine').checked
+  const dispoDimanche = document.getElementById('fc-dispo-dimanche').checked
+  const parentNom = document.getElementById('fc-parent-nom').value.trim()
+  const parentEmail = document.getElementById('fc-parent-email').value.trim()
+  const parentTelephone = document.getElementById('fc-parent-telephone').value.trim()
+  const precisions = document.getElementById('fc-precisions').value.trim()
+  const msg = document.getElementById('fc-msg')
+  const btn = document.getElementById('fc-submit')
+
+  if (!prenomEleve || !parentNom || !parentEmail) {
+    msg.style.display = 'block'
+    msg.style.color = 'var(--bordeaux)'
+    msg.textContent = 'Merci de remplir au moins le prénom de l\'élève, votre nom et votre email.'
+    return
+  }
+  if (!dispoSemaine && !dispoDimanche) {
+    msg.style.display = 'block'
+    msg.style.color = 'var(--bordeaux)'
+    msg.textContent = 'Merci de cocher au moins une disponibilité.'
+    return
+  }
+
+  btn.disabled = true
+  btn.textContent = 'Envoi en cours…'
+  msg.style.display = 'none'
+
+  try {
+    const res = await fetch('/api/contact-cours', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prenom_eleve: prenomEleve,
+        niveau,
+        format: formatCoursChoisi,
+        dispo_semaine: dispoSemaine,
+        dispo_dimanche: dispoDimanche,
+        parent_nom: parentNom,
+        parent_email: parentEmail,
+        parent_telephone: parentTelephone,
+        precisions
+      })
+    })
+    const data = await res.json()
+    if (data.error) {
+      msg.style.display = 'block'
+      msg.style.color = 'var(--bordeaux)'
+      msg.textContent = data.error
+      btn.disabled = false
+      btn.textContent = 'Envoyer la demande'
+      return
+    }
+    msg.style.display = 'block'
+    msg.style.color = '#1f7a45'
+    msg.textContent = '✅ Demande envoyée, réponse sous 24h.'
+    btn.textContent = 'Demande envoyée'
+  } catch(e) {
+    msg.style.display = 'block'
+    msg.style.color = 'var(--bordeaux)'
+    msg.textContent = 'Erreur réseau — réessayez, ou écrivez à contact@academika.fr.'
+    btn.disabled = false
+    btn.textContent = 'Envoyer la demande'
+  }
 }
 </script>
 
