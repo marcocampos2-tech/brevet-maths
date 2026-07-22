@@ -28,9 +28,10 @@
 .tarif-desc { flex: 1; }
 .tarif-guide {
   font-size: 10px;
-  color: var(--bordeaux);
+  color: var(--navy);
+  opacity: 0.65;
   font-style: italic;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 .tarif-cta {
   margin-top: 10px;
@@ -74,14 +75,10 @@
   color: #6B7280;
 }
 .tarif-badge {
-  display: inline-block;
-  background: var(--navy);
-  color: var(--cream);
   font-size: 10px;
   font-weight: 500;
-  padding: 4px 12px;
-  border-radius: 20px;
-  margin-top: 10px;
+  color: var(--navy);
+  margin-top: 8px;
 }
 .tarifs-note {
   text-align: center;
@@ -294,43 +291,36 @@
       <div class="tarif-prix">7,90€<span>/mois</span></div>
       <div class="tarif-desc">Notes par email + examen blanc QCM</div>
       <div class="tarif-guide">Pour suivre les progrès sans cours</div>
-      <a href="connexion.html" class="tarif-cta tarif-cta-outline">Créer un compte</a>
+      <a href="connexion.html" class="tarif-cta tarif-cta-solid">Créer un compte</a>
     </div>
 
     <div class="tarif-card">
       <div class="tarif-nom">Cours visio</div>
       <div class="tarif-prix">30€<span>/h</span></div>
       <div class="tarif-desc">Individuel, 10 ans d'expérience</div>
-      <div class="tarif-badge">Suivi inclus</div>
+      <div class="tarif-badge">✓ Suivi inclus</div>
       <div class="tarif-guide">Pour approfondir un point, chaque semaine</div>
-      <button type="button" class="tarif-cta tarif-cta-solid" onclick="ouvrirFormulaireCours()">Demander un cours</button>
+      <button type="button" class="tarif-cta tarif-cta-outline" onclick="ouvrirFormulaireCours()">Demander un cours</button>
     </div>
 
     <div class="tarif-card">
       <div class="tarif-nom">Cours présentiel</div>
       <div class="tarif-prix" style="font-size:20px">Sur devis</div>
       <div class="tarif-desc">Individuel, à domicile, 10 ans d'expérience</div>
-      <div class="tarif-badge">Suivi inclus</div>
+      <div class="tarif-badge">✓ Suivi inclus</div>
       <div class="tarif-guide">Pour approfondir un point, chaque semaine</div>
-      <button type="button" class="tarif-cta tarif-cta-solid" onclick="ouvrirFormulaireCours()">Demander un cours</button>
+      <button type="button" class="tarif-cta tarif-cta-outline" onclick="ouvrirFormulaireCours()">Demander un cours</button>
     </div>
 
     <div class="tarif-card">
       <div class="tarif-nom">Stage vacances</div>
       <div class="tarif-prix">200€<span>/semaine</span></div>
       <div class="tarif-desc">Une semaine, 2h/jour, un domaine du Brevet, groupe 5 max. Le stage de mai inclut un brevet blanc écrit.</div>
-      <div class="tarif-badge">Suivi inclus</div>
+      <div class="tarif-badge">✓ Suivi inclus</div>
       <div class="tarif-guide">Pour réviser un domaine à chaque période de vacances</div>
-      <a href="stages-vacances.html" class="tarif-cta tarif-cta-outline">Voir les stages</a>
+      <a href="stages-vacances.html" class="tarif-cta tarif-cta-solid">Voir les stages</a>
     </div>
 
-  </div>
-
-  <div class="tarifs-note">Le suivi parent est compris avec les cours particuliers et les stages, sans frais supplémentaires.</div>
-
-  <div class="suivi-explain">
-    <div class="suivi-explain-title">C'est quoi le suivi ?</div>
-    <div class="suivi-explain-desc">Un email avec les notes de votre enfant, à chaque session de quiz. Inclus avec l'abonnement Suivi, ou automatiquement pendant les cours particuliers et les stages.</div>
   </div>
 
   <div class="form-cours-card" id="form-cours-card">
@@ -373,6 +363,13 @@
 
     <button type="button" class="form-cours-submit" id="fc-submit" onclick="envoyerDemandeCours()">Envoyer la demande</button>
     <div class="form-cours-msg" id="fc-msg"></div>
+  </div>
+
+  <div class="tarifs-note">Le suivi parent est compris avec les cours particuliers et les stages, sans frais supplémentaires.</div>
+
+  <div class="suivi-explain">
+    <div class="suivi-explain-title">C'est quoi le suivi ?</div>
+    <div class="suivi-explain-desc">Un email avec les notes de votre enfant, à chaque session de quiz. Inclus avec l'abonnement Suivi, ou automatiquement pendant les cours particuliers et les stages.</div>
   </div>
 </section>
 
