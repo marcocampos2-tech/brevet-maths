@@ -35,7 +35,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'Academika <contact@academika.fr>',
+        from: 'ACADEMIKA <noreply@academika.fr>',
         to: 'contact@academika.fr',
         reply_to: parent_email,
         subject: `Demande de cours — ${prenom_eleve} (${niveau})`,
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     if (!resMarco.ok) {
       const errBody = await resMarco.text()
       console.error('Resend a refusé l\'email à Marco:', resMarco.status, errBody)
-      return res.status(502).json({ error: `Erreur Resend (${resMarco.status}) : ${errBody}` })
+      return res.status(502).json({ error: 'Erreur d\'envoi. Réessayez ou écrivez à contact@academika.fr.' })
     }
 
     // Email de confirmation au parent
@@ -67,7 +67,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'Academika <contact@academika.fr>',
+        from: 'ACADEMIKA <noreply@academika.fr>',
         to: parent_email,
         subject: 'Votre demande de cours a bien été reçue',
         html: `
