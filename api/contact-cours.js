@@ -28,7 +28,7 @@ export default async function handler(req, res) {
 
   try {
     // Email à Marco — demande reçue
-    await fetch('https://api.resend.com/emails', {
+    const resMarco = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
@@ -53,8 +53,14 @@ export default async function handler(req, res) {
       })
     })
 
+    if (!resMarco.ok) {
+      const errBody = await resMarco.text()
+      console.error('Resend a refusé l\'email à Marco:', resMarco.status, errBody)
+      return res.status(502).json({ error: 'Erreur d\'envoi (email interne). Réessayez ou écrivez à contact@academika.fr.' })
+    }
+
     // Email de confirmation au parent
-    await fetch('https://api.resend.com/emails', {
+    const resParent = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
@@ -72,6 +78,12 @@ export default async function handler(req, res) {
         `
       })
     })
+
+    if (!resParent.ok) {
+      const errBody = await resParent.text()
+      console.error('Resend a refusé la confirmation au parent:', resParent.status, errBody)
+      // On ne bloque pas : Marco a déjà reçu la demande, c'est l'essentiel
+    }
 
     return res.status(200).json({ success: true })
   } catch (e) {
