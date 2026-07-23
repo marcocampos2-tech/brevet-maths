@@ -300,7 +300,7 @@
       <div class="tarif-desc">Individuel, 10 ans d'expérience</div>
       <div class="tarif-badge">✓ Suivi inclus</div>
       <div class="tarif-guide">Pour approfondir un point, chaque semaine</div>
-      <button type="button" class="tarif-cta tarif-cta-outline" onclick="ouvrirFormulaireCours()">Demander un cours</button>
+      <button type="button" class="tarif-cta tarif-cta-outline" onclick="ouvrirFormulaireCours('visio')">Demander un cours</button>
     </div>
 
     <div class="tarif-card">
@@ -309,7 +309,7 @@
       <div class="tarif-desc">Individuel, à domicile, 10 ans d'expérience</div>
       <div class="tarif-badge">✓ Suivi inclus</div>
       <div class="tarif-guide">Pour approfondir un point, chaque semaine</div>
-      <button type="button" class="tarif-cta tarif-cta-outline" onclick="ouvrirFormulaireCours()">Demander un cours</button>
+      <button type="button" class="tarif-cta tarif-cta-outline" onclick="ouvrirFormulaireCours('presentiel')">Demander un cours</button>
     </div>
 
     <div class="tarif-card">
@@ -404,9 +404,12 @@ function toggleMenu() {
 
 let formatCoursChoisi = 'visio'
 
-function ouvrirFormulaireCours() {
+function ouvrirFormulaireCours(formatPreselectionne) {
   const carte = document.getElementById('form-cours-card')
   carte.style.display = 'block'
+  if (formatPreselectionne) {
+    choisirFormat(formatPreselectionne)
+  }
   carte.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
