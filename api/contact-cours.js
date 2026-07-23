@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     if (!resMarco.ok) {
       const errBody = await resMarco.text()
       console.error('Resend a refusé l\'email à Marco:', resMarco.status, errBody)
-      return res.status(502).json({ error: 'Erreur d\'envoi (email interne). Réessayez ou écrivez à contact@academika.fr.' })
+      return res.status(502).json({ error: `Erreur Resend (${resMarco.status}) : ${errBody}` })
     }
 
     // Email de confirmation au parent
