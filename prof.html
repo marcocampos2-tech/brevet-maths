@@ -1115,9 +1115,14 @@ function openFiche(userId) {
   const tempsTot = rows.reduce((a,r) => a + (r.temps_secondes||0), 0)
   const themes = {}
   rows.forEach(r => {
-    if (!themes[r.theme]) themes[r.theme] = { ok:0, tot:0, n:0, niveaux: { facile:{ok:0,tot:0}, moyen:{ok:0,tot:0}, difficile:{ok:0,tot:0} } }
+    if (!themes[r.theme]) themes[r.theme] = { ok:0, tot:0, n:0, niveaux: { facile:{ok:0,tot:0}, moyen:{ok:0,tot:0}, difficile:{ok:0,tot:0} }, sousThemes: {} }
     themes[r.theme].ok += r.score; themes[r.theme].tot += r.total; themes[r.theme].n++
     if (r.difficulte && themes[r.theme].niveaux[r.difficulte]) { themes[r.theme].niveaux[r.difficulte].ok += r.score; themes[r.theme].niveaux[r.difficulte].tot += r.total }
+    if (r.sous_theme) {
+      if (!themes[r.theme].sousThemes[r.sous_theme]) themes[r.theme].sousThemes[r.sous_theme] = { ok:0, tot:0 }
+      themes[r.theme].sousThemes[r.sous_theme].ok += r.score
+      themes[r.theme].sousThemes[r.sous_theme].tot += r.total
+    }
   })
   const chapitresRates = {}
   rows.forEach(r => { (r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q => { if (!chapitresRates[r.theme]) chapitresRates[r.theme]={}; chapitresRates[r.theme][q]=(chapitresRates[r.theme][q]||0)+1 }) })
@@ -1154,11 +1159,23 @@ function openFiche(userId) {
       body += '<span style="color:#666">'+niveauEmoji[niv]+'</span>'
       body += '<span style="color:'+ns.color+';font-weight:600">'+ns.emoji+' '+ns.label+' — '+n.ok+'/'+n.tot+'</span></div>'
     })
+    const sousThemesData = Object.entries(s.sousThemes || {})
+    if (sousThemesData.length > 0) {
+      body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e8e8e4">'
+      body += '<div style="font-size:11px;color:var(--blue);font-weight:600;margin-bottom:6px">Par sous-thème :</div>'
+      sousThemesData.forEach(([nomSousTheme, st]) => {
+        const stp = pct(st.ok, st.tot), sts = getStatut(stp)
+        body += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px">'
+        body += '<span style="color:#555">'+nomSousTheme+'</span>'
+        body += '<span style="color:'+sts.color+';font-weight:600">'+sts.emoji+' '+stp+'%</span></div>'
+      })
+      body += '</div>'
+    }
     const chaps = chapitresRates[t]
     if (chaps && Object.keys(chaps).length > 0) {
       const topChaps = Object.entries(chaps).sort((a,b) => b[1]-a[1]).slice(0,3)
       body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e8e8e4">'
-      body += '<div style="font-size:11px;color:#9E2B25;font-weight:600;margin-bottom:4px">Chapitres ratés :</div>'
+      body += '<div style="font-size:11px;color:#9E2B25;font-weight:600;margin-bottom:4px">Questions ratées :</div>'
       topChaps.forEach(([chap, nb]) => { body += '<div style="font-size:11px;color:#666;padding:2px 0">• '+chap.replace(t+' — ','')+' <span style="color:#9E2B25;font-weight:600">('+nb+'×)</span></div>' })
       body += '</div>'
     }
