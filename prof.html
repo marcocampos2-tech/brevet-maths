@@ -1180,7 +1180,9 @@ async function envoyerBilan(userId) {
   const btn = document.getElementById('btn-bilan')
   btn.disabled = true; btn.textContent = 'Envoi…'
   const rows = ROWS.filter(r => r.user_id === userId)
-  const moyGlobale = Math.round((rows.reduce((a,r)=>a+r.score/r.total,0)/rows.length)*100)
+  const gSBilan = rows.reduce((a,r)=>a+r.score,0)
+  const gTBilan = rows.reduce((a,r)=>a+r.total,0)
+  const moyGlobale = pct(gSBilan, gTBilan)
   const themes = {}
   rows.forEach(r => { if (!themes[r.theme]) themes[r.theme]={ok:0,tot:0,n:0}; themes[r.theme].ok+=r.score; themes[r.theme].tot+=r.total; themes[r.theme].n++ })
   const rateeMap = {}
@@ -1220,7 +1222,8 @@ async function ajouterQuestion() {
 // ═══════════════════════════════════════════════════
 function render() {
   const nbEleves=[...new Set(ROWS.map(r=>r.user_id))].length
-  const moyGlo=ROWS.length?Math.round((ROWS.reduce((a,r)=>a+r.score/r.total,0)/ROWS.length)*100):0
+  const gAllS=ROWS.reduce((a,r)=>a+r.score,0), gAllT=ROWS.reduce((a,r)=>a+r.total,0)
+  const moyGlo=pct(gAllS,gAllT)
   const nbIA=ROWS.filter(r=>!r.source_questions||r.source_questions==='ia').length
   const nbBanque=ROWS.filter(r=>r.source_questions==='banque').length
   const nbExamens=EXAMENS.filter(e=>!e.abandonne).length
