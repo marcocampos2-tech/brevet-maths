@@ -23,7 +23,21 @@ const CADENCE_JOURS = 21
 export default async function handler(req, res) {
 
   const authHeader = req.headers['authorization']
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const secretAttendu = process.env.CRON_SECRET
+
+  // ⚠️ DIAGNOSTIC TEMPORAIRE — à retirer après résolution du problème d'auth
+  if (req.query.debug === '1') {
+    return res.status(200).json({
+      secretDefini: !!secretAttendu,
+      secretLongueur: secretAttendu ? secretAttendu.length : 0,
+      headerRecu: !!authHeader,
+      headerLongueur: authHeader ? authHeader.length : 0,
+      headerCommence: authHeader ? authHeader.slice(0, 7) : null, // devrait être "Bearer "
+      correspondance: authHeader === `Bearer ${secretAttendu}`
+    })
+  }
+
+  if (authHeader !== `Bearer ${secretAttendu}`) {
     return res.status(401).json({ error: 'Non autorisé' })
   }
 
