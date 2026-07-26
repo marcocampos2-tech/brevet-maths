@@ -189,6 +189,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
     <span class="nav-email" id="user-email"></span>
     <a href="prof.html" class="btn" id="btn-prof" style="display:none" onclick="return allerVersLien(event,'prof.html')">🎓 Prof</a>
     <a href="resultats.html" class="btn" onclick="return allerVersLien(event,'resultats.html')">📊 Mes résultats</a>
+    <a href="suivi-parent.html" class="btn" onclick="return allerVersLien(event,'suivi-parent.html')">👪 Suivi parent</a>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
@@ -719,7 +720,6 @@ function renderQuiz() {
   }
   let html=''
   html+=`<div class="quiz-en-cours">⚠️ Quiz en cours — Ne quitte pas la page !</div>`
-  // Badge source retiré (détail technique sans intérêt pour l'élève) — sourceQuestions reste utilisé en interne (sauvegarde, stats)
   html+=`<div class="quiz-progress"><div class="progress-steps">${questions.map((_,i)=>{let cls='progress-step';if(submitted[i]!==undefined)cls+=' done';else if(i===nbDone)cls+=' current';return `<div class="${cls}"></div>`}).join('')}</div><span class="progress-label">Question ${Math.min(nbDone+1,questions.length)}/${questions.length}</span></div>`
   const letters=['A','B','C','D']
   questions.forEach((q,i)=>{
