@@ -7,6 +7,7 @@
 <title>ACADEMIKA — Suivi parent</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -44,6 +45,14 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .resume-tile.dore .resume-valeur { color: #8a6416; }
 .loader { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
 .vide { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+.info-bandeau { background: var(--marine-light); border-left: 3px solid var(--marine); border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 1.25rem; font-size: 12px; color: var(--marine); line-height: 1.6; }
+.pdf-sub { font-size: 11.5px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+.pdf-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; background: white; cursor: pointer; font-family: 'Inter', sans-serif; margin-bottom: 8px; }
+.pdf-btn:last-child { margin-bottom: 0; }
+.pdf-btn:hover { border-color: var(--marine); }
+.pdf-btn span:first-child { font-size: 13px; color: var(--ardoise); }
+.pdf-btn span:last-child { font-size: 12px; color: var(--bordeaux); font-weight: 500; }
+.pdf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 @media (max-width:480px){
   .container{padding:0 1rem 1.5rem}
   .card{padding:1.1rem}
@@ -65,6 +74,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <div class="page-titre">Suivi de la progression</div>
 <div class="page-sub" id="page-sub">Activité de <span id="prenom-affiche">votre enfant</span></div>
 
+<div class="info-bandeau">Le graphique montre le détail jour par jour sur 7, 14 ou 21 jours. Pour une période plus longue (un mois, un trimestre), utilisez les boutons de téléchargement en bas de page.</div>
+
 <div class="periode-select">
   <button class="periode-btn" data-jours="7" onclick="setPeriode(7)">7 jours</button>
   <button class="periode-btn active" data-jours="14" onclick="setPeriode(14)">14 jours</button>
@@ -74,6 +85,16 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <div id="contenu">
   <div class="loader">⏳ Chargement…</div>
 </div>
+
+<div class="card">
+  <div class="card-titre">Télécharger un bilan</div>
+  <div class="pdf-sub">Un clic suffit — aucune date à saisir.</div>
+  <button class="pdf-btn" id="pdf-mois" onclick="genererPDF('mois')"><span>Ce mois-ci</span><span>PDF ↓</span></button>
+  <button class="pdf-btn" id="pdf-trimestre" onclick="genererPDF('trimestre')"><span>Les 3 derniers mois</span><span>PDF ↓</span></button>
+  <button class="pdf-btn" id="pdf-debut" onclick="genererPDF('debut')"><span>Depuis le début</span><span>PDF ↓</span></button>
+</div>
+
+<canvas id="chart-pdf-offscreen" width="600" height="260" style="display:none"></canvas>
 
 </div>
 
@@ -221,6 +242,161 @@ async function chargerDonnees() {
   })
 }
 
+function getRangeEtGranularite(mode) {
+  const maintenant = new Date()
+  if (mode === 'mois') {
+    const debut = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1)
+    return { debut, fin: maintenant, granularite: 'jour', libelle: 'Ce mois-ci' }
+  }
+  if (mode === 'trimestre') {
+    const debut = new Date(maintenant)
+    debut.setMonth(debut.getMonth() - 3)
+    return { debut, fin: maintenant, granularite: 'semaine', libelle: 'Les 3 derniers mois' }
+  }
+  const debut = new Date(2020, 0, 1)
+  return { debut, fin: maintenant, granularite: 'mois', libelle: 'Depuis le début' }
+}
+
+function cleBucket(date, granularite) {
+  if (granularite === 'jour') return date.toISOString().split('T')[0]
+  if (granularite === 'mois') return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+  const d = new Date(date)
+  const jour = (d.getDay() + 6) % 7
+  d.setDate(d.getDate() - jour)
+  return d.toISOString().split('T')[0]
+}
+
+function libelleBucket(cle, granularite) {
+  if (granularite === 'mois') {
+    const [a, m] = cle.split('-')
+    const d = new Date(a, m - 1, 1)
+    return d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
+  }
+  const d = new Date(cle + 'T00:00:00')
+  const prefixe = granularite === 'semaine' ? 'sem. ' : ''
+  return prefixe + d.getDate() + ' ' + d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
+}
+
+async function genererPDF(mode) {
+  const btn = document.getElementById('pdf-' + mode)
+  const texteOriginal = btn.innerHTML
+  btn.disabled = true
+  btn.innerHTML = '<span>Génération…</span><span></span>'
+
+  try {
+    const { debut, fin, granularite, libelle } = getRangeEtGranularite(mode)
+
+    const { data: sessions, error } = await sb.from('resultats')
+      .select('created_at, score, total, temps_secondes, sous_theme')
+      .eq('user_id', user.id)
+      .gte('created_at', debut.toISOString())
+      .lte('created_at', fin.toISOString())
+      .order('created_at', { ascending: true })
+
+    if (error || !sessions) throw new Error('Chargement impossible')
+
+    const buckets = {}
+    sessions.forEach(s => {
+      const d = new Date(s.created_at)
+      const cle = cleBucket(d, granularite)
+      if (!buckets[cle]) buckets[cle] = { ok: 0, total: 0, exercices: 0 }
+      buckets[cle].ok += s.score
+      buckets[cle].total += s.total
+      buckets[cle].exercices += 1
+    })
+    const clesTriees = Object.keys(buckets).sort()
+    const labels = clesTriees.map(c => libelleBucket(c, granularite))
+    const nbExercices = clesTriees.map(c => buckets[c].exercices)
+    const couleurs = clesTriees.map(c => {
+      const b = buckets[c]
+      const pct = b.total > 0 ? (b.ok / b.total) * 100 : 0
+      return pct >= 70 ? '#1B2A4A' : '#D4A23C'
+    })
+
+    const totalExercices = sessions.length
+    const totalOk = sessions.reduce((a, s) => a + s.score, 0)
+    const totalQ = sessions.reduce((a, s) => a + s.total, 0)
+    const scoreMoyen = totalQ > 0 ? Math.round((totalOk / totalQ) * 100) : 0
+    const tempsTot = sessions.reduce((a, s) => a + (s.temps_secondes || 0), 0)
+    const dureeMin = Math.round(tempsTot / 60)
+    const dureeAffiche = dureeMin >= 60 ? `${Math.floor(dureeMin / 60)} h ${dureeMin % 60} min` : `${dureeMin} min`
+    const sousThemesSet = new Set(sessions.map(s => s.sous_theme).filter(Boolean))
+
+    if (sessions.length === 0) {
+      btn.innerHTML = '<span>Aucune activité sur cette période</span><span></span>'
+      setTimeout(() => { btn.innerHTML = texteOriginal; btn.disabled = false }, 2500)
+      return
+    }
+
+    const canvas = document.getElementById('chart-pdf-offscreen')
+    if (window._chartPdf) { window._chartPdf.destroy() }
+    window._chartPdf = new Chart(canvas, {
+      type: 'bar',
+      data: { labels, datasets: [{ data: nbExercices, backgroundColor: couleurs, borderRadius: 4 }] },
+      options: {
+        responsive: false, animation: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { font: { size: 10 } } },
+          y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
+        }
+      }
+    })
+
+    await new Promise(r => setTimeout(r, 200))
+    const imgData = canvas.toDataURL('image/png')
+
+    const { jsPDF } = window.jspdf
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    const margeG = 48
+    let y = 60
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(27, 42, 74)
+    doc.text('Academika — Bilan de progression', margeG, y)
+    y += 22
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(107, 110, 115)
+    doc.text(`${prenom || 'Élève'} · ${libelle} · du ${debut.toLocaleDateString('fr-FR')} au ${fin.toLocaleDateString('fr-FR')}`, margeG, y)
+    y += 30
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(65, 69, 76)
+    const stats = [
+      ['Exercices faits', String(totalExercices)],
+      ['Score moyen', scoreMoyen + '%'],
+      ['Sous-thèmes travaillés', String(sousThemesSet.size)],
+      ['Durée totale', dureeAffiche]
+    ]
+    stats.forEach((s, i) => {
+      const x = margeG + (i % 2) * 250
+      const yy = y + Math.floor(i / 2) * 34
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(107, 110, 115)
+      doc.text(s[0], x, yy)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(27, 42, 74)
+      doc.text(s[1], x, yy + 16)
+    })
+    y += 90
+
+    doc.setDrawColor(228, 225, 216)
+    doc.line(margeG, y, 547, y)
+    y += 24
+
+    const imgW = 499
+    const imgH = imgW * (canvas.height / canvas.width)
+    doc.addImage(imgData, 'PNG', margeG, y, imgW, imgH)
+    y += imgH + 16
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(107, 110, 115)
+    doc.text('Hauteur = exercices faits · couleur = score (bleu ≥ 70%, doré < 70%)', margeG, y)
+
+    doc.save(`academika-bilan-${mode}-${new Date().toISOString().split('T')[0]}.pdf`)
+  } catch (e) {
+    console.log('Erreur génération PDF:', e.message)
+    btn.innerHTML = '<span>Erreur, réessayez</span><span></span>'
+    setTimeout(() => { btn.innerHTML = texteOriginal; btn.disabled = false }, 2500)
+    return
+  }
+  btn.innerHTML = texteOriginal
+  btn.disabled = false
+}
+
 async function logout() {
   await sb.auth.signOut()
   window.location.href = 'index.html'
@@ -228,5 +404,9 @@ async function logout() {
 
 init()
 </script>
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
