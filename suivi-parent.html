@@ -581,7 +581,7 @@ async function genererPDF(mode) {
 
 async function logout() {
   await sb.auth.signOut()
-  window.location.href = 'espace-parent.html'
+  window.location.href = 'espace-parent.html?deconnecte=1'
 }
 
 init()
