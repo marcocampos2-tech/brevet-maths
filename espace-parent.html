@@ -156,6 +156,12 @@ async function verifierSessionExistante() {
   }
 }
 verifierSessionExistante()
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    window.location.href = 'suivi-parent.html'
+  }
+})
 </script>
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
