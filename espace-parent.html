@@ -74,6 +74,7 @@ const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 let emailCourant = ''
+let actionLocaleEnCours = false
 
 function afficherMsg(zoneId, type, texte) {
   document.getElementById(zoneId).innerHTML = `<div class="msg ${type}">${texte}</div>`
@@ -129,6 +130,7 @@ async function verifierCode() {
   btn.disabled = true
   btn.textContent = 'Vérification…'
 
+  actionLocaleEnCours = true
   try {
     const { data, error } = await sb.auth.verifyOtp({
       email: emailCourant,
@@ -140,6 +142,7 @@ async function verifierCode() {
     afficherMsg('zone-msg-code', 'succes', 'Connexion réussie, redirection…')
     window.location.href = 'suivi-parent.html'
   } catch (e) {
+    actionLocaleEnCours = false
     console.log('Erreur vérification code:', e.message)
     afficherMsg('zone-msg-code', 'erreur', 'Code invalide ou expiré. Vérifiez le code ou demandez-en un nouveau.')
     btn.disabled = false
@@ -150,6 +153,7 @@ async function verifierCode() {
 // Si le parent clique sur le lien magique dans l'email, Supabase gère la session
 // automatiquement au retour sur le site ; on redirige alors directement.
 async function verifierSessionExistante() {
+  actionLocaleEnCours = true
   const { data } = await sb.auth.getSession()
   if (data.session) {
     // Tentative de fermeture automatique (fonctionne uniquement si cet onglet
@@ -159,15 +163,20 @@ async function verifierSessionExistante() {
     setTimeout(() => {
       window.location.href = 'suivi-parent.html'
     }, 150)
+  } else {
+    actionLocaleEnCours = false
   }
 }
 verifierSessionExistante()
 
 sb.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_IN' && session) {
-    // Connexion détectée depuis un autre onglet (ex. clic sur le lien magique).
-    // Pas de redirection automatique ici : on laisse l'utilisateur choisir,
-    // pour éviter d'ouvrir la même page en double sans qu'il l'ait demandé.
+    // Si cet onglet gère déjà lui-même la connexion (code saisi ici, ou lien
+    // cliqué directement dans cet onglet), on ne touche à rien : sa propre
+    // logique s'occupe de la redirection. Ce message ne concerne que le cas
+    // où la connexion a eu lieu ailleurs, détectée passivement ici.
+    if (actionLocaleEnCours) return
+
     const etapeCode = document.getElementById('etape-code')
     const etapeEmail = document.getElementById('etape-email')
     const cibleVisible = (etapeCode && etapeCode.style.display !== 'none') ? etapeCode
