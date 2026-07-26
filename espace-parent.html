@@ -74,7 +74,10 @@ const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 let emailCourant = ''
-let actionLocaleEnCours = false
+// Détection immédiate : si l'URL contient les informations d'un lien magique,
+// cette page est la cible directe d'un clic sur ce lien — donc une action locale,
+// peu importe si Supabase n'a pas encore fini de traiter la session en interne.
+let actionLocaleEnCours = window.location.hash.includes('access_token') || window.location.href.includes('type=magiclink')
 
 function afficherMsg(zoneId, type, texte) {
   document.getElementById(zoneId).innerHTML = `<div class="msg ${type}">${texte}</div>`
@@ -153,9 +156,9 @@ async function verifierCode() {
 // Si le parent clique sur le lien magique dans l'email, Supabase gère la session
 // automatiquement au retour sur le site ; on redirige alors directement.
 async function verifierSessionExistante() {
-  actionLocaleEnCours = true
   const { data } = await sb.auth.getSession()
   if (data.session) {
+    actionLocaleEnCours = true
     // Tentative de fermeture automatique (fonctionne uniquement si cet onglet
     // n'a aucun historique de navigation, ex. ouvert directement par le lien reçu).
     // Si le navigateur bloque la fermeture, la page continue normalement ci-dessous.
@@ -163,13 +166,12 @@ async function verifierSessionExistante() {
     setTimeout(() => {
       window.location.href = 'suivi-parent.html'
     }, 150)
-  } else {
-    actionLocaleEnCours = false
   }
 }
 verifierSessionExistante()
 
 sb.auth.onAuthStateChange((event, session) => {
+  console.log('DIAGNOSTIC — événement reçu:', event, '| actionLocaleEnCours:', actionLocaleEnCours, '| session existe:', !!session)
   if (event === 'SIGNED_IN' && session) {
     // Si cet onglet gère déjà lui-même la connexion (code saisi ici, ou lien
     // cliqué directement dans cet onglet), on ne touche à rien : sa propre
