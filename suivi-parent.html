@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1B2A4A">
+<title>ACADEMIKA — Suivi parent</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --marine:#1B2A4A; --marine-light:#EEF1F6;
+  --bordeaux:#9E2B25; --bordeaux-light:#FBEDEC;
+  --creme:#FAF9F6; --ardoise:#41454C; --muted:#6B6E73;
+  --vert:#2F9E5C; --dore:#D4A23C; --dore-light:#FBF4E4;
+  --border:#E4E1D8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--creme); min-height: 100vh; color: var(--ardoise); }
+.container { max-width: 700px; margin: 0 auto; padding: 0 1.25rem 2rem; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 0; border-bottom: 2px solid var(--marine); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
+.nav-left { font-family:'Newsreader',serif; font-size: 19px; font-weight: 600; color: var(--marine); letter-spacing: -0.3px; }
+.nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nav-email { font-size: 13px; color: var(--muted); margin-right: 4px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: white; color: var(--ardoise); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; font-family:'Inter',sans-serif; }
+.btn:hover { background: var(--creme); }
+.btn-ghost { border: none; background: none; color: var(--muted); padding: 8px 4px; }
+.page-titre { font-family:'Newsreader',serif; font-size: 22px; font-weight: 600; color: var(--marine); margin-bottom: 4px; }
+.page-sub { font-size: 13.5px; color: var(--muted); margin-bottom: 1.5rem; }
+.periode-select { display: flex; gap: 6px; margin-bottom: 1.25rem; }
+.periode-btn { padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border); background: white; color: var(--ardoise); font-size: 13px; font-weight: 500; cursor: pointer; font-family:'Inter',sans-serif; }
+.periode-btn.active { background: var(--marine); border-color: var(--marine); color: white; }
+.card { background: white; border-radius: 14px; border: 1px solid var(--border); padding: 1.5rem; margin-bottom: 1rem; }
+.card-titre { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }
+.chart-wrap { position: relative; height: 200px; margin-bottom: 4px; }
+.chart-legende { font-size: 11px; color: var(--muted); text-align: center; margin-top: 10px; }
+.resume-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.resume-tile { background: var(--marine-light); border-radius: 10px; padding: 14px; }
+.resume-tile.dore { background: var(--dore-light); }
+.resume-label { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+.resume-valeur { font-size: 22px; font-weight: 600; color: var(--marine); font-family: 'Newsreader', serif; }
+.resume-tile.dore .resume-valeur { color: #8a6416; }
+.loader { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
+.vide { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+@media (max-width:480px){
+  .container{padding:0 1rem 1.5rem}
+  .card{padding:1.1rem}
+  .resume-valeur{font-size:19px}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<nav>
+  <div class="nav-left">∑ Academika</div>
+  <div class="nav-right">
+    <span class="nav-email" id="user-email"></span>
+    <a href="quiz.html" class="btn">← Retour au quiz</a>
+    <button class="btn-ghost" onclick="logout()">Déconnexion</button>
+  </div>
+</nav>
+
+<div class="page-titre">Suivi de la progression</div>
+<div class="page-sub" id="page-sub">Activité de <span id="prenom-affiche">votre enfant</span></div>
+
+<div class="periode-select">
+  <button class="periode-btn" data-jours="7" onclick="setPeriode(7)">7 jours</button>
+  <button class="periode-btn active" data-jours="14" onclick="setPeriode(14)">14 jours</button>
+  <button class="periode-btn" data-jours="21" onclick="setPeriode(21)">21 jours</button>
+</div>
+
+<div id="contenu">
+  <div class="loader">⏳ Chargement…</div>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+let user = null, prenom = '', jours = 14, chart = null
+
+async function init() {
+  const { data } = await sb.auth.getSession()
+  if (!data.session) { window.location.href = 'index.html'; return }
+  user = data.session.user
+  prenom = user.user_metadata?.prenom || ''
+  const { data: profil } = await sb.from('profils').select('prenom_affiche').eq('user_id', user.id).limit(1)
+  if (profil && profil.length > 0) prenom = prenom || profil[0].prenom_affiche || ''
+  document.getElementById('user-email').textContent = prenom || user.email
+  document.getElementById('prenom-affiche').textContent = prenom || 'votre enfant'
+  await chargerDonnees()
+}
+
+function setPeriode(j) {
+  jours = j
+  document.querySelectorAll('.periode-btn').forEach(b => b.classList.remove('active'))
+  document.querySelector(`.periode-btn[data-jours="${j}"]`).classList.add('active')
+  chargerDonnees()
+}
+
+async function chargerDonnees() {
+  const contenu = document.getElementById('contenu')
+  contenu.innerHTML = '<div class="loader">⏳ Chargement…</div>'
+
+  const depuis = new Date()
+  depuis.setDate(depuis.getDate() - (jours - 1))
+  depuis.setHours(0, 0, 0, 0)
+
+  const { data: sessions, error } = await sb.from('resultats')
+    .select('created_at, score, total, temps_secondes, sous_theme')
+    .eq('user_id', user.id)
+    .gte('created_at', depuis.toISOString())
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    contenu.innerHTML = '<div class="vide">Impossible de charger les données pour le moment.</div>'
+    return
+  }
+
+  if (!sessions || sessions.length === 0) {
+    contenu.innerHTML = `<div class="card"><div class="vide">Aucune activité enregistrée sur les ${jours} derniers jours.</div></div>`
+    return
+  }
+
+  const parJour = {}
+  for (let i = 0; i < jours; i++) {
+    const d = new Date(depuis)
+    d.setDate(d.getDate() + i)
+    const cle = d.toISOString().split('T')[0]
+    parJour[cle] = { exercices: 0, ok: 0, total: 0 }
+  }
+  const sousThemesSet = new Set()
+  let tempsTotal = 0
+
+  sessions.forEach(s => {
+    const cle = s.created_at.split('T')[0]
+    if (!parJour[cle]) parJour[cle] = { exercices: 0, ok: 0, total: 0 }
+    parJour[cle].exercices += 1
+    parJour[cle].ok += s.score
+    parJour[cle].total += s.total
+    tempsTotal += s.temps_secondes || 0
+    if (s.sous_theme) sousThemesSet.add(s.sous_theme)
+  })
+
+  const cles = Object.keys(parJour).sort()
+  const labels = cles.map(c => {
+    const d = new Date(c + 'T00:00:00')
+    return d.getDate() + ' ' + d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
+  })
+  const nbExercices = cles.map(c => parJour[c].exercices)
+  const scores = cles.map(c => parJour[c].total > 0 ? Math.round((parJour[c].ok / parJour[c].total) * 100) : null)
+  const couleurs = scores.map(s => s === null ? '#E4E1D8' : (s >= 70 ? '#1B2A4A' : '#D4A23C'))
+
+  const totalExercices = sessions.length
+  const totalOk = sessions.reduce((a, s) => a + s.score, 0)
+  const totalQ = sessions.reduce((a, s) => a + s.total, 0)
+  const scoreMoyen = totalQ > 0 ? Math.round((totalOk / totalQ) * 100) : 0
+  const dureeMin = Math.round(tempsTotal / 60)
+  const dureeAffiche = dureeMin >= 60 ? `${Math.floor(dureeMin / 60)} h ${dureeMin % 60} min` : `${dureeMin} min`
+
+  document.getElementById('contenu').innerHTML = `
+    <div class="card">
+      <div class="card-titre">Activité par jour</div>
+      <div class="chart-wrap"><canvas id="chart-activite"></canvas></div>
+      <div class="chart-legende">Hauteur = nombre d'exercices faits · couleur = score du jour (bleu ≥ 70%, doré &lt; 70%)</div>
+    </div>
+    <div class="card">
+      <div class="card-titre">Résumé sur ${jours} jours</div>
+      <div class="resume-grid">
+        <div class="resume-tile">
+          <div class="resume-label">Exercices faits</div>
+          <div class="resume-valeur">${totalExercices}</div>
+        </div>
+        <div class="resume-tile">
+          <div class="resume-label">Score moyen</div>
+          <div class="resume-valeur">${scoreMoyen}%</div>
+        </div>
+        <div class="resume-tile">
+          <div class="resume-label">Sous-thèmes travaillés</div>
+          <div class="resume-valeur">${sousThemesSet.size}</div>
+        </div>
+        <div class="resume-tile dore">
+          <div class="resume-label">Durée totale</div>
+          <div class="resume-valeur">${dureeAffiche}</div>
+        </div>
+      </div>
+    </div>
+  `
+
+  if (chart) { chart.destroy(); chart = null }
+  const canvas = document.getElementById('chart-activite')
+  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+  const textColor = isDark ? '#ccc' : '#6B6E73'
+  const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'
+  chart = new Chart(canvas, {
+    type: 'bar',
+    data: { labels, datasets: [{ data: nbExercices, backgroundColor: couleurs, borderRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const s = scores[ctx.dataIndex]
+              return s === null ? `${ctx.raw} exercice(s)` : `${ctx.raw} exercice(s) · ${s}% de réussite`
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { color: textColor, stepSize: 1, precision: 0 }, grid: { color: gridColor } }
+      }
+    }
+  })
+}
+
+async function logout() {
+  await sb.auth.signOut()
+  window.location.href = 'index.html'
+}
+
+init()
+</script>
+</body>
+</html>
