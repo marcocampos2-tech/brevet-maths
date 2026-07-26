@@ -37,7 +37,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .card-titre { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }
 .chart-wrap { position: relative; height: 200px; margin-bottom: 4px; }
 .chart-legende { font-size: 11px; color: var(--muted); text-align: center; margin-top: 10px; }
-.resume-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.resume-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .resume-tile { background: var(--marine-light); border-radius: 10px; padding: 14px; }
 .resume-tile.dore { background: var(--dore-light); }
 .resume-label { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
@@ -56,7 +56,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 @media (max-width:480px){
   .container{padding:0 1rem 1.5rem}
   .card{padding:1.1rem}
-  .resume-valeur{font-size:19px}
+  .resume-valeur{font-size:17px}
+  .resume-grid{grid-template-columns:repeat(2,1fr)}
 }
 </style>
 </head>
@@ -132,8 +133,8 @@ async function chargerDonnees() {
   depuis.setDate(depuis.getDate() - (jours - 1))
   depuis.setHours(0, 0, 0, 0)
 
-  const { data: sessions, error } = await sb.from('resultats')
-    .select('created_at, score, total, temps_secondes, sous_theme')
+  const { data: sessionsBrutes, error } = await sb.from('resultats')
+    .select('created_at, score, total, temps_secondes, sous_theme, questions_ratees')
     .eq('user_id', user.id)
     .gte('created_at', depuis.toISOString())
     .order('created_at', { ascending: true })
@@ -143,29 +144,35 @@ async function chargerDonnees() {
     return
   }
 
-  if (!sessions || sessions.length === 0) {
+  if (!sessionsBrutes || sessionsBrutes.length === 0) {
     contenu.innerHTML = `<div class="card"><div class="vide">Aucune activité enregistrée sur les ${jours} derniers jours.</div></div>`
     return
   }
+
+  const nbAbandons = sessionsBrutes.filter(estAbandon).length
+  const sessions = sessionsBrutes.filter(s => !estAbandon(s))
 
   const parJour = {}
   for (let i = 0; i < jours; i++) {
     const d = new Date(depuis)
     d.setDate(d.getDate() + i)
-    const cle = d.toISOString().split('T')[0]
-    parJour[cle] = { exercices: 0, ok: 0, total: 0 }
+    const cle = dateLocaleISO(d)
+    parJour[cle] = { nbSessions: 0, ok: 0, total: 0 }
   }
   const sousThemesSet = new Set()
+  const joursActifsSet = new Set()
   let tempsTotal = 0
 
   sessions.forEach(s => {
-    const cle = s.created_at.split('T')[0]
-    if (!parJour[cle]) parJour[cle] = { exercices: 0, ok: 0, total: 0 }
-    parJour[cle].exercices += 1
+    const d = new Date(s.created_at)
+    const cle = dateLocaleISO(d)
+    if (!parJour[cle]) parJour[cle] = { nbSessions: 0, ok: 0, total: 0 }
+    parJour[cle].nbSessions += 1
     parJour[cle].ok += s.score
     parJour[cle].total += s.total
     tempsTotal += s.temps_secondes || 0
     if (s.sous_theme) sousThemesSet.add(s.sous_theme)
+    joursActifsSet.add(cle)
   })
 
   const cles = Object.keys(parJour).sort()
@@ -173,22 +180,22 @@ async function chargerDonnees() {
     const d = new Date(c + 'T00:00:00')
     return d.getDate() + ' ' + d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
   })
-  const nbExercices = cles.map(c => parJour[c].exercices)
+  const nbSessionsParJour = cles.map(c => parJour[c].nbSessions)
   const scores = cles.map(c => parJour[c].total > 0 ? Math.round((parJour[c].ok / parJour[c].total) * 100) : null)
   const couleurs = scores.map(s => s === null ? '#E4E1D8' : (s >= 70 ? '#1B2A4A' : '#D4A23C'))
 
-  const totalExercices = sessions.length
+  const totalSessions = sessions.length
   const totalOk = sessions.reduce((a, s) => a + s.score, 0)
-  const totalQ = sessions.reduce((a, s) => a + s.total, 0)
-  const scoreMoyen = totalQ > 0 ? Math.round((totalOk / totalQ) * 100) : 0
+  const totalExercices = sessions.reduce((a, s) => a + s.total, 0)
+  const scoreMoyen = totalExercices > 0 ? Math.round((totalOk / totalExercices) * 100) : 0
   const dureeMin = Math.round(tempsTotal / 60)
   const dureeAffiche = dureeMin >= 60 ? `${Math.floor(dureeMin / 60)} h ${dureeMin % 60} min` : `${dureeMin} min`
 
   document.getElementById('contenu').innerHTML = `
     <div class="card">
-      <div class="card-titre">Activité par jour</div>
+      <div class="card-titre">Nombre de sessions par jour</div>
       <div class="chart-wrap"><canvas id="chart-activite"></canvas></div>
-      <div class="chart-legende">Hauteur = nombre d'exercices faits · couleur = score du jour (bleu ≥ 70%, doré &lt; 70%)</div>
+      <div class="chart-legende">Couleur des barres : bleu = score du jour 70% ou plus, doré = moins de 70%</div>
     </div>
     <div class="card">
       <div class="card-titre">Résumé sur ${jours} jours</div>
@@ -196,6 +203,7 @@ async function chargerDonnees() {
         <div class="resume-tile">
           <div class="resume-label">Exercices faits</div>
           <div class="resume-valeur">${totalExercices}</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${totalSessions} session${totalSessions > 1 ? 's' : ''} de 5</div>
         </div>
         <div class="resume-tile">
           <div class="resume-label">Score moyen</div>
@@ -209,6 +217,14 @@ async function chargerDonnees() {
           <div class="resume-label">Durée totale</div>
           <div class="resume-valeur">${dureeAffiche}</div>
         </div>
+        <div class="resume-tile">
+          <div class="resume-label">Jours actifs</div>
+          <div class="resume-valeur">${joursActifsSet.size}/${jours}</div>
+        </div>
+        <div class="resume-tile dore">
+          <div class="resume-label">Quiz abandonnés</div>
+          <div class="resume-valeur">${nbAbandons}</div>
+        </div>
       </div>
     </div>
   `
@@ -218,31 +234,59 @@ async function chargerDonnees() {
   const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
   const textColor = isDark ? '#ccc' : '#6B6E73'
   const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'
+
+  const plaqueValeursEcran = {
+    id: 'plaqueValeursEcran',
+    afterDatasetsDraw(c) {
+      const ctx = c.ctx
+      ctx.save()
+      ctx.font = '600 10px Inter, sans-serif'
+      ctx.fillStyle = isDark ? '#eee' : '#41454C'
+      ctx.textAlign = 'center'
+      c.data.datasets[0].data.forEach((val, i) => {
+        if (!val) return
+        const meta = c.getDatasetMeta(0)
+        const bar = meta.data[i]
+        if (bar) ctx.fillText(String(val), bar.x, bar.y - 5)
+      })
+      ctx.restore()
+    }
+  }
+
   chart = new Chart(canvas, {
     type: 'bar',
-    data: { labels, datasets: [{ data: nbExercices, backgroundColor: couleurs, borderRadius: 4 }] },
+    data: { labels, datasets: [{ data: nbSessionsParJour, backgroundColor: couleurs, borderRadius: 4 }] },
+    plugins: [plaqueValeursEcran],
     options: {
       responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 16 } },
       plugins: {
         legend: { display: false },
         tooltip: {
           callbacks: {
             label: (ctx) => {
               const s = scores[ctx.dataIndex]
-              return s === null ? `${ctx.raw} exercice(s)` : `${ctx.raw} exercice(s) · ${s}% de réussite`
+              return s === null ? `${ctx.raw} session(s)` : `${ctx.raw} session(s) · ${s}% de réussite`
             }
           }
         }
       },
       scales: {
-        x: { ticks: { color: textColor, font: { size: 11 } }, grid: { display: false } },
-        y: { beginAtZero: true, ticks: { color: textColor, stepSize: 1, precision: 0 }, grid: { color: gridColor } }
+        x: {
+          title: { display: true, text: 'Date', color: textColor, font: { size: 11 } },
+          ticks: { color: textColor, font: { size: 11 } }, grid: { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          title: { display: true, text: 'Nb de sessions', color: textColor, font: { size: 11 } },
+          ticks: { color: textColor, stepSize: 1, precision: 0 }, grid: { color: gridColor }
+        }
       }
     }
   })
 }
 
-function getRangeEtGranularite(mode) {
+async function getRangeEtGranularite(mode) {
   const maintenant = new Date()
   if (mode === 'mois') {
     const debut = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1)
@@ -253,7 +297,12 @@ function getRangeEtGranularite(mode) {
     debut.setMonth(debut.getMonth() - 3)
     return { debut, fin: maintenant, granularite: 'semaine', libelle: 'Les 3 derniers mois' }
   }
-  const debut = new Date(2020, 0, 1)
+  const { data } = await sb.from('resultats')
+    .select('created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: true })
+    .limit(1)
+  const debut = (data && data.length > 0) ? new Date(data[0].created_at) : maintenant
   return { debut, fin: maintenant, granularite: 'mois', libelle: 'Depuis le début' }
 }
 
@@ -281,6 +330,33 @@ function libelleBucket(cle, granularite) {
   return prefixe + d.getDate() + ' ' + d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
 }
 
+function genererClesPeriode(debut, fin, granularite) {
+  const cles = new Set()
+  if (granularite === 'jour') {
+    const d = new Date(debut); d.setHours(0, 0, 0, 0)
+    const finJ = new Date(fin); finJ.setHours(0, 0, 0, 0)
+    while (d <= finJ) { cles.add(dateLocaleISO(d)); d.setDate(d.getDate() + 1) }
+  } else if (granularite === 'semaine') {
+    const d = new Date(debut)
+    const finJ = new Date(fin)
+    let cle = cleBucket(d, 'semaine')
+    cles.add(cle)
+    const curseur = new Date(cle + 'T00:00:00')
+    while (curseur < finJ) {
+      curseur.setDate(curseur.getDate() + 7)
+      cles.add(dateLocaleISO(curseur))
+    }
+  } else {
+    const d = new Date(debut.getFullYear(), debut.getMonth(), 1)
+    const finJ = new Date(fin.getFullYear(), fin.getMonth(), 1)
+    while (d <= finJ) {
+      cles.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+      d.setMonth(d.getMonth() + 1)
+    }
+  }
+  return Array.from(cles).sort()
+}
+
 function estAbandon(s) {
   return Array.isArray(s.questions_ratees) && s.questions_ratees.some(q => typeof q === 'string' && q.includes('abandonné'))
 }
@@ -292,7 +368,7 @@ async function genererPDF(mode) {
   btn.innerHTML = '<span>Génération…</span><span></span>'
 
   try {
-    const { debut, fin, granularite, libelle } = getRangeEtGranularite(mode)
+    const { debut, fin, granularite, libelle } = await getRangeEtGranularite(mode)
 
     const { data: sessionsBrutes, error } = await sb.from('resultats')
       .select('created_at, score, total, temps_secondes, sous_theme, questions_ratees')
@@ -319,6 +395,9 @@ async function genererPDF(mode) {
     }
 
     const buckets = {}
+    genererClesPeriode(debut, fin, granularite).forEach(cle => {
+      buckets[cle] = { ok: 0, total: 0, nbSessions: 0 }
+    })
     const joursActifsSet = new Set()
     sessions.forEach(s => {
       const d = new Date(s.created_at)
@@ -335,7 +414,7 @@ async function genererPDF(mode) {
     const couleurs = clesTriees.map(c => {
       const b = buckets[c]
       const pct = b.total > 0 ? (b.ok / b.total) * 100 : 0
-      return pct >= 70 ? '#1B2A4A' : '#D4A23C'
+      return b.nbSessions === 0 ? '#E4E1D8' : (pct >= 70 ? '#1B2A4A' : '#D4A23C')
     })
 
     const totalSessions = sessions.length
