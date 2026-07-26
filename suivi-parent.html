@@ -237,9 +237,9 @@ async function chargerDonnees() {
       <div class="card-titre">Résumé sur ${jours} jours</div>
       <div class="resume-grid">
         <div class="resume-tile">
-          <div class="resume-label">Exercices faits</div>
-          <div class="resume-valeur">${totalExercices}</div>
-          <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${totalSessions} session${totalSessions > 1 ? 's' : ''} de 5</div>
+          <div class="resume-label">Sessions faites</div>
+          <div class="resume-valeur">${totalSessions}</div>
+          <div style="font-size:10.5px;color:var(--muted);margin-top:2px">${totalExercices} exercices</div>
         </div>
         <div class="resume-tile">
           <div class="resume-label">Score moyen</div>
@@ -532,7 +532,7 @@ async function genererPDF(mode) {
     y += 28
 
     const stats = [
-      ['Exercices faits', String(totalExercices), `${totalSessions} session${totalSessions > 1 ? 's' : ''} de 5`],
+      ['Sessions faites', String(totalSessions), `${totalExercices} exercices`],
       ['Score moyen', scoreMoyen + '%', null],
       ['Sous-thèmes travaillés', String(sousThemesSet.size), null],
       ['Durée totale', dureeAffiche, null],
