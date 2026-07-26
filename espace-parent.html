@@ -48,7 +48,7 @@ input:focus { outline: none; border-color: var(--marine); }
 
   <div class="card" id="etape-email">
     <h2>Suivi de la progression</h2>
-    <div class="desc">Entrez l'adresse email renseignée à l'inscription de votre enfant. Vous recevrez un lien de connexion et un code, sans mot de passe à retenir.</div>
+    <div class="desc">Entrez l'adresse email renseignée à l'inscription de votre enfant. Vous recevrez un lien de connexion et un code.</div>
     <label for="input-email">Adresse email</label>
     <input type="email" id="input-email" placeholder="votre@email.fr" autocomplete="email">
     <button class="btn" id="btn-envoyer" onclick="envoyerAcces()">Recevoir mon accès</button>
@@ -159,7 +159,21 @@ verifierSessionExistante()
 
 sb.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_IN' && session) {
-    window.location.href = 'suivi-parent.html'
+    // Connexion détectée depuis un autre onglet (ex. clic sur le lien magique).
+    // Pas de redirection automatique ici : on laisse l'utilisateur choisir,
+    // pour éviter d'ouvrir la même page en double sans qu'il l'ait demandé.
+    const etapeCode = document.getElementById('etape-code')
+    const etapeEmail = document.getElementById('etape-email')
+    const cibleVisible = (etapeCode && etapeCode.style.display !== 'none') ? etapeCode
+                        : (etapeEmail && etapeEmail.style.display !== 'none') ? etapeEmail
+                        : null
+    if (cibleVisible) {
+      cibleVisible.innerHTML = `
+        <h2>Connexion réussie</h2>
+        <div class="desc">Vous êtes connecté depuis un autre onglet. Vous pouvez fermer celui-ci, ou continuer ici si vous préférez.</div>
+        <button class="btn" onclick="window.location.href='suivi-parent.html'">Continuer ici</button>
+      `
+    }
   }
 })
 </script>
