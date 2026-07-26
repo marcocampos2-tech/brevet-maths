@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1B2A4A">
+<title>ACADEMIKA — Espace parent</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --marine:#1B2A4A; --marine-light:#EEF1F6;
+  --bordeaux:#9E2B25; --bordeaux-light:#FBEDEC;
+  --creme:#FAF9F6; --ardoise:#41454C; --muted:#6B6E73;
+  --vert:#2F9E5C; --dore:#D4A23C; --dore-light:#FBF4E4;
+  --border:#E4E1D8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--creme); min-height: 100vh; color: var(--ardoise); display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+.wrap { max-width: 420px; width: 100%; }
+.logo { font-family:'Newsreader',serif; font-size: 22px; font-weight: 600; color: var(--marine); text-align: center; margin-bottom: 6px; }
+.souslogo { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 2rem; }
+.card { background: white; border-radius: 14px; border: 1px solid var(--border); padding: 1.75rem; }
+h2 { font-size: 16px; font-weight: 500; margin-bottom: 6px; color: var(--ardoise); }
+.desc { font-size: 13px; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.6; }
+label { font-size: 12.5px; font-weight: 500; color: var(--ardoise); display: block; margin-bottom: 6px; }
+input { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; margin-bottom: 14px; }
+input:focus { outline: none; border-color: var(--marine); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 12px 14px; border-radius: 8px; border: none; background: var(--marine); color: white; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; font-family:'Inter',sans-serif; }
+.btn:hover { background: #14213a; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-lien { background: none; border: none; color: var(--marine); font-size: 12.5px; text-decoration: underline; cursor: pointer; margin-top: 10px; font-family: 'Inter', sans-serif; }
+.msg { font-size: 12.5px; border-radius: 8px; padding: 10px 14px; margin-top: 14px; line-height: 1.6; }
+.msg.info { background: var(--marine-light); color: var(--marine); }
+.msg.erreur { background: var(--bordeaux-light); color: var(--bordeaux); }
+.msg.succes { background: #EAF6EF; color: #1f7a45; }
+.code-input { text-align: center; font-size: 20px; letter-spacing: 6px; font-family: 'IBM Plex Mono', monospace; }
+.retour { text-align: center; margin-top: 1rem; }
+.retour a { font-size: 12.5px; color: var(--muted); text-decoration: none; }
+.retour a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">∑ Academika</div>
+  <div class="souslogo">Espace parent</div>
+
+  <div class="card" id="etape-email">
+    <h2>Suivi de la progression</h2>
+    <div class="desc">Entrez l'adresse email renseignée à l'inscription de votre enfant. Vous recevrez un lien de connexion et un code, sans mot de passe à retenir.</div>
+    <label for="input-email">Adresse email</label>
+    <input type="email" id="input-email" placeholder="votre@email.fr" autocomplete="email">
+    <button class="btn" id="btn-envoyer" onclick="envoyerAcces()">Recevoir mon accès</button>
+    <div id="zone-msg-email"></div>
+  </div>
+
+  <div class="card" id="etape-code" style="display:none">
+    <h2>Vérifiez votre boîte mail</h2>
+    <div class="desc">Un email vient de vous être envoyé. Cliquez sur le lien qu'il contient, ou saisissez ici le code à 6 chiffres reçu.</div>
+    <label for="input-code">Code à 6 chiffres</label>
+    <input type="text" id="input-code" class="code-input" maxlength="6" placeholder="000000" inputmode="numeric">
+    <button class="btn" id="btn-verifier" onclick="verifierCode()">Valider le code</button>
+    <div id="zone-msg-code"></div>
+    <button class="btn-lien" onclick="renvoyerAcces()">Je n'ai rien reçu, renvoyer l'accès</button>
+  </div>
+
+  <div class="retour"><a href="index.html">← Retour à l'accueil</a></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+
+let emailCourant = ''
+
+function afficherMsg(zoneId, type, texte) {
+  document.getElementById(zoneId).innerHTML = `<div class="msg ${type}">${texte}</div>`
+}
+
+async function envoyerAcces() {
+  const email = document.getElementById('input-email').value.trim()
+  if (!email || !email.includes('@')) {
+    afficherMsg('zone-msg-email', 'erreur', 'Merci de saisir une adresse email valide.')
+    return
+  }
+  const btn = document.getElementById('btn-envoyer')
+  btn.disabled = true
+  btn.textContent = 'Envoi en cours…'
+
+  try {
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true }
+    })
+    if (error) throw error
+
+    emailCourant = email
+    document.getElementById('etape-email').style.display = 'none'
+    document.getElementById('etape-code').style.display = ''
+    document.getElementById('input-code').focus()
+  } catch (e) {
+    console.log('Erreur envoi accès:', e.message)
+    afficherMsg('zone-msg-email', 'erreur', "Impossible d'envoyer l'accès pour le moment. Réessayez dans un instant.")
+    btn.disabled = false
+    btn.textContent = 'Recevoir mon accès'
+  }
+}
+
+async function renvoyerAcces() {
+  document.getElementById('etape-code').style.display = 'none'
+  document.getElementById('etape-email').style.display = ''
+  document.getElementById('btn-envoyer').disabled = false
+  document.getElementById('btn-envoyer').textContent = 'Recevoir mon accès'
+  afficherMsg('zone-msg-email', 'info', 'Vous pouvez redemander un accès ci-dessous.')
+}
+
+async function verifierCode() {
+  const code = document.getElementById('input-code').value.trim()
+  if (code.length !== 6) {
+    afficherMsg('zone-msg-code', 'erreur', 'Le code doit contenir 6 chiffres.')
+    return
+  }
+  const btn = document.getElementById('btn-verifier')
+  btn.disabled = true
+  btn.textContent = 'Vérification…'
+
+  try {
+    const { data, error } = await sb.auth.verifyOtp({
+      email: emailCourant,
+      token: code,
+      type: 'email'
+    })
+    if (error) throw error
+
+    afficherMsg('zone-msg-code', 'succes', 'Connexion réussie, redirection…')
+    window.location.href = 'suivi-parent.html'
+  } catch (e) {
+    console.log('Erreur vérification code:', e.message)
+    afficherMsg('zone-msg-code', 'erreur', 'Code invalide ou expiré. Vérifiez le code ou demandez-en un nouveau.')
+    btn.disabled = false
+    btn.textContent = 'Valider le code'
+  }
+}
+
+// Si le parent clique sur le lien magique dans l'email, Supabase gère la session
+// automatiquement au retour sur le site ; on redirige alors directement.
+async function verifierSessionExistante() {
+  const { data } = await sb.auth.getSession()
+  if (data.session) {
+    window.location.href = 'suivi-parent.html'
+  }
+}
+verifierSessionExistante()
+</script>
+</body>
+</html>
