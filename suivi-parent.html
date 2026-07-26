@@ -257,13 +257,17 @@ function getRangeEtGranularite(mode) {
   return { debut, fin: maintenant, granularite: 'mois', libelle: 'Depuis le début' }
 }
 
+function dateLocaleISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function cleBucket(date, granularite) {
-  if (granularite === 'jour') return date.toISOString().split('T')[0]
+  if (granularite === 'jour') return dateLocaleISO(date)
   if (granularite === 'mois') return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
   const d = new Date(date)
   const jour = (d.getDay() + 6) % 7
   d.setDate(d.getDate() - jour)
-  return d.toISOString().split('T')[0]
+  return dateLocaleISO(d)
 }
 
 function libelleBucket(cle, granularite) {
@@ -277,6 +281,10 @@ function libelleBucket(cle, granularite) {
   return prefixe + d.getDate() + ' ' + d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
 }
 
+function estAbandon(s) {
+  return Array.isArray(s.questions_ratees) && s.questions_ratees.some(q => typeof q === 'string' && q.includes('abandonné'))
+}
+
 async function genererPDF(mode) {
   const btn = document.getElementById('pdf-' + mode)
   const texteOriginal = btn.innerHTML
@@ -286,59 +294,101 @@ async function genererPDF(mode) {
   try {
     const { debut, fin, granularite, libelle } = getRangeEtGranularite(mode)
 
-    const { data: sessions, error } = await sb.from('resultats')
-      .select('created_at, score, total, temps_secondes, sous_theme')
+    const { data: sessionsBrutes, error } = await sb.from('resultats')
+      .select('created_at, score, total, temps_secondes, sous_theme, questions_ratees')
       .eq('user_id', user.id)
       .gte('created_at', debut.toISOString())
       .lte('created_at', fin.toISOString())
       .order('created_at', { ascending: true })
 
-    if (error || !sessions) throw new Error('Chargement impossible')
+    if (error || !sessionsBrutes) throw new Error('Chargement impossible')
+
+    if (sessionsBrutes.length === 0) {
+      btn.innerHTML = '<span>Aucune activité sur cette période</span><span></span>'
+      setTimeout(() => { btn.innerHTML = texteOriginal; btn.disabled = false }, 2500)
+      return
+    }
+
+    const nbAbandons = sessionsBrutes.filter(estAbandon).length
+    const sessions = sessionsBrutes.filter(s => !estAbandon(s))
+
+    if (sessions.length === 0) {
+      btn.innerHTML = '<span>Que des abandons sur cette période</span><span></span>'
+      setTimeout(() => { btn.innerHTML = texteOriginal; btn.disabled = false }, 2500)
+      return
+    }
 
     const buckets = {}
+    const joursActifsSet = new Set()
     sessions.forEach(s => {
       const d = new Date(s.created_at)
       const cle = cleBucket(d, granularite)
-      if (!buckets[cle]) buckets[cle] = { ok: 0, total: 0, exercices: 0 }
+      if (!buckets[cle]) buckets[cle] = { ok: 0, total: 0, nbSessions: 0 }
       buckets[cle].ok += s.score
       buckets[cle].total += s.total
-      buckets[cle].exercices += 1
+      buckets[cle].nbSessions += 1
+      joursActifsSet.add(dateLocaleISO(d))
     })
     const clesTriees = Object.keys(buckets).sort()
     const labels = clesTriees.map(c => libelleBucket(c, granularite))
-    const nbExercices = clesTriees.map(c => buckets[c].exercices)
+    const nbSessionsParBucket = clesTriees.map(c => buckets[c].nbSessions)
     const couleurs = clesTriees.map(c => {
       const b = buckets[c]
       const pct = b.total > 0 ? (b.ok / b.total) * 100 : 0
       return pct >= 70 ? '#1B2A4A' : '#D4A23C'
     })
 
-    const totalExercices = sessions.length
+    const totalSessions = sessions.length
     const totalOk = sessions.reduce((a, s) => a + s.score, 0)
-    const totalQ = sessions.reduce((a, s) => a + s.total, 0)
-    const scoreMoyen = totalQ > 0 ? Math.round((totalOk / totalQ) * 100) : 0
+    const totalExercices = sessions.reduce((a, s) => a + s.total, 0)
+    const scoreMoyen = totalExercices > 0 ? Math.round((totalOk / totalExercices) * 100) : 0
     const tempsTot = sessions.reduce((a, s) => a + (s.temps_secondes || 0), 0)
     const dureeMin = Math.round(tempsTot / 60)
     const dureeAffiche = dureeMin >= 60 ? `${Math.floor(dureeMin / 60)} h ${dureeMin % 60} min` : `${dureeMin} min`
     const sousThemesSet = new Set(sessions.map(s => s.sous_theme).filter(Boolean))
 
-    if (sessions.length === 0) {
-      btn.innerHTML = '<span>Aucune activité sur cette période</span><span></span>'
-      setTimeout(() => { btn.innerHTML = texteOriginal; btn.disabled = false }, 2500)
-      return
+    const jourMs = 24 * 60 * 60 * 1000
+    const nbJoursPeriode = Math.max(1, Math.round((fin - debut) / jourMs) + 1)
+
+    // Plugin Chart.js pour afficher la valeur au-dessus de chaque barre
+    const plaqueValeurs = {
+      id: 'plaqueValeurs',
+      afterDatasetsDraw(c) {
+        const ctx = c.ctx
+        ctx.save()
+        ctx.font = '600 11px Inter, sans-serif'
+        ctx.fillStyle = '#41454C'
+        ctx.textAlign = 'center'
+        c.data.datasets[0].data.forEach((val, i) => {
+          const meta = c.getDatasetMeta(0)
+          const bar = meta.data[i]
+          if (bar) ctx.fillText(String(val), bar.x, bar.y - 6)
+        })
+        ctx.restore()
+      }
     }
 
     const canvas = document.getElementById('chart-pdf-offscreen')
+    canvas.width = 900; canvas.height = 380
     if (window._chartPdf) { window._chartPdf.destroy() }
     window._chartPdf = new Chart(canvas, {
       type: 'bar',
-      data: { labels, datasets: [{ data: nbExercices, backgroundColor: couleurs, borderRadius: 4 }] },
+      data: { labels, datasets: [{ data: nbSessionsParBucket, backgroundColor: couleurs, borderRadius: 4 }] },
+      plugins: [plaqueValeurs],
       options: {
         responsive: false, animation: false,
+        layout: { padding: { top: 20 } },
         plugins: { legend: { display: false } },
         scales: {
-          x: { ticks: { font: { size: 10 } } },
-          y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 } }
+          x: {
+            title: { display: true, text: 'Date', font: { size: 13, weight: '500' }, color: '#41454C' },
+            ticks: { font: { size: 11 }, color: '#41454C' }
+          },
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Nb de sessions', font: { size: 13, weight: '500' }, color: '#41454C' },
+            ticks: { stepSize: 1, precision: 0, font: { size: 11 }, color: '#41454C' }
+          }
         }
       }
     })
@@ -347,44 +397,54 @@ async function genererPDF(mode) {
     const imgData = canvas.toDataURL('image/png')
 
     const { jsPDF } = window.jspdf
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+    const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' })
+    const pageW = doc.internal.pageSize.getWidth()
     const margeG = 48
-    let y = 60
+    let y = 56
 
     doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(27, 42, 74)
     doc.text('Academika — Bilan de progression', margeG, y)
-    y += 22
+    y += 20
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(107, 110, 115)
     doc.text(`${prenom || 'Élève'} · ${libelle} · du ${debut.toLocaleDateString('fr-FR')} au ${fin.toLocaleDateString('fr-FR')}`, margeG, y)
-    y += 30
+    y += 28
 
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(65, 69, 76)
     const stats = [
-      ['Exercices faits', String(totalExercices)],
-      ['Score moyen', scoreMoyen + '%'],
-      ['Sous-thèmes travaillés', String(sousThemesSet.size)],
-      ['Durée totale', dureeAffiche]
+      ['Exercices faits', String(totalExercices), `${totalSessions} session${totalSessions > 1 ? 's' : ''} de 5`],
+      ['Score moyen', scoreMoyen + '%', null],
+      ['Sous-thèmes travaillés', String(sousThemesSet.size), null],
+      ['Durée totale', dureeAffiche, null],
+      ['Jours actifs', `${joursActifsSet.size}/${nbJoursPeriode}`, null],
+      ['Quiz abandonnés', String(nbAbandons), null]
     ]
+    const colW = (pageW - 2 * margeG) / stats.length
     stats.forEach((s, i) => {
-      const x = margeG + (i % 2) * 250
-      const yy = y + Math.floor(i / 2) * 34
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(107, 110, 115)
-      doc.text(s[0], x, yy)
+      const x = margeG + i * colW
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(107, 110, 115)
+      doc.text(s[0], x, y)
       doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(27, 42, 74)
-      doc.text(s[1], x, yy + 16)
+      doc.text(s[1], x, y + 17)
+      if (s[2]) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(154, 154, 149)
+        doc.text(s[2], x, y + 28)
+      }
     })
-    y += 90
+    y += 46
 
     doc.setDrawColor(228, 225, 216)
-    doc.line(margeG, y, 547, y)
-    y += 24
+    doc.line(margeG, y, pageW - margeG, y)
+    y += 22
 
-    const imgW = 499
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(65, 69, 76)
+    doc.text(`Nombre de sessions par ${granularite === 'jour' ? 'jour' : granularite === 'semaine' ? 'semaine' : 'mois'} (une session = 5 exercices)`, pageW / 2, y, { align: 'center' })
+    y += 14
+
+    const imgW = pageW - 2 * margeG
     const imgH = imgW * (canvas.height / canvas.width)
     doc.addImage(imgData, 'PNG', margeG, y, imgW, imgH)
-    y += imgH + 16
+    y += imgH + 18
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(107, 110, 115)
-    doc.text('Hauteur = exercices faits · couleur = score (bleu ≥ 70%, doré < 70%)', margeG, y)
+    doc.text('Couleur des barres : bleu = score du jour 70% ou plus, doré = moins de 70%', pageW / 2, y, { align: 'center' })
 
     doc.save(`academika-bilan-${mode}-${new Date().toISOString().split('T')[0]}.pdf`)
   } catch (e) {
