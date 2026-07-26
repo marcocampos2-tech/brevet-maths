@@ -263,6 +263,11 @@ export default async function handler(req, res) {
           <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">📊 Résultats par thème :</h3>
           <table style="width:100%;border-collapse:collapse">${themesHTML}</table>
           ${rateesHTML}
+          <div style="text-align:center;margin:28px 0">
+            <a href="https://www.academika.fr/espace-parent.html" style="background:#3730a3;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block">
+              Voir le suivi complet dans l'espace parent →
+            </a>
+          </div>
           <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
             <p style="color:#444;font-size:13px;margin-bottom:16px;">
               Pour toute question, contactez-nous : 
@@ -415,6 +420,11 @@ export default async function handler(req, res) {
             Votre enfant peut commencer maintenant sur :<br>
             <a href="https://www.academika.fr" style="color:#3730a3;font-weight:600;text-decoration:none;">👉 www.academika.fr</a>
           </p>
+          <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0;">
+            <p style="font-weight:600;margin-bottom:8px;color:#1a1a1a">👪 Votre espace parent</p>
+            <p style="font-size:14px;color:#444;margin-bottom:14px">Suivez à tout moment l'activité et la progression de votre enfant, sans mot de passe à retenir.</p>
+            <a href="https://www.academika.fr/espace-parent.html" style="display:inline-block;background:#3730a3;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;">Accéder à l'espace parent →</a>
+          </div>
           <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
             <p style="color:#444;font-size:13px;margin-bottom:8px;">
               Pour toute question, contactez-nous : 
@@ -569,6 +579,9 @@ export default async function handler(req, res) {
           <p style="color:#aaa;font-size:11px;margin:0 0 14px">Acquis : au moins 70% de bonnes réponses aujourd'hui sur ce sous-thème. À revoir : moins de 70%.</p>
           ${badgesHTML}
           <p style="color:#444;line-height:1.6;margin-top:14px">${phraseSynthese}</p>
+          <div style="text-align:center;margin:24px 0 4px">
+            <a href="https://www.academika.fr/espace-parent.html" style="color:#3730a3;text-decoration:none;font-weight:600;font-size:13px">👪 Consulter le suivi complet dans l'espace parent →</a>
+          </div>
           <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
             <p style="color:#444;font-size:13px;margin-bottom:16px;">
               Pour toute question, contactez-nous : 
@@ -618,7 +631,7 @@ export default async function handler(req, res) {
             <strong>10 minutes par jour</strong> suffisent pour progresser.
           </p>
           <div style="text-align:center;margin:28px 0">
-            <a href="https://academika.fr" style="background:#1a1a1a;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
+            <a href="https://www.academika.fr/espace-parent.html" style="background:#1a1a1a;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
               Voir ses résultats complets →
             </a>
           </div>
