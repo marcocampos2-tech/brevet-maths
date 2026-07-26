@@ -164,7 +164,7 @@ async function chargerDonnees() {
   let tempsTotal = 0
 
   sessions.forEach(s => {
-    const d = new Date(s.created_at)
+    const d = parseUTC(s.created_at)
     const cle = dateLocaleISO(d)
     if (!parJour[cle]) parJour[cle] = { nbSessions: 0, ok: 0, total: 0 }
     parJour[cle].nbSessions += 1
@@ -302,8 +302,12 @@ async function getRangeEtGranularite(mode) {
     .eq('user_id', user.id)
     .order('created_at', { ascending: true })
     .limit(1)
-  const debut = (data && data.length > 0) ? new Date(data[0].created_at) : maintenant
+  const debut = (data && data.length > 0) ? parseUTC(data[0].created_at) : maintenant
   return { debut, fin: maintenant, granularite: 'mois', libelle: 'Depuis le début' }
+}
+
+function parseUTC(chaine) {
+  return new Date(chaine.replace(' ', 'T') + 'Z')
 }
 
 function dateLocaleISO(d) {
@@ -341,10 +345,13 @@ function genererClesPeriode(debut, fin, granularite) {
     const finJ = new Date(fin)
     let cle = cleBucket(d, 'semaine')
     cles.add(cle)
-    const curseur = new Date(cle + 'T00:00:00')
-    while (curseur < finJ) {
-      curseur.setDate(curseur.getDate() + 7)
-      cles.add(dateLocaleISO(curseur))
+    let curseur = new Date(cle + 'T00:00:00')
+    while (true) {
+      const suivant = new Date(curseur)
+      suivant.setDate(suivant.getDate() + 7)
+      if (suivant > finJ) break
+      cles.add(dateLocaleISO(suivant))
+      curseur = suivant
     }
   } else {
     const d = new Date(debut.getFullYear(), debut.getMonth(), 1)
@@ -400,7 +407,7 @@ async function genererPDF(mode) {
     })
     const joursActifsSet = new Set()
     sessions.forEach(s => {
-      const d = new Date(s.created_at)
+      const d = parseUTC(s.created_at)
       const cle = cleBucket(d, granularite)
       if (!buckets[cle]) buckets[cle] = { ok: 0, total: 0, nbSessions: 0 }
       buckets[cle].ok += s.score
