@@ -171,7 +171,6 @@ async function verifierSessionExistante() {
 verifierSessionExistante()
 
 sb.auth.onAuthStateChange((event, session) => {
-  console.log('DIAGNOSTIC — événement reçu:', event, '| actionLocaleEnCours:', actionLocaleEnCours, '| session existe:', !!session)
   if (event === 'SIGNED_IN' && session) {
     // Si cet onglet gère déjà lui-même la connexion (code saisi ici, ou lien
     // cliqué directement dans cet onglet), on ne touche à rien : sa propre
@@ -187,8 +186,8 @@ sb.auth.onAuthStateChange((event, session) => {
     if (cibleVisible) {
       cibleVisible.innerHTML = `
         <h2>Connexion réussie</h2>
-        <div class="desc">Vous êtes connecté depuis un autre onglet. Vous pouvez fermer celui-ci, ou continuer ici si vous préférez.</div>
-        <button class="btn" onclick="window.location.href='suivi-parent.html'">Continuer ici</button>
+        <div class="desc">Cliquez ci-dessous pour accéder à votre suivi.</div>
+        <button class="btn" onclick="window.location.href='suivi-parent.html'">Continuer</button>
       `
     }
   }
