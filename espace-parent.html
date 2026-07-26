@@ -156,6 +156,9 @@ async function verifierCode() {
 // Si le parent clique sur le lien magique dans l'email, Supabase gère la session
 // automatiquement au retour sur le site ; on redirige alors directement.
 async function verifierSessionExistante() {
+  const params = new URLSearchParams(window.location.hash.replace('#', '?'))
+  const erreurUrl = params.get('error_description') || params.get('error')
+
   const { data } = await sb.auth.getSession()
   if (data.session) {
     actionLocaleEnCours = true
@@ -166,6 +169,17 @@ async function verifierSessionExistante() {
     setTimeout(() => {
       window.location.href = 'suivi-parent.html'
     }, 150)
+  } else if (erreurUrl) {
+    // Le lien contenait une erreur explicite (expiré, déjà utilisé, invalide) —
+    // on l'affiche clairement plutôt que de retomber silencieusement sur l'écran de départ.
+    document.getElementById('etape-email').innerHTML = `
+      <h2>Lien expiré ou déjà utilisé</h2>
+      <div class="desc">Ce lien n'est plus valide — chaque lien ne fonctionne qu'une seule fois. Redemandez un accès ci-dessous.</div>
+      <label for="input-email">Adresse email</label>
+      <input type="email" id="input-email" placeholder="votre@email.fr" autocomplete="email">
+      <button class="btn" id="btn-envoyer" onclick="envoyerAcces()">Recevoir mon accès</button>
+      <div id="zone-msg-email"></div>
+    `
   }
 }
 verifierSessionExistante()
