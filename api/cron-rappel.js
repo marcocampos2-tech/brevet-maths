@@ -352,6 +352,11 @@ export default async function handler(req, res) {
           </div>
           ${synthese}
           ${Object.keys(sousThemesActuel).length > 0 ? `<h3 style="font-size:14px;font-weight:600;margin-bottom:10px">📊 Par sous-thème :</h3>${sousThemesHTML}` : ''}
+          <div style="text-align:center;margin:24px 0 4px">
+            <a href="https://www.academika.fr/espace-parent.html" style="background:#3730a3;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block">
+              Voir le suivi complet dans l'espace parent →
+            </a>
+          </div>
           ${cta}
           <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e8e8e4;">
             <p style="color:#444;font-size:13px;margin-bottom:16px;">
