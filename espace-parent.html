@@ -57,9 +57,9 @@ input:focus { outline: none; border-color: var(--marine); }
 
   <div class="card" id="etape-code" style="display:none">
     <h2>Vérifiez votre boîte mail</h2>
-    <div class="desc">Un email vient de vous être envoyé. Cliquez sur le lien qu'il contient, ou saisissez ici le code à 6 chiffres reçu.</div>
-    <label for="input-code">Code à 6 chiffres</label>
-    <input type="text" id="input-code" class="code-input" maxlength="6" placeholder="000000" inputmode="numeric">
+    <div class="desc">Un email vient de vous être envoyé. Cliquez sur le lien qu'il contient, ou saisissez ici le code reçu.</div>
+    <label for="input-code">Code reçu par email</label>
+    <input type="text" id="input-code" class="code-input" placeholder="00000000" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 10)">
     <button class="btn" id="btn-verifier" onclick="verifierCode()">Valider le code</button>
     <div id="zone-msg-code"></div>
     <button class="btn-lien" onclick="renvoyerAcces()">Je n'ai rien reçu, renvoyer l'accès</button>
@@ -92,7 +92,10 @@ async function envoyerAcces() {
   try {
     const { error } = await sb.auth.signInWithOtp({
       email,
-      options: { shouldCreateUser: true }
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: window.location.origin + '/espace-parent.html'
+      }
     })
     if (error) throw error
 
@@ -117,9 +120,9 @@ async function renvoyerAcces() {
 }
 
 async function verifierCode() {
-  const code = document.getElementById('input-code').value.trim()
-  if (code.length !== 6) {
-    afficherMsg('zone-msg-code', 'erreur', 'Le code doit contenir 6 chiffres.')
+  const code = document.getElementById('input-code').value.replace(/\D/g, '')
+  if (code.length < 6) {
+    afficherMsg('zone-msg-code', 'erreur', 'Le code semble incomplet.')
     return
   }
   const btn = document.getElementById('btn-verifier')
