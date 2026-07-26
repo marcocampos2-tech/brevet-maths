@@ -53,6 +53,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .pdf-btn span:first-child { font-size: 13px; color: var(--ardoise); }
 .pdf-btn span:last-child { font-size: 12px; color: var(--bordeaux); font-weight: 500; }
 .pdf-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.selecteur-enfant { display: flex; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.enfant-btn { padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border); background: white; color: var(--ardoise); font-size: 13px; font-weight: 500; cursor: pointer; font-family:'Inter',sans-serif; }
+.enfant-btn.active { background: var(--bordeaux); border-color: var(--bordeaux); color: white; }
+.erreur-liaison { text-align: center; padding: 3rem 1.5rem; color: var(--muted); font-size: 13.5px; line-height: 1.7; }
 @media (max-width:480px){
   .container{padding:0 1rem 1.5rem}
   .card{padding:1.1rem}
@@ -67,10 +71,11 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   <div class="nav-left">∑ Academika</div>
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
-    <a href="quiz.html" class="btn">← Retour au quiz</a>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
+
+<div id="selecteur-enfant"></div>
 
 <div class="page-titre">Suivi de la progression</div>
 <div class="page-sub" id="page-sub">Activité de <span id="prenom-affiche">votre enfant</span></div>
@@ -105,17 +110,48 @@ const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 let user = null, prenom = '', jours = 14, chart = null
+let eleveUserId = null, eleves = []
 
 async function init() {
   const { data } = await sb.auth.getSession()
-  if (!data.session) { window.location.href = 'index.html'; return }
+  if (!data.session) { window.location.href = 'espace-parent.html'; return }
   user = data.session.user
-  prenom = user.user_metadata?.prenom || ''
-  const { data: profil } = await sb.from('profils').select('prenom_affiche').eq('user_id', user.id).limit(1)
-  if (profil && profil.length > 0) prenom = prenom || profil[0].prenom_affiche || ''
-  document.getElementById('user-email').textContent = prenom || user.email
+  document.getElementById('user-email').textContent = user.email
+
+  const { data: profils, error } = await sb.from('profils')
+    .select('user_id, prenom_affiche')
+    .eq('email_parent', user.email)
+
+  if (error || !profils || profils.length === 0) {
+    document.querySelector('.page-titre').textContent = 'Aucun compte lié'
+    document.getElementById('page-sub').innerHTML = ''
+    document.querySelector('.info-bandeau').style.display = 'none'
+    document.querySelector('.periode-select').style.display = 'none'
+    document.querySelectorAll('.card').forEach(c => c.style.display = 'none')
+    document.getElementById('contenu').innerHTML = `<div class="erreur-liaison">Aucun élève n'est associé à l'adresse ${user.email} pour le moment. Vérifiez que c'est bien l'adresse renseignée à l'inscription de votre enfant.</div>`
+    return
+  }
+
+  eleves = profils
+  if (eleves.length > 1) {
+    document.getElementById('selecteur-enfant').innerHTML = `
+      <div class="selecteur-enfant">
+        ${eleves.map((e, i) => `<button class="enfant-btn ${i === 0 ? 'active' : ''}" data-uid="${e.user_id}" onclick="choisirEnfant('${e.user_id}', this)">${e.prenom_affiche || 'Élève ' + (i + 1)}</button>`).join('')}
+      </div>`
+  }
+
+  choisirEnfant(eleves[0].user_id, null, eleves[0].prenom_affiche)
+}
+
+function choisirEnfant(uid, btn, prenomDirect) {
+  eleveUserId = uid
+  prenom = prenomDirect || (btn ? btn.textContent : '')
+  if (btn) {
+    document.querySelectorAll('.enfant-btn').forEach(b => b.classList.remove('active'))
+    btn.classList.add('active')
+  }
   document.getElementById('prenom-affiche').textContent = prenom || 'votre enfant'
-  await chargerDonnees()
+  chargerDonnees()
 }
 
 function setPeriode(j) {
@@ -135,7 +171,7 @@ async function chargerDonnees() {
 
   const { data: sessionsBrutes, error } = await sb.from('resultats')
     .select('created_at, score, total, temps_secondes, sous_theme, questions_ratees')
-    .eq('user_id', user.id)
+    .eq('user_id', eleveUserId)
     .gte('created_at', depuis.toISOString())
     .order('created_at', { ascending: true })
 
@@ -299,7 +335,7 @@ async function getRangeEtGranularite(mode) {
   }
   const { data } = await sb.from('resultats')
     .select('created_at')
-    .eq('user_id', user.id)
+    .eq('user_id', eleveUserId)
     .order('created_at', { ascending: true })
     .limit(1)
   const debut = (data && data.length > 0) ? parseUTC(data[0].created_at) : maintenant
@@ -379,7 +415,7 @@ async function genererPDF(mode) {
 
     const { data: sessionsBrutes, error } = await sb.from('resultats')
       .select('created_at, score, total, temps_secondes, sous_theme, questions_ratees')
-      .eq('user_id', user.id)
+      .eq('user_id', eleveUserId)
       .gte('created_at', debut.toISOString())
       .lte('created_at', fin.toISOString())
       .order('created_at', { ascending: true })
@@ -545,7 +581,7 @@ async function genererPDF(mode) {
 
 async function logout() {
   await sb.auth.signOut()
-  window.location.href = 'index.html'
+  window.location.href = 'espace-parent.html'
 }
 
 init()
