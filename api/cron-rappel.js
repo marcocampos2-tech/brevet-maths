@@ -7,6 +7,16 @@
 //   - CORRIGÉ : marcocampos2@gmail.com → contact@academika.fr
 //   - AJOUTÉ : branche bilan périodique automatique (~3 semaines)
 //   - CONSERVÉ tel quel : branches "été" et "fin d'année"
+//
+// Modifié le 27/07/2026 — Rattrapage récap journalier
+//   - AJOUTÉ : bloc de rattrapage en tête de handler(), avant toutes les
+//     branches saisonnières. Tourne tous les jours de l'année (y compris
+//     août), à chaque exécution du cron (désormais 0 19 * * * UTC).
+//   - Détecte les élèves ayant eu au moins une session aujourd'hui dont
+//     le récap journalier n'a pas encore été envoyé (alerte_envoyee=false),
+//     et déclenche l'envoi via la même logique serveur que le flux normal
+//     (api/email.js, type: 'recap-journalier-user'), pour garantir une
+//     seule et même source de vérité (pas de recalcul dupliqué ici).
 // ═══════════════════════════════════════════════════════════
 
 const ORDRE_DIFFICULTE = { facile: 1, moyen: 2, difficile: 3 }
@@ -29,6 +39,57 @@ export default async function handler(req, res) {
     'apikey': SUPA_KEY
   }
 
+  // ═══════════════════════════════════════════════════════════
+  // RATTRAPAGE RÉCAP JOURNALIER — permanent, tourne avant toute branche
+  // saisonnière. Non bloquant : une erreur ici n'empêche pas le reste
+  // du cron (bilan périodique, fin d'année, été) de s'exécuter.
+  // ═══════════════════════════════════════════════════════════
+  let rattrapageResume = { traites: 0, ignores: 0, erreurs: 0 }
+  try {
+    const maintenantRattrapage = new Date()
+    const dateParisStr = maintenantRattrapage.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }) // YYYY-MM-DD
+
+    // Sessions potentiellement du jour, avec au moins une non couverte.
+    // On élargit un peu la fenêtre de recherche (48h en created_at UTC)
+    // puis on filtre précisément sur la date Paris en mémoire, pour
+    // rester cohérent avec le bug de fuseau horaire déjà connu ailleurs
+    // sur le site plutôt que de le réintroduire ici avec un filtre naïf.
+    const depuisRes = await fetch(
+      `${SUPA_URL}/rest/v1/resultats?select=id,user_id,created_at,alerte_envoyee` +
+      `&created_at=gte.${new Date(maintenantRattrapage.getTime() - 48 * 3600 * 1000).toISOString()}` +
+      `&alerte_envoyee=eq.false`,
+      { headers }
+    )
+    const sessionsCandidates = await depuisRes.json()
+
+    const sessionsDuJourNonCouvertes = (sessionsCandidates || []).filter(s => {
+      const dateSessionParis = new Date(s.created_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+      return dateSessionParis === dateParisStr
+    })
+
+    // Un seul appel de traitement par élève, même s'il a plusieurs sessions non couvertes
+    const userIdsATraiter = [...new Set(sessionsDuJourNonCouvertes.map(s => s.user_id))]
+
+    for (const user_id of userIdsATraiter) {
+      try {
+        const resultRes = await fetch(`https://${req.headers.host}/api/email`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'recap-journalier-user', user_id })
+        })
+        const resultData = await resultRes.json()
+        if (resultData.skip) rattrapageResume.ignores++
+        else if (resultData.success) rattrapageResume.traites++
+        else rattrapageResume.erreurs++
+      } catch (e) {
+        console.log('Erreur rattrapage user', user_id, ':', e.message)
+        rattrapageResume.erreurs++
+      }
+    }
+  } catch (e) {
+    console.log('Erreur bloc rattrapage récap journalier:', e.message)
+  }
+
   try {
     const maintenant = new Date()
     const mois = maintenant.getMonth() + 1 // 1-12
@@ -41,7 +102,7 @@ export default async function handler(req, res) {
     )
     const profils = await profilsRes.json()
     if (!profils || profils.length === 0) {
-      return res.status(200).json({ message: 'Aucun profil' })
+      return res.status(200).json({ message: 'Aucun profil', rattrapage: rattrapageResume })
     }
 
     // ── PÉRIODE FIN D'ANNÉE (27-30 juin) ──────────────────
@@ -102,7 +163,7 @@ export default async function handler(req, res) {
           envoyes++
         }
       }
-      return res.status(200).json({ success: true, type: 'fin_annee', envoyes })
+      return res.status(200).json({ success: true, type: 'fin_annee', envoyes, rattrapage: rattrapageResume })
     }
 
     // ── PÉRIODE ÉTÉ (juillet) — aussi la fenêtre de pause du bilan périodique ──
@@ -167,12 +228,13 @@ export default async function handler(req, res) {
           envoyes++
         }
       }
-      return res.status(200).json({ success: true, type: 'ete', envoyes })
+      return res.status(200).json({ success: true, type: 'ete', envoyes, rattrapage: rattrapageResume })
     }
 
-    // ── PÉRIODE AOÛT — silence total (bilan périodique aussi en pause) ──
+    // ── PÉRIODE AOÛT — silence total pour les autres emails
+    // (le bloc de rattrapage récap journalier ci-dessus reste actif) ──
     if (mois === 8) {
-      return res.status(200).json({ message: 'Août — pas de rappels ni de bilans' })
+      return res.status(200).json({ message: 'Août — pas de rappels ni de bilans', rattrapage: rattrapageResume })
     }
 
     // ── BILAN PÉRIODIQUE AUTOMATIQUE (septembre → 26 juin) ──────────────
@@ -407,11 +469,12 @@ export default async function handler(req, res) {
       bilans_envoyes: bilansEnvoyes,
       bilans_ignores: bilansIgnores,
       bilans_en_pause: bilansPauses,
-      total_profils: profils.length
+      total_profils: profils.length,
+      rattrapage: rattrapageResume
     })
 
   } catch(e) {
     console.error('Erreur cron:', e.message)
-    return res.status(500).json({ error: e.message })
+    return res.status(500).json({ error: e.message, rattrapage: rattrapageResume })
   }
 }
