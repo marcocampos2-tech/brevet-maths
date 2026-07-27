@@ -466,43 +466,21 @@ function setDiffCard(el, val) {
   if(btn) btn.classList.add('active')
 }
 
+// ═══════════════════════════════════════════════════
+// RÉCAP JOURNALIER — simplifié : tout le calcul (agrégat, seuils,
+// sous-thèmes) et l'envoi sont désormais faits côté serveur dans
+// api/email.js (type: 'recap-journalier-user'), pour garantir une
+// seule et même logique que le job de rattrapage du cron.
+// ═══════════════════════════════════════════════════
 async function envoyerRecapJournalier() {
-  if (!emailParent || !user) return
+  if (!user) return
   try {
-    const aujourd_hui = new Date().toISOString().split('T')[0]
-    const { data: sessions } = await sb.from('resultats')
-      .select('theme, sous_theme, difficulte, score, total, temps_secondes, questions_ratees, created_at')
-      .eq('user_id', user.id)
-      .gte('created_at', aujourd_hui + 'T00:00:00')
-      .order('created_at', { ascending: true })
-    if (!sessions || sessions.length === 0) return
-    const totalSessions = sessions.length
-    const moyGlobale = Math.round((sessions.reduce((a,s) => a + s.score/s.total, 0) / totalSessions) * 100)
-    const tempsTot = sessions.reduce((a,s) => a + (s.temps_secondes||0), 0)
-    const sousThemesDetail = {}
-    const ORDRE_NIVEAUX = { facile: 1, moyen: 2, difficile: 3 }
-    sessions.forEach(s => {
-      if (!s.sous_theme) return
-      if (!sousThemesDetail[s.sous_theme]) sousThemesDetail[s.sous_theme] = { ok: 0, total: 0, niveau: s.difficulte }
-      sousThemesDetail[s.sous_theme].ok += s.score
-      sousThemesDetail[s.sous_theme].total += s.total
-      if (ORDRE_NIVEAUX[s.difficulte] > ORDRE_NIVEAUX[sousThemesDetail[s.sous_theme].niveau]) {
-        sousThemesDetail[s.sous_theme].niveau = s.difficulte
-      }
-    })
     await fetch('/api/email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        emailParent, prenom: prenom||'', nom: user.user_metadata?.nom||'',
-        theme: sessions[sessions.length-1].theme, difficulte: sessions[sessions.length-1].difficulte,
-        sousThemesDetail,
-        score: sessions.reduce((a,s) => a+s.score, 0), total: sessions.reduce((a,s) => a+s.total, 0),
-        questionsRatees: sessions.flatMap(s => s.questions_ratees||[]).filter(q => !q.includes('abandonné')),
-        tempsSecondes: tempsTot, resultatsId: null, recap: true, totalSessions, moyGlobale
-      })
+      body: JSON.stringify({ type: 'recap-journalier-user', user_id: user.id })
     })
-  } catch(e) { console.log('Erreur email récap:', e.message) }
+  } catch(e) { console.log('Erreur envoi récap:', e.message) }
 }
 
 async function afficherBanniereExamenPresentiel() {
