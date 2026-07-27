@@ -59,7 +59,7 @@ input:focus { outline: none; border-color: var(--marine); }
     <h2>Vérifiez votre boîte mail</h2>
     <div class="desc">Un code vient de vous être envoyé par email. Saisissez-le ci-dessous pour vous connecter.</div>
     <label for="input-code">Code reçu par email</label>
-    <input type="text" id="input-code" class="code-input" placeholder="00000000" inputmode="numeric" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 8)">
+    <input type="text" id="input-code" class="code-input" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" oninput="this.value = this.value.replace(/\D/g, '').slice(0, 6)">
     <button class="btn" id="btn-verifier" onclick="verifierCode()">Valider le code</button>
     <div id="zone-msg-code"></div>
     <button class="btn-lien" onclick="renvoyerAcces()">Je n'ai rien reçu, renvoyer le code</button>
@@ -118,8 +118,8 @@ async function renvoyerAcces() {
 
 async function verifierCode() {
   const code = document.getElementById('input-code').value.replace(/\D/g, '')
-  if (code.length !== 8) {
-    afficherMsg('zone-msg-code', 'erreur', `Le code doit contenir 8 chiffres (${code.length} détecté${code.length > 1 ? 's' : ''}). Vérifiez le copier-coller.`)
+  if (code.length !== 6) {
+    afficherMsg('zone-msg-code', 'erreur', `Le code doit contenir 6 chiffres (${code.length} détecté${code.length > 1 ? 's' : ''}). Vérifiez le copier-coller.`)
     return
   }
   const btn = document.getElementById('btn-verifier')
