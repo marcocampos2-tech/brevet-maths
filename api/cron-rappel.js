@@ -17,6 +17,12 @@
 //     et déclenche l'envoi via la même logique serveur que le flux normal
 //     (api/email.js, type: 'recap-journalier-user'), pour garantir une
 //     seule et même source de vérité (pas de recalcul dupliqué ici).
+//
+// Modifié le 28/07/2026 — Relecture emails
+//   - RETIRÉ : mention "Academika Seconde, nouveauté à la rentrée" dans
+//     les branches "été" et "fin d'année" — promesse non tenable pour
+//     cette année (produit pas encore lancé). À réintroduire l'été 2027
+//     sous forme d'invitation réelle, une fois Academika Seconde lancé.
 // ═══════════════════════════════════════════════════════════
 
 const ORDRE_DIFFICULTE = { facile: 1, moyen: 2, difficile: 3 }
@@ -49,11 +55,6 @@ export default async function handler(req, res) {
     const maintenantRattrapage = new Date()
     const dateParisStr = maintenantRattrapage.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }) // YYYY-MM-DD
 
-    // Sessions potentiellement du jour, avec au moins une non couverte.
-    // On élargit un peu la fenêtre de recherche (48h en created_at UTC)
-    // puis on filtre précisément sur la date Paris en mémoire, pour
-    // rester cohérent avec le bug de fuseau horaire déjà connu ailleurs
-    // sur le site plutôt que de le réintroduire ici avec un filtre naïf.
     const depuisRes = await fetch(
       `${SUPA_URL}/rest/v1/resultats?select=id,user_id,created_at,alerte_envoyee` +
       `&created_at=gte.${new Date(maintenantRattrapage.getTime() - 48 * 3600 * 1000).toISOString()}` +
@@ -67,7 +68,6 @@ export default async function handler(req, res) {
       return dateSessionParis === dateParisStr
     })
 
-    // Un seul appel de traitement par élève, même s'il a plusieurs sessions non couvertes
     const userIdsATraiter = [...new Set(sessionsDuJourNonCouvertes.map(s => s.user_id))]
 
     for (const user_id of userIdsATraiter) {
@@ -132,9 +132,6 @@ export default async function handler(req, res) {
               Merci d'avoir fait confiance à Academika cette année.<br><br>
               Le compte de <strong>${prenom_affiche}</strong> reste actif — il peut continuer à réviser pendant l'été s'il le souhaite.
             </p>
-            <p style="color:#444;line-height:1.6;margin-bottom:20px">
-              🎓 <strong>Nouveauté à la rentrée :</strong> nous travaillons sur Academika Seconde et vous tiendrons informés très bientôt.
-            </p>
             <p style="color:#888;font-size:12px;text-align:center;margin-top:24px">
               Pour toute question : <a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a>
             </p>
@@ -197,9 +194,6 @@ export default async function handler(req, res) {
                 Continuer à réviser →
               </a>
             </div>
-            <p style="color:#444;line-height:1.6;margin-bottom:20px">
-              🎓 <strong>Nouveauté à la rentrée :</strong> nous travaillons sur Academika Seconde et vous tiendrons informés très bientôt.
-            </p>
             <p style="color:#888;font-size:12px;text-align:center;margin-top:24px">
               Pour toute question : <a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a>
             </p>
@@ -244,7 +238,6 @@ export default async function handler(req, res) {
       const { user_id, prenom_affiche, email_parent, email_actif } = profil
       if (!email_parent || email_actif === false) { bilansIgnores++; continue }
 
-      // Récupère le dernier bilan périodique envoyé
       const dernierBilanRes = await fetch(
         `${SUPA_URL}/rest/v1/historique_bilans?user_id=eq.${user_id}` +
         `&type_bilan=eq.periodique&select=date_envoi,sous_themes_snapshot,total_sessions` +
@@ -255,7 +248,6 @@ export default async function handler(req, res) {
       const dernierBilan = (derniersBilans && derniersBilans.length > 0) ? derniersBilans[0] : null
       const avantDernierBilan = (derniersBilans && derniersBilans.length > 1) ? derniersBilans[1] : null
 
-      // Date de début de la fenêtre : dernier bilan, sinon inscription (approximé par la 1ère session)
       let dateDebut
       if (dernierBilan) {
         dateDebut = new Date(dernierBilan.date_envoi)
@@ -265,22 +257,19 @@ export default async function handler(req, res) {
           { headers }
         )
         const premiereSession = await premiereSessionRes.json()
-        if (!premiereSession || premiereSession.length === 0) { bilansIgnores++; continue } // jamais utilisé l'app
+        if (!premiereSession || premiereSession.length === 0) { bilansIgnores++; continue }
         dateDebut = new Date(premiereSession[0].created_at)
       }
 
-      // Vérifie si la cadence de 21 jours est atteinte
       const joursDepuisDernier = Math.floor((maintenant - dateDebut) / (1000 * 60 * 60 * 24))
       if (joursDepuisDernier < CADENCE_JOURS) { bilansIgnores++; continue }
 
-      // Pause automatique : si les 2 derniers bilans étaient déjà vides (0 session)
       if (dernierBilan && dernierBilan.total_sessions === 0 &&
           avantDernierBilan && avantDernierBilan.total_sessions === 0) {
         bilansPauses++
         continue
       }
 
-      // ── Calcul des données du bilan ──
       const dateDebutISO = dateDebut.toISOString()
       const dateFinISO = maintenant.toISOString()
 
@@ -324,7 +313,6 @@ export default async function handler(req, res) {
         }
       }
 
-      // ── Phrase de synthèse comparative ──
       let phraseSynthese = ''
       const premierBilan = !dernierBilan
 
@@ -354,7 +342,6 @@ export default async function handler(req, res) {
         }
       }
 
-      // ── CTA ──
       let cta = ''
       if (!premierBilan) {
         const enPeriodeBrevet = (mois >= 2 && mois <= 6)
@@ -368,7 +355,6 @@ export default async function handler(req, res) {
              </div>`
       }
 
-      // ── Assemblage du HTML ──
       const moyNote20 = (moyGlobale / 100 * 20).toFixed(1).replace('.0', '')
       const couleur = moyGlobale >= 80 ? '#16a34a' : moyGlobale >= 60 ? '#3730a3' : moyGlobale >= 40 ? '#f59e0b' : '#dc2626'
       const mention = moyGlobale >= 80 ? '🌟 Excellent !' : moyGlobale >= 60 ? '👍 Bien !' : moyGlobale >= 40 ? '💪 Continue !' : '📚 À retravailler'
