@@ -43,15 +43,8 @@
   text-decoration: none;
   cursor: pointer;
   border: none;
-}
-.tarif-cta-outline {
-  color: var(--navy);
-  border: 1px solid var(--navy);
-  background: transparent;
-}
-.tarif-cta-solid {
   color: var(--cream);
-  background: var(--bordeaux);
+  background: var(--navy);
 }
 .tarif-nom {
   font-size: 13px;
@@ -283,15 +276,15 @@
       <div class="tarif-prix">0€</div>
       <div class="tarif-desc">Quiz corrigés étape par étape</div>
       <div class="tarif-guide">Pour réviser seul, à son rythme</div>
-      <a href="connexion.html" class="tarif-cta tarif-cta-outline">Créer un compte</a>
+      <a href="connexion.html" class="tarif-cta">Créer un compte</a>
     </div>
 
     <div class="tarif-card" id="carte-suivi">
       <div class="tarif-nom">Suivi</div>
       <div class="tarif-prix">7,90€<span>/mois</span></div>
-      <div class="tarif-desc">Notes par email + examen blanc QCM</div>
+      <div class="tarif-desc">Email après chaque session, bilan tous les 21 jours, et examen blanc en ligne</div>
       <div class="tarif-guide">Pour suivre les progrès sans cours</div>
-      <a href="connexion.html" class="tarif-cta tarif-cta-solid">Créer un compte</a>
+      <a href="connexion.html" class="tarif-cta">Créer un compte</a>
     </div>
 
     <div class="tarif-card">
@@ -300,16 +293,16 @@
       <div class="tarif-desc">Individuel, 10 ans d'expérience</div>
       <div class="tarif-badge">✓ Suivi inclus</div>
       <div class="tarif-guide">Pour un suivi régulier ou occasionnel</div>
-      <button type="button" class="tarif-cta tarif-cta-outline" onclick="ouvrirFormulaireCours('visio')">Demander un cours</button>
+      <button type="button" class="tarif-cta" onclick="ouvrirFormulaireCours('visio')">Demander un cours</button>
     </div>
 
     <div class="tarif-card">
       <div class="tarif-nom">Cours présentiel</div>
-      <div class="tarif-prix" style="font-size:20px">Sur devis</div>
+      <div class="tarif-prix">40€<span>/h</span></div>
       <div class="tarif-desc">Individuel, à domicile, 10 ans d'expérience</div>
       <div class="tarif-badge">✓ Suivi inclus</div>
       <div class="tarif-guide">Pour un suivi régulier ou occasionnel</div>
-      <button type="button" class="tarif-cta tarif-cta-outline" onclick="ouvrirFormulaireCours('presentiel')">Demander un cours</button>
+      <button type="button" class="tarif-cta" onclick="ouvrirFormulaireCours('presentiel')">Demander un cours</button>
     </div>
 
     <div class="tarif-card">
@@ -319,7 +312,7 @@
       <div class="tarif-desc">Une semaine, 2h/jour, en visio, un domaine du Brevet, groupe 5 max. Le stage de mai inclut un brevet blanc écrit.</div>
       <div class="tarif-badge">✓ Suivi inclus</div>
       <div class="tarif-guide">Pour réviser un domaine à chaque période de vacances</div>
-      <a href="stages-vacances.html" class="tarif-cta tarif-cta-solid">Voir les stages</a>
+      <a href="stages-vacances.html" class="tarif-cta">Voir les stages</a>
     </div>
 
   </div>
@@ -370,7 +363,7 @@
 
   <div class="suivi-explain">
     <div class="suivi-explain-title">C'est quoi le suivi ?</div>
-    <div class="suivi-explain-desc">Un email avec les notes de votre enfant, à chaque session de quiz. Inclus avec l'abonnement Suivi, ou automatiquement pendant les cours particuliers et les stages.</div>
+    <div class="suivi-explain-desc">Un email à chaque déconnexion, avec alerte en cas de difficulté, et un bilan complet tous les 21 jours. Inclus avec l'abonnement Suivi, ou automatiquement pendant les cours particuliers et les stages.</div>
   </div>
 </section>
 
