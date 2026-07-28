@@ -21,8 +21,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--creme); min-height: 100vh; color: var(--ardoise); }
 .container { max-width: 700px; margin: 0 auto; padding: 0 1.25rem 2rem; }
-nav { display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 0; border-bottom: 2px solid var(--marine); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
-.nav-left { font-family:'Newsreader',serif; font-size: 19px; font-weight: 600; color: var(--marine); letter-spacing: -0.3px; }
+nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+.nav-left { font-family:'Newsreader',serif; font-size: 22px; font-weight: 500; color: var(--marine); }
 .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .nav-email { font-size: 13px; color: var(--muted); margin-right: 4px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: white; color: var(--ardoise); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; font-family:'Inter',sans-serif; }
@@ -66,14 +66,15 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 </style>
 </head>
 <body>
-<div class="container">
 <nav>
-  <div class="nav-left">∑ Academika</div>
+  <div class="nav-left">ACADEMIKA</div>
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
+
+<div class="container">
 
 <div id="selecteur-enfant"></div>
 
@@ -472,7 +473,6 @@ async function genererPDF(mode) {
     const jourMs = 24 * 60 * 60 * 1000
     const nbJoursPeriode = Math.max(1, Math.round((fin - debut) / jourMs) + 1)
 
-    // Plugin Chart.js pour afficher la valeur au-dessus de chaque barre
     const plaqueValeurs = {
       id: 'plaqueValeurs',
       afterDatasetsDraw(c) {
