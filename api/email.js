@@ -64,12 +64,22 @@ export default async function handler(req, res) {
           to: email_parent,
           subject: '🔑 Réinitialisation de mot de passe — ACADEMIKA',
           html: `
-            <h2>Réinitialisation de mot de passe</h2>
-            <p>Une demande de réinitialisation de mot de passe a été effectuée pour votre compte ACADEMIKA.</p>
-            <p><a href="${lienReset}">Cliquez ici pour choisir un nouveau mot de passe</a></p>
-            <p>Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.</p>
-            <br>
-            <p>Cordialement,<br>ACADEMIKA</p>
+            <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+              <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+                <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+              </div>
+              <p style="margin-bottom:16px">Bonjour,</p>
+              <p style="color:#444;line-height:1.6;margin-bottom:20px">Une demande de réinitialisation de mot de passe a été effectuée pour votre compte ACADEMIKA.</p>
+              <div style="text-align:center;margin:28px 0">
+                <a href="${lienReset}" style="background:#1a1a1a;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
+                  Choisir un nouveau mot de passe →
+                </a>
+              </div>
+              <p style="color:#444;line-height:1.6;margin-bottom:20px">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.</p>
+              <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+                <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
+              </div>
+            </div>
           `
         })
       })
@@ -96,53 +106,55 @@ export default async function handler(req, res) {
     const { emailParent, prenom, nom, date, heure, adresse, messageCompl, sousType } = req.body
     if (!emailParent || !prenom) return res.status(400).json({ error: 'Champs manquants' })
 
-    let subject, html
+    let sujetInterne, contenuInterne
     if (sousType === 'refus') {
-      subject = `Inscription Examen Blanc Brevet — ${prenom}`
-      html = `
-        <h2>Inscription Examen Blanc — Information</h2>
-        <p>Bonjour,</p>
-        <p>Nous avons bien reçu la demande d'inscription de <strong>${prenom} ${nom}</strong> pour la session du <strong>${date}</strong>.</p>
-        <p>Malheureusement, cette session est complète. Nous ne pouvons pas confirmer cette inscription.</p>
-        <p>Si l'autre date vous convient, n'hésitez pas à vous réinscrire sur <strong>academika.fr</strong>.</p>
-        <p>Contact : <strong>06 26 53 90 13</strong></p>
-        <br>
-        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      sujetInterne = `Inscription Examen Blanc Brevet — ${prenom}`
+      contenuInterne = `
+        <p style="margin-bottom:16px">Bonjour,</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous avons bien reçu la demande d'inscription de <strong>${prenom} ${nom}</strong> pour la session du <strong>${date}</strong>.</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Malheureusement, cette session est complète. Nous ne pouvons pas confirmer cette inscription.</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Si l'autre date vous convient, n'hésitez pas à vous réinscrire sur <strong>academika.fr</strong>.</p>
       `
     } else if (sousType === 'annulation') {
-      subject = `Annulation Examen Blanc Brevet — ${prenom}`
-      html = `
-        <h2>Annulation — Examen Blanc Brevet</h2>
-        <p>Bonjour,</p>
-        <p>Nous vous informons que l'inscription de <strong>${prenom} ${nom}</strong> pour la session du <strong>${date}</strong> a été annulée.</p>
-        <p>Pour toute question, contactez-nous au <strong>06 26 53 90 13</strong>.</p>
-        <br>
-        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      sujetInterne = `Annulation Examen Blanc Brevet — ${prenom}`
+      contenuInterne = `
+        <p style="margin-bottom:16px">Bonjour,</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous vous informons que l'inscription de <strong>${prenom} ${nom}</strong> pour la session du <strong>${date}</strong> a été annulée.</p>
       `
     } else {
       if (!adresse) return res.status(400).json({ error: 'Adresse manquante' })
-      subject = `✅ Inscription confirmée — Examen Blanc Brevet — ${prenom}`
-      html = `
-        <h2>✅ Inscription confirmée — Adresse communiquée</h2>
-        <p>Bonjour,</p>
-        <p>L'inscription de <strong>${prenom} ${nom}</strong> pour l'examen blanc est confirmée :</p>
-        <div style="background:#f0f7ff;border-radius:8px;padding:16px;margin:16px 0">
-          <p><strong>📅 Date :</strong> ${date} · ${heure || '15h00'}</p>
-          <p><strong>📍 Adresse :</strong> ${adresse}</p>
+      sujetInterne = `✅ Inscription confirmée — Examen Blanc Brevet — ${prenom}`
+      contenuInterne = `
+        <p style="margin-bottom:16px">Bonjour,</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">L'inscription de <strong>${prenom} ${nom}</strong> pour l'examen blanc est confirmée :</p>
+        <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0">
+          <p style="margin-bottom:8px"><strong>📅 Date :</strong> ${date} · ${heure || '15h00'}</p>
+          <p style="margin-bottom:8px"><strong>📍 Adresse :</strong> ${adresse}</p>
           ${messageCompl ? `<p><strong>ℹ️ Infos :</strong> ${messageCompl}</p>` : ''}
         </div>
-        <p>Merci d'arriver 5 minutes avant. Prévoir stylo et calculatrice.</p>
-        <p>Contact : <strong>06 26 53 90 13</strong></p>
-        <br>
-        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Merci d'arriver 5 minutes avant. Prévoir stylo et calculatrice.</p>
       `
     }
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+        <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+          <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+        </div>
+        ${contenuInterne}
+        <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+          <p style="color:#444;font-size:13px;margin-bottom:8px;">
+            Contact : <strong>06 26 53 90 13</strong> · <a href="mailto:contact@academika.fr" style="color:#3730a3;text-decoration:none;font-weight:500">contact@academika.fr</a>
+          </p>
+          <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
+        </div>
+      </div>`
 
     try {
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
-        body: JSON.stringify({ from: 'ACADEMIKA <noreply@academika.fr>', to: emailParent, subject, html })
+        body: JSON.stringify({ from: 'ACADEMIKA <noreply@academika.fr>', to: emailParent, subject: sujetInterne, html })
       })
       return res.status(200).json({ success: true })
     } catch(e) {
@@ -158,47 +170,49 @@ export default async function handler(req, res) {
     const { emailParent, prenom, nom, libelle, sousType } = req.body
     if (!emailParent || !prenom) return res.status(400).json({ error: 'Champs manquants' })
 
-    let subject, html
+    let sujetInterne, contenuInterne
     if (sousType === 'refus') {
-      subject = `Inscription stage — ${prenom}`
-      html = `
-        <h2>Inscription stage — Information</h2>
-        <p>Bonjour,</p>
-        <p>Nous avons bien reçu la demande d'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong>.</p>
-        <p>Malheureusement, ce stage est complet. Nous ne pouvons pas confirmer cette inscription.</p>
-        <p>N'hésitez pas à vous inscrire à une autre période sur <strong>academika.fr</strong>.</p>
-        <p>Contact : <strong>06 26 53 90 13</strong></p>
-        <br>
-        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      sujetInterne = `Inscription stage — ${prenom}`
+      contenuInterne = `
+        <p style="margin-bottom:16px">Bonjour,</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous avons bien reçu la demande d'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong>.</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Malheureusement, ce stage est complet. Nous ne pouvons pas confirmer cette inscription.</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">N'hésitez pas à vous inscrire à une autre période sur <strong>academika.fr</strong>.</p>
       `
     } else if (sousType === 'annulation') {
-      subject = `Annulation stage — ${prenom}`
-      html = `
-        <h2>Annulation — Stage vacances</h2>
-        <p>Bonjour,</p>
-        <p>Nous vous informons que l'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong> a été annulée.</p>
-        <p>Pour toute question, contactez-nous au <strong>06 26 53 90 13</strong>.</p>
-        <br>
-        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      sujetInterne = `Annulation stage — ${prenom}`
+      contenuInterne = `
+        <p style="margin-bottom:16px">Bonjour,</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous vous informons que l'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong> a été annulée.</p>
       `
     } else {
-      subject = `✅ Inscription confirmée — Stage — ${prenom}`
-      html = `
-        <h2>✅ Inscription confirmée</h2>
-        <p>Bonjour,</p>
-        <p>L'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong> est confirmée.</p>
-        <p>Nous vous recontacterons prochainement pour les modalités pratiques (lien de connexion visio, etc.).</p>
-        <p>Contact : <strong>06 26 53 90 13</strong></p>
-        <br>
-        <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+      sujetInterne = `✅ Inscription confirmée — Stage — ${prenom}`
+      contenuInterne = `
+        <p style="margin-bottom:16px">Bonjour,</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">L'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong> est confirmée.</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous vous recontacterons prochainement pour les modalités pratiques (lien de connexion visio, etc.).</p>
       `
     }
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+        <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+          <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+        </div>
+        ${contenuInterne}
+        <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+          <p style="color:#444;font-size:13px;margin-bottom:8px;">
+            Contact : <strong>06 26 53 90 13</strong> · <a href="mailto:contact@academika.fr" style="color:#3730a3;text-decoration:none;font-weight:500">contact@academika.fr</a>
+          </p>
+          <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
+        </div>
+      </div>`
 
     try {
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
-        body: JSON.stringify({ from: 'ACADEMIKA <noreply@academika.fr>', to: emailParent, subject, html })
+        body: JSON.stringify({ from: 'ACADEMIKA <noreply@academika.fr>', to: emailParent, subject: sujetInterne, html })
       })
       return res.status(200).json({ success: true })
     } catch(e) {
@@ -473,33 +487,40 @@ export default async function handler(req, res) {
     else mention = '📚 À retravailler'
     const couleur = pct >= 50 ? '#16a34a' : '#dc2626'
 
+    const html = `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+        <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+          <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+          <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Examen blanc présentiel</div>
+        </div>
+        <p style="margin-bottom:16px;">Bonjour,</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Voici les résultats de <strong>${prenom} ${nom}</strong> pour l'examen blanc du <strong>${date}</strong> :</p>
+        <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
+          <div style="font-size:56px;font-weight:700;color:${couleur}">${note}<span style="font-size:24px;color:#999">/20</span></div>
+          <div style="font-size:18px;margin-top:8px">${mention}</div>
+        </div>
+        ${commentaire ? `
+        <div style="background:#f7f7f5;border-radius:12px;padding:16px 20px;margin:16px 0">
+          <p style="font-weight:600;margin-bottom:8px">💬 Commentaire :</p>
+          <p style="color:#555;line-height:1.6">${commentaire}</p>
+        </div>` : ''}
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Continuez à réviser sur <a href="https://academika.fr" style="color:#3730a3">academika.fr</a> !</p>
+        <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+          <p style="color:#444;font-size:13px;margin-bottom:8px;">
+            Contact : <strong>06 26 53 90 13</strong> · <a href="mailto:contact@academika.fr" style="color:#3730a3;text-decoration:none;font-weight:500">contact@academika.fr</a>
+          </p>
+          <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
+        </div>
+        <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
+          <a href="https://academika.fr/api/desabonner?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
+        </p>
+      </div>`
+
     try {
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
-        body: JSON.stringify({
-          from: 'ACADEMIKA <noreply@academika.fr>',
-          to: emailParent,
-          subject: `📝 Résultats Examen Blanc Brevet — ${prenom}`,
-          html: `
-            <h2>📝 Résultats — Examen Blanc Brevet</h2>
-            <p>Bonjour,</p>
-            <p>Voici les résultats de <strong>${prenom} ${nom}</strong> pour l'examen blanc du <strong>${date}</strong> :</p>
-            <div style="background:#f0f7ff;border-radius:8px;padding:20px;margin:16px 0;text-align:center">
-              <div style="font-size:48px;font-weight:700;color:${couleur}">${note}/20</div>
-              <div style="font-size:18px;color:${couleur};margin-top:8px">${mention}</div>
-            </div>
-            ${commentaire ? `
-            <div style="background:#f7f7f5;border-radius:8px;padding:16px;margin:16px 0">
-              <p><strong>💬 Commentaire :</strong></p>
-              <p style="color:#555">${commentaire}</p>
-            </div>` : ''}
-            <p>Continuez à réviser sur <a href="https://academika.fr">academika.fr</a> !</p>
-            <p>Contact : <strong>06 26 53 90 13</strong></p>
-            <br>
-            <p>Cordialement,<br>ACADEMIKA</p>
-          `
-        })
+        body: JSON.stringify({ from: 'ACADEMIKA <noreply@academika.fr>', to: emailParent, subject: `📝 Résultats Examen Blanc Brevet — ${prenom}`, html })
       })
       return res.status(200).json({ success: true })
     } catch(e) {
@@ -525,7 +546,6 @@ export default async function handler(req, res) {
     }
 
     try {
-      // ── Profil (prénom, nom, email parent, email actif) ──
       const profilRes = await fetch(
         `${SUPA_URL}/rest/v1/profils?user_id=eq.${user_id}&select=prenom_affiche,email_parent,email_actif&limit=1`,
         { headers: supaHeaders }
@@ -539,13 +559,8 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, skip: 'email parent absent ou désactivé' })
       }
 
-      // ── Sessions du jour (fenêtre calendaire Europe/Paris) ──
-      // On calcule les bornes UTC correspondant à minuit-minuit heure de Paris,
-      // pour rester cohérent avec le bug de fuseau horaire déjà corrigé ailleurs sur le site.
       const maintenant = new Date()
-      const dateParisStr = maintenant.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }) // format YYYY-MM-DD
-      const debutJourParis = new Date(new Date(`${dateParisStr}T00:00:00`).toLocaleString('en-US', { timeZone: 'Europe/Paris' }))
-      // Méthode robuste : on interroge simplement via le décalage connu, en filtrant ensuite en mémoire sur le fuseau Paris
+      const dateParisStr = maintenant.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
       const sessionsRes = await fetch(
         `${SUPA_URL}/rest/v1/resultats?user_id=eq.${user_id}` +
         `&select=id,theme,sous_theme,difficulte,score,total,temps_secondes,questions_ratees,created_at,alerte_envoyee` +
@@ -563,13 +578,11 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, skip: 'aucune session aujourd\'hui' })
       }
 
-      // Ne traite que si au moins une session n'a pas encore été couverte par un envoi
       const sessionsNonCouvertes = sessionsDuJour.filter(s => s.alerte_envoyee !== true)
       if (sessionsNonCouvertes.length === 0) {
         return res.status(200).json({ success: true, skip: 'déjà envoyé aujourd\'hui' })
       }
 
-      // ── Calcul de l'agrégat journalier (logique reprise de l'ancien envoyerRecapJournalier côté client) ──
       const totalSessions = sessionsDuJour.length
       const scoreTotal = sessionsDuJour.reduce((a, s) => a + (s.score || 0), 0)
       const totalTotal = sessionsDuJour.reduce((a, s) => a + (s.total || 0), 0)
@@ -730,8 +743,6 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Erreur email : ' + JSON.stringify(err) })
       }
 
-      // Marque uniquement les sessions traitées comme couvertes — seulement après succès d'envoi confirmé.
-      // (les sessions déjà à alerte_envoyee=true, s'il y en avait, ne sont pas re-touchées)
       await Promise.all(
         sessionsNonCouvertes.map(s =>
           fetch(`${SUPA_URL}/rest/v1/resultats?id=eq.${s.id}`, {
