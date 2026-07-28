@@ -44,11 +44,11 @@ input:focus { outline: none; border-color: var(--marine); }
 .hero-titre { font-family:'Newsreader',serif; font-size: 34px; font-weight: 500; color: var(--creme); line-height: 1.3; max-width: 480px; margin: 0 auto 20px; }
 .hero-sous { font-size: 15px; color: rgba(250,249,246,0.7); max-width: 480px; margin: 0 auto; line-height: 1.6; }
 .presentation { margin: 2rem auto 1.75rem; max-width: 480px; }
-.presentation-bandeau { background: var(--marine-light); border-left: 3px solid var(--marine); border-radius: 0 10px 10px 0; padding: 14px 18px; }
+.presentation-bandeau { background: transparent; border-left: 3px solid var(--bordeaux); border-radius: 0; padding: 4px 0 4px 18px; }
 .presentation-liste { display: flex; flex-direction: column; gap: 12px; }
 .presentation-point { display: flex; gap: 10px; align-items: flex-start; }
 .presentation-icone { font-size: 16px; color: var(--bordeaux); margin-top: 1px; flex-shrink: 0; line-height: 1; }
-.presentation-texte { font-size: 12.5px; color: var(--marine); line-height: 1.55; }
+.presentation-texte { font-size: 12.5px; color: var(--ardoise); line-height: 1.55; font-style: italic; }
 </style>
 </head>
 <body>
@@ -82,6 +82,10 @@ input:focus { outline: none; border-color: var(--marine); }
       <div class="presentation-point">
         <span class="presentation-icone">📄</span>
         <span class="presentation-texte">Un export PDF des bilans : sur le mois en cours, les 3 derniers mois, ou depuis le début</span>
+      </div>
+      <div class="presentation-point">
+        <span class="presentation-icone">📝</span>
+        <span class="presentation-texte">Le résultat de chaque examen blanc en ligne, détaillé par domaine du programme officiel du Brevet</span>
       </div>
     </div>
   </div>
