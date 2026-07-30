@@ -67,39 +67,6 @@
   font-size: 12px;
   color: #6B7280;
 }
-.tarif-badge {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--navy);
-  margin-top: 8px;
-}
-.tarifs-note {
-  text-align: center;
-  font-size: 13px;
-  color: #6B7280;
-  max-width: 480px;
-  margin: 0 auto 48px;
-  line-height: 1.6;
-}
-.suivi-explain {
-  background: var(--navy);
-  border-radius: 10px;
-  padding: 28px 24px;
-  max-width: 560px;
-  margin: 0 auto;
-  text-align: center;
-}
-.suivi-explain-title {
-  font-family: 'Newsreader', serif;
-  font-size: 18px;
-  color: var(--cream);
-  margin-bottom: 10px;
-}
-.suivi-explain-desc {
-  font-size: 13px;
-  color: rgba(250,249,246,0.8);
-  line-height: 1.6;
-}
 .form-cours-card {
   max-width: 400px;
   margin: 32px auto 0;
@@ -133,26 +100,6 @@
   background: var(--light-bg);
 }
 .form-cours-textarea { resize: vertical; min-height: 50px; }
-.format-toggle {
-  display: flex;
-  gap: 8px;
-}
-.format-btn {
-  flex: 1;
-  text-align: center;
-  padding: 9px;
-  border: 1.5px solid #e8e8e4;
-  color: #6B7280;
-  border-radius: 6px;
-  font-size: 11.5px;
-  cursor: pointer;
-  background: white;
-}
-.format-btn.active {
-  border-color: var(--navy);
-  background: var(--navy);
-  color: var(--cream);
-}
 .dispo-check {
   display: flex;
   align-items: center;
@@ -274,7 +221,7 @@
     <div class="tarif-card">
       <div class="tarif-nom">Autonomie</div>
       <div class="tarif-prix">0€</div>
-      <div class="tarif-desc">Quiz corrigés étape par étape</div>
+      <div class="tarif-desc">Quiz illimités par domaine et niveau, corrigés en détail</div>
       <div class="tarif-guide">Pour réviser seul, à son rythme</div>
       <a href="connexion.html" class="tarif-cta">Créer un compte</a>
     </div>
@@ -290,29 +237,9 @@
     <div class="tarif-card">
       <div class="tarif-nom">Cours visio</div>
       <div class="tarif-prix">30€<span>/h</span></div>
-      <div class="tarif-desc">Individuel, 10 ans d'expérience</div>
-      <div class="tarif-badge">✓ Suivi inclus</div>
+      <div class="tarif-desc">Cours individuel avec tableau numérique partagé, 10 ans d'expérience en soutien scolaire</div>
       <div class="tarif-guide">Pour un suivi régulier ou occasionnel</div>
-      <button type="button" class="tarif-cta" onclick="ouvrirFormulaireCours('visio')">Demander un cours</button>
-    </div>
-
-    <div class="tarif-card">
-      <div class="tarif-nom">Cours présentiel</div>
-      <div class="tarif-prix">40€<span>/h</span></div>
-      <div class="tarif-desc">Individuel, à domicile, 10 ans d'expérience</div>
-      <div class="tarif-badge">✓ Suivi inclus</div>
-      <div class="tarif-guide">Pour un suivi régulier ou occasionnel</div>
-      <button type="button" class="tarif-cta" onclick="ouvrirFormulaireCours('presentiel')">Demander un cours</button>
-    </div>
-
-    <div class="tarif-card">
-      <div class="tarif-nom">Stage vacances</div>
-      <div class="tarif-prix">200€<span>/semaine</span></div>
-      <div style="opacity:0.6;font-size:10.5px;color:#6B7280;margin-bottom:4px">soit 20€/h</div>
-      <div class="tarif-desc">Une semaine, 2h/jour, en visio, un domaine du Brevet, groupe 5 max. Le stage de mai inclut un brevet blanc écrit.</div>
-      <div class="tarif-badge">✓ Suivi inclus</div>
-      <div class="tarif-guide">Pour réviser un domaine à chaque période de vacances</div>
-      <a href="stages-vacances.html" class="tarif-cta">Voir les stages</a>
+      <button type="button" class="tarif-cta" onclick="ouvrirFormulaireCours()">Demander un cours</button>
     </div>
 
   </div>
@@ -331,15 +258,10 @@
       <option value="Autre">Autre</option>
     </select>
 
-    <div class="form-cours-label">Format</div>
-    <div class="format-toggle">
-      <div class="format-btn active" id="fc-format-visio" onclick="choisirFormat('visio')">Visio</div>
-      <div class="format-btn" id="fc-format-presentiel" onclick="choisirFormat('presentiel')">Présentiel</div>
-    </div>
-
     <div class="form-cours-label">Disponibilités</div>
     <label class="dispo-check"><input type="checkbox" id="fc-dispo-semaine"> Semaine, 18h-20h</label>
     <label class="dispo-check"><input type="checkbox" id="fc-dispo-dimanche"> Dimanche</label>
+    <div style="font-size:10.5px;color:#9CA3AF;font-style:italic;margin-top:4px">Présentiel possible sur demande</div>
 
     <div class="form-cours-section-label">Vos coordonnées</div>
 
@@ -359,12 +281,6 @@
     <div class="form-cours-msg" id="fc-msg"></div>
   </div>
 
-  <div class="tarifs-note">Le offre suivi est compris avec les cours particuliers et les stages, sans frais supplémentaires.</div>
-
-  <div class="suivi-explain">
-    <div class="suivi-explain-title">Comment vous êtes informé</div>
-    <div class="suivi-explain-desc">Un email après chaque session, avec une alerte en cas de difficulté, et un bilan complet tous les 21 jours.</div>
-  </div>
 </section>
 
 <section class="alt-bg">
@@ -398,19 +314,10 @@ function toggleMenu() {
 
 let formatCoursChoisi = 'visio'
 
-function ouvrirFormulaireCours(formatPreselectionne) {
+function ouvrirFormulaireCours() {
   const carte = document.getElementById('form-cours-card')
   carte.style.display = 'block'
-  if (formatPreselectionne) {
-    choisirFormat(formatPreselectionne)
-  }
   carte.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-function choisirFormat(format) {
-  formatCoursChoisi = format
-  document.getElementById('fc-format-visio').classList.toggle('active', format === 'visio')
-  document.getElementById('fc-format-presentiel').classList.toggle('active', format === 'presentiel')
 }
 
 async function envoyerDemandeCours() {
