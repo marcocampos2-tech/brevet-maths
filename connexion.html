@@ -137,7 +137,7 @@ async function init() {
   if (hash && hash.includes('type=recovery')) { afficherNouveauMdp(); return }
   const { data } = await sb.auth.getSession()
   if (data.session) { window.location.href = 'quiz.html'; return }
-  if (planParam === 'suivi') setMode('register')
+  if (planParam) setMode('register')
 }
 
 function afficherChampSource() {
