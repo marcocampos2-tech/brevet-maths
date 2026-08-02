@@ -125,6 +125,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 let mode = 'login'
 const urlParams = new URLSearchParams(window.location.search)
 const utmSource = urlParams.get('utm_source') || ''
+const planParam = urlParams.get('plan') || ''
 
 function toggleMenu() {
   document.getElementById('burger').classList.toggle('open')
@@ -135,7 +136,8 @@ async function init() {
   const hash = window.location.hash
   if (hash && hash.includes('type=recovery')) { afficherNouveauMdp(); return }
   const { data } = await sb.auth.getSession()
-  if (data.session) window.location.href = 'quiz.html'
+  if (data.session) { window.location.href = 'quiz.html'; return }
+  if (planParam === 'suivi') setMode('register')
 }
 
 function afficherChampSource() {
@@ -213,7 +215,8 @@ async function soumettre() {
         prenom: prenom.toLowerCase(), nom: nom.toLowerCase(),
         prenom_affiche: prenom, nom_affiche: nom,
         email_parent: emailParent, faux_email: fauxEmail,
-        source: source || null
+        source: source || null,
+        plan_souhaite: planParam || null
       })
       fetch('/api/email', {
         method: 'POST',
