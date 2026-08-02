@@ -8,6 +8,7 @@
 <title>Abonnement confirmé — ACADEMIKA</title>
 <meta name="robots" content="noindex">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="style.css">
 <style>
 .confirme-wrap {
@@ -130,7 +131,7 @@
     <div class="confirme-titre">Votre abonnement est confirmé</div>
 
     <div class="confirme-sous">
-      Merci — le Suivi est désormais activé sur le compte de [Prénom].
+      Merci — le Suivi est désormais activé sur le compte de <span id="prenom-eleve">votre enfant</span>.
     </div>
 
     <div class="confirme-liste">
@@ -176,6 +177,34 @@ function toggleMenu() {
   document.getElementById('burger').classList.toggle('open')
   document.getElementById('mobileMenu').classList.toggle('open')
 }
+
+const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true }
+})
+
+async function afficherPrenomEleve() {
+  try {
+    const { data } = await sb.auth.getSession()
+    if (!data.session) return // repli : "votre enfant" reste affiché
+
+    const userId = data.session.user.id
+    const { data: profil, error } = await sb
+      .from('profils')
+      .select('prenom_affiche')
+      .eq('user_id', userId)
+      .single()
+
+    if (error || !profil || !profil.prenom_affiche) return // repli
+
+    document.getElementById('prenom-eleve').textContent = profil.prenom_affiche
+  } catch (e) {
+    console.log('Erreur récupération prénom:', e.message) // repli silencieux
+  }
+}
+
+afficherPrenomEleve()
 </script>
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
