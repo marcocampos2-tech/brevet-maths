@@ -63,6 +63,33 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   .resume-valeur{font-size:17px}
   .resume-grid{grid-template-columns:repeat(2,1fr)}
 }
+.etat-vide { text-align: center; padding: 3rem 1.5rem; }
+.etat-vide-titre { font-family:'Newsreader',serif; font-size: 19px; color: var(--marine); margin-bottom: 8px; }
+.etat-vide-sub { font-size: 13.5px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+.btn-ajouter { background: var(--marine); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+.form-ajout { background: white; border-radius: 14px; border: 1px solid var(--border); padding: 1.5rem; }
+.form-ajout-titre { font-family:'Newsreader',serif; font-size: 18px; color: var(--marine); margin-bottom: 4px; }
+.form-ajout-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 1.25rem; }
+.form-ajout label { font-size: 12px; font-weight: 500; color: var(--ardoise); display: block; margin-bottom: 5px; margin-top: 12px; }
+.form-ajout label:first-of-type { margin-top: 0; }
+.form-ajout input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 13.5px; font-family: 'Inter', sans-serif; }
+.form-ajout input:focus { outline: none; border-color: var(--marine); }
+.offre-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+.offre-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px 12px; cursor: pointer; position: relative; }
+.offre-card.selected { border: 2px solid var(--bordeaux); padding: 13px 11px; }
+.offre-nom { font-size: 13px; font-weight: 500; color: var(--marine); margin-bottom: 4px; }
+.offre-prix { font-family:'Newsreader',serif; font-size: 18px; color: var(--marine); margin-bottom: 6px; }
+.offre-prix span { font-size: 11px; color: var(--muted); font-family:'Inter',sans-serif; }
+.offre-desc { font-size: 10.5px; color: var(--muted); line-height: 1.5; }
+.offre-badge { position: absolute; top: -9px; left: 10px; background: var(--bordeaux); color: white; font-size: 9.5px; font-weight: 500; padding: 2px 8px; border-radius: 10px; }
+.form-ajout-note { font-size: 10.5px; color: var(--muted); text-align: center; margin: 12px 0 4px; line-height: 1.5; }
+.form-ajout-actions { display: flex; gap: 8px; margin-top: 16px; }
+.form-ajout-submit { flex: 1; background: var(--marine); color: white; border: none; padding: 11px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+.form-ajout-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.form-ajout-annuler { background: white; color: var(--muted); border: 1px solid var(--border); padding: 11px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; }
+.form-ajout-msg { font-size: 12.5px; border-radius: 8px; padding: 10px 14px; margin-top: 12px; line-height: 1.5; display: none; }
+.form-ajout-msg.erreur { background: var(--bordeaux-light); color: var(--bordeaux); display: block; }
+.form-ajout-msg.succes { background: #EAF6EF; color: #1f7a45; display: block; }
 </style>
 </head>
 <body>
@@ -70,6 +97,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   <div class="nav-left">ACADEMIKA</div>
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
+    <button class="btn" id="btn-nav-ajouter" onclick="afficherFormulaireAjout()" style="display:none">+ Ajouter un enfant</button>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
@@ -78,27 +106,77 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 
 <div id="selecteur-enfant"></div>
 
-<div class="page-titre">Suivi de la progression</div>
-<div class="page-sub" id="page-sub">Activité de <span id="prenom-affiche">votre enfant</span></div>
+<div id="zone-dashboard">
+  <div class="page-titre">Suivi de la progression</div>
+  <div class="page-sub" id="page-sub">Activité de <span id="prenom-affiche">votre enfant</span></div>
 
-<div class="info-bandeau">Le graphique montre le détail jour par jour sur 7, 14 ou 21 jours. Pour une période plus longue (un mois, un trimestre), utilisez les boutons de téléchargement en bas de page.</div>
+  <div class="info-bandeau">Le graphique montre le détail jour par jour sur 7, 14 ou 21 jours. Pour une période plus longue (un mois, un trimestre), utilisez les boutons de téléchargement en bas de page.</div>
 
-<div class="periode-select">
-  <button class="periode-btn" data-jours="7" onclick="setPeriode(7)">7 jours</button>
-  <button class="periode-btn active" data-jours="14" onclick="setPeriode(14)">14 jours</button>
-  <button class="periode-btn" data-jours="21" onclick="setPeriode(21)">21 jours</button>
+  <div class="periode-select">
+    <button class="periode-btn" data-jours="7" onclick="setPeriode(7)">7 jours</button>
+    <button class="periode-btn active" data-jours="14" onclick="setPeriode(14)">14 jours</button>
+    <button class="periode-btn" data-jours="21" onclick="setPeriode(21)">21 jours</button>
+  </div>
+
+  <div id="contenu">
+    <div class="loader">⏳ Chargement…</div>
+  </div>
+
+  <div class="card">
+    <div class="card-titre">Télécharger un bilan</div>
+    <div class="pdf-sub">Un clic suffit — aucune date à saisir.</div>
+    <button class="pdf-btn" id="pdf-mois" onclick="genererPDF('mois')"><span>Ce mois-ci</span><span>PDF ↓</span></button>
+    <button class="pdf-btn" id="pdf-trimestre" onclick="genererPDF('trimestre')"><span>Les 3 derniers mois</span><span>PDF ↓</span></button>
+    <button class="pdf-btn" id="pdf-debut" onclick="genererPDF('debut')"><span>Depuis le début</span><span>PDF ↓</span></button>
+  </div>
 </div>
 
-<div id="contenu">
-  <div class="loader">⏳ Chargement…</div>
+<div id="zone-vide" style="display:none">
+  <div class="etat-vide">
+    <div class="etat-vide-titre">Ajoutez votre enfant</div>
+    <div class="etat-vide-sub">Créez son compte pour qu'il commence à réviser dès aujourd'hui.</div>
+    <button class="btn-ajouter" onclick="afficherFormulaireAjout()">Ajouter un enfant</button>
+  </div>
 </div>
 
-<div class="card">
-  <div class="card-titre">Télécharger un bilan</div>
-  <div class="pdf-sub">Un clic suffit — aucune date à saisir.</div>
-  <button class="pdf-btn" id="pdf-mois" onclick="genererPDF('mois')"><span>Ce mois-ci</span><span>PDF ↓</span></button>
-  <button class="pdf-btn" id="pdf-trimestre" onclick="genererPDF('trimestre')"><span>Les 3 derniers mois</span><span>PDF ↓</span></button>
-  <button class="pdf-btn" id="pdf-debut" onclick="genererPDF('debut')"><span>Depuis le début</span><span>PDF ↓</span></button>
+<div id="zone-form-ajout" style="display:none">
+  <div class="form-ajout">
+    <div class="form-ajout-titre">Ajouter un enfant</div>
+    <div class="form-ajout-sub">Son compte sera créé immédiatement, avec l'offre choisie ci-dessous.</div>
+
+    <label for="fa-prenom">Prénom de l'enfant</label>
+    <input type="text" id="fa-prenom" placeholder="Ex: Lucas">
+
+    <label for="fa-nom">Nom de l'enfant</label>
+    <input type="text" id="fa-nom" placeholder="Ex: Martin">
+
+    <label for="fa-password">Mot de passe de l'enfant</label>
+    <input type="password" id="fa-password" placeholder="••••••••">
+
+    <label>Choisir une offre</label>
+    <div class="offre-grid">
+      <div class="offre-card selected" id="offre-autonomie" onclick="choisirOffre('autonomie')">
+        <div class="offre-nom">Autonomie</div>
+        <div class="offre-prix">0 €</div>
+        <div class="offre-desc">Quiz illimités, corrigés en détail</div>
+      </div>
+      <div class="offre-card" id="offre-suivi" onclick="choisirOffre('suivi')">
+        <div class="offre-badge">14 jours offerts</div>
+        <div class="offre-nom">Suivi</div>
+        <div class="offre-prix">7,90 €<span>/mois</span></div>
+        <div class="offre-desc">Autonomie, plus : bilans, email de suivi, PDF, examen blanc</div>
+      </div>
+    </div>
+
+    <div class="form-ajout-note">Suivi : sans engagement, résiliable à tout moment. Carte demandée, rien prélevé avant 14 jours.</div>
+
+    <div class="form-ajout-actions">
+      <button class="form-ajout-annuler" onclick="fermerFormulaireAjout()">Annuler</button>
+      <button class="form-ajout-submit" id="fa-submit" onclick="creerEnfant()">Créer le compte de l'enfant</button>
+    </div>
+
+    <div class="form-ajout-msg" id="fa-msg"></div>
+  </div>
 </div>
 
 <canvas id="chart-pdf-offscreen" width="600" height="260" style="display:none"></canvas>
@@ -112,24 +190,22 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 let user = null, prenom = '', jours = 14, chart = null
 let eleveUserId = null, eleves = []
+let offreSelectionnee = 'autonomie'
 
 async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'espace-parent.html'; return }
   user = data.session.user
   document.getElementById('user-email').textContent = user.email
+  document.getElementById('btn-nav-ajouter').style.display = 'inline-flex'
 
   const { data: profils, error } = await sb.from('profils')
     .select('user_id, prenom_affiche')
     .eq('email_parent', user.email)
 
   if (error || !profils || profils.length === 0) {
-    document.querySelector('.page-titre').textContent = 'Aucun compte lié'
-    document.getElementById('page-sub').innerHTML = ''
-    document.querySelector('.info-bandeau').style.display = 'none'
-    document.querySelector('.periode-select').style.display = 'none'
-    document.querySelectorAll('.card').forEach(c => c.style.display = 'none')
-    document.getElementById('contenu').innerHTML = `<div class="erreur-liaison">Aucun élève n'est associé à l'adresse ${user.email} pour le moment. Vérifiez que c'est bien l'adresse renseignée à l'inscription de votre enfant.</div>`
+    document.getElementById('zone-dashboard').style.display = 'none'
+    document.getElementById('zone-vide').style.display = 'block'
     return
   }
 
@@ -582,6 +658,128 @@ async function genererPDF(mode) {
 async function logout() {
   await sb.auth.signOut()
   window.location.href = 'espace-parent.html?deconnecte=1'
+}
+
+// ═══════════════════════════════════════════════════════════
+// AJOUTÉ le 04/08/2026 — Ajout d'enfant depuis l'espace parent
+// (architecture parent-payeur : le parent crée le compte élève
+// depuis SA session, avec choix d'offre Autonomie/Suivi)
+// ═══════════════════════════════════════════════════════════
+
+function afficherFormulaireAjout() {
+  document.getElementById('zone-dashboard').style.display = 'none'
+  document.getElementById('zone-vide').style.display = 'none'
+  document.getElementById('zone-form-ajout').style.display = 'block'
+  document.getElementById('fa-msg').className = 'form-ajout-msg'
+  document.getElementById('fa-msg').style.display = 'none'
+}
+
+function fermerFormulaireAjout() {
+  document.getElementById('zone-form-ajout').style.display = 'none'
+  if (eleves.length === 0) {
+    document.getElementById('zone-vide').style.display = 'block'
+  } else {
+    document.getElementById('zone-dashboard').style.display = 'block'
+  }
+}
+
+function choisirOffre(offre) {
+  offreSelectionnee = offre
+  document.getElementById('offre-autonomie').classList.toggle('selected', offre === 'autonomie')
+  document.getElementById('offre-suivi').classList.toggle('selected', offre === 'suivi')
+}
+
+function genererFauxEmailEnfant(prenom, nom) {
+  const code = Math.random().toString(36).substring(2, 6)
+  const p = prenom.toLowerCase().replace(/[^a-z]/g, '')
+  const n = nom.toLowerCase().replace(/[^a-z]/g, '')
+  return `${p}_${n}_${code}@academika.app`
+}
+
+function afficherMsgAjout(type, texte) {
+  const m = document.getElementById('fa-msg')
+  m.textContent = texte
+  m.className = 'form-ajout-msg ' + type
+}
+
+async function creerEnfant() {
+  const prenomE = document.getElementById('fa-prenom').value.trim()
+  const nomE = document.getElementById('fa-nom').value.trim()
+  const passwordE = document.getElementById('fa-password').value
+  const btn = document.getElementById('fa-submit')
+
+  if (!prenomE) { afficherMsgAjout('erreur', 'Entrez le prénom.'); return }
+  if (!nomE) { afficherMsgAjout('erreur', 'Entrez le nom.'); return }
+  if (!passwordE || passwordE.length < 6) { afficherMsgAjout('erreur', 'Mot de passe trop court (6 caractères min).'); return }
+
+  btn.disabled = true
+  btn.textContent = 'Création en cours…'
+  document.getElementById('fa-msg').style.display = 'none'
+
+  try {
+    const { data: existe } = await sb.rpc('verifier_disponibilite', { p_prenom: prenomE.toLowerCase(), p_nom: nomE.toLowerCase() })
+    if (existe) {
+      afficherMsgAjout('erreur', 'Ce prénom et nom sont déjà utilisés.')
+      btn.disabled = false; btn.textContent = 'Créer le compte de l\'enfant'
+      return
+    }
+
+    // Client isolé : ne persiste pas de session, ne touche jamais à la
+    // session du parent active sur "sb". Sert uniquement à créer le
+    // compte élève sans déconnecter le parent en cours de route.
+    const sbEleve = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: false }
+    })
+
+    const fauxEmail = genererFauxEmailEnfant(prenomE, nomE)
+    const { data: signUpData, error: signUpError } = await sbEleve.auth.signUp({
+      email: fauxEmail, password: passwordE,
+      options: { data: { prenom: prenomE, nom: nomE, email_parent: user.email } }
+    })
+    if (signUpError) {
+      afficherMsgAjout('erreur', 'Erreur : ' + signUpError.message)
+      btn.disabled = false; btn.textContent = 'Créer le compte de l\'enfant'
+      return
+    }
+
+    // Insertion via le client élève (sa propre session, tout juste créée) —
+    // cohérent avec la logique déjà en place dans connexion.html.
+    await sbEleve.from('profils').insert({
+      user_id: signUpData.user.id,
+      prenom: prenomE.toLowerCase(), nom: nomE.toLowerCase(),
+      prenom_affiche: prenomE, nom_affiche: nomE,
+      email_parent: user.email, faux_email: fauxEmail,
+      plan_actif: false,
+      plan_souhaite: offreSelectionnee
+    })
+
+    if (offreSelectionnee === 'suivi') {
+      const { data: sessionParent } = await sb.auth.getSession()
+      const res = await fetch('/api/stripe-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionParent.session.access_token}`
+        },
+        body: JSON.stringify({ user_id_enfant: signUpData.user.id })
+      })
+      const result = await res.json()
+      if (result.error || !result.url) {
+        afficherMsgAjout('erreur', 'Le compte a été créé, mais le paiement n\'a pas pu démarrer. Réessayez depuis le tableau de bord.')
+        btn.disabled = false; btn.textContent = 'Créer le compte de l\'enfant'
+        setTimeout(() => window.location.reload(), 2500)
+        return
+      }
+      window.location.href = result.url
+    } else {
+      afficherMsgAjout('succes', '✅ Compte créé ! Redirection…')
+      setTimeout(() => window.location.reload(), 1200)
+    }
+  } catch (e) {
+    console.log('Erreur création enfant:', e.message)
+    afficherMsgAjout('erreur', 'Erreur inattendue. Réessayez.')
+    btn.disabled = false; btn.textContent = 'Créer le compte de l\'enfant'
+  }
 }
 
 init()
