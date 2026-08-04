@@ -149,7 +149,7 @@ export default async function handler(req, res) {
         { price: process.env.STRIPE_PRICE_SUIVI, quantity: 1 }
       ],
       metadata: { user_id: userIdEnfant },
-      success_url: `${SITE_URL}/abonnement-confirme.html`,
+      success_url: `${SITE_URL}/abonnement-confirme.html?enfant=${userIdEnfant}`,
       cancel_url: `${SITE_URL}/suivi-parent.html`
     }
 
