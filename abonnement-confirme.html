@@ -145,7 +145,7 @@
       </ul>
     </div>
 
-    <a href="espace-parent.html" class="confirme-btn">Accéder à l'espace parent</a>
+    <a href="suivi-parent.html" class="confirme-btn">Accéder à l'espace parent</a>
 
     <div class="confirme-note">
       Un email de confirmation vous a été envoyé.<br>
@@ -186,17 +186,28 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
 
 async function afficherPrenomEleve() {
   try {
-    const { data } = await sb.auth.getSession()
-    if (!data.session) return // repli : "votre enfant" reste affiché
+    // L'identité de l'enfant est transmise explicitement dans l'URL par
+    // stripe-checkout.js (?enfant=user_id). On ne peut plus deviner via
+    // la session active : c'est désormais celle du PARENT (compte OTP),
+    // pas celle de l'élève — chercher par session.user.id échouerait
+    // systématiquement depuis l'architecture parent-payeur du 03/08/2026.
+    const userIdEnfant = new URLSearchParams(window.location.search).get('enfant')
+    if (!userIdEnfant) return // repli : "votre enfant" reste affiché
 
-    const userId = data.session.user.id
+    const { data: session } = await sb.auth.getSession()
+    if (!session.session) return // repli
+
+    // Vérification de cohérence : l'enfant affiché doit appartenir au
+    // parent actuellement connecté (évite d'afficher un prénom qui ne
+    // correspond pas à la session active si l'URL est partagée ou rejouée).
     const { data: profil, error } = await sb
       .from('profils')
-      .select('prenom_affiche')
-      .eq('user_id', userId)
+      .select('prenom_affiche, email_parent')
+      .eq('user_id', userIdEnfant)
       .single()
 
     if (error || !profil || !profil.prenom_affiche) return // repli
+    if (profil.email_parent !== session.session.user.email) return // repli
 
     document.getElementById('prenom-eleve').textContent = profil.prenom_affiche
   } catch (e) {
