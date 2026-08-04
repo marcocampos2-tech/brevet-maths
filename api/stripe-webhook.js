@@ -84,7 +84,12 @@ export default async function handler(req, res) {
   let userId
   try {
     const invoice = event.data.object
+    // Le champ invoice.subscription est déprécié depuis l'API
+    // 2025-03-31.basil, remplacé par invoice.parent.subscription_details.
+    // On gère les deux formats pour être robuste indépendamment de la
+    // version d'API effectivement utilisée par le SDK au moment de l'appel.
     const subscriptionId = invoice.subscription
+      || (invoice.parent?.type === 'subscription_details' ? invoice.parent.subscription_details?.subscription : null)
 
     if (!subscriptionId) {
       console.error('Facture sans subscription associée, event id:', event.id)
