@@ -153,6 +153,9 @@ export default async function handler(req, res) {
         { price: process.env.STRIPE_PRICE_SUIVI, quantity: 1 }
       ],
       metadata: { user_id: userIdEnfant },
+      subscription_data: {
+        metadata: { user_id: userIdEnfant }
+      },
       success_url: `${SITE_URL}/abonnement-confirme.html?enfant=${userIdEnfant}`,
       cancel_url: `${SITE_URL}/suivi-parent.html`
     }
@@ -164,7 +167,7 @@ export default async function handler(req, res) {
     }
 
     if (premierEssai) {
-      sessionParams.subscription_data = { trial_period_days: 14 }
+      sessionParams.subscription_data.trial_period_days = 14
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams, { idempotencyKey })
