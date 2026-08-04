@@ -3,16 +3,29 @@
 // ═══════════════════════════════════════════════════════════
 // Créé le 03/08/2026 — Chantier Stripe / abonnement Suivi
 //
-// Rôle : recevoir la demande d'un parent connecté ("Commencer mon essai
-// gratuit"), et créer une session Stripe Checkout pour l'abonnement
-// Suivi (7,90€/mois, sans engagement).
+// Rôle : recevoir la demande d'un parent connecté (depuis suivi-parent.html,
+// bouton "Créer le compte de l'enfant" avec offre Suivi choisie, ou bouton
+// "Passer à Suivi" sur un enfant existant), et créer une session Stripe
+// Checkout pour l'abonnement Suivi (7,90€/mois, sans engagement) au nom
+// d'un enfant précis.
+//
+// Modifié le 03/08/2026 — Adaptation architecture parent-payeur :
+//   - La session vérifiée (étape 1) est désormais celle du PARENT
+//     (compte OTP créé via espace-parent.html), pas celle de l'élève.
+//   - L'enfant ciblé (user_id_enfant) est reçu dans le body, mais
+//     TOUJOURS vérifié serveur-side : on confirme qu'il appartient
+//     bien à ce parent (email_parent = email de la session) avant
+//     toute action. Le client propose, le serveur vérifie — jamais
+//     l'inverse.
+//   - metadata.user_id (lu par stripe-webhook.js) référence l'ENFANT,
+//     pas le parent qui paie — c'est son plan_actif qui doit s'activer.
 //
 // Sécurité :
-//   - Le user_id n'est JAMAIS lu depuis le body de la requête. Il est
-//     dérivé du token de session Supabase, vérifié ici côté serveur
-//     via l'API Auth Supabase (/auth/v1/user).
-//   - L'email de facturation vient de la table profils (email_parent),
-//     jamais d'une valeur envoyée par le client.
+//   - Aucun user_id n'est utilisé sans vérification. Celui de la session
+//     (parent) vient de Supabase Auth. Celui de l'enfant est vérifié par
+//     appartenance avant tout usage.
+//   - L'email de facturation vient de la session parent authentifiée,
+//     jamais d'une valeur envoyée librement par le client.
 //
 // Déduplication essai gratuit :
 //   - Avant de créer la session, on cherche si un customer Stripe existe
@@ -52,6 +65,7 @@ export default async function handler(req, res) {
   }
 
   let userId
+  let emailSessionParent
   try {
     const userRes = await fetch(`${SUPA_URL}/auth/v1/user`, {
       headers: {
@@ -64,7 +78,8 @@ export default async function handler(req, res) {
     }
     const userData = await userRes.json()
     userId = userData.id
-    if (!userId) {
+    emailSessionParent = userData.email
+    if (!userId || !emailSessionParent) {
       return res.status(401).json({ error: 'Session invalide' })
     }
   } catch (e) {
@@ -72,11 +87,23 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Session invalide' })
   }
 
-  // ── Étape 2 — Récupération du profil (email de facturation réel) ──
+  // ── Étape 2 — Lire l'enfant ciblé, et vérifier qu'il appartient bien
+  //             au parent authentifié (jamais de confiance aveugle dans
+  //             le body : le client PROPOSE un user_id_enfant, le serveur
+  //             VÉRIFIE qu'il est légitimement rattaché à ce parent) ──
+  const userIdEnfant = req.body?.user_id_enfant
+  if (!userIdEnfant) {
+    return res.status(400).json({ error: 'user_id_enfant manquant' })
+  }
+
   let emailParent
   try {
+    // La session vérifiée à l'étape 1 est celle du PARENT (compte OTP,
+    // email réel).
+    emailParent = emailSessionParent
+
     const profilRes = await fetch(
-      `${SUPA_URL}/rest/v1/profils?user_id=eq.${userId}&select=email_parent,prenom_affiche&limit=1`,
+      `${SUPA_URL}/rest/v1/profils?user_id=eq.${userIdEnfant}&email_parent=eq.${encodeURIComponent(emailParent)}&select=email_parent&limit=1`,
       {
         headers: {
           'Authorization': `Bearer ${SUPA_KEY}`,
@@ -85,13 +112,15 @@ export default async function handler(req, res) {
       }
     )
     const profils = await profilRes.json()
-    if (!profils || profils.length === 0 || !profils[0].email_parent) {
-      return res.status(404).json({ error: 'Profil introuvable' })
+    if (!profils || profils.length === 0) {
+      // Soit l'enfant n'existe pas, soit il n'appartient pas à ce parent —
+      // dans les deux cas, refus. Ne jamais préciser lequel (évite de
+      // révéler l'existence d'un profil à un tiers qui devine des IDs).
+      return res.status(403).json({ error: 'Accès refusé à ce profil' })
     }
-    emailParent = profils[0].email_parent
   } catch (e) {
-    console.error('Erreur récupération profil:', e.message)
-    return res.status(500).json({ error: 'Erreur lors de la récupération du profil' })
+    console.error('Erreur vérification appartenance profil:', e.message)
+    return res.status(500).json({ error: 'Erreur lors de la vérification du profil' })
   }
 
   // ── Étape 3 — Déduplication : essai gratuit déjà utilisé pour cet email ? ──
@@ -110,7 +139,7 @@ export default async function handler(req, res) {
 
   // ── Étape 4 — Idempotency (anti double-clic) ──
   const jour = new Date().toISOString().slice(0, 10)
-  const idempotencyKey = `checkout_${userId}_${jour}`
+  const idempotencyKey = `checkout_${userIdEnfant}_${jour}`
 
   // ── Étape 5 — Création de la session Stripe Checkout ──
   try {
@@ -119,9 +148,9 @@ export default async function handler(req, res) {
       line_items: [
         { price: process.env.STRIPE_PRICE_SUIVI, quantity: 1 }
       ],
-      metadata: { user_id: userId },
+      metadata: { user_id: userIdEnfant },
       success_url: `${SITE_URL}/abonnement-confirme.html`,
-      cancel_url: `${SITE_URL}/abonnement.html`
+      cancel_url: `${SITE_URL}/suivi-parent.html`
     }
 
     if (customerId) {
