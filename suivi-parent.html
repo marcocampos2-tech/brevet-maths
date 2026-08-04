@@ -90,6 +90,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .form-ajout-msg { font-size: 12.5px; border-radius: 8px; padding: 10px 14px; margin-top: 12px; line-height: 1.5; display: none; }
 .form-ajout-msg.erreur { background: var(--bordeaux-light); color: var(--bordeaux); display: block; }
 .form-ajout-msg.succes { background: #EAF6EF; color: #1f7a45; display: block; }
+.bandeau-suivi { background: var(--bordeaux-light); border-left: 3px solid var(--bordeaux); border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.bandeau-suivi-texte { font-size: 12.5px; color: var(--bordeaux); line-height: 1.5; }
+.bandeau-suivi-btn { background: var(--bordeaux); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; }
+.bandeau-suivi-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -109,6 +113,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <div id="zone-dashboard">
   <div class="page-titre">Suivi de la progression</div>
   <div class="page-sub" id="page-sub">Activité de <span id="prenom-affiche">votre enfant</span></div>
+
+  <div id="bandeau-suivi" style="display:none"></div>
 
   <div class="info-bandeau">Le graphique montre le détail jour par jour sur 7, 14 ou 21 jours. Pour une période plus longue (un mois, un trimestre), utilisez les boutons de téléchargement en bas de page.</div>
 
@@ -200,7 +206,7 @@ async function init() {
   document.getElementById('btn-nav-ajouter').style.display = 'inline-flex'
 
   const { data: profils, error } = await sb.from('profils')
-    .select('user_id, prenom_affiche')
+    .select('user_id, prenom_affiche, plan_actif, plan_souhaite')
     .eq('email_parent', user.email)
 
   if (error || !profils || profils.length === 0) {
@@ -228,7 +234,28 @@ function choisirEnfant(uid, btn, prenomDirect) {
     btn.classList.add('active')
   }
   document.getElementById('prenom-affiche').textContent = prenom || 'votre enfant'
+  afficherBandeauSuivi(uid)
   chargerDonnees()
+}
+
+function afficherBandeauSuivi(uid) {
+  const bandeau = document.getElementById('bandeau-suivi')
+  const eleve = eleves.find(e => e.user_id === uid)
+  if (!eleve || eleve.plan_actif) {
+    bandeau.style.display = 'none'
+    bandeau.innerHTML = ''
+    return
+  }
+  const texte = eleve.plan_souhaite === 'suivi'
+    ? `${eleve.prenom_affiche || 'Cet élève'} — finalisez l'abonnement Suivi commencé précédemment.`
+    : `${eleve.prenom_affiche || 'Cet élève'} est en Autonomie. Suivi ajoute bilans, email de suivi, PDF et examen blanc.`
+  const libelleBtn = eleve.plan_souhaite === 'suivi' ? 'Finaliser Suivi' : 'Passer à Suivi'
+  bandeau.innerHTML = `
+    <div class="bandeau-suivi">
+      <div class="bandeau-suivi-texte">${texte}</div>
+      <button class="bandeau-suivi-btn" id="btn-passer-suivi" onclick="passerASuivi('${uid}')">${libelleBtn} →</button>
+    </div>`
+  bandeau.style.display = 'block'
 }
 
 function setPeriode(j) {
@@ -779,6 +806,32 @@ async function creerEnfant() {
     console.log('Erreur création enfant:', e.message)
     afficherMsgAjout('erreur', 'Erreur inattendue. Réessayez.')
     btn.disabled = false; btn.textContent = 'Créer le compte de l\'enfant'
+  }
+}
+
+async function passerASuivi(uid) {
+  const btn = document.getElementById('btn-passer-suivi')
+  if (btn) { btn.disabled = true; btn.textContent = 'Redirection…' }
+
+  try {
+    const { data: sessionParent } = await sb.auth.getSession()
+    const res = await fetch('/api/stripe-checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionParent.session.access_token}`
+      },
+      body: JSON.stringify({ user_id_enfant: uid })
+    })
+    const result = await res.json()
+    if (result.error || !result.url) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Réessayer' }
+      return
+    }
+    window.location.href = result.url
+  } catch (e) {
+    console.log('Erreur passage à Suivi:', e.message)
+    if (btn) { btn.disabled = false; btn.textContent = 'Réessayer' }
   }
 }
 
