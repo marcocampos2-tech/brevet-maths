@@ -145,6 +145,7 @@ export default async function handler(req, res) {
   try {
     const sessionParams = {
       mode: 'subscription',
+      locale: 'fr',
       line_items: [
         { price: process.env.STRIPE_PRICE_SUIVI, quantity: 1 }
       ],
