@@ -138,8 +138,11 @@ export default async function handler(req, res) {
   }
 
   // ── Étape 4 — Idempotency (anti double-clic) ──
-  const jour = new Date().toISOString().slice(0, 10)
-  const idempotencyKey = `checkout_${userIdEnfant}_${jour}`
+  // Granularité fine (timestamp), pas par jour : le bouton désactivé au clic
+  // protège déjà du double-clic. Une clé basée sur le jour causait des
+  // conflits Stripe entre tentatives successives avec des paramètres
+  // différents (ex. dédup changeant l'essai gratuit d'un essai à l'autre).
+  const idempotencyKey = `checkout_${userIdEnfant}_${Date.now()}`
 
   // ── Étape 5 — Création de la session Stripe Checkout ──
   try {
