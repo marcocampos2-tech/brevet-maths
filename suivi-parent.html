@@ -63,10 +63,14 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   .resume-valeur{font-size:17px}
   .resume-grid{grid-template-columns:repeat(2,1fr)}
 }
-.etat-vide { text-align: center; padding: 3rem 1.5rem; }
-.etat-vide-titre { font-family:'Newsreader',serif; font-size: 19px; color: var(--marine); margin-bottom: 8px; }
-.etat-vide-sub { font-size: 13.5px; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
-.btn-ajouter { background: var(--marine); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+.etat-vide { text-align: center; padding: 2.5rem 1.75rem; background: white; border-radius: 14px; border: 1px solid var(--border); }
+.etat-vide-icone { width: 52px; height: 52px; border-radius: 50%; background: var(--marine-light); color: var(--marine); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-family: 'Newsreader', serif; font-size: 22px; }
+.etat-vide-titre { font-family:'Newsreader',serif; font-size: 20px; color: var(--marine); margin-bottom: 8px; }
+.etat-vide-sub { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 18px; max-width: 340px; margin-left: auto; margin-right: auto; }
+.btn-ajouter { background: var(--marine); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; margin-bottom: 20px; }
+.etat-vide-suivi { border-top: 1px solid var(--border); padding-top: 16px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.etat-vide-badge { background: var(--bordeaux-light); color: var(--bordeaux); font-size: 10.5px; font-weight: 500; padding: 3px 9px; border-radius: 10px; }
+.etat-vide-suivi-texte { font-size: 11.5px; color: #9CA3AF; }
 .form-ajout { background: white; border-radius: 14px; border: 1px solid var(--border); padding: 1.5rem; }
 .form-ajout-titre { font-family:'Newsreader',serif; font-size: 18px; color: var(--marine); margin-bottom: 4px; }
 .form-ajout-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 1.25rem; }
@@ -139,9 +143,14 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 
 <div id="zone-vide" style="display:none">
   <div class="etat-vide">
-    <div class="etat-vide-titre">Ajoutez votre enfant</div>
-    <div class="etat-vide-sub">Créez son compte pour qu'il commence à réviser dès aujourd'hui.</div>
-    <button class="btn-ajouter" onclick="afficherFormulaireAjout()">Ajouter un enfant</button>
+    <div class="etat-vide-icone">∑</div>
+    <div class="etat-vide-titre">Bienvenue</div>
+    <div class="etat-vide-sub">Créez le compte de votre enfant, gratuitement, en une minute.</div>
+    <button class="btn-ajouter" onclick="afficherFormulaireAjout()">Créer le compte de mon enfant</button>
+    <div class="etat-vide-suivi">
+      <span class="etat-vide-badge">14 jours offerts</span>
+      <span class="etat-vide-suivi-texte">Suivi disponible à tout moment</span>
+    </div>
   </div>
 </div>
 
