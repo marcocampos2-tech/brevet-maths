@@ -1,4 +1,66 @@
 // /api/email.js
+
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+// ═══════════════════════════════════════════
+// RATE-LIMIT PAR DESTINATAIRE — 10 emails / heure / adresse
+// Table email_rate_limit (destinataire text PK, compteur int, fenetre_debut timestamptz)
+// ═══════════════════════════════════════════
+async function verifierRateLimit(destinataire) {
+  if (!destinataire) return true
+  const dest = String(destinataire).trim().toLowerCase()
+  const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+  const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPA_KEY}`, 'apikey': SUPA_KEY }
+
+  try {
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/email_rate_limit?destinataire=eq.${encodeURIComponent(dest)}&select=compteur,fenetre_debut`,
+      { headers }
+    )
+    const rows = await r.json()
+    const maintenant = new Date()
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      await fetch(`${SUPA_URL}/rest/v1/email_rate_limit`, {
+        method: 'POST',
+        headers: { ...headers, 'Prefer': 'return=minimal,resolution=merge-duplicates' },
+        body: JSON.stringify({ destinataire: dest, compteur: 1, fenetre_debut: maintenant.toISOString() })
+      })
+      return true
+    }
+
+    const { compteur, fenetre_debut } = rows[0]
+    const diffHeures = (maintenant - new Date(fenetre_debut)) / 3600000
+
+    if (diffHeures >= 1) {
+      await fetch(`${SUPA_URL}/rest/v1/email_rate_limit?destinataire=eq.${encodeURIComponent(dest)}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ compteur: 1, fenetre_debut: maintenant.toISOString() })
+      })
+      return true
+    }
+
+    if (compteur >= 10) return false
+
+    await fetch(`${SUPA_URL}/rest/v1/email_rate_limit?destinataire=eq.${encodeURIComponent(dest)}`, {
+      method: 'PATCH',
+      headers: { ...headers, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ compteur: compteur + 1 })
+    })
+    return true
+
+  } catch (e) {
+    console.log('Erreur verifierRateLimit:', e.message)
+    return true
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST')
@@ -56,6 +118,9 @@ export default async function handler(req, res) {
         return res.status(200).json(reponseUniforme)
       }
 
+      const rateOk = await verifierRateLimit(email_parent)
+      if (!rateOk) return res.status(429).json({ error: 'Trop de demandes pour cette adresse. Réessayez plus tard.' })
+
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
@@ -111,7 +176,7 @@ export default async function handler(req, res) {
       sujetInterne = `Inscription Examen Blanc Brevet — ${prenom}`
       contenuInterne = `
         <p style="margin-bottom:16px">Bonjour,</p>
-        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous avons bien reçu la demande d'inscription de <strong>${prenom} ${nom}</strong> pour la session du <strong>${date}</strong>.</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous avons bien reçu la demande d'inscription de <strong>${esc(prenom)} ${esc(nom)}</strong> pour la session du <strong>${esc(date)}</strong>.</p>
         <p style="color:#444;line-height:1.6;margin-bottom:20px">Malheureusement, cette session est complète. Nous ne pouvons pas confirmer cette inscription.</p>
         <p style="color:#444;line-height:1.6;margin-bottom:20px">Si l'autre date vous convient, n'hésitez pas à vous réinscrire sur <strong>academika.fr</strong>.</p>
       `
@@ -119,18 +184,18 @@ export default async function handler(req, res) {
       sujetInterne = `Annulation Examen Blanc Brevet — ${prenom}`
       contenuInterne = `
         <p style="margin-bottom:16px">Bonjour,</p>
-        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous vous informons que l'inscription de <strong>${prenom} ${nom}</strong> pour la session du <strong>${date}</strong> a été annulée.</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous vous informons que l'inscription de <strong>${esc(prenom)} ${esc(nom)}</strong> pour la session du <strong>${esc(date)}</strong> a été annulée.</p>
       `
     } else {
       if (!adresse) return res.status(400).json({ error: 'Adresse manquante' })
       sujetInterne = `✅ Inscription confirmée — Examen Blanc Brevet — ${prenom}`
       contenuInterne = `
         <p style="margin-bottom:16px">Bonjour,</p>
-        <p style="color:#444;line-height:1.6;margin-bottom:20px">L'inscription de <strong>${prenom} ${nom}</strong> pour l'examen blanc est confirmée :</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">L'inscription de <strong>${esc(prenom)} ${esc(nom)}</strong> pour l'examen blanc est confirmée :</p>
         <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0">
-          <p style="margin-bottom:8px"><strong>📅 Date :</strong> ${date} · ${heure || '15h00'}</p>
-          <p style="margin-bottom:8px"><strong>📍 Adresse :</strong> ${adresse}</p>
-          ${messageCompl ? `<p><strong>ℹ️ Infos :</strong> ${messageCompl}</p>` : ''}
+          <p style="margin-bottom:8px"><strong>📅 Date :</strong> ${esc(date)} · ${esc(heure) || '15h00'}</p>
+          <p style="margin-bottom:8px"><strong>📍 Adresse :</strong> ${esc(adresse)}</p>
+          ${messageCompl ? `<p><strong>ℹ️ Infos :</strong> ${esc(messageCompl)}</p>` : ''}
         </div>
         <p style="color:#444;line-height:1.6;margin-bottom:20px">Merci d'arriver 5 minutes avant. Prévoir stylo et calculatrice.</p>
       `
@@ -149,6 +214,9 @@ export default async function handler(req, res) {
           <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
         </div>
       </div>`
+
+    const rateOk = await verifierRateLimit(emailParent)
+    if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
 
     try {
       await fetch('https://api.resend.com/emails', {
@@ -175,7 +243,7 @@ export default async function handler(req, res) {
       sujetInterne = `Inscription stage — ${prenom}`
       contenuInterne = `
         <p style="margin-bottom:16px">Bonjour,</p>
-        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous avons bien reçu la demande d'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong>.</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous avons bien reçu la demande d'inscription de <strong>${esc(prenom)} ${esc(nom)}</strong> pour le stage <strong>${esc(libelle)}</strong>.</p>
         <p style="color:#444;line-height:1.6;margin-bottom:20px">Malheureusement, ce stage est complet. Nous ne pouvons pas confirmer cette inscription.</p>
         <p style="color:#444;line-height:1.6;margin-bottom:20px">N'hésitez pas à vous inscrire à une autre période sur <strong>academika.fr</strong>.</p>
       `
@@ -183,13 +251,13 @@ export default async function handler(req, res) {
       sujetInterne = `Annulation stage — ${prenom}`
       contenuInterne = `
         <p style="margin-bottom:16px">Bonjour,</p>
-        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous vous informons que l'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong> a été annulée.</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous vous informons que l'inscription de <strong>${esc(prenom)} ${esc(nom)}</strong> pour le stage <strong>${esc(libelle)}</strong> a été annulée.</p>
       `
     } else {
       sujetInterne = `✅ Inscription confirmée — Stage — ${prenom}`
       contenuInterne = `
         <p style="margin-bottom:16px">Bonjour,</p>
-        <p style="color:#444;line-height:1.6;margin-bottom:20px">L'inscription de <strong>${prenom} ${nom}</strong> pour le stage <strong>${libelle}</strong> est confirmée.</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">L'inscription de <strong>${esc(prenom)} ${esc(nom)}</strong> pour le stage <strong>${esc(libelle)}</strong> est confirmée.</p>
         <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous vous recontacterons prochainement pour les modalités pratiques (lien de connexion visio, etc.).</p>
       `
     }
@@ -207,6 +275,9 @@ export default async function handler(req, res) {
           <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
         </div>
       </div>`
+
+    const rateOk = await verifierRateLimit(emailParent)
+    if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
 
     try {
       await fetch('https://api.resend.com/emails', {
@@ -239,21 +310,21 @@ export default async function handler(req, res) {
         const pct = Math.round((s.ok/s.tot)*100)
         const couleurTheme = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
         return `<tr>
-          <td style="padding:8px;color:#555;border-bottom:1px solid #f0f0ec">${theme}</td>
+          <td style="padding:8px;color:#555;border-bottom:1px solid #f0f0ec">${esc(theme)}</td>
           <td style="padding:8px;font-weight:600;color:${couleurTheme};border-bottom:1px solid #f0f0ec">${pct}%</td>
           <td style="padding:8px;color:#999;border-bottom:1px solid #f0f0ec;font-size:12px">${s.n} session(s)</td>
         </tr>`
       }).join('')
 
       const messageMotivation = moyGlobale >= 40
-        ? `Bonne nouvelle : <strong>${prenom} progresse !</strong><br>Encouragez-le à continuer sur les thèmes à améliorer.`
-        : `<strong>${prenom}</strong> traverse une période plus difficile sur ces notions.<br>Un encouragement et un peu de temps supplémentaire sur les thèmes ci-dessous peuvent faire la différence.`
+        ? `Bonne nouvelle : <strong>${esc(prenom)} progresse !</strong><br>Encouragez-le à continuer sur les thèmes à améliorer.`
+        : `<strong>${esc(prenom)}</strong> traverse une période plus difficile sur ces notions.<br>Un encouragement et un peu de temps supplémentaire sur les thèmes ci-dessous peuvent faire la différence.`
 
       const rateesHTML = topRatees && topRatees.length > 0
         ? `<div style="margin-top:20px">
             <p style="font-weight:600;margin-bottom:8px">📚 Points à améliorer :</p>
             <ul style="padding-left:20px;color:#555;margin:0">
-              ${topRatees.map(([q]) => `<li style="margin-bottom:6px">${q}</li>`).join('')}
+              ${topRatees.map(([q]) => `<li style="margin-bottom:6px">${esc(q)}</li>`).join('')}
             </ul>
           </div>`
         : `<p style="color:#16a34a;margin-top:20px;font-weight:600">✅ Aucune notion particulièrement en difficulté !</p>`
@@ -266,7 +337,7 @@ export default async function handler(req, res) {
           </div>
           <p style="margin-bottom:6px;">Bonjour Madame, Monsieur,</p>
           <p style="margin-bottom:20px;color:#444;">
-            Voici le bilan de progression de <strong>${prenom}${nom ? ' ' + nom : ''}</strong> sur ACADEMIKA.
+            Voici le bilan de progression de <strong>${esc(prenom)}${nom ? ' ' + esc(nom) : ''}</strong> sur ACADEMIKA.
           </p>
           <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
             <div style="font-size:56px;font-weight:700;color:${couleur}">${moyNote20}<span style="font-size:24px;color:#999">/20</span></div>
@@ -290,9 +361,12 @@ export default async function handler(req, res) {
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
           <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-            <a href="https://academika.fr/api/desabonner?email=${emailParent}" style="color:#bbb">Se désabonner des emails automatiques</a>
+            <a href="https://academika.fr/api/desabonner?email=${esc(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
           </p>
         </div>`
+
+      const rateOk = await verifierRateLimit(emailParent)
+      if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
 
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -319,8 +393,8 @@ export default async function handler(req, res) {
       const couleurScore = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
       const mention = pct >= 80 ? '🌟 Excellent' : pct >= 70 ? '👍 Très bon' : pct >= 60 ? '✅ Bon' : pct >= 50 ? '📋 Correct' : '📚 À retravailler'
       const messageMotivation = pct >= 50
-        ? `Bonne nouvelle : <strong>${prenom}</strong> a réussi son examen en ligne ! Encouragez-le à continuer sur les thèmes à améliorer.`
-        : `<strong>${prenom}</strong> n'a pas encore le niveau requis. C'est normal — c'est un entraînement ! Encouragez-le à continuer à réviser régulièrement.`
+        ? `Bonne nouvelle : <strong>${esc(prenom)}</strong> a réussi son examen en ligne ! Encouragez-le à continuer sur les thèmes à améliorer.`
+        : `<strong>${esc(prenom)}</strong> n'a pas encore le niveau requis. C'est normal — c'est un entraînement ! Encouragez-le à continuer à réviser régulièrement.`
 
       const m = Math.floor(tempsSecondes / 60)
       const s = tempsSecondes % 60
@@ -330,7 +404,7 @@ export default async function handler(req, res) {
         const tp = Math.round((s.ok / s.total) * 100)
         const tc = tp >= 60 ? '#16a34a' : tp >= 40 ? '#f59e0b' : '#dc2626'
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0ec">
-          <span style="font-size:13px;color:#444">${theme}</span>
+          <span style="font-size:13px;color:#444">${esc(theme)}</span>
           <span style="font-weight:700;color:${tc}">${s.ok}/${s.total} (${tp}%)</span>
         </div>`
       }).join('') : ''
@@ -343,7 +417,7 @@ export default async function handler(req, res) {
           </div>
           <p style="margin-bottom:6px;">Bonjour Madame, Monsieur,</p>
           <p style="margin-bottom:20px;color:#444;">
-            Votre enfant <strong>${prenom}${nom ? ' ' + nom : ''}</strong> vient de passer l'Examen en ligne Brevet Maths sur ACADEMIKA.
+            Votre enfant <strong>${esc(prenom)}${nom ? ' ' + esc(nom) : ''}</strong> vient de passer l'Examen en ligne Brevet Maths sur ACADEMIKA.
           </p>
           <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
             <div style="font-size:56px;font-weight:700;color:${couleurScore}">${score}/20</div>
@@ -361,9 +435,12 @@ export default async function handler(req, res) {
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
           <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-            <a href="https://academika.fr/api/desabonner?email=${emailParent}" style="color:#bbb">Se désabonner des emails automatiques</a>
+            <a href="https://academika.fr/api/desabonner?email=${esc(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
           </p>
         </div>`
+
+      const rateOk = await verifierRateLimit(emailParent)
+      if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
 
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -398,9 +475,9 @@ export default async function handler(req, res) {
           <p style="margin-bottom:20px;color:#444;">Un nouvel élève vient de s'inscrire sur ACADEMIKA :</p>
           <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0;">
             <table style="width:100%;border-collapse:collapse">
-              <tr><td style="padding:8px;color:#666;border-bottom:1px solid #e8e8e4">Prénom</td><td style="padding:8px;font-weight:600;border-bottom:1px solid #e8e8e4">${prenom}</td></tr>
-              <tr><td style="padding:8px;color:#666;border-bottom:1px solid #e8e8e4">Nom</td><td style="padding:8px;font-weight:600;border-bottom:1px solid #e8e8e4">${nom}</td></tr>
-              <tr><td style="padding:8px;color:#666">Email parents</td><td style="padding:8px;font-weight:600;color:#3730a3">${emailParent}</td></tr>
+              <tr><td style="padding:8px;color:#666;border-bottom:1px solid #e8e8e4">Prénom</td><td style="padding:8px;font-weight:600;border-bottom:1px solid #e8e8e4">${esc(prenom)}</td></tr>
+              <tr><td style="padding:8px;color:#666;border-bottom:1px solid #e8e8e4">Nom</td><td style="padding:8px;font-weight:600;border-bottom:1px solid #e8e8e4">${esc(nom)}</td></tr>
+              <tr><td style="padding:8px;color:#666">Email parents</td><td style="padding:8px;font-weight:600;color:#3730a3">${esc(emailParent)}</td></tr>
             </table>
           </div>
           <p style="color:#444;font-size:13px;margin-bottom:16px;">
@@ -421,7 +498,7 @@ export default async function handler(req, res) {
           </div>
           <p style="margin-bottom:16px;">Bonjour Madame, Monsieur,</p>
           <p style="margin-bottom:20px;color:#444;">
-            Votre enfant <strong>${prenom} ${nom}</strong> vient de s'inscrire sur ACADEMIKA, 
+            Votre enfant <strong>${esc(prenom)} ${esc(nom)}</strong> vient de s'inscrire sur ACADEMIKA,
             une application de révision en mathématiques pour le Brevet des collèges.
           </p>
           <div style="background:#eef2ff;border-radius:12px;padding:20px;margin:20px 0;">
@@ -447,9 +524,14 @@ export default async function handler(req, res) {
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
           <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-            <a href="https://academika.fr/api/desabonner?email=${emailParent}" style="color:#bbb">Se désabonner des emails automatiques</a>
+            <a href="https://academika.fr/api/desabonner?email=${esc(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
           </p>
         </div>`
+
+      // Le rate-limit ne compte que l'email envoyé au parent — l'email interne
+      // vers PROF_EMAIL n'est pas une adresse externe soumise à abus.
+      const rateOk = await verifierRateLimit(emailParent)
+      if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
 
       await Promise.all([
         fetch('https://api.resend.com/emails', {
@@ -494,7 +576,7 @@ export default async function handler(req, res) {
           <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Examen blanc présentiel</div>
         </div>
         <p style="margin-bottom:16px;">Bonjour,</p>
-        <p style="color:#444;line-height:1.6;margin-bottom:20px">Voici les résultats de <strong>${prenom} ${nom}</strong> pour l'examen blanc du <strong>${date}</strong> :</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Voici les résultats de <strong>${esc(prenom)} ${esc(nom)}</strong> pour l'examen blanc du <strong>${esc(date)}</strong> :</p>
         <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
           <div style="font-size:56px;font-weight:700;color:${couleur}">${note}<span style="font-size:24px;color:#999">/20</span></div>
           <div style="font-size:18px;margin-top:8px">${mention}</div>
@@ -502,7 +584,7 @@ export default async function handler(req, res) {
         ${commentaire ? `
         <div style="background:#f7f7f5;border-radius:12px;padding:16px 20px;margin:16px 0">
           <p style="font-weight:600;margin-bottom:8px">💬 Commentaire :</p>
-          <p style="color:#555;line-height:1.6">${commentaire}</p>
+          <p style="color:#555;line-height:1.6">${esc(commentaire)}</p>
         </div>` : ''}
         <p style="color:#444;line-height:1.6;margin-bottom:20px">Continuez à réviser sur <a href="https://academika.fr" style="color:#3730a3">academika.fr</a> !</p>
         <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
@@ -515,6 +597,9 @@ export default async function handler(req, res) {
           <a href="https://academika.fr/api/desabonner?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
         </p>
       </div>`
+
+    const rateOk = await verifierRateLimit(emailParent)
+    if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
 
     try {
       await fetch('https://api.resend.com/emails', {
@@ -621,13 +706,13 @@ export default async function handler(req, res) {
         const entries = Object.entries(sousThemesDetail)
         const badgesData = entries.map(([nomSt, d]) => {
           const p = d.total > 0 ? Math.round((d.ok / d.total) * 100) : 0
-          return { nom: nomSt, pct: p, acquis: p >= 70, niveau: d.niveau }
+          return { nom: esc(nomSt), pct: p, acquis: p >= 70, niveau: d.niveau }
         })
         const nbAcquis = badgesData.filter(b => b.acquis).length
         const nbARevoir = badgesData.length - nbAcquis
         const messagePrincipal = badgesData.length === 0
-          ? `${prenom} a travaillé aujourd'hui`
-          : (nbAcquis >= badgesData.length / 2 ? `${prenom} a bien travaillé aujourd'hui` : `${prenom} a un peu buté aujourd'hui`)
+          ? `${esc(prenom)} a travaillé aujourd'hui`
+          : (nbAcquis >= badgesData.length / 2 ? `${esc(prenom)} a bien travaillé aujourd'hui` : `${esc(prenom)} a un peu buté aujourd'hui`)
 
         const NIVEAU_LABEL = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
         const badgesHTML = badgesData.map(b => {
@@ -688,7 +773,7 @@ export default async function handler(req, res) {
               <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:8px">📚 Points à retravailler :</p>
               ${questionsRatees.slice(0,5).map(q => `
                 <div style="font-size:13px;color:#666;padding:4px 0">
-                  • ${q}
+                  • ${esc(q)}
                 </div>`).join('')}
             </div>`
           : ''
@@ -701,7 +786,7 @@ export default async function handler(req, res) {
             </div>
             <p style="margin-bottom:16px">Bonjour Madame, Monsieur,</p>
             <p style="margin-bottom:20px;color:#444">
-              <strong>${prenom}</strong> a passé ${totalSessions} session${totalSessions>1?'s':''} de révision aujourd'hui 
+              <strong>${esc(prenom)}</strong> a passé ${totalSessions} session${totalSessions>1?'s':''} de révision aujourd'hui
               qui nécessite${totalSessions>1?'nt':''} votre attention :
             </p>
             <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0">
@@ -728,6 +813,9 @@ export default async function handler(req, res) {
             </p>
           </div>`
       }
+
+      const rateOk = await verifierRateLimit(email_parent)
+      if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
 
       const emailRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
