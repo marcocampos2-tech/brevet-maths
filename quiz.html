@@ -36,7 +36,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn-outline { background: white; color: var(--muted); border: 1px solid var(--border); font-size: 14px; padding: 12px; }
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-#btn-prof { background: var(--dore-light); border-color: var(--dore); color: #8a6416; }
 .btn-ghost { border: none; background: none; color: var(--muted); padding: 8px 4px; cursor: pointer; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .msg-accueil { background: var(--marine-light); border-left: 3px solid var(--marine); border-radius: 0 10px 10px 0; padding: 12px 16px; margin-bottom: 2rem; font-size: 13.5px; color: var(--marine); line-height: 1.6; }
@@ -187,7 +186,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="nav-left">∑ Academika</div>
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
-    <a href="prof.html" class="btn" id="btn-prof" style="display:none" onclick="return allerVersLien(event,'prof.html')">🎓 Prof</a>
     <a href="resultats.html" class="btn" onclick="return allerVersLien(event,'resultats.html')">📊 Mes résultats</a>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
   </div>
@@ -259,7 +257,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
-const PROF_EMAIL = 'marcocampos2@gmail.com'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const THEMES = [
@@ -505,7 +502,6 @@ async function init() {
   const {data:profil}=await sb.from('profils').select('prenom_affiche,email_parent').eq('user_id',user.id).limit(1)
   if(profil&&profil.length>0){prenom=prenom||profil[0].prenom_affiche||'';emailParent=emailParent||profil[0].email_parent||''}
   document.getElementById('user-email').textContent=prenom||user.email
-  if(user.user_metadata?.email_parent===PROF_EMAIL||emailParent===PROF_EMAIL)document.getElementById('btn-prof').style.display='inline-flex'
   renderThemes()
   renderSousThemes()
   await mettreAJourNiveaux()
