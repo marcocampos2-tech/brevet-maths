@@ -361,7 +361,7 @@ export default async function handler(req, res) {
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
           <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-            <a href="https://academika.fr/api/desabonner?email=${esc(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
+            <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
           </p>
         </div>`
 
@@ -435,7 +435,7 @@ export default async function handler(req, res) {
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
           <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-            <a href="https://academika.fr/api/desabonner?email=${esc(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
+            <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
           </p>
         </div>`
 
@@ -524,7 +524,7 @@ export default async function handler(req, res) {
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
           <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-            <a href="https://academika.fr/api/desabonner?email=${esc(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
+            <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
           </p>
         </div>`
 
@@ -594,7 +594,7 @@ export default async function handler(req, res) {
           <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
         </div>
         <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-          <a href="https://academika.fr/api/desabonner?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
+          <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
         </p>
       </div>`
 
@@ -694,7 +694,7 @@ export default async function handler(req, res) {
         .filter(q => typeof q === 'string' && !q.includes('abandonné'))
 
       const prenom = prenom_affiche || ''
-      const lienDesabonnement = `https://academika.fr/api/desabonner?email=${encodeURIComponent(email_parent)}`
+      const lienDesabonnement = `https://academika.fr/desabonner.html?email=${encodeURIComponent(email_parent)}`
       const m = Math.floor(tempsSecondes / 60)
       const s2 = tempsSecondes % 60
       const tempsFormat = m === 0 ? `${s2} sec` : `${m} min ${s2} sec`

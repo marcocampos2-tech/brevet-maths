@@ -136,7 +136,7 @@ export default async function handler(req, res) {
               Pour toute question : <a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a>
             </p>
             <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-              <a href="https://academika.fr/api/desabonner?email=${encodeURIComponent(email_parent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
+              <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(email_parent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
             </p>
           </div>`
 
@@ -198,7 +198,7 @@ export default async function handler(req, res) {
               Pour toute question : <a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a>
             </p>
             <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-              <a href="https://academika.fr/api/desabonner?email=${encodeURIComponent(email_parent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
+              <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(email_parent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
             </p>
           </div>`
 
@@ -413,7 +413,7 @@ export default async function handler(req, res) {
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
           <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-            <a href="https://academika.fr/api/desabonner?email=${encodeURIComponent(email_parent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
+            <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(email_parent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
           </p>
         </div>`
 
