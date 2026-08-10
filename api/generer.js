@@ -213,7 +213,7 @@ Réponds UNIQUEMENT avec un tableau JSON de 5 chiffres : [0, 2, 1, 3, 0]`
 async function getBanqueSupabase(theme, sous_theme, difficulte) {
   try {
     const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
-    const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+    const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY
     const url = `${SUPABASE_URL}/rest/v1/questions_banque?theme=eq.${encodeURIComponent(theme)}&sous_theme=eq.${encodeURIComponent(sous_theme)}&difficulte=eq.${encodeURIComponent(difficulte)}&select=question,opts,answer,explication,tableau,figure`
     const res = await fetch(url, {
       headers: {
