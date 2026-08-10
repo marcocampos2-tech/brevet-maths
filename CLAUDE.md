@@ -10,9 +10,9 @@ Marco Campos (CM) — Responsable Qualité chez Maison La Hulotte (métier princ
 
 Academika (academika.fr) — plateforme de préparation au Brevet des collèges (maths, niveau 3ème), en auto-entrepreneur. Stack : Vercel (serverless functions `/api`), Supabase (Postgres + Auth OTP + Storage), Stripe (abonnement Suivi), Resend (emails).
 
-Fichiers clés déjà connus : `espace-parent.html`, `suivi-parent.html`, `prof.html`, `quiz.html`, `index.html`, `tarifs.html`, `api/stripe-checkout.js`, `api/stripe-webhook.js`, `api/email.js`, `api/cron-rappel.js`, `api/desabonner.js`, `vercel.json`.
+Fichiers clés déjà connus : `espace-parent.html`, `suivi-parent.html`, `prof.html`, `quiz.html`, `index.html`, `tarifs.html`, `examen.html`, `brevet-blanc.html`, `stages-vacances.html`, `connexion.html`, `desabonner.html`, `api/stripe-checkout.js`, `api/stripe-webhook.js`, `api/email.js`, `api/cron-rappel.js`, `api/desabonner.js`, `api/examen.js`, `api/generer.js`, `api/generer-brevet.js`, `api/inscription-brevet.js`, `api/inscription-stage.js`, `vercel.json`.
 
-Fichiers non encore audités, à lire en priorité si pertinent : `examen.html`, le script d'inscription aux stages (probablement lié à la table `inscriptions_stages`), `resultats.html`, `quiz-resultat.js`, `api/examen.js`, `api/generer.js`.
+Fichiers non encore audités, à lire en priorité si pertinent : `resultats.html`, `quiz-resultat.js`.
 
 ## Décisions commerciales verrouillées (ne pas remettre en question)
 
@@ -21,7 +21,7 @@ Fichiers non encore audités, à lire en priorité si pertinent : `examen.html`,
 * Cours présentiel individuel retiré de l'offre publique (conflit avec activité salariée)
 * CM ne travaille jamais le samedi ; présentiel bassin Melun = dimanches uniquement
 
-## CHANTIER EN COURS — Audit sécurité & correction RLS (priorité actuelle)
+## CHANTIER — Audit sécurité & correction RLS
 
 Un audit complet a été mené (8 fichiers, 13 tables, 1 fonction, 1 bucket Storage, 2 configurations) et a identifié 19 items de sécurité, dont plusieurs critiques et exploitables sans authentification. Correction menée par étapes indépendantes, chacune testée avant de passer à la suivante.
 
@@ -58,39 +58,57 @@ $$;
 
 * Bouton « 🎓 Prof » retiré de `quiz.html` (nav + condition JS + constante `PROF_EMAIL` + CSS) — n'était qu'un affichage conditionnel sans valeur de sécurité, mais dépendait du même schéma de donnée faillible que l'ancien `is_prof()`
 
-### À faire — Étape 3 : les 6 policies à `qual = true`
+**Étape 3 — les 6 policies à `qual = true`** (SQL exécuté directement par CM sur Supabase, hors Claude Code — confirmé terminé et testé)
 
-Toutes ces tables ont RLS activé mais des policies qui laissent passer `anon`/`public` sans condition réelle. Plan conçu, pas encore exécuté. Ordre du plus sûr au plus risqué, un test après chaque table avant de passer à la suivante :
+1. `resultats` — `"Le prof voit tout"` (qual=true) remplacée par `is_prof()`. Policy élève (`auth.uid()=user_id`) conservée.
+2. `inscriptions_stages` — lecture publique retirée, INSERT public conservé. Vérifié avant correction : `api/inscription-stage.js` ne fait aucun `select()` après l'`insert()` (confirmation client basée sur `{success:true}`, pas sur une lecture Supabase) — la lecture publique retirée ne casse donc rien.
+3. `questions_banque` — lecture publique retirée. Point additionnel découvert et corrigé en amont (PR #1) : `api/generer.js` lisait cette table avec un fallback codé en dur sur la clé anon (`SUPABASE_KEY`) — basculé sur `SUPABASE_SERVICE_KEY` avant la correction RLS, pour ne pas casser le repli "banque" du générateur de questions.
+4. `brevets_blancs` / `resultats_brevet_blanc` — ces deux noms de table n'ont jamais été retrouvés dans le code (recherche exhaustive sur tout l'historique Git, aucune occurrence). Probable confusion de nommage avec `examen_questions` / `examens_blancs`, les tables réellement utilisées par `examen.html` — à reclarifier si le nom exact ressort un jour. CM confirme la correction faite et testée sous ce chantier quel que soit le nom exact.
+5. `examens_blancs` — confirmé lu ET écrit directement côté client (clé anon) dans `examen.html` (INSERT à l'abandon et à la fin d'examen, SELECT pour l'historique). Policy prof (`is_prof()`) et policy élève (`auth.uid()=user_id`) toutes les deux nécessaires et conservées.
 
-1. `resultats` — confiance élevée. Remplacer `"Le prof voit tout"` (qual=true) par `is_prof()`. La policy élève (`auth.uid()=user_id`) reste.
-2. `inscriptions_stages` — confiance moyenne. Retirer la lecture publique (fuite RGPD : noms, emails, téléphones), garder l'INSERT public (formulaire non authentifié probablement légitime). Vérifier avant d'exécuter : le script d'inscription fait-il un `select()` après l'`insert()` pour confirmer à l'utilisateur ? Si oui, la lecture publique retirée casserait ce message de confirmation — chercher ce fichier.
-3. `questions_banque` — confiance moyenne. Retirer la lecture publique, garder les policies d'écriture prof (déjà correctes). Vérifier : `quiz.html` passe par `/api/generer` (serveur) — confirmer qu'aucun autre fichier ne lit cette table en direct côté client.
-4. `brevets_blancs` — confiance faible. Actuellement `ALL` avec `true`. Passer à `is_prof()` pour tout. Vérifier avant tout : `examen.html` lit-il cette table en direct côté client, ou uniquement via `/api/examen.js` (service_role) ? Si lecture directe côté client, la correction casse l'examen en ligne.
-5. `resultats_brevet_blanc` — même famille de risque que ci-dessus, même vérification nécessaire dans `examen.html`.
-6. `examens_blancs` — risque le plus élevé de l'étape. SELECT/INSERT/DELETE actuellement `true`, pas de policy UPDATE. Hypothèse : l'écriture des résultats passe par un score calculé serveur (comme `quiz-resultat.js` pour les quiz). À confirmer absolument dans `examen.html` avant d'exécuter quoi que ce soit — si l'INSERT se fait côté client, le retirer casse l'enregistrement des examens blancs.
+**Bucket Storage `figures`** — écriture (INSERT/UPDATE/DELETE) restreinte à `is_prof()`, lecture publique conservée (nécessaire à l'affichage des figures dans les quiz élèves). Terminé et testé.
 
-Chaque correction SQL est déjà rédigée dans l'historique de la conversation Claude.ai correspondante — redemander si besoin, ou les reconstruire selon le même principe (`is_prof()` pour le prof, `auth.uid()=user_id` pour l'élève propriétaire, jamais `true` nu).
+**`api/email.js` — échappement HTML + rate-limit** (PR #2, mergée)
 
-### À faire — Étape 4 : INSERT `profils` + bucket Storage
+* Fonction `esc()` appliquée à tous les champs interpolés dans les templates HTML des 8 branches d'emails (`prenom`, `nom`, `date`, `heure`, `adresse`, `messageCompl`, `libelle`, `commentaire`, `emailParent`, `prenom_affiche`, noms de thèmes/sous-thèmes, entrées de `questions_ratees`/`topRatees`) — corrige l'injection HTML confirmée sur ces champs.
+* `verifierRateLimit(destinataire)` : 10 emails/heure/destinataire, table `email_rate_limit` (`destinataire` text PK, `compteur` int, `fenetre_debut` timestamptz), fail-open si la vérification échoue techniquement. Appliqué avant l'envoi dans les 8 branches ; pour `inscription` (2 emails), seul l'email vers le parent est compté.
+* Table `email_rate_limit` créée côté Supabase, comportement confirmé en production.
 
-* `profils` : la policy INSERT actuelle (`with_check: auth.uid()=user_id`) ne contrôle pas `email_parent` — un utilisateur peut s'attribuer n'importe quel email parent à l'insertion. Concevoir une contrainte plus stricte (probablement : valider `email_parent` côté serveur avant l'insertion, pas en RLS pur, puisque RLS ne peut pas facilement comparer à une valeur externe).
-* Bucket `figures` (Storage, `public=true`) : policy actuelle `FOR ALL` avec seule condition `bucket_id='figures'` — écriture/suppression ouvertes à `anon`. Restreindre l'écriture (INSERT/UPDATE/DELETE) à `is_prof()`, garder la lecture publique (nécessaire à l'affichage des figures dans les quiz élèves, le bucket étant public la lecture ne passe pas par RLS de toute façon).
+**`vercel.json` — headers de sécurité HTTP** (PR #3, mergée)
 
-### Items hors RLS, déjà identifiés mais non traités
+* `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN` appliqués sur `/(.*)`.
+* Pas de CSP (hors périmètre). `rewrites` et `crons` existants intacts.
 
-* `api/email.js` : endpoint totalement non authentifié, CORS ouvert (`*`), injection HTML sur plusieurs champs (`commentaire`, `messageCompl`, `adresse`, `prenom`, `nom`, `libelle`) — item le plus critique de tout l'audit, risque de relais de spam/phishing depuis le domaine `academika.fr`. Corriger en même temps que `api/cron-rappel.js`, qui appelle `/api/email` sans authentification (dépendance confirmée).
-* `api/desabonner.js` : désabonnement en GET, sans token — risque de désabonnements accidentels via crawlers de sécurité email (Outlook Safe Links etc.), pas seulement risque d'abus volontaire.
-* `vercel.json` : aucun header de sécurité (`Referrer-Policy`, `X-Frame-Options`, CSP) — fuite du `user_id` de l'enfant via Referer sur la page de confirmation Stripe (`success_url` contient `?enfant=<user_id>`).
+**Parcours de désabonnement — correction de la faille GET** (PR #4, mergée)
+
+* Problème : le lien de désabonnement dans les emails déclenchait le désabonnement directement en GET — exploitable par les scanners de sécurité email (Outlook Safe Links etc.) qui suivent les liens automatiquement, désabonnant des parents à leur insu.
+* `api/desabonner.js` : GET ne modifie plus rien, redirige vers `/desabonner.html?email=...` (compatibilité anciens liens). POST (déclenché uniquement par une action explicite) fait le `PATCH email_actif=false` réel et répond en JSON. Autre méthode → 405.
+* `desabonner.html` : nouvel état de confirmation (email affiché, échappé) avec bouton qui déclenche le POST ; résultat affiché sans redirection.
+* `api/email.js` et `api/cron-rappel.js` : les 8 liens de désabonnement basculés vers `/desabonner.html` ; les occurrences qui n'encodaient pas l'email (`esc()` au lieu d'un encodage URL) corrigées avec `encodeURIComponent`.
+* Déploiement Production confirmé après un redéploiement forcé (le premier push n'avait pas déclenché le webhook Vercel — commit vide poussé sur `main` pour forcer un nouveau déclenchement, déploiement confirmé côté GitHub Deployments API).
+
+### Reste ouvert — chantier différé « intégrité des comptes »
+
+À traiter avant le passage Stripe live :
+
+* **`profils` INSERT** : la policy INSERT actuelle (`with_check: auth.uid()=user_id`) ne contrôle pas `email_parent` — un utilisateur peut s'attribuer n'importe quel email parent à l'insertion. Concrètement observé dans `suivi-parent.html` (`creerEnfant()`) : l'INSERT se fait avec la session de l'**enfant** (`sbEleve`, pas celle du parent), et `email_parent` est envoyé correctement par ce flux applicatif précis — mais RLS seule ne l'impose pas, donc rien n'empêche un appel direct à l'API Supabase avec une session valide et n'importe quel `email_parent`. Solution probable : valider `email_parent` côté serveur avant l'insertion plutôt qu'en RLS pur (RLS ne peut pas facilement comparer à une valeur externe).
+* **`shouldCreateUser`** : point identifié mais pas encore investigué en détail dans le code — à approfondir (quel flux Auth OTP/signUp est concerné, paramètre actuellement à sa valeur par défaut ou explicitement géré) avant de rédiger un correctif.
+
+### Prochain chantier prévu : Stripe
+
 * `stripe-checkout.js` : clé d'idempotency basée sur `Date.now()` — unique à chaque appel, donc n'idempotise rien ; pas de vérification qu'un abonnement n'est pas déjà actif avant d'en créer un nouveau (risque de double facturation).
 * `stripe-webhook.js` : pas d'idempotency au niveau DB (pas de table de log d'événements Stripe) — sans dégât aujourd'hui car l'opération actuelle est un simple `set`, mais deviendra un risque dès qu'une action non-idempotente (email, log) sera ajoutée à ce handler.
 * `customer.subscription.deleted` non écouté par le webhook — un parent qui annule son abonnement garde `plan_actif=true` indéfiniment.
+
+### Items mineurs restants, hors RLS et hors chantier Stripe
+
 * `alerte_envoyee` (table `resultats`) : `NOT NULL` non appliqué, `DEFAULT false` confirmé — risque résiduel faible mais réel si une valeur `NULL` explicite est un jour insérée.
 * `jours_actifs` dans le bilan périodique (`cron-rappel.js`) calculé via `toISOString()` (UTC) au lieu de `Europe/Paris` comme le reste du code — sous-estime l'activité pour les sessions tardives.
 
 ### Reste hors du périmètre Claude Code (à traiter dans les échanges avec Claude sur claude.ai)
 
 * SIRET toujours en attente (dossier déposé 21/07/2026) — bloque le passage Stripe live, la déclaration SAP, la facturation
-* Gating produit (frontière Autonomie/Suivi sur `suivi-parent.html`) — décision produit prise, non codée, dépend de l'étape 3 terminée pour avoir un sens
+* Gating produit (frontière Autonomie/Suivi sur `suivi-parent.html`) — décision produit prise, non codée, dépend de l'étape 3 terminée pour avoir un sens (étape 3 terminée — à coder)
 * Décisions stratégiques générales, priorisation, calendrier
 
 ## Rappel méthodologique
