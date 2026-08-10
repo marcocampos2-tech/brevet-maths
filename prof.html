@@ -1406,11 +1406,20 @@ function render() {
 async function init() {
   const { data: { session } } = await sb.auth.getSession()
   if (!session) { location.href='index.html'; return }
-  const meta = session.user.user_metadata || {}
-  if (meta.email_parent !== PROF) {
-    const { data: p } = await sb.from('profils').select('email_parent').eq('user_id',session.user.id).single()
-    if (!p || p.email_parent !== PROF) { document.getElementById('root').innerHTML='<div class="denied">Accès réservé au professeur.</div>'; return }
+
+  // Contrôle d'accès — révisé le 10/08/2026 (chantier RLS, étape 1)
+  // Avant : vérification via user_metadata (modifiable par l'utilisateur) puis
+  // fallback sur la table profils. Purement côté client, sans valeur de
+  // sécurité réelle — l'accès aux données reste gouverné par is_prof() en base.
+  // Après : vérification via app_metadata, seul champ du token non modifiable
+  // par l'utilisateur lui-même (posé uniquement via service_role).
+  // Étape 1 volontairement sans impact sur is_prof() : ce dernier reste la
+  // véritable barrière RLS jusqu'à sa refonte (étape 2).
+  if (session.user.app_metadata?.role !== 'prof') {
+    document.getElementById('root').innerHTML = '<div class="denied">Accès réservé au professeur.</div>'
+    return
   }
+
   const [r1,r2,r3,r4,r5] = await Promise.all([
     sb.from('resultats').select('*').order('created_at',{ascending:false}),
     sb.from('examens_blancs').select('*').order('created_at',{ascending:false}),
