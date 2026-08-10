@@ -19,9 +19,12 @@
 //     jamais depuis une source côté client. C'est la seule donnée
 //     d'identité autoritaire à ce stade de la chaîne.
 //
-// Événement écouté : invoice.payment_succeeded uniquement (déjà validé
-// comme événement de référence — pas checkout.session.completed seul,
-// qui ne garantit pas qu'un paiement a effectivement eu lieu).
+// Événements écoutés :
+//   - invoice.payment_succeeded (déjà validé comme événement de
+//     référence — pas checkout.session.completed seul, qui ne garantit
+//     pas qu'un paiement a effectivement eu lieu) → active plan_actif
+//   - customer.subscription.deleted → désactive plan_actif quand
+//     l'abonnement est annulé côté Stripe
 //
 // Convention du projet : Supabase en fetch REST direct (comme
 // cron-rappel.js), SDK officiel pour Stripe.
@@ -72,68 +75,114 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Signature invalide' })
   }
 
-  // ── Étape 2 — Ne traiter que l'événement attendu ──
-  if (event.type !== 'invoice.payment_succeeded') {
-    // 200 pour que Stripe ne retente pas — on n'écoute que cet événement,
-    // recevoir autre chose ici serait une anomalie de configuration, pas
-    // une erreur côté serveur.
-    return res.status(200).json({ received: true, ignored: event.type })
-  }
+  // ── Étape 2 — Router selon le type d'événement ──
 
-  // ── Étape 3 — Extraire user_id depuis les métadonnées de la subscription ──
-  let userId
-  try {
-    const invoice = event.data.object
-    // Le champ invoice.subscription est déprécié depuis l'API
-    // 2025-03-31.basil, remplacé par invoice.parent.subscription_details.
-    // On gère les deux formats pour être robuste indépendamment de la
-    // version d'API effectivement utilisée par le SDK au moment de l'appel.
-    const subscriptionId = invoice.subscription
-      || (invoice.parent?.type === 'subscription_details' ? invoice.parent.subscription_details?.subscription : null)
+  if (event.type === 'invoice.payment_succeeded') {
 
-    if (!subscriptionId) {
-      console.error('Facture sans subscription associée, event id:', event.id)
-      return res.status(200).json({ received: true, skipped: 'pas de subscription' })
-    }
+    // ── Étape 3 — Extraire user_id depuis les métadonnées de la subscription ──
+    let userId
+    try {
+      const invoice = event.data.object
+      // Le champ invoice.subscription est déprécié depuis l'API
+      // 2025-03-31.basil, remplacé par invoice.parent.subscription_details.
+      // On gère les deux formats pour être robuste indépendamment de la
+      // version d'API effectivement utilisée par le SDK au moment de l'appel.
+      const subscriptionId = invoice.subscription
+        || (invoice.parent?.type === 'subscription_details' ? invoice.parent.subscription_details?.subscription : null)
 
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-    userId = subscription.metadata?.user_id
-
-    if (!userId) {
-      console.error('Aucun user_id dans les métadonnées de la subscription:', subscriptionId)
-      return res.status(200).json({ received: true, skipped: 'pas de user_id' })
-    }
-  } catch (e) {
-    console.error('Erreur récupération subscription Stripe:', e.message)
-    return res.status(500).json({ error: 'Erreur lors de la lecture de la subscription' })
-  }
-
-  // ── Étape 4 — Activer plan_actif dans Supabase ──
-  try {
-    const updateRes = await fetch(
-      `${SUPA_URL}/rest/v1/profils?user_id=eq.${userId}`,
-      {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPA_KEY}`,
-          'apikey': SUPA_KEY,
-          'Prefer': 'return=minimal'
-        },
-        body: JSON.stringify({ plan_actif: true })
+      if (!subscriptionId) {
+        console.error('Facture sans subscription associée, event id:', event.id)
+        return res.status(200).json({ received: true, skipped: 'pas de subscription' })
       }
-    )
 
-    if (!updateRes.ok) {
-      const errText = await updateRes.text()
-      console.error('Erreur mise à jour plan_actif:', errText)
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+      userId = subscription.metadata?.user_id
+
+      if (!userId) {
+        console.error('Aucun user_id dans les métadonnées de la subscription:', subscriptionId)
+        return res.status(200).json({ received: true, skipped: 'pas de user_id' })
+      }
+    } catch (e) {
+      console.error('Erreur récupération subscription Stripe:', e.message)
+      return res.status(500).json({ error: 'Erreur lors de la lecture de la subscription' })
+    }
+
+    // ── Étape 4 — Activer plan_actif dans Supabase ──
+    try {
+      const updateRes = await fetch(
+        `${SUPA_URL}/rest/v1/profils?user_id=eq.${userId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPA_KEY}`,
+            'apikey': SUPA_KEY,
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ plan_actif: true })
+        }
+      )
+
+      if (!updateRes.ok) {
+        const errText = await updateRes.text()
+        console.error('Erreur mise à jour plan_actif:', errText)
+        return res.status(500).json({ error: 'Erreur lors de la mise à jour du profil' })
+      }
+    } catch (e) {
+      console.error('Erreur réseau mise à jour Supabase:', e.message)
       return res.status(500).json({ error: 'Erreur lors de la mise à jour du profil' })
     }
-  } catch (e) {
-    console.error('Erreur réseau mise à jour Supabase:', e.message)
-    return res.status(500).json({ error: 'Erreur lors de la mise à jour du profil' })
+
+    // ── Étape 5 — Répondre rapidement à Stripe ──
+    return res.status(200).json({ received: true, user_id: userId, plan_actif: true })
   }
 
-  // ── Étape 5 — Répondre rapidement à Stripe ──
-  return res.status(200).json({ received: true, user_id: userId, plan_actif: true })
+  if (event.type === 'customer.subscription.deleted') {
+
+    // ── Étape 3 — Extraire user_id depuis les métadonnées de la subscription ──
+    // L'objet de l'événement EST directement la subscription (contrairement
+    // à invoice.payment_succeeded) — pas besoin d'appeler
+    // stripe.subscriptions.retrieve().
+    const subscription = event.data.object
+    const userId = subscription.metadata?.user_id
+
+    if (!userId) {
+      console.error('Aucun user_id dans les métadonnées de la subscription supprimée:', subscription.id)
+      return res.status(200).json({ received: true, skipped: 'pas de user_id' })
+    }
+
+    // ── Étape 4 — Désactiver plan_actif dans Supabase ──
+    try {
+      const updateRes = await fetch(
+        `${SUPA_URL}/rest/v1/profils?user_id=eq.${userId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPA_KEY}`,
+            'apikey': SUPA_KEY,
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({ plan_actif: false })
+        }
+      )
+
+      if (!updateRes.ok) {
+        const errText = await updateRes.text()
+        console.error('Erreur mise à jour plan_actif (annulation):', errText)
+        return res.status(500).json({ error: 'Erreur lors de la mise à jour du profil' })
+      }
+    } catch (e) {
+      console.error('Erreur réseau mise à jour Supabase (annulation):', e.message)
+      return res.status(500).json({ error: 'Erreur lors de la mise à jour du profil' })
+    }
+
+    // ── Étape 5 — Répondre rapidement à Stripe ──
+    return res.status(200).json({ received: true, user_id: userId, plan_actif: false })
+  }
+
+  // 200 pour que Stripe ne retente pas — on n'écoute que ces deux
+  // événements, recevoir autre chose ici serait une anomalie de
+  // configuration, pas une erreur côté serveur.
+  return res.status(200).json({ received: true, ignored: event.type })
 }
