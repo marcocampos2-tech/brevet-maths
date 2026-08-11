@@ -107,6 +107,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .bandeau-suivi-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 8px; }
 .bandeau-suivi-badge { background: white; color: var(--bordeaux); font-size: 10px; font-weight: 500; padding: 3px 9px; border-radius: 10px; }
 .encart-origine { display: none; background: var(--marine-light); border-radius: 10px; padding: 14px 16px; margin-top: 14px; }
+.encart-origine-confirmation { font-size: 12.5px; color: #1f7a45; margin-bottom: 8px; }
 .encart-origine-titre { font-size: 12.5px; color: var(--ardoise); margin-bottom: 10px; }
 .encart-origine-choix { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .encart-origine-btn { background: white; border: 1px solid var(--border); color: var(--marine); font-size: 12px; padding: 7px 12px; border-radius: 20px; cursor: pointer; font-family: 'Inter', sans-serif; }
@@ -209,6 +210,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 </div>
 
 <div class="encart-origine" id="encart-origine">
+  <div class="encart-origine-confirmation">✅ Compte créé !</div>
   <div class="encart-origine-titre">Comment avez-vous connu Academika ?</div>
   <div class="encart-origine-choix">
     <button class="encart-origine-btn" onclick="repondreOrigine('ami')">Bouche à oreille</button>
@@ -901,7 +903,10 @@ async function creerEnfant() {
       // surtout pas la retarder : on ne l'affiche donc pas dans ce cas.
       window.location.href = result.url
     } else {
-      afficherMsgAjout('succes', '✅ Compte créé !')
+      // Pas d'afficherMsgAjout('succes', ...) ici : #fa-msg est à
+      // l'intérieur de #zone-form-ajout, masqué juste après — le message
+      // n'y serait jamais visible. La confirmation "✅ Compte créé !" est
+      // fixe dans #encart-origine, affichée juste en dessous.
       // Masque uniquement le formulaire, sans passer par
       // fermerFormulaireAjout() : cette dernière réaffiche zone-vide ou
       // zone-dashboard selon `eleves`, qui n'est jamais mis à jour ici
