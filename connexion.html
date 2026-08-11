@@ -111,13 +111,6 @@ async function init() {
   if (data.session) { window.location.href = 'quiz.html'; return }
 }
 
-function genererFauxEmail(prenom, nom) {
-  const code = Math.random().toString(36).substring(2, 6)
-  const p = prenom.toLowerCase().replace(/[^a-z]/g, '')
-  const n = nom.toLowerCase().replace(/[^a-z]/g, '')
-  return `${p}_${n}_${code}@academika.app`
-}
-
 async function soumettre() {
   const btn = document.getElementById('btn')
   btn.disabled = true
@@ -132,7 +125,7 @@ async function soumettre() {
   const { data: fauxEmailTrouve, error: errProfil } = await sb
     .rpc('verifier_login', { p_prenom: prenom.toLowerCase(), p_nom: nom.toLowerCase() })
   if (errProfil || !fauxEmailTrouve) {
-    afficherMsg('Prénom ou nom introuvable. Vérifie ou crée un compte.', 'error')
+    afficherMsg("Prénom ou nom introuvable. Vérifie l'orthographe.", 'error')
     btn.disabled = false; btn.textContent = 'Se connecter'; return
   }
   const { error } = await sb.auth.signInWithPassword({ email: fauxEmailTrouve, password })

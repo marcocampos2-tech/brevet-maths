@@ -98,6 +98,14 @@ $$;
 * `suivi-parent.html` : bouton "Gérer mon abonnement" affiché **uniquement en fallback sur le 409** (pas de bouton systématique) — le bandeau "Passer à Suivi" étant déjà masqué quand `plan_actif=true` en base, le seul cas réel où le portail est utile côté UI est une désynchronisation Stripe/Supabase détectée au moment du 409.
 * Terminé, testé en conditions réelles.
 
+**`connexion.html` — suppression du parcours d'inscription autonome de l'élève**
+
+* Retiré : l'onglet "Créer un compte", tous les champs du bloc d'inscription (prénom/nom élève, email parent, mot de passe, source du trafic), et la branche `signUp` + `insert` dans `profils` de `soumettre()`.
+* Raison (sécurité, pas que cosmétique) : `email_parent` y était saisi **librement par l'élève**, sans aucune vérification — n'importe qui pouvait créer un compte élève et router le suivi scolaire d'un mineur vers une adresse email arbitraire.
+* Décision produit confirmée : seul le parent crée les comptes, depuis `espace-parent.html` puis `suivi-parent.html` (`creerEnfant()`), où `email_parent` provient de la session authentifiée du parent, pas d'un champ libre. **Ne pas réintroduire** de parcours d'inscription autonome dans `connexion.html`.
+* `connexion.html` ne sert plus qu'à connecter un élève dont le compte existe déjà (`verifier_login` + `signInWithPassword`) et au reset de mot de passe.
+* Effet de bord à traiter dans un chantier suivant (déjà validé) : la collecte d'origine du trafic (champ radio "comment avez-vous connu Academika ?", colonne `source` de `profils`) a disparu avec ce bloc. Elle doit être réimplantée dans `suivi-parent.html` (`creerEnfant()`) plutôt que restaurée ici.
+
 ### Reste ouvert — chantier différé « intégrité des comptes »
 
 À traiter avant le passage Stripe live :
