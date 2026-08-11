@@ -87,6 +87,17 @@ $$;
 * `api/email.js` et `api/cron-rappel.js` : les 8 liens de désabonnement basculés vers `/desabonner.html` ; les occurrences qui n'encodaient pas l'email (`esc()` au lieu d'un encodage URL) corrigées avec `encodeURIComponent`.
 * Déploiement Production confirmé après un redéploiement forcé (le premier push n'avait pas déclenché le webhook Vercel — commit vide poussé sur `main` pour forcer un nouveau déclenchement, déploiement confirmé côté GitHub Deployments API).
 
+**Chantier Stripe — item A : annulation d'abonnement**
+
+* `stripe-webhook.js` écoute désormais `customer.subscription.deleted` en plus de `invoice.payment_succeeded` : à l'annulation côté Stripe, `plan_actif` repasse à `false` dans `profils`. Terminé et testé.
+
+**Chantier Stripe — item B : anti-doublon d'abonnement + portail client** (PR #6, PR #7)
+
+* `stripe-checkout.js` : avant toute création de session Checkout, vérifie si le customer Stripe du foyer (email_parent) a déjà un abonnement actif dont `metadata.user_id` correspond à l'enfant ciblé → refus **409** si oui, plutôt qu'un doublon d'abonnement.
+* Portail client Stripe (gestion d'un abonnement déjà actif — moyen de paiement, annulation, historique) : ajouté d'abord en fonction séparée `api/stripe-portal.js` (PR #6), puis **fusionné dans `api/stripe-checkout.js`** (PR #7) — le plan Vercel Hobby limite à 12 Serverless Functions par déploiement et `stripe-portal.js` était la 13ᵉ, faisant échouer le déploiement Production. `stripe-checkout.js` accepte maintenant un paramètre `action` (`'checkout'` par défaut, ou `'portal'`), logique d'authentification et de recherche du customer Stripe factorisée une seule fois, chaque action dans sa propre fonction (`gererCheckout` / `gererPortal`).
+* `suivi-parent.html` : bouton "Gérer mon abonnement" affiché **uniquement en fallback sur le 409** (pas de bouton systématique) — le bandeau "Passer à Suivi" étant déjà masqué quand `plan_actif=true` en base, le seul cas réel où le portail est utile côté UI est une désynchronisation Stripe/Supabase détectée au moment du 409.
+* Terminé et testé.
+
 ### Reste ouvert — chantier différé « intégrité des comptes »
 
 À traiter avant le passage Stripe live :
@@ -94,11 +105,23 @@ $$;
 * **`profils` INSERT** : la policy INSERT actuelle (`with_check: auth.uid()=user_id`) ne contrôle pas `email_parent` — un utilisateur peut s'attribuer n'importe quel email parent à l'insertion. Concrètement observé dans `suivi-parent.html` (`creerEnfant()`) : l'INSERT se fait avec la session de l'**enfant** (`sbEleve`, pas celle du parent), et `email_parent` est envoyé correctement par ce flux applicatif précis — mais RLS seule ne l'impose pas, donc rien n'empêche un appel direct à l'API Supabase avec une session valide et n'importe quel `email_parent`. Solution probable : valider `email_parent` côté serveur avant l'insertion plutôt qu'en RLS pur (RLS ne peut pas facilement comparer à une valeur externe).
 * **`shouldCreateUser: true`** : dans `espace-parent.html`, l'appel `sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })` (seule occurrence dans le dépôt) permet à n'importe qui de créer un compte Auth sur une adresse email arbitraire. C'est le vecteur d'entrée qui rend exploitable la faille `profils` INSERT ci-dessus — d'où leur regroupement dans ce même chantier.
 
-### Prochain chantier prévu : Stripe
+### Reste ouvert — chantier Stripe (idempotency)
 
-* `stripe-checkout.js` : clé d'idempotency basée sur `Date.now()` — unique à chaque appel, donc n'idempotise rien ; pas de vérification qu'un abonnement n'est pas déjà actif avant d'en créer un nouveau (risque de double facturation).
-* `stripe-webhook.js` : pas d'idempotency au niveau DB (pas de table de log d'événements Stripe) — sans dégât aujourd'hui car l'opération actuelle est un simple `set`, mais deviendra un risque dès qu'une action non-idempotente (email, log) sera ajoutée à ce handler.
-* `customer.subscription.deleted` non écouté par le webhook — un parent qui annule son abonnement garde `plan_actif=true` indéfiniment.
+* **C1** — `stripe-checkout.js` : clé d'idempotency basée sur `Date.now()` — unique à chaque appel, donc n'idempotise rien (le bouton désactivé au clic protège du double-clic côté UI, mais pas d'un retry réseau ou d'un appel API direct).
+* **C2** — `stripe-webhook.js` : pas d'idempotency au niveau DB (pas de table de log d'événements Stripe) — sans dégât aujourd'hui car l'opération actuelle est un simple `set` (idempotent par nature), mais deviendra un risque dès qu'une action non-idempotente (email, log) sera ajoutée à ce handler.
+
+### CHANTIER PRIORITAIRE avant live — CGV & conformité du parcours de résiliation
+
+**Cases à cocher manquantes (blocage juridique — aucun contrat valablement formé sans ça) :**
+
+* Art. A1 — acceptation des CGV : case à cocher manquante au moment de la souscription.
+* Art. B4 — renonciation au droit de rétractation (nécessaire pour un service numérique à exécution immédiate) : case à cocher manquante.
+
+**Conformité du parcours de résiliation (loi "résiliation en 3 clics") :**
+
+* Locale FR manquante sur le portail client Stripe (Billing Portal) — actuellement pas configurée en français.
+* Nom d'entreprise à configurer dans Stripe (affiché sur le portail et les factures) — actuellement absent/générique.
+* Email de confirmation de résiliation sur support durable : requis par la loi, pas encore en place (le webhook `customer.subscription.deleted` désactive `plan_actif` mais n'envoie aucun email de confirmation au parent).
 
 ### Items mineurs restants, hors RLS et hors chantier Stripe
 
@@ -109,7 +132,16 @@ $$;
 
 * SIRET toujours en attente (dossier déposé 21/07/2026) — bloque le passage Stripe live, la déclaration SAP, la facturation
 * Gating produit (frontière Autonomie/Suivi sur `suivi-parent.html`) — décision produit prise, non codée, dépend de l'étape 3 terminée pour avoir un sens (étape 3 terminée — à coder)
+* Mise à jour rédactionnelle des CGV (Art. A1, Art. B4, cf. chantier CGV ci-dessus)
+* Relecture juridique des CGV avant passage Stripe live
 * Décisions stratégiques générales, priorisation, calendrier
+
+### Reste à faire — récapitulatif
+
+* Idempotency checkout/webhook (C1, C2 — cf. chantier Stripe ci-dessus)
+* Intégrité des comptes (chantier différé — cf. section dédiée ci-dessus)
+* Mise à jour rédactionnelle des CGV
+* Relecture juridique avant passage Stripe live
 
 ## Rappel méthodologique
 
