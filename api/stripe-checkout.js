@@ -40,6 +40,16 @@
 //     refus (409) plutôt que de créer un deuxième abonnement pour le
 //     même enfant.
 //
+// Modifié le 11/08/2026 — Fusion avec stripe-portal.js :
+//   - Le plan Hobby de Vercel limite à 12 Serverless Functions par
+//     déploiement ; stripe-portal.js (gestion d'un abonnement déjà actif
+//     via le Billing Portal Stripe) est donc fusionné ici plutôt que
+//     supprimé un autre endpoint. Le paramètre `action` du body
+//     ('checkout', défaut, ou 'portal') distingue les deux comportements ;
+//     la logique commune aux deux (authentification du parent, recherche
+//     du customer Stripe) est factorisée en tête de handler et exécutée
+//     une seule fois, chaque action gardant sa propre fonction dédiée.
+//
 // Idempotency :
 //   - Clé basée sur user_id + jour, pour éviter la création de deux
 //     sessions Checkout en cas de double-clic.
@@ -64,7 +74,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Méthode non autorisée' })
   }
 
+  const action = req.body?.action || 'checkout'
+  if (action !== 'checkout' && action !== 'portal') {
+    return res.status(400).json({ error: 'Action inconnue' })
+  }
+
   // ── Étape 1 — Authentification : vérifier le token Supabase côté serveur ──
+  // Commune aux deux actions.
   const authHeader = req.headers['authorization'] || ''
   const token = authHeader.replace('Bearer ', '').trim()
   if (!token) {
@@ -72,7 +88,7 @@ export default async function handler(req, res) {
   }
 
   let userId
-  let emailSessionParent
+  let emailParent
   try {
     const userRes = await fetch(`${SUPA_URL}/auth/v1/user`, {
       headers: {
@@ -85,8 +101,8 @@ export default async function handler(req, res) {
     }
     const userData = await userRes.json()
     userId = userData.id
-    emailSessionParent = userData.email
-    if (!userId || !emailSessionParent) {
+    emailParent = userData.email
+    if (!userId || !emailParent) {
       return res.status(401).json({ error: 'Session invalide' })
     }
   } catch (e) {
@@ -94,21 +110,45 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Session invalide' })
   }
 
-  // ── Étape 2 — Lire l'enfant ciblé, et vérifier qu'il appartient bien
-  //             au parent authentifié (jamais de confiance aveugle dans
-  //             le body : le client PROPOSE un user_id_enfant, le serveur
-  //             VÉRIFIE qu'il est légitimement rattaché à ce parent) ──
+  // ── Étape 2 — Recherche du customer Stripe du foyer (email_parent) ──
+  // Commune aux deux actions : une seule recherche Stripe, réutilisée
+  // pour la déduplication essai gratuit + l'anti-doublon (checkout), et
+  // pour retrouver le compte à gérer (portal).
+  let customerId
+  let premierEssai = true
+  try {
+    const existingCustomers = await stripe.customers.list({ email: emailParent, limit: 1 })
+    if (existingCustomers.data.length > 0) {
+      customerId = existingCustomers.data[0].id
+      premierEssai = false
+    }
+  } catch (e) {
+    console.error('Erreur recherche customer Stripe:', e.message)
+    return res.status(500).json({ error: 'Erreur lors de la vérification du compte de facturation' })
+  }
+
+  if (action === 'portal') {
+    return gererPortal(req, res, { customerId })
+  }
+
+  return gererCheckout(req, res, { emailParent, customerId, premierEssai })
+}
+
+// ═══════════════════════════════════════════════════════════
+// action: 'checkout' — créer une session Stripe Checkout pour l'abonnement
+// Suivi d'un enfant précis.
+// ═══════════════════════════════════════════════════════════
+async function gererCheckout(req, res, { emailParent, customerId, premierEssai }) {
+  // ── Lire l'enfant ciblé, et vérifier qu'il appartient bien au parent
+  //    authentifié (jamais de confiance aveugle dans le body : le client
+  //    PROPOSE un user_id_enfant, le serveur VÉRIFIE qu'il est légitimement
+  //    rattaché à ce parent) ──
   const userIdEnfant = req.body?.user_id_enfant
   if (!userIdEnfant) {
     return res.status(400).json({ error: 'user_id_enfant manquant' })
   }
 
-  let emailParent
   try {
-    // La session vérifiée à l'étape 1 est celle du PARENT (compte OTP,
-    // email réel).
-    emailParent = emailSessionParent
-
     const profilRes = await fetch(
       `${SUPA_URL}/rest/v1/profils?user_id=eq.${userIdEnfant}&email_parent=eq.${encodeURIComponent(emailParent)}&select=email_parent&limit=1`,
       {
@@ -130,25 +170,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Erreur lors de la vérification du profil' })
   }
 
-  // ── Étape 3 — Recherche du customer Stripe du foyer (email_parent) ──
-  // Une seule recherche Stripe, réutilisée pour deux vérifications :
-  //   3a. cet enfant n'a-t-il pas déjà un abonnement Suivi actif ?
-  //   3b. déduplication de l'essai gratuit (le foyer en a-t-il déjà
-  //       bénéficié sur un autre compte élève ?)
-  let customerId
-  let premierEssai = true
-  try {
-    const existingCustomers = await stripe.customers.list({ email: emailParent, limit: 1 })
-    if (existingCustomers.data.length > 0) {
-      customerId = existingCustomers.data[0].id
-      premierEssai = false
-    }
-  } catch (e) {
-    console.error('Erreur recherche customer Stripe:', e.message)
-    return res.status(500).json({ error: 'Erreur lors de la vérification du compte de facturation' })
-  }
-
-  // ── Étape 3a — Cet enfant a-t-il déjà un abonnement Suivi actif ? ──
+  // ── Cet enfant a-t-il déjà un abonnement Suivi actif ? ──
   // Empêche la création d'un doublon si le parent reclique sur "Passer à
   // Suivi" (ex. avant que plan_actif ne soit repassé à true côté Supabase
   // par le webhook, ou par onglet dupliqué).
@@ -165,14 +187,14 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── Étape 4 — Idempotency (anti double-clic) ──
+  // ── Idempotency (anti double-clic) ──
   // Granularité fine (timestamp), pas par jour : le bouton désactivé au clic
   // protège déjà du double-clic. Une clé basée sur le jour causait des
   // conflits Stripe entre tentatives successives avec des paramètres
   // différents (ex. dédup changeant l'essai gratuit d'un essai à l'autre).
   const idempotencyKey = `checkout_${userIdEnfant}_${Date.now()}`
 
-  // ── Étape 5 — Création de la session Stripe Checkout ──
+  // ── Création de la session Stripe Checkout ──
   try {
     const sessionParams = {
       mode: 'subscription',
@@ -204,5 +226,28 @@ export default async function handler(req, res) {
   } catch (e) {
     console.error('Erreur création session Stripe Checkout:', e.message)
     return res.status(500).json({ error: 'Erreur lors de la création du paiement' })
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// action: 'portal' — créer une session du Portail client Stripe (Billing
+// Portal) pour un parent souhaitant gérer un abonnement Suivi déjà actif
+// (moyen de paiement, annulation, historique de facturation).
+// ═══════════════════════════════════════════════════════════
+async function gererPortal(req, res, { customerId }) {
+  if (!customerId) {
+    return res.status(404).json({ error: 'Aucun abonnement trouvé pour ce compte.' })
+  }
+
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: `${SITE_URL}/suivi-parent.html`
+    })
+
+    return res.status(200).json({ url: session.url })
+  } catch (e) {
+    console.error('Erreur création session Stripe Billing Portal:', e.message)
+    return res.status(500).json({ error: 'Erreur lors de l\'ouverture de l\'espace de gestion' })
   }
 }
