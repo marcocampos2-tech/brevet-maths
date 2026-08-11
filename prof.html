@@ -228,6 +228,7 @@ const fmt      = (m, s) => m+'min '+s+'s'
 const fmtTemps = s => { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60); return h ? h+'h '+m+'min' : m+' min' }
 const dateStr  = d => new Date(d).toLocaleDateString('fr-FR')
 const initiales = (prenom, nom) => ((prenom||'?')[0] + (nom||'')[0]).toUpperCase()
+const origineLabel = s => ({ ami: 'Bouche à oreille', internet: 'Recherche internet', reseaux: 'Réseaux sociaux', autre: 'Autre' })[s] || '—'
 
 // Échappe une chaîne pour une insertion sûre à l'intérieur d'un attribut onclick="...('...')"
 // (protège contre les apostrophes dans les prénoms/noms composés : D'Angelo, N'Diaye...)
@@ -1314,11 +1315,11 @@ function render() {
 
   // ÉLÈVES
   h+='<div class="section" id="sec-eleves"><div class="card"><div class="card-title">Liste des élèves</div>'
-  h+='<table class="tbl"><thead><tr><th>Élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th><th>Examen</th><th>Actions</th></tr></thead><tbody>'
+  h+='<table class="tbl"><thead><tr><th>Élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th><th>Examen</th><th>Origine</th><th>Actions</th></tr></thead><tbody>'
   ELEVES.forEach(e=>{
     const p=e.totalQ>0?pct(e.totalScore,e.totalQ):0, exam=examMap[e.user_id]
     const examCell=exam?mentionBadge(pct(exam.score,exam.total))+' <span style="font-size:12px">'+exam.score+'/20</span>':'<span style="color:#999;font-size:12px">—</span>'
-    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+initiales(e.prenom,e.nom)+'</div><strong>'+e.prenom+' '+e.nom+'</strong></div></td><td style="color:var(--blue);font-size:12px">'+e.email_parent+'</td><td>'+e.sessions+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td><td>'+examCell+'</td>'
+    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+initiales(e.prenom,e.nom)+'</div><strong>'+e.prenom+' '+e.nom+'</strong></div></td><td style="color:var(--blue);font-size:12px">'+e.email_parent+'</td><td>'+e.sessions+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td><td>'+examCell+'</td><td style="font-size:12px">'+origineLabel(e.source)+'</td>'
     h+='<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">Fiche</button></td></tr>'
   })
   h+='</tbody></table></div></div>'
@@ -1430,7 +1431,7 @@ async function init() {
   ROWS=r1.data||[]; EXAMENS=r2.data||[]
   const profils=r3.data||[]
   PROFILS={}; profils.forEach(p=>PROFILS[p.user_id]=p)
-  ELEVES=profils.map(p=>({user_id:p.user_id,prenom:p.prenom_affiche||'—',nom:p.nom_affiche||'',email_parent:p.email_parent||'—',sessions:0,totalScore:0,totalQ:0}))
+  ELEVES=profils.map(p=>({user_id:p.user_id,prenom:p.prenom_affiche||'—',nom:p.nom_affiche||'',email_parent:p.email_parent||'—',source:p.source||null,sessions:0,totalScore:0,totalQ:0}))
   ROWS.forEach(r=>{ const e=ELEVES.find(x=>x.user_id===r.user_id); if(e){ e.sessions++; e.totalScore+=r.score; e.totalQ+=r.total } })
   INSCRIPTIONS=r4.data||[]
   SESSIONS=r5.data||[]
