@@ -816,7 +816,7 @@ async function repondreOrigine(valeur) {
   const encart = document.getElementById('encart-origine')
   const userIdEnfant = encart?.dataset.userId
   if (encart) encart.style.display = 'none'
-  if (userIdEnfant && valeur) {
+  if (userIdEnfant) {
     try {
       // Session parent (sb), pas la session élève (sbEleve) — la policy
       // UPDATE sur profils.source est restreinte à email_parent = email
