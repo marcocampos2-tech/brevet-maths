@@ -242,7 +242,8 @@ async function gererPortal(req, res, { customerId }) {
   try {
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${SITE_URL}/suivi-parent.html`
+      return_url: `${SITE_URL}/suivi-parent.html`,
+      locale: 'fr'
     })
 
     return res.status(200).json({ url: session.url })
