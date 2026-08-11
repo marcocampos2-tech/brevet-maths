@@ -918,12 +918,13 @@ async function ouvrirPortailAbonnement() {
 
   try {
     const { data: sessionParent } = await sb.auth.getSession()
-    const res = await fetch('/api/stripe-portal', {
+    const res = await fetch('/api/stripe-checkout', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${sessionParent.session.access_token}`
-      }
+      },
+      body: JSON.stringify({ action: 'portal' })
     })
     const result = await res.json()
     if (result.error || !result.url) {
