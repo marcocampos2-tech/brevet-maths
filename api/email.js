@@ -850,6 +850,70 @@ export default async function handler(req, res) {
   }
 
   // ═══════════════════════════════════════════
+  // RÉSILIATION CONFIRMÉE — envoyé depuis stripe-webhook.js au moment où
+  // le parent programme l'annulation dans le portail client Stripe (pas
+  // à la fin effective de la période, trop tardive pour une confirmation)
+  // ═══════════════════════════════════════════
+  if (req.body?.type === 'resiliation-confirmee') {
+    try {
+      const { emailParent, prenom, dateFin } = req.body
+      if (!emailParent || !dateFin) return res.status(400).json({ error: 'Champs manquants' })
+
+      const html = `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+          <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+            <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Résiliation confirmée</div>
+          </div>
+          <p style="margin-bottom:16px;">Bonjour Madame, Monsieur,</p>
+          <p style="margin-bottom:20px;color:#444;">
+            Nous confirmons la résiliation de l'abonnement Suivi${prenom ? ` de <strong>${esc(prenom)}</strong>` : ''}, à votre demande.
+          </p>
+          <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0;">
+            <p style="margin-bottom:8px;font-size:14px;color:#444;">✅ Le service Suivi reste actif jusqu'au <strong>${esc(dateFin)}</strong>.</p>
+            <p style="margin:0;font-size:14px;color:#444;">✅ Aucun prélèvement n'aura lieu après cette date.</p>
+          </div>
+          <p style="color:#444;margin-bottom:20px;">
+            Vous pouvez réactiver l'abonnement à tout moment avant cette date depuis votre espace parent.
+          </p>
+          <div style="text-align:center;margin:28px 0">
+            <a href="https://www.academika.fr/espace-parent.html" style="background:#3730a3;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block">
+              Accéder à l'espace parent →
+            </a>
+          </div>
+          <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+            <p style="color:#444;font-size:13px;margin-bottom:16px;">
+              Pour toute question, contactez-nous :
+              <a href="mailto:contact@academika.fr" style="color:#3730a3;text-decoration:none;font-weight:500">contact@academika.fr</a>
+            </p>
+            <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
+          </div>
+          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
+            <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
+          </p>
+        </div>`
+
+      const rateOk = await verifierRateLimit(emailParent)
+      if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
+
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+        body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `Résiliation confirmée — ACADEMIKA`, html })
+      })
+
+      if (!response.ok) {
+        const responseData = await response.json()
+        return res.status(500).json({ error: 'Erreur : ' + JSON.stringify(responseData) })
+      }
+      return res.status(200).json({ success: true })
+    } catch (e) {
+      console.log('Erreur resiliation-confirmee:', e.message)
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ═══════════════════════════════════════════
   // Type non reconnu
   // ═══════════════════════════════════════════
   return res.status(400).json({ error: 'Type de requête non reconnu ou manquant' })

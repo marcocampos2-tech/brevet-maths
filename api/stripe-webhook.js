@@ -25,6 +25,13 @@
 //     pas qu'un paiement a effectivement eu lieu) → active plan_actif
 //   - customer.subscription.deleted → désactive plan_actif quand
 //     l'abonnement est annulé côté Stripe
+//   - customer.subscription.updated → détecte la transition précise
+//     "annulation programmée" (cancel_at_period_end false → true) pour
+//     envoyer une confirmation de résiliation immédiate. Nécessaire car
+//     le portail client Stripe annule "à la fin de la période de
+//     facturation" : customer.subscription.deleted ne se déclenche que
+//     des semaines plus tard, trop tard pour une confirmation au moment
+//     de la demande.
 //
 // Convention du projet : Supabase en fetch REST direct (comme
 // cron-rappel.js), SDK officiel pour Stripe.
@@ -181,7 +188,85 @@ export default async function handler(req, res) {
     return res.status(200).json({ received: true, user_id: userId, plan_actif: false })
   }
 
-  // 200 pour que Stripe ne retente pas — on n'écoute que ces deux
+  if (event.type === 'customer.subscription.updated') {
+
+    // ── Étape 3 — Extraire user_id depuis les métadonnées de la subscription ──
+    // L'objet de l'événement EST directement la subscription (comme pour
+    // customer.subscription.deleted) — pas besoin de
+    // stripe.subscriptions.retrieve().
+    const subscription = event.data.object
+    const userId = subscription.metadata?.user_id
+
+    if (!userId) {
+      console.error('Aucun user_id dans les métadonnées de la subscription mise à jour:', subscription.id)
+      return res.status(200).json({ received: true, skipped: 'pas de user_id' })
+    }
+
+    // ── Étape 4 — Ne réagir qu'à la transition précise "annulation
+    //             programmée" (cancel_at_period_end false → true) ──
+    // Un customer.subscription.updated se déclenche pour bien d'autres
+    // raisons (changement de moyen de paiement, etc.) — on n'agit que sur
+    // ce passage précis, jamais sur l'événement en général.
+    const estAnnulationProgrammee = subscription.cancel_at_period_end === true
+      && event.data.previous_attributes?.cancel_at_period_end === false
+
+    if (!estAnnulationProgrammee) {
+      return res.status(200).json({ received: true, skipped: 'pas une transition d\'annulation' })
+    }
+
+    // ── Étape 5 — Récupérer email_parent et prenom_affiche de l'enfant ──
+    let emailParent, prenom
+    try {
+      const profilRes = await fetch(
+        `${SUPA_URL}/rest/v1/profils?user_id=eq.${userId}&select=email_parent,prenom_affiche`,
+        {
+          headers: {
+            'Authorization': `Bearer ${SUPA_KEY}`,
+            'apikey': SUPA_KEY
+          }
+        }
+      )
+      const profils = await profilRes.json()
+      if (!profils || profils.length === 0) {
+        console.error('Profil introuvable pour la confirmation de résiliation:', userId)
+        return res.status(200).json({ received: true, skipped: 'profil introuvable' })
+      }
+      emailParent = profils[0].email_parent
+      prenom = profils[0].prenom_affiche
+    } catch (e) {
+      console.error('Erreur récupération profil pour confirmation résiliation:', e.message)
+      return res.status(500).json({ error: 'Erreur lors de la lecture du profil' })
+    }
+
+    // ── Étape 6 — Envoyer l'email de confirmation de résiliation ──
+    // Pas de mécanisme anti-doublon ici (sujet traité globalement dans le
+    // futur chantier d'idempotency C1/C2, pas dans ce commit) : un retry
+    // Stripe sur cet événement renverrait un second email, risque accepté.
+    try {
+      const dateFin = new Date(subscription.current_period_end * 1000)
+        .toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Paris' })
+
+      const emailRes = await fetch(`https://${req.headers.host}/api/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'resiliation-confirmee', emailParent, prenom, dateFin })
+      })
+
+      if (!emailRes.ok) {
+        const errText = await emailRes.text()
+        console.error('Erreur envoi email confirmation résiliation:', errText)
+        return res.status(500).json({ error: 'Erreur lors de l\'envoi de l\'email de confirmation' })
+      }
+    } catch (e) {
+      console.error('Erreur réseau envoi email confirmation résiliation:', e.message)
+      return res.status(500).json({ error: 'Erreur lors de l\'envoi de l\'email de confirmation' })
+    }
+
+    // ── Étape 7 — Répondre rapidement à Stripe ──
+    return res.status(200).json({ received: true, user_id: userId, resiliation_programmee: true })
+  }
+
+  // 200 pour que Stripe ne retente pas — on n'écoute que ces trois
   // événements, recevoir autre chose ici serait une anomalie de
   // configuration, pas une erreur côté serveur.
   return res.status(200).json({ received: true, ignored: event.type })
