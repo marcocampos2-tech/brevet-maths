@@ -796,25 +796,23 @@ function afficherMsgAjout(type, texte) {
   m.className = 'form-ajout-msg ' + type
 }
 
-let timeoutRechargementOrigine = null
-
 // Encart discret "Comment avez-vous connu Academika ?", affiché sous le
 // formulaire d'ajout une fois celui-ci fermé (compte Autonomie créé avec
-// succès). Non bloquant : le tableau de bord se recharge de toute façon
-// après un délai, que le parent réponde ou clique "Passer" ou ignore
-// l'encart — jamais d'attente forcée.
+// succès). Reste affiché indéfiniment tant que le parent n'a pas cliqué
+// un choix ou "Passer" — pas de rechargement automatique par timer (testé
+// en conditions réelles : 8s s'est révélé trop court, le parent n'avait
+// pas toujours le temps de répondre). Le rechargement du tableau de bord
+// ne se déclenche plus que via repondreOrigine(), sur interaction du parent.
 function afficherEncartOrigine(userIdEnfant) {
   const encart = document.getElementById('encart-origine')
   if (!encart) return
   encart.dataset.userId = userIdEnfant
   encart.style.display = 'block'
-  timeoutRechargementOrigine = setTimeout(() => window.location.reload(), 8000)
 }
 
 async function repondreOrigine(valeur) {
   const encart = document.getElementById('encart-origine')
   const userIdEnfant = encart?.dataset.userId
-  if (timeoutRechargementOrigine) { clearTimeout(timeoutRechargementOrigine); timeoutRechargementOrigine = null }
   if (encart) encart.style.display = 'none'
   if (userIdEnfant && valeur) {
     try {
