@@ -874,6 +874,16 @@ async function passerASuivi(uid) {
       body: JSON.stringify({ user_id_enfant: uid })
     })
     const result = await res.json()
+
+    if (res.status === 409) {
+      // Abonnement Stripe déjà actif pour cet enfant alors que le bandeau
+      // s'affiche encore (désynchronisation Stripe/Supabase, ex. webhook
+      // en retard) — seul cas réel où le portail est utile ici, puisque
+      // le bandeau est déjà masqué quand plan_actif=true en base.
+      afficherErreurAbonnementActif(result.error || 'Cet enfant a déjà un abonnement Suivi actif.')
+      return
+    }
+
     if (result.error || !result.url) {
       if (btn) { btn.disabled = false; btn.textContent = 'Réessayer' }
       return
@@ -882,6 +892,50 @@ async function passerASuivi(uid) {
   } catch (e) {
     console.log('Erreur passage à Suivi:', e.message)
     if (btn) { btn.disabled = false; btn.textContent = 'Réessayer' }
+  }
+}
+
+function afficherErreurAbonnementActif(message) {
+  const btn = document.getElementById('btn-passer-suivi')
+  if (!btn) return
+
+  const wrapper = document.createElement('div')
+  wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;gap:4px'
+  wrapper.innerHTML = `
+    <span id="bandeau-suivi-erreur-msg" style="color:#b91c1c;font-size:0.85em"></span>
+    <button class="bandeau-suivi-btn" id="btn-gerer-abonnement" onclick="ouvrirPortailAbonnement()">Gérer mon abonnement →</button>`
+  // Message inséré via textContent (pas d'interpolation dans le HTML),
+  // même si ce message vient de notre propre API — pas de risque
+  // d'injection ici, mais pas de raison de s'en écarter.
+  wrapper.querySelector('#bandeau-suivi-erreur-msg').textContent = message
+  btn.replaceWith(wrapper)
+}
+
+async function ouvrirPortailAbonnement() {
+  const btn = document.getElementById('btn-gerer-abonnement')
+  const msg = document.getElementById('bandeau-suivi-erreur-msg')
+  if (btn) { btn.disabled = true; btn.textContent = 'Redirection…' }
+
+  try {
+    const { data: sessionParent } = await sb.auth.getSession()
+    const res = await fetch('/api/stripe-portal', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionParent.session.access_token}`
+      }
+    })
+    const result = await res.json()
+    if (result.error || !result.url) {
+      if (msg) msg.textContent = result.error || 'Erreur lors de l\'ouverture de l\'espace de gestion.'
+      if (btn) { btn.disabled = false; btn.textContent = 'Réessayer →' }
+      return
+    }
+    window.location.href = result.url
+  } catch (e) {
+    console.log('Erreur ouverture portail abonnement:', e.message)
+    if (msg) msg.textContent = 'Erreur inattendue. Réessayez.'
+    if (btn) { btn.disabled = false; btn.textContent = 'Réessayer →' }
   }
 }
 
