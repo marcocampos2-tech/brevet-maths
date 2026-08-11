@@ -902,7 +902,12 @@ async function creerEnfant() {
       window.location.href = result.url
     } else {
       afficherMsgAjout('succes', '✅ Compte créé !')
-      fermerFormulaireAjout()
+      // Masque uniquement le formulaire, sans passer par
+      // fermerFormulaireAjout() : cette dernière réaffiche zone-vide ou
+      // zone-dashboard selon `eleves`, qui n'est jamais mis à jour ici
+      // (pas de rechargement de la page à ce stade) — elle réafficherait
+      // à tort l'écran "Bienvenue" même quand un enfant vient d'être créé.
+      document.getElementById('zone-form-ajout').style.display = 'none'
       afficherEncartOrigine(signUpData.user.id)
     }
   } catch (e) {
