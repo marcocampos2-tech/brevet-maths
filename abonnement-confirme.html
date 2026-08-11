@@ -90,6 +90,46 @@
   line-height: 1.7;
   margin-top: 20px;
 }
+.encart-origine {
+  display: none;
+  background: var(--light-bg);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-top: 20px;
+  text-align: left;
+}
+.encart-origine-titre {
+  font-size: 12.5px;
+  color: var(--slate);
+  margin-bottom: 10px;
+}
+.encart-origine-choix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.encart-origine-btn {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  color: var(--navy);
+  font-size: 12px;
+  padding: 7px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+.encart-origine-btn:hover { border-color: var(--navy); }
+.encart-origine-passer {
+  background: none;
+  border: none;
+  color: #9CA3AF;
+  font-size: 11.5px;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  padding: 4px;
+}
 </style>
 </head>
 <body>
@@ -153,6 +193,17 @@
       Abonnement sans engagement, résiliable à tout moment.
     </div>
 
+    <div class="encart-origine" id="encart-origine">
+      <div class="encart-origine-titre">Comment avez-vous connu Academika ?</div>
+      <div class="encart-origine-choix">
+        <button class="encart-origine-btn" onclick="repondreOrigine('ami')">Bouche à oreille</button>
+        <button class="encart-origine-btn" onclick="repondreOrigine('internet')">Recherche internet</button>
+        <button class="encart-origine-btn" onclick="repondreOrigine('reseaux')">Réseaux sociaux</button>
+        <button class="encart-origine-btn" onclick="repondreOrigine('autre')">Autre</button>
+        <button class="encart-origine-passer" onclick="repondreOrigine(null)">Passer</button>
+      </div>
+    </div>
+
   </div>
 </section>
 
@@ -184,6 +235,8 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
   auth: { persistSession: true, autoRefreshToken: true }
 })
 
+let userIdEnfantCourant = null
+
 async function afficherPrenomEleve() {
   try {
     // L'identité de l'enfant est transmise explicitement dans l'URL par
@@ -202,7 +255,7 @@ async function afficherPrenomEleve() {
     // correspond pas à la session active si l'URL est partagée ou rejouée).
     const { data: profil, error } = await sb
       .from('profils')
-      .select('prenom_affiche, email_parent')
+      .select('prenom_affiche, email_parent, source')
       .eq('user_id', userIdEnfant)
       .single()
 
@@ -210,8 +263,31 @@ async function afficherPrenomEleve() {
     if (profil.email_parent !== session.session.user.email) return // repli
 
     document.getElementById('prenom-eleve').textContent = profil.prenom_affiche
+
+    // Collecte de l'origine du trafic : ce compte peut arriver ici sans
+    // être jamais passé par l'encart de suivi-parent.html (Suivi payé
+    // dès la création, ou upgrade via passerASuivi()) — donc seulement
+    // si `source` n'est pas déjà renseignée.
+    if (!profil.source) {
+      userIdEnfantCourant = userIdEnfant
+      document.getElementById('encart-origine').style.display = 'block'
+    }
   } catch (e) {
     console.log('Erreur récupération prénom:', e.message) // repli silencieux
+  }
+}
+
+async function repondreOrigine(valeur) {
+  document.getElementById('encart-origine').style.display = 'none'
+  if (!userIdEnfantCourant) return
+  try {
+    // Session parent déjà active sur cette page (sb) — la policy UPDATE
+    // sur profils.source est restreinte à email_parent = email du
+    // parent authentifié.
+    const { error } = await sb.from('profils').update({ source: valeur }).eq('user_id', userIdEnfantCourant)
+    if (error) console.log('Erreur mise à jour source:', error.message)
+  } catch (e) {
+    console.log('Erreur mise à jour source:', e.message)
   }
 }
 
