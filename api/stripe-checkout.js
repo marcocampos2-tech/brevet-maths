@@ -33,6 +33,13 @@
 //     (le foyer en a probablement déjà bénéficié sur un autre compte
 //     élève) — abonnement facturé dès la création.
 //
+// Modifié le 11/08/2026 — Anti-doublon d'abonnement :
+//   - Avant toute création de session, si un customer Stripe existe déjà
+//     pour ce foyer, on vérifie qu'aucun de ses abonnements actifs ne
+//     porte déjà metadata.user_id === l'enfant ciblé. Si c'est le cas,
+//     refus (409) plutôt que de créer un deuxième abonnement pour le
+//     même enfant.
+//
 // Idempotency :
 //   - Clé basée sur user_id + jour, pour éviter la création de deux
 //     sessions Checkout en cas de double-clic.
@@ -123,7 +130,11 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Erreur lors de la vérification du profil' })
   }
 
-  // ── Étape 3 — Déduplication : essai gratuit déjà utilisé pour cet email ? ──
+  // ── Étape 3 — Recherche du customer Stripe du foyer (email_parent) ──
+  // Une seule recherche Stripe, réutilisée pour deux vérifications :
+  //   3a. cet enfant n'a-t-il pas déjà un abonnement Suivi actif ?
+  //   3b. déduplication de l'essai gratuit (le foyer en a-t-il déjà
+  //       bénéficié sur un autre compte élève ?)
   let customerId
   let premierEssai = true
   try {
@@ -135,6 +146,23 @@ export default async function handler(req, res) {
   } catch (e) {
     console.error('Erreur recherche customer Stripe:', e.message)
     return res.status(500).json({ error: 'Erreur lors de la vérification du compte de facturation' })
+  }
+
+  // ── Étape 3a — Cet enfant a-t-il déjà un abonnement Suivi actif ? ──
+  // Empêche la création d'un doublon si le parent reclique sur "Passer à
+  // Suivi" (ex. avant que plan_actif ne soit repassé à true côté Supabase
+  // par le webhook, ou par onglet dupliqué).
+  if (customerId) {
+    try {
+      const activeSubs = await stripe.subscriptions.list({ customer: customerId, status: 'active' })
+      const dejaAbonne = activeSubs.data.some(sub => sub.metadata?.user_id === userIdEnfant)
+      if (dejaAbonne) {
+        return res.status(409).json({ error: 'Cet enfant a déjà un abonnement Suivi actif.' })
+      }
+    } catch (e) {
+      console.error('Erreur vérification abonnements actifs Stripe:', e.message)
+      return res.status(500).json({ error: 'Erreur lors de la vérification de l\'abonnement' })
+    }
   }
 
   // ── Étape 4 — Idempotency (anti double-clic) ──
