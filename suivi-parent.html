@@ -106,6 +106,12 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .bandeau-suivi-point-texte { font-size: 11.5px; color: var(--ardoise); line-height: 1.5; }
 .bandeau-suivi-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 8px; }
 .bandeau-suivi-badge { background: white; color: var(--bordeaux); font-size: 10px; font-weight: 500; padding: 3px 9px; border-radius: 10px; }
+.encart-origine { display: none; background: var(--marine-light); border-radius: 10px; padding: 14px 16px; margin-top: 14px; }
+.encart-origine-titre { font-size: 12.5px; color: var(--ardoise); margin-bottom: 10px; }
+.encart-origine-choix { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.encart-origine-btn { background: white; border: 1px solid var(--border); color: var(--marine); font-size: 12px; padding: 7px 12px; border-radius: 20px; cursor: pointer; font-family: 'Inter', sans-serif; }
+.encart-origine-btn:hover { border-color: var(--marine); }
+.encart-origine-passer { background: none; border: none; color: var(--muted); font-size: 11.5px; text-decoration: underline; cursor: pointer; font-family: 'Inter', sans-serif; padding: 4px; }
 </style>
 </head>
 <body>
@@ -199,6 +205,17 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     </div>
 
     <div class="form-ajout-msg" id="fa-msg"></div>
+  </div>
+</div>
+
+<div class="encart-origine" id="encart-origine">
+  <div class="encart-origine-titre">Comment avez-vous connu Academika ?</div>
+  <div class="encart-origine-choix">
+    <button class="encart-origine-btn" onclick="repondreOrigine('ami')">Bouche à oreille</button>
+    <button class="encart-origine-btn" onclick="repondreOrigine('internet')">Recherche internet</button>
+    <button class="encart-origine-btn" onclick="repondreOrigine('reseaux')">Réseaux sociaux</button>
+    <button class="encart-origine-btn" onclick="repondreOrigine('autre')">Autre</button>
+    <button class="encart-origine-passer" onclick="repondreOrigine(null)">Passer</button>
   </div>
 </div>
 
@@ -779,6 +796,40 @@ function afficherMsgAjout(type, texte) {
   m.className = 'form-ajout-msg ' + type
 }
 
+let timeoutRechargementOrigine = null
+
+// Encart discret "Comment avez-vous connu Academika ?", affiché sous le
+// formulaire d'ajout une fois celui-ci fermé (compte Autonomie créé avec
+// succès). Non bloquant : le tableau de bord se recharge de toute façon
+// après un délai, que le parent réponde ou clique "Passer" ou ignore
+// l'encart — jamais d'attente forcée.
+function afficherEncartOrigine(userIdEnfant) {
+  const encart = document.getElementById('encart-origine')
+  if (!encart) return
+  encart.dataset.userId = userIdEnfant
+  encart.style.display = 'block'
+  timeoutRechargementOrigine = setTimeout(() => window.location.reload(), 8000)
+}
+
+async function repondreOrigine(valeur) {
+  const encart = document.getElementById('encart-origine')
+  const userIdEnfant = encart?.dataset.userId
+  if (timeoutRechargementOrigine) { clearTimeout(timeoutRechargementOrigine); timeoutRechargementOrigine = null }
+  if (encart) encart.style.display = 'none'
+  if (userIdEnfant && valeur) {
+    try {
+      // Session parent (sb), pas la session élève (sbEleve) — la policy
+      // UPDATE sur profils.source est restreinte à email_parent = email
+      // du parent authentifié.
+      const { error } = await sb.from('profils').update({ source: valeur }).eq('user_id', userIdEnfant)
+      if (error) console.log('Erreur mise à jour source:', error.message)
+    } catch (e) {
+      console.log('Erreur mise à jour source:', e.message)
+    }
+  }
+  window.location.reload()
+}
+
 async function creerEnfant() {
   const prenomE = document.getElementById('fa-prenom').value.trim()
   const nomE = document.getElementById('fa-nom').value.trim()
@@ -847,10 +898,14 @@ async function creerEnfant() {
         setTimeout(() => window.location.reload(), 2500)
         return
       }
+      // Redirection Stripe immédiate — l'encart d'origine du trafic n'a
+      // jamais le temps de s'afficher avant la navigation, et ne doit
+      // surtout pas la retarder : on ne l'affiche donc pas dans ce cas.
       window.location.href = result.url
     } else {
-      afficherMsgAjout('succes', '✅ Compte créé ! Redirection…')
-      setTimeout(() => window.location.reload(), 1200)
+      afficherMsgAjout('succes', '✅ Compte créé !')
+      fermerFormulaireAjout()
+      afficherEncartOrigine(signUpData.user.id)
     }
   } catch (e) {
     console.log('Erreur création enfant:', e.message)
