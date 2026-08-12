@@ -873,7 +873,7 @@ async function creerEnfant() {
     // Insertion via le client parent (sb), pas le client élève (sbEleve) —
     // la policy INSERT sur profils vérifie email_parent = email du parent
     // authentifié ; la session élève n'a pas cet email dans son JWT.
-    await sb.from('profils').insert({
+    const { error: insertError } = await sb.from('profils').insert({
       user_id: signUpData.user.id,
       prenom: prenomE.toLowerCase(), nom: nomE.toLowerCase(),
       prenom_affiche: prenomE, nom_affiche: nomE,
@@ -881,6 +881,13 @@ async function creerEnfant() {
       plan_actif: false,
       plan_souhaite: offreSelectionnee
     })
+
+    if (insertError) {
+      console.log('Erreur insertion profils:', insertError.message)
+      afficherMsgAjout('erreur', 'Le compte a été créé, mais une erreur est survenue lors de la finalisation. Contactez-nous à contact@academika.fr.')
+      btn.disabled = false; btn.textContent = 'Créer le compte de l\'enfant'
+      return
+    }
 
     if (offreSelectionnee === 'suivi') {
       const { data: sessionParent } = await sb.auth.getSession()
