@@ -870,9 +870,10 @@ async function creerEnfant() {
       return
     }
 
-    // Insertion via le client élève (sa propre session, tout juste créée) —
-    // cohérent avec la logique déjà en place dans connexion.html.
-    await sbEleve.from('profils').insert({
+    // Insertion via le client parent (sb), pas le client élève (sbEleve) —
+    // la policy INSERT sur profils vérifie email_parent = email du parent
+    // authentifié ; la session élève n'a pas cet email dans son JWT.
+    await sb.from('profils').insert({
       user_id: signUpData.user.id,
       prenom: prenomE.toLowerCase(), nom: nomE.toLowerCase(),
       prenom_affiche: prenomE, nom_affiche: nomE,
