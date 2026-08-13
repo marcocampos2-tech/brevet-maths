@@ -1,5 +1,7 @@
 // /api/email.js
 
+const { peutRecevoirEmailDetaille } = require('../lib/gating')
+
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -632,14 +634,14 @@ export default async function handler(req, res) {
 
     try {
       const profilRes = await fetch(
-        `${SUPA_URL}/rest/v1/profils?user_id=eq.${user_id}&select=prenom_affiche,email_parent,email_actif&limit=1`,
+        `${SUPA_URL}/rest/v1/profils?user_id=eq.${user_id}&select=prenom_affiche,email_parent,email_actif,plan_actif&limit=1`,
         { headers: supaHeaders }
       )
       const profils = await profilRes.json()
       if (!profils || profils.length === 0) {
         return res.status(200).json({ success: true, skip: 'profil introuvable' })
       }
-      const { prenom_affiche, email_parent, email_actif } = profils[0]
+      const { prenom_affiche, email_parent, email_actif, plan_actif } = profils[0]
       if (!email_parent || email_actif === false) {
         return res.status(200).json({ success: true, skip: 'email parent absent ou désactivé' })
       }
@@ -698,6 +700,7 @@ export default async function handler(req, res) {
       const m = Math.floor(tempsSecondes / 60)
       const s2 = tempsSecondes % 60
       const tempsFormat = m === 0 ? `${s2} sec` : `${m} min ${s2} sec`
+      const detailComplet = peutRecevoirEmailDetaille({ plan_actif })
 
       let html = ''
       let sujet = ''
@@ -732,9 +735,11 @@ export default async function handler(req, res) {
           ? `Continuez à l'encourager !`
           : nbARevoir === 0
             ? `Bravo, tout est acquis aujourd'hui !`
-            : nbAcquis === 0
-              ? `Un petit coup de pouce sur ${listeARevoir} serait utile.`
-              : `Bravo pour ${listeAcquis} ! Un petit coup de pouce sur ${listeARevoir} serait utile.`
+            : !detailComplet
+              ? `Un point est à consolider — le détail est disponible avec l'offre Suivi.`
+              : nbAcquis === 0
+                ? `Un petit coup de pouce sur ${listeARevoir} serait utile.`
+                : `Bravo pour ${listeAcquis} ! Un petit coup de pouce sur ${listeARevoir} serait utile.`
 
         sujet = `${prenom} a travaillé aujourd'hui — ACADEMIKA`
 
@@ -747,8 +752,8 @@ export default async function handler(req, res) {
             <p style="margin-bottom:10px">Bonjour,</p>
             <p style="font-size:15px;font-weight:600;margin:0 0 4px">${messagePrincipal}.</p>
             <p style="font-size:12px;color:#888;margin:0 0 20px">${totalSessions} session${totalSessions>1?'s':''} · ${tempsFormat} · moyenne ${moyGlobale}%</p>
-            <p style="color:#aaa;font-size:11px;margin:0 0 14px">Acquis : au moins 70% de bonnes réponses aujourd'hui sur ce sous-thème. À revoir : moins de 70%.</p>
-            ${badgesHTML}
+            ${detailComplet ? `<p style="color:#aaa;font-size:11px;margin:0 0 14px">Acquis : au moins 70% de bonnes réponses aujourd'hui sur ce sous-thème. À revoir : moins de 70%.</p>` : ''}
+            ${detailComplet ? badgesHTML : ''}
             <p style="color:#444;line-height:1.6;margin-top:14px">${phraseSynthese}</p>
             <div style="text-align:center;margin:24px 0 4px">
               <a href="https://www.academika.fr/espace-parent.html" style="color:#3730a3;text-decoration:none;font-weight:600;font-size:13px">👪 Consulter le suivi complet dans l'espace parent →</a>
@@ -769,13 +774,17 @@ export default async function handler(req, res) {
         sujet = `⚠️ ${prenom} a eu des difficultés aujourd'hui — ACADEMIKA`
 
         const rateesHTML = questionsRatees.length > 0
-          ? `<div style="margin-top:16px">
-              <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:8px">📚 Points à retravailler :</p>
-              ${questionsRatees.slice(0,5).map(q => `
-                <div style="font-size:13px;color:#666;padding:4px 0">
-                  • ${esc(q)}
-                </div>`).join('')}
-            </div>`
+          ? (detailComplet
+              ? `<div style="margin-top:16px">
+                  <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:8px">📚 Points à retravailler :</p>
+                  ${questionsRatees.slice(0,5).map(q => `
+                    <div style="font-size:13px;color:#666;padding:4px 0">
+                      • ${esc(q)}
+                    </div>`).join('')}
+                </div>`
+              : `<div style="margin-top:16px">
+                  <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:8px">📚 Des points à retravailler ont été identifiés — le détail est disponible avec l'offre Suivi.</p>
+                </div>`)
           : ''
 
         html = `
