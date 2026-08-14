@@ -736,7 +736,7 @@ export default async function handler(req, res) {
           : nbARevoir === 0
             ? `Bravo, tout est acquis aujourd'hui !`
             : !detailComplet
-              ? `Un point est à consolider — le détail est disponible avec l'offre Suivi.`
+              ? `Un point est à consolider — le détail est disponible avec l'offre Accompagné.`
               : nbAcquis === 0
                 ? `Un petit coup de pouce sur ${listeARevoir} serait utile.`
                 : `Bravo pour ${listeAcquis} ! Un petit coup de pouce sur ${listeARevoir} serait utile.`
@@ -783,7 +783,7 @@ export default async function handler(req, res) {
                     </div>`).join('')}
                 </div>`
               : `<div style="margin-top:16px">
-                  <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:8px">📚 Des points à retravailler ont été identifiés — le détail est disponible avec l'offre Suivi.</p>
+                  <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:8px">📚 Des points à retravailler ont été identifiés — le détail est disponible avec l'offre Accompagné.</p>
                 </div>`)
           : ''
 
@@ -876,10 +876,10 @@ export default async function handler(req, res) {
           </div>
           <p style="margin-bottom:16px;">Bonjour Madame, Monsieur,</p>
           <p style="margin-bottom:20px;color:#444;">
-            Nous confirmons la résiliation de l'abonnement Suivi${prenom ? ` de <strong>${esc(prenom)}</strong>` : ''}, à votre demande.
+            Nous confirmons la résiliation de l'abonnement Accompagné${prenom ? ` de <strong>${esc(prenom)}</strong>` : ''}, à votre demande.
           </p>
           <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0;">
-            <p style="margin-bottom:8px;font-size:14px;color:#444;">✅ Le service Suivi reste actif jusqu'au <strong>${esc(dateFin)}</strong>.</p>
+            <p style="margin-bottom:8px;font-size:14px;color:#444;">✅ Le service Accompagné reste actif jusqu'au <strong>${esc(dateFin)}</strong>.</p>
             <p style="margin:0;font-size:14px;color:#444;">✅ Aucun prélèvement n'aura lieu après cette date.</p>
           </div>
           <p style="color:#444;margin-bottom:20px;">

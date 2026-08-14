@@ -158,6 +158,7 @@ section.alt-bg { background: var(--light-bg); }
 .offer-card.highlight .offer-desc { color: rgba(250,249,246,0.75); }
 .offer-price { font-family: 'Newsreader', serif; font-size: 22px; font-weight: 500; color: var(--navy); }
 .offer-card.highlight .offer-price { color: var(--cream); }
+.offer-note { font-size: 10.5px; font-weight: 500; color: var(--gold); margin-top: 4px; }
 
 .method-block { display: grid; grid-template-columns: 140px 1fr; gap: 32px; align-items: start; }
 .method-avatar {

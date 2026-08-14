@@ -32,6 +32,9 @@
 //     déjà pour cet email_parent. Si oui, pas de nouvel essai gratuit
 //     (le foyer en a probablement déjà bénéficié sur un autre compte
 //     élève) — abonnement facturé dès la création.
+//   - Sauf pendant l'offre de lancement (jusqu'au 01/12/2026) : voir le
+//     bloc FIN_OFFRE_LANCEMENT dans gererCheckout(), qui prévaut sur
+//     cette dédup tant que la bascule payante n'a pas eu lieu.
 //
 // Modifié le 11/08/2026 — Anti-doublon d'abonnement :
 //   - Avant toute création de session, si un customer Stripe existe déjà
@@ -179,7 +182,7 @@ async function gererCheckout(req, res, { emailParent, customerId, premierEssai }
       const activeSubs = await stripe.subscriptions.list({ customer: customerId, status: 'active' })
       const dejaAbonne = activeSubs.data.some(sub => sub.metadata?.user_id === userIdEnfant)
       if (dejaAbonne) {
-        return res.status(409).json({ error: 'Cet enfant a déjà un abonnement Suivi actif.' })
+        return res.status(409).json({ error: 'Cet enfant a déjà un abonnement Accompagné actif.' })
       }
     } catch (e) {
       console.error('Erreur vérification abonnements actifs Stripe:', e.message)
@@ -216,7 +219,21 @@ async function gererCheckout(req, res, { emailParent, customerId, premierEssai }
       sessionParams.customer_email = emailParent
     }
 
-    if (premierEssai) {
+    // ── Offre de lancement : Accompagné offert jusqu'au 01/12/2026 ──
+    // Le prix réel (7,90€/mois) reste affiché partout côté client, mais
+    // personne ne doit être prélevé avant la bascule payante (après le
+    // stage de Toussaint, avant le stage de Noël — cf. CLAUDE.md). On
+    // calcule donc le nombre de jours d'essai Stripe restant jusqu'à
+    // cette date plutôt que d'appliquer le forfait fixe de 14 jours :
+    // ce bloc s'auto-désactive de lui-même début décembre
+    // (joursEssaiLancement <= 0) et retombe sur le comportement normal
+    // (14 jours, 1er essai du foyer) — pas besoin d'y repenser à la bascule.
+    const FIN_OFFRE_LANCEMENT = new Date('2026-12-01T00:00:00Z')
+    const joursEssaiLancement = Math.ceil((FIN_OFFRE_LANCEMENT - new Date()) / (1000 * 60 * 60 * 24))
+
+    if (joursEssaiLancement > 0) {
+      sessionParams.subscription_data.trial_period_days = joursEssaiLancement
+    } else if (premierEssai) {
       sessionParams.subscription_data.trial_period_days = 14
     }
 

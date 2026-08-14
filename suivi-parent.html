@@ -163,7 +163,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <div class="etat-vide-sub">Créez le compte de votre enfant, gratuitement, en une minute.</div>
     <button class="btn-ajouter" onclick="afficherFormulaireAjout()">Créer le compte de mon enfant</button>
     <div class="etat-vide-suivi">
-      <span class="etat-vide-badge">14 jours offerts</span>
+      <span class="etat-vide-badge">Offert jusqu'à décembre</span>
       <span class="etat-vide-suivi-texte">Suivi disponible à tout moment</span>
     </div>
   </div>
@@ -186,19 +186,19 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <label>Choisir une offre</label>
     <div class="offre-grid">
       <div class="offre-card selected" id="offre-autonomie" onclick="choisirOffre('autonomie')">
-        <div class="offre-nom">Autonomie</div>
+        <div class="offre-nom">Libre</div>
         <div class="offre-prix">0 €</div>
         <div class="offre-desc">Quiz illimités, corrigés en détail</div>
       </div>
       <div class="offre-card" id="offre-suivi" onclick="choisirOffre('suivi')">
-        <div class="offre-badge">14 jours offerts</div>
-        <div class="offre-nom">Suivi</div>
+        <div class="offre-badge">Offert jusqu'à décembre</div>
+        <div class="offre-nom">Accompagné</div>
         <div class="offre-prix">7,90 €<span>/mois</span></div>
-        <div class="offre-desc">Autonomie, plus : emails de suivi après chaque session, bilan complet tous les 21 jours, export PDF des résultats, examen blanc en ligne</div>
+        <div class="offre-desc">Libre, plus : emails de suivi après chaque session, bilan complet tous les 21 jours, export PDF des résultats, examen blanc en ligne</div>
       </div>
     </div>
 
-    <div class="form-ajout-note">Suivi : sans engagement, résiliable à tout moment. Carte demandée, rien prélevé avant 14 jours.</div>
+    <div class="form-ajout-note">Accompagné : sans engagement, résiliable à tout moment. Carte demandée, rien prélevé avant décembre 2026.</div>
 
     <div class="form-ajout-actions">
       <button class="form-ajout-annuler" onclick="fermerFormulaireAjout()">Annuler</button>
@@ -284,9 +284,9 @@ function afficherBandeauSuivi(uid) {
   }
   const nomEleve = eleve.prenom_affiche || 'Cet élève'
   const texteHaut = eleve.plan_souhaite === 'suivi'
-    ? `${nomEleve} — abonnement Suivi non finalisé`
-    : `${nomEleve} est en Autonomie`
-  const libelleBtn = eleve.plan_souhaite === 'suivi' ? 'Finaliser Suivi' : 'Passer à Suivi'
+    ? `${nomEleve} — abonnement Accompagné non finalisé`
+    : `${nomEleve} est en Libre`
+  const libelleBtn = eleve.plan_souhaite === 'suivi' ? 'Finaliser Accompagné' : 'Passer à Accompagné'
 
   const points = [
     ['✉️', "Un e-mail à chaque déconnexion, avec un récapitulatif détaillé par sous-thème et une alerte si des difficultés sont détectées"],
@@ -306,14 +306,14 @@ function afficherBandeauSuivi(uid) {
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
         <div>
           <div class="bandeau-suivi-texte" style="font-weight:500;margin-bottom:2px">${texteHaut}</div>
-          <button class="bandeau-suivi-lien" onclick="toggleDetailSuivi()">Voir ce que Suivi ajoute <span id="chevron-suivi">⌄</span></button>
+          <button class="bandeau-suivi-lien" onclick="toggleDetailSuivi()">Voir ce qu'Accompagné ajoute <span id="chevron-suivi">⌄</span></button>
         </div>
         <button class="bandeau-suivi-btn" id="btn-passer-suivi" onclick="passerASuivi('${uid}')">${libelleBtn} →</button>
       </div>
       <div class="bandeau-suivi-detail" id="detail-suivi">
         ${pointsHTML}
         <div class="bandeau-suivi-footer">
-          <span class="bandeau-suivi-badge">14 jours offerts</span>
+          <span class="bandeau-suivi-badge">Offert jusqu'à décembre</span>
         </div>
       </div>
     </div>`
@@ -951,7 +951,7 @@ async function passerASuivi(uid) {
       // s'affiche encore (désynchronisation Stripe/Supabase, ex. webhook
       // en retard) — seul cas réel où le portail est utile ici, puisque
       // le bandeau est déjà masqué quand plan_actif=true en base.
-      afficherErreurAbonnementActif(result.error || 'Cet enfant a déjà un abonnement Suivi actif.')
+      afficherErreurAbonnementActif(result.error || 'Cet enfant a déjà un abonnement Accompagné actif.')
       return
     }
 
