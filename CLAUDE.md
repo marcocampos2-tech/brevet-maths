@@ -170,13 +170,29 @@ Item #5 (neutralisation du parcours CB pendant l'offre de lancement) traité en 
 * `suivi-parent.html` : sélecteur d'offre retiré du formulaire de création d'enfant (tout le monde crée un compte `plan_souhaite: 'autonomie'`, `plan_actif: false`, aucun appel à `/api/stripe-checkout`). Bandeau d'upsell "Passer à Accompagné" (`afficherBandeauSuivi()`) masqué via un early-return, corps de fonction original intact juste en dessous.
 * `api/email.js` : `peutRecevoirEmailDetaille()` court-circuitée (`detailComplet = true` codé en dur) — tout le monde reçoit l'email détaillé pendant le lancement.
 
+**Commit qui a supprimé le code à restaurer** : `992e5a1` — "Neutralise le parcours CB pendant l'offre de lancement (item #5)". Pour retrouver le code exact supprimé :
+
+```
+git show 992e5a1 -- suivi-parent.html
+git show 992e5a1 -- api/email.js
+```
+
+(les lignes précédées de `-` dans ce diff sont le code à remettre ; celles précédées de `+` sont les lignes TEMPORAIRE à retirer).
+
 **À faire à la bascule (01/12/2026) :**
 
-1. Rétablir le sélecteur d'offre dans `suivi-parent.html` (formulaire de création d'enfant + branche Stripe dans `creerEnfant()` — cf. git log/diff sur les commits marqués TEMPORAIRE pour restaurer proprement, ou réimplémenter si le produit a évolué entre-temps).
-2. Retirer l'early-return de `afficherBandeauSuivi()` dans `suivi-parent.html` pour réafficher le bandeau "Passer à Accompagné".
-3. Rétablir le gating email dans `api/email.js` (retirer le court-circuit, redonner la main à `peutRecevoirEmailDetaille({ plan_actif })`).
-4. Vérifier que `invoice.payment_failed` est écouté dans `stripe-webhook.js` — **trou confirmé à ce jour** : seuls `invoice.payment_succeeded`, `customer.subscription.deleted` et `customer.subscription.updated` sont gérés. Sans ça, un échec de paiement (carte expirée, etc.) à la bascule payante ne désactive `plan_actif` que via `customer.subscription.deleted` — donc seulement une fois que Stripe a définitivement abandonné les tentatives de relance, avec un délai potentiellement long pendant lequel l'accès reste actif sans paiement.
-5. Vérifier que le trial dynamique de `api/stripe-checkout.js` (bloc `FIN_OFFRE_LANCEMENT`) retombe bien sur le comportement normal (14 jours, 1er essai du foyer) une fois le 01/12/2026 passé — déjà conçu pour s'auto-désactiver, mais à re-tester en conditions réelles à l'approche de la date plutôt que de faire confiance au calcul seul.
+1. Dans `suivi-parent.html`, restaurer ce que `992e5a1` a supprimé :
+   * le bloc sélecteur d'offre dans le formulaire de création d'enfant (`<label>Choisir une offre</label>` + `.offre-grid` + `.form-ajout-note`)
+   * la fonction `choisirOffre()`
+   * la variable `let offreSelectionnee = 'autonomie'`
+   * la branche `if (offreSelectionnee === 'suivi') { ... }` dans `creerEnfant()` qui déclenchait l'appel à `/api/stripe-checkout` (et remettre `plan_souhaite: offreSelectionnee` à la place de `plan_souhaite: 'autonomie'` dans l'INSERT)
+   * la phrase `form-ajout-sub`, à remettre en "Son compte sera créé immédiatement, avec l'offre choisie ci-dessous."
+   * réimplémenter si le produit a évolué entre-temps plutôt que restaurer à l'identique si ça ne colle plus.
+2. Toujours dans `suivi-parent.html` : retirer la garde d'early-return en tête de `afficherBandeauSuivi()` (les 6 lignes marquées TEMPORAIRE juste après `const bandeau = ...`) pour réafficher le bandeau "Passer à Accompagné" — le reste de la fonction n'a pas été touché par `992e5a1`, rien d'autre à restaurer ici.
+3. Dans `api/email.js` (ligne ~703) : retirer le court-circuit `const detailComplet = true // peutRecevoirEmailDetaille(...)`, redonner la main à `peutRecevoirEmailDetaille({ plan_actif })`.
+4. Les classes CSS `.offre-grid`, `.offre-card`, `.offre-badge`, `.form-ajout-note` (dans le `<style>` de `suivi-parent.html`) n'ont **pas** été supprimées par `992e5a1` — toujours en place, inutilisées en attendant. Pas besoin de les recréer, seul le HTML qui les utilisait doit revenir.
+5. Vérifier que `invoice.payment_failed` est écouté dans `stripe-webhook.js` — **trou confirmé à ce jour** : seuls `invoice.payment_succeeded`, `customer.subscription.deleted` et `customer.subscription.updated` sont gérés. Sans ça, un échec de paiement (carte expirée, etc.) à la bascule payante ne désactive `plan_actif` que via `customer.subscription.deleted` — donc seulement une fois que Stripe a définitivement abandonné les tentatives de relance, avec un délai potentiellement long pendant lequel l'accès reste actif sans paiement.
+6. Vérifier que le trial dynamique de `api/stripe-checkout.js` (bloc `FIN_OFFRE_LANCEMENT`) retombe bien sur le comportement normal (14 jours, 1er essai du foyer) une fois le 01/12/2026 passé — déjà conçu pour s'auto-désactiver, mais à re-tester en conditions réelles à l'approche de la date plutôt que de faire confiance au calcul seul.
 
 ## Rappel méthodologique
 
