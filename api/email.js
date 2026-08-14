@@ -700,7 +700,10 @@ export default async function handler(req, res) {
       const m = Math.floor(tempsSecondes / 60)
       const s2 = tempsSecondes % 60
       const tempsFormat = m === 0 ? `${s2} sec` : `${m} min ${s2} sec`
-      const detailComplet = peutRecevoirEmailDetaille({ plan_actif })
+      // TEMPORAIRE — offre de lancement, à rétablir le 01/12/2026 : tout le
+      // monde reçoit l'email détaillé, plan_actif n'est pas encore pertinent
+      // pendant le lancement gratuit.
+      const detailComplet = true // peutRecevoirEmailDetaille({ plan_actif })
 
       let html = ''
       let sujet = ''

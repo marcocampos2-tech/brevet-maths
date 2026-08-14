@@ -172,7 +172,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <div id="zone-form-ajout" style="display:none">
   <div class="form-ajout">
     <div class="form-ajout-titre">Ajouter un enfant</div>
-    <div class="form-ajout-sub">Son compte sera créé immédiatement, avec l'offre choisie ci-dessous.</div>
+    <!-- TEMPORAIRE — offre de lancement, à rétablir le 01/12/2026 : sélecteur
+         d'offre retiré, tout le monde crée un compte Libre (accès Accompagné
+         déjà offert gratuitement pendant le lancement, aucun appel Stripe). -->
+    <div class="form-ajout-sub">Son compte sera créé immédiatement.</div>
 
     <label for="fa-prenom">Prénom de l'enfant</label>
     <input type="text" id="fa-prenom" placeholder="Ex: Lucas">
@@ -182,23 +185,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 
     <label for="fa-password">Mot de passe de l'enfant</label>
     <input type="password" id="fa-password" placeholder="••••••••">
-
-    <label>Choisir une offre</label>
-    <div class="offre-grid">
-      <div class="offre-card selected" id="offre-autonomie" onclick="choisirOffre('autonomie')">
-        <div class="offre-nom">Libre</div>
-        <div class="offre-prix">0 €</div>
-        <div class="offre-desc">Quiz illimités, corrigés en détail</div>
-      </div>
-      <div class="offre-card" id="offre-suivi" onclick="choisirOffre('suivi')">
-        <div class="offre-badge">Offert jusqu'à décembre</div>
-        <div class="offre-nom">Accompagné</div>
-        <div class="offre-prix">7,90 €<span>/mois</span></div>
-        <div class="offre-desc">Libre, plus : emails de suivi après chaque session, bilan complet tous les 21 jours, export PDF des résultats, examen blanc en ligne</div>
-      </div>
-    </div>
-
-    <div class="form-ajout-note">Accompagné : sans engagement, résiliable à tout moment. Carte demandée, rien prélevé avant décembre 2026.</div>
 
     <div class="form-ajout-actions">
       <button class="form-ajout-annuler" onclick="fermerFormulaireAjout()">Annuler</button>
@@ -232,7 +218,6 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
 let user = null, prenom = '', jours = 14, chart = null
 let eleveUserId = null, eleves = []
-let offreSelectionnee = 'autonomie'
 
 async function init() {
   const { data } = await sb.auth.getSession()
@@ -276,6 +261,15 @@ function choisirEnfant(uid, btn, prenomDirect) {
 
 function afficherBandeauSuivi(uid) {
   const bandeau = document.getElementById('bandeau-suivi')
+
+  // TEMPORAIRE — offre de lancement, à rétablir le 01/12/2026 : bandeau
+  // d'upsell "Passer à Accompagné" masqué pendant le lancement (tout le
+  // monde a déjà l'accès Accompagné gratuitement). Reste du corps de la
+  // fonction inchangé pour restauration triviale (retirer ce return).
+  bandeau.style.display = 'none'
+  bandeau.innerHTML = ''
+  return
+
   const eleve = eleves.find(e => e.user_id === uid)
   if (!eleve || eleve.plan_actif) {
     bandeau.style.display = 'none'
@@ -779,12 +773,6 @@ function fermerFormulaireAjout() {
   }
 }
 
-function choisirOffre(offre) {
-  offreSelectionnee = offre
-  document.getElementById('offre-autonomie').classList.toggle('selected', offre === 'autonomie')
-  document.getElementById('offre-suivi').classList.toggle('selected', offre === 'suivi')
-}
-
 function genererFauxEmailEnfant(prenom, nom) {
   const code = Math.random().toString(36).substring(2, 6)
   const p = prenom.toLowerCase().replace(/[^a-z]/g, '')
@@ -873,13 +861,18 @@ async function creerEnfant() {
     // Insertion via le client parent (sb), pas le client élève (sbEleve) —
     // la policy INSERT sur profils vérifie email_parent = email du parent
     // authentifié ; la session élève n'a pas cet email dans son JWT.
+    // TEMPORAIRE — offre de lancement, à rétablir le 01/12/2026 : plus de
+    // sélecteur d'offre (voir le formulaire plus haut), plan_souhaite
+    // toujours 'autonomie', et plus aucun appel à /api/stripe-checkout
+    // depuis ce formulaire (branche Stripe retirée ci-dessous, cf. git log
+    // pour la restaurer).
     const { error: insertError } = await sb.from('profils').insert({
       user_id: signUpData.user.id,
       prenom: prenomE.toLowerCase(), nom: nomE.toLowerCase(),
       prenom_affiche: prenomE, nom_affiche: nomE,
       email_parent: user.email, faux_email: fauxEmail,
       plan_actif: false,
-      plan_souhaite: offreSelectionnee
+      plan_souhaite: 'autonomie'
     })
 
     if (insertError) {
@@ -889,40 +882,17 @@ async function creerEnfant() {
       return
     }
 
-    if (offreSelectionnee === 'suivi') {
-      const { data: sessionParent } = await sb.auth.getSession()
-      const res = await fetch('/api/stripe-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${sessionParent.session.access_token}`
-        },
-        body: JSON.stringify({ user_id_enfant: signUpData.user.id })
-      })
-      const result = await res.json()
-      if (result.error || !result.url) {
-        afficherMsgAjout('erreur', 'Le compte a été créé, mais le paiement n\'a pas pu démarrer. Réessayez depuis le tableau de bord.')
-        btn.disabled = false; btn.textContent = 'Créer le compte de l\'enfant'
-        setTimeout(() => window.location.reload(), 2500)
-        return
-      }
-      // Redirection Stripe immédiate — l'encart d'origine du trafic n'a
-      // jamais le temps de s'afficher avant la navigation, et ne doit
-      // surtout pas la retarder : on ne l'affiche donc pas dans ce cas.
-      window.location.href = result.url
-    } else {
-      // Pas d'afficherMsgAjout('succes', ...) ici : #fa-msg est à
-      // l'intérieur de #zone-form-ajout, masqué juste après — le message
-      // n'y serait jamais visible. La confirmation "✅ Compte créé !" est
-      // fixe dans #encart-origine, affichée juste en dessous.
-      // Masque uniquement le formulaire, sans passer par
-      // fermerFormulaireAjout() : cette dernière réaffiche zone-vide ou
-      // zone-dashboard selon `eleves`, qui n'est jamais mis à jour ici
-      // (pas de rechargement de la page à ce stade) — elle réafficherait
-      // à tort l'écran "Bienvenue" même quand un enfant vient d'être créé.
-      document.getElementById('zone-form-ajout').style.display = 'none'
-      afficherEncartOrigine(signUpData.user.id)
-    }
+    // Pas d'afficherMsgAjout('succes', ...) ici : #fa-msg est à
+    // l'intérieur de #zone-form-ajout, masqué juste après — le message
+    // n'y serait jamais visible. La confirmation "✅ Compte créé !" est
+    // fixe dans #encart-origine, affichée juste en dessous.
+    // Masque uniquement le formulaire, sans passer par
+    // fermerFormulaireAjout() : cette dernière réaffiche zone-vide ou
+    // zone-dashboard selon `eleves`, qui n'est jamais mis à jour ici
+    // (pas de rechargement de la page à ce stade) — elle réafficherait
+    // à tort l'écran "Bienvenue" même quand un enfant vient d'être créé.
+    document.getElementById('zone-form-ajout').style.display = 'none'
+    afficherEncartOrigine(signUpData.user.id)
   } catch (e) {
     console.log('Erreur création enfant:', e.message)
     afficherMsgAjout('erreur', 'Erreur inattendue. Réessayez.')

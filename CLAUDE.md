@@ -163,6 +163,21 @@ Basé sur la lecture du document CGV (fourni en pièce jointe dans une conversat
 5. Mise à jour rédactionnelle des CGV.
 6. Relecture juridique avant passage Stripe live.
 
+## CHANTIER — Bascule décembre 2026
+
+Item #5 (neutralisation du parcours CB pendant l'offre de lancement) traité en trois changements, tous marqués `TEMPORAIRE — offre de lancement, à rétablir le 01/12/2026` dans le code (grep sur cette phrase pour tout retrouver) :
+
+* `suivi-parent.html` : sélecteur d'offre retiré du formulaire de création d'enfant (tout le monde crée un compte `plan_souhaite: 'autonomie'`, `plan_actif: false`, aucun appel à `/api/stripe-checkout`). Bandeau d'upsell "Passer à Accompagné" (`afficherBandeauSuivi()`) masqué via un early-return, corps de fonction original intact juste en dessous.
+* `api/email.js` : `peutRecevoirEmailDetaille()` court-circuitée (`detailComplet = true` codé en dur) — tout le monde reçoit l'email détaillé pendant le lancement.
+
+**À faire à la bascule (01/12/2026) :**
+
+1. Rétablir le sélecteur d'offre dans `suivi-parent.html` (formulaire de création d'enfant + branche Stripe dans `creerEnfant()` — cf. git log/diff sur les commits marqués TEMPORAIRE pour restaurer proprement, ou réimplémenter si le produit a évolué entre-temps).
+2. Retirer l'early-return de `afficherBandeauSuivi()` dans `suivi-parent.html` pour réafficher le bandeau "Passer à Accompagné".
+3. Rétablir le gating email dans `api/email.js` (retirer le court-circuit, redonner la main à `peutRecevoirEmailDetaille({ plan_actif })`).
+4. Vérifier que `invoice.payment_failed` est écouté dans `stripe-webhook.js` — **trou confirmé à ce jour** : seuls `invoice.payment_succeeded`, `customer.subscription.deleted` et `customer.subscription.updated` sont gérés. Sans ça, un échec de paiement (carte expirée, etc.) à la bascule payante ne désactive `plan_actif` que via `customer.subscription.deleted` — donc seulement une fois que Stripe a définitivement abandonné les tentatives de relance, avec un délai potentiellement long pendant lequel l'accès reste actif sans paiement.
+5. Vérifier que le trial dynamique de `api/stripe-checkout.js` (bloc `FIN_OFFRE_LANCEMENT`) retombe bien sur le comportement normal (14 jours, 1er essai du foyer) une fois le 01/12/2026 passé — déjà conçu pour s'auto-désactiver, mais à re-tester en conditions réelles à l'approche de la date plutôt que de faire confiance au calcul seul.
+
 ## Rappel méthodologique
 
 Ne jamais exécuter de SQL, modifier RLS, ou toucher aux tables ci-dessus sans présenter d'abord : ce qui va changer, pourquoi, le risque principal, et un plan de test précis — puis attendre validation explicite. Tester une table/un changement à la fois, jamais un lot entier d'un coup. En cas de doute sur un usage client (une table lue/écrite directement depuis un fichier HTML), vérifier dans le code avant de formuler une hypothèse — ne pas supposer.
