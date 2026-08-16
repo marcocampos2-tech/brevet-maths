@@ -491,6 +491,16 @@ export default async function handler(req, res) {
           </div>
         </div>`
 
+      // Contenu revu et validé le 16/08/2026 (première relecture de cet
+      // email depuis sa création — jamais parti à un vrai parent avant
+      // câblage dans creerEnfant()). Corrections apportées à cette
+      // occasion : retrait de "sans mot de passe à retenir" (inexact —
+      // creerEnfant() fait bien saisir un mot de passe pour le compte
+      // enfant), précision de l'identifiant de connexion de l'enfant
+      // (prénom + nom, vérifié dans connexion.html/verifier_login — pas
+      // un email ni un identifiant généré), mention de la gratuité de
+      // lancement sans nommer les offres (le parent n'en choisit pas
+      // pendant le lancement, cf. CLAUDE.md § Bascule décembre 2026).
       const htmlParents = `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
           <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
@@ -499,27 +509,36 @@ export default async function handler(req, res) {
           </div>
           <p style="margin-bottom:16px;">Bonjour Madame, Monsieur,</p>
           <p style="margin-bottom:20px;color:#444;">
-            Votre enfant <strong>${esc(prenom)} ${esc(nom)}</strong> vient de s'inscrire sur ACADEMIKA,
-            une application de révision en mathématiques pour le Brevet des collèges.
+            Le compte de <strong>${esc(prenom)}</strong> vient d'être créé sur ACADEMIKA, une plateforme de révision en mathématiques pour préparer le Brevet.
           </p>
           <div style="background:#eef2ff;border-radius:12px;padding:20px;margin:20px 0;">
-            <p style="font-weight:600;margin-bottom:12px;color:#3730a3">Comment ça fonctionne :</p>
-            <p style="margin-bottom:8px;font-size:14px;">🎯 Quiz ciblés par sous-thème, corrections détaillées</p>
-            <p style="margin-bottom:8px;font-size:14px;">📝 Examen en ligne, façon QCM du brevet</p>
-            <p style="margin-bottom:0;font-size:14px;">🔓 Niveaux Facile, Moyen, Difficile à débloquer progressivement</p>
+            <p style="font-weight:600;margin-bottom:12px;color:#3730a3">Comment ça fonctionne</p>
+            <p style="margin-bottom:8px;font-size:14px;">🎯 Des quiz ciblés par sous-thème, avec des corrections détaillées étape par étape</p>
+            <p style="margin-bottom:8px;font-size:14px;">📝 Un examen en ligne, au format du QCM du Brevet</p>
+            <p style="margin-bottom:0;font-size:14px;">🔓 Trois niveaux — Facile, Moyen, Difficile — à débloquer progressivement</p>
           </div>
-          <p style="color:#444;margin-bottom:20px;">
-            Votre enfant peut commencer maintenant sur :<br>
-            <a href="https://www.academika.fr" style="color:#3730a3;font-weight:600;text-decoration:none;">👉 www.academika.fr</a>
-          </p>
           <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0;">
-            <p style="font-weight:600;margin-bottom:8px;color:#1a1a1a">👪 Votre espace parent</p>
-            <p style="font-size:14px;color:#444;margin-bottom:14px">Suivez à tout moment l'activité et la progression de votre enfant, sans mot de passe à retenir.</p>
+            <p style="font-weight:600;margin-bottom:12px;color:#1a1a1a">Les accès</p>
+            <p style="margin-bottom:10px;font-size:14px;color:#444;">👦 <strong>${esc(prenom)}</strong> se connecte sur academika.fr avec son prénom et son nom, et le mot de passe que vous venez de créer.</p>
+            <p style="margin:0;font-size:14px;color:#444;">👪 Vous accédez à votre espace parent sans mot de passe : saisissez simplement votre adresse email, vous recevrez un code à usage unique valable quelques minutes.</p>
+          </div>
+          <div style="text-align:center;margin:24px 0">
             <a href="https://www.academika.fr/espace-parent.html" style="display:inline-block;background:#3730a3;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:13px;">Accéder à l'espace parent →</a>
           </div>
-          <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
+          <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0;">
+            <p style="font-weight:600;margin-bottom:12px;color:#1a1a1a">Ce que vous recevrez</p>
+            <p style="margin-bottom:8px;font-size:14px;color:#444;">Chaque soir où <strong>${esc(prenom)}</strong> aura travaillé, vous recevrez un récapitulatif : les sous-thèmes acquis et ceux qui restent à consolider.</p>
+            <p style="margin-bottom:8px;font-size:14px;color:#444;">Tous les 21 jours, un bilan complet fait le point sur la progression.</p>
+            <p style="margin:0;font-size:14px;color:#444;">Vous pouvez aussi télécharger un bilan au format PDF à tout moment depuis votre espace.</p>
+          </div>
+          <div style="border-top:1px solid #e8e8e4;margin-top:24px;padding-top:16px">
+            <p style="color:#666;font-size:12px;line-height:1.6;margin:0">
+              ACADEMIKA est gratuit jusqu'en décembre 2026, sans carte bancaire. Le suivi parent passera ensuite à 7,90 €/mois, sans engagement — les quiz resteront gratuits.
+            </p>
+          </div>
+          <div style="margin-top:24px;padding-top:16px;border-top:1px solid #e8e8e4;">
             <p style="color:#444;font-size:13px;margin-bottom:8px;">
-              Pour toute question, contactez-nous : 
+              Pour toute question, contactez-nous :
               <a href="mailto:${PROF_EMAIL}" style="color:#3730a3;text-decoration:none;font-weight:500">${PROF_EMAIL}</a>
             </p>
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
@@ -543,7 +562,7 @@ export default async function handler(req, res) {
         fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
-          body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `🎓 Bienvenue sur ACADEMIKA — ${prenom} ${nom}`, html: htmlParents })
+          body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `🎓 Bienvenue sur ACADEMIKA — ${prenom}`, html: htmlParents })
         })
       ])
 

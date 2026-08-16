@@ -916,6 +916,20 @@ async function creerEnfant() {
       return
     }
 
+    // Email de bienvenue — best-effort (fire-and-forget), ne bloque jamais
+    // la création du compte : si Resend échoue, le compte enfant reste
+    // valide, ce n'est qu'un email manqué, pas rejoué automatiquement.
+    // Idempotence : ce point n'est atteint qu'une seule fois par couple
+    // (prénom, nom) réellement créé avec succès — verifier_disponibilite
+    // (ci-dessus) bloque toute tentative avec un couple déjà présent dans
+    // profils AVANT d'arriver ici, donc rappeler creerEnfant() pour le
+    // même enfant ne peut pas redéclencher cet envoi.
+    fetch('/api/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'inscription', prenom: prenomE, nom: nomE, emailParent: user.email })
+    }).catch(e => console.log('Erreur email de bienvenue:', e.message))
+
     if (offreSelectionnee === 'suivi') {
       const { data: sessionParent } = await sb.auth.getSession()
       const res = await fetch('/api/stripe-checkout', {
