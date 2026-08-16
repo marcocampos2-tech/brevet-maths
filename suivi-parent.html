@@ -368,7 +368,10 @@ async function chargerDonnees() {
   }
 
   if (!sessionsBrutes || sessionsBrutes.length === 0) {
-    contenu.innerHTML = `<div class="card"><div class="vide">Aucune activité enregistrée sur les ${jours} derniers jours.</div></div>`
+    const messageVide = prenom
+      ? `Aucun quiz effectué pour l'instant. Dès que <strong>${prenom}</strong> aura terminé sa première session, la progression s'affichera ici.`
+      : `Aucun quiz effectué pour l'instant. Dès que la première session sera terminée, la progression s'affichera ici.`
+    contenu.innerHTML = `<div class="card"><div class="vide">${messageVide}</div></div>`
     return
   }
 
