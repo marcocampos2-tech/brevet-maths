@@ -298,7 +298,7 @@ export default async function handler(req, res) {
   // ═══════════════════════════════════════════
   if (req.body?.type === 'bilan') {
     try {
-      const { emailParent, prenom, nom, moyGlobale, totalSessions, tempsTotal, themes, topRatees } = req.body
+      const { emailParent, prenom, nom, moyGlobale, totalSessions, tempsTotal, sousThemes } = req.body
       const moyNote20 = (moyGlobale / 100 * 20).toFixed(1).replace('.0', '')
 
       const couleur = moyGlobale >= 80 ? '#16a34a' : moyGlobale >= 60 ? '#3730a3' : moyGlobale >= 40 ? '#f59e0b' : '#dc2626'
@@ -308,28 +308,28 @@ export default async function handler(req, res) {
       const m = Math.floor((tempsTotal%3600)/60)
       const tempsFormat = h > 0 ? `${h}h ${m}min` : `${m} min`
 
-      const themesHTML = Object.entries(themes).map(([theme, s]) => {
-        const pct = Math.round((s.ok/s.tot)*100)
-        const couleurTheme = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
-        return `<tr>
-          <td style="padding:8px;color:#555;border-bottom:1px solid #f0f0ec">${esc(theme)}</td>
-          <td style="padding:8px;font-weight:600;color:${couleurTheme};border-bottom:1px solid #f0f0ec">${pct}%</td>
-          <td style="padding:8px;color:#999;border-bottom:1px solid #f0f0ec;font-size:12px">${s.n} session(s)</td>
-        </tr>`
+      // Modifié le 16/08/2026 — aligné sur le bilan périodique automatique
+      // (cron-rappel.js) : détail par sous-thème, Acquis (≥70%) / À revoir,
+      // plus de texte de question brute. Gating volontairement absent ici
+      // (cf. CLAUDE.md § bilan manuel) : ce bouton sert d'échantillon
+      // détaillé pour un parent en offre Libre, dans une logique de
+      // conversion — pas de peutRecevoirEmailDetaille sur ce flux.
+      const NIVEAU_LABEL_BILAN = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
+      const sousThemesHTML = Object.entries(sousThemes || {}).map(([st, d]) => {
+        const acquis = d.pct >= 70
+        const bg = acquis ? '#EAF6EF' : '#FBF4E4'
+        const fg = acquis ? '#1f7a45' : '#8a6416'
+        const label = acquis ? 'Acquis' : 'À revoir'
+        const niveauLabel = NIVEAU_LABEL_BILAN[d.difficulte] || ''
+        return `<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr style="background:${bg};border-radius:8px">
+          <td style="padding:10px 12px;font-size:13px;color:${fg}">${esc(st)}${niveauLabel ? ` <span style="font-size:11px;opacity:0.75">· ${niveauLabel}</span>` : ''}</td>
+          <td style="padding:10px 12px;font-size:12px;font-weight:600;color:${fg};text-align:right;white-space:nowrap">${label} · ${d.ok}/${d.tot}</td>
+        </tr></table>`
       }).join('')
 
       const messageMotivation = moyGlobale >= 40
-        ? `Bonne nouvelle : <strong>${esc(prenom)} progresse !</strong><br>Encouragez-le à continuer sur les thèmes à améliorer.`
-        : `<strong>${esc(prenom)}</strong> traverse une période plus difficile sur ces notions.<br>Un encouragement et un peu de temps supplémentaire sur les thèmes ci-dessous peuvent faire la différence.`
-
-      const rateesHTML = topRatees && topRatees.length > 0
-        ? `<div style="margin-top:20px">
-            <p style="font-weight:600;margin-bottom:8px">📚 Points à améliorer :</p>
-            <ul style="padding-left:20px;color:#555;margin:0">
-              ${topRatees.map(([q]) => `<li style="margin-bottom:6px">${esc(q)}</li>`).join('')}
-            </ul>
-          </div>`
-        : `<p style="color:#16a34a;margin-top:20px;font-weight:600">✅ Aucune notion particulièrement en difficulté !</p>`
+        ? `Bonne nouvelle : <strong>${esc(prenom)} progresse !</strong><br>Encouragez-le à continuer sur les sous-thèmes à améliorer.`
+        : `<strong>${esc(prenom)}</strong> traverse une période plus difficile sur ces notions.<br>Un encouragement et un peu de temps supplémentaire sur les sous-thèmes ci-dessous peuvent faire la différence.`
 
       const html = `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
@@ -347,9 +347,8 @@ export default async function handler(req, res) {
             <div style="font-size:13px;color:#666;margin-top:8px">${totalSessions} sessions · ${tempsFormat} de révision</div>
           </div>
           <p style="color:#444;margin-bottom:16px;">${messageMotivation}</p>
-          <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">📊 Résultats par thème :</h3>
-          <table style="width:100%;border-collapse:collapse">${themesHTML}</table>
-          ${rateesHTML}
+          <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">📊 Résultats par sous-thème :</h3>
+          ${sousThemesHTML || '<p style="color:#999;font-size:13px">Pas encore assez de sessions par sous-thème pour établir un détail.</p>'}
           <div style="text-align:center;margin:28px 0">
             <a href="https://www.academika.fr/espace-parent.html" style="background:#3730a3;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block">
               Voir le suivi complet dans l'espace parent →

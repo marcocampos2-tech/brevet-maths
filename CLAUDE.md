@@ -163,6 +163,10 @@ Basé sur la lecture du document CGV (fourni en pièce jointe dans une conversat
 5. Mise à jour rédactionnelle des CGV.
 6. Relecture juridique avant passage Stripe live.
 
+## Note — Gating du bilan manuel (`api/email.js`, type `bilan`)
+
+**`bilan` (bouton manuel "Envoyer bilan parents", `prof.html`) — gating volontairement absent.** Contrairement à `recap-journalier-user`, ce flux n'applique pas `peutRecevoirEmailDetaille`. C'est un choix commercial assumé : ce bouton sert au prof à envoyer manuellement un échantillon détaillé (sous-thème, Acquis/À revoir, tout l'historique de l'élève) à un parent en offre Libre, dans une logique de conversion vers l'offre Accompagné. Ne pas "corriger" en ajoutant le gating lors d'un futur audit.
+
 ## Rappel méthodologique
 
 Ne jamais exécuter de SQL, modifier RLS, ou toucher aux tables ci-dessus sans présenter d'abord : ce qui va changer, pourquoi, le risque principal, et un plan de test précis — puis attendre validation explicite. Tester une table/un changement à la fois, jamais un lot entier d'un coup. En cas de doute sur un usage client (une table lue/écrite directement depuis un fichier HTML), vérifier dans le code avant de formuler une hypothèse — ne pas supposer.

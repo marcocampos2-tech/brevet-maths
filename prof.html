@@ -1201,13 +1201,28 @@ async function envoyerBilan(userId) {
   const gSBilan = rows.reduce((a,r)=>a+r.score,0)
   const gTBilan = rows.reduce((a,r)=>a+r.total,0)
   const moyGlobale = pct(gSBilan, gTBilan)
-  const themes = {}
-  rows.forEach(r => { if (!themes[r.theme]) themes[r.theme]={ok:0,tot:0,n:0}; themes[r.theme].ok+=r.score; themes[r.theme].tot+=r.total; themes[r.theme].n++ })
-  const rateeMap = {}
-  rows.flatMap(r=>r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1)
-  const topRatees = Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
+
+  // Modifié le 16/08/2026 — aligné sur le bilan périodique automatique
+  // (cron-rappel.js) : détail par sous-thème (niveau de difficulté max
+  // atteint, Acquis ≥70%/À revoir), plus de texte de question brute.
+  // Portée volontairement conservée sur tout l'historique de l'élève
+  // (ROWS non filtré par période) — ce bouton sert d'échantillon complet
+  // à un parent en offre Libre, pas d'un suivi limité à une fenêtre.
+  const ORDRE_DIFFICULTE_BILAN = { facile: 1, moyen: 2, difficile: 3 }
+  const parSousTheme = {}
+  rows.forEach(r => { if (!r.sous_theme || !r.difficulte) return; (parSousTheme[r.sous_theme] ||= []).push(r) })
+  const sousThemes = {}
+  Object.entries(parSousTheme).forEach(([st, list]) => {
+    let difficulteMax = null
+    list.forEach(r => { if (!difficulteMax || ORDRE_DIFFICULTE_BILAN[r.difficulte] > ORDRE_DIFFICULTE_BILAN[difficulteMax]) difficulteMax = r.difficulte })
+    const auNiveauMax = list.filter(r => r.difficulte === difficulteMax)
+    const ok = auNiveauMax.reduce((a,r)=>a+r.score,0)
+    const tot = auNiveauMax.reduce((a,r)=>a+r.total,0)
+    sousThemes[st] = { difficulte: difficulteMax, ok, tot, pct: tot>0?Math.round((ok/tot)*100):0 }
+  })
+
   try {
-    const res = await fetch('/api/email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type: 'bilan', emailParent:e.email_parent, prenom:e.prenom, nom:e.nom, moyGlobale, totalSessions:rows.length, tempsTotal:rows.reduce((a,r)=>a+(r.temps_secondes||0),0), themes, topRatees }) })
+    const res = await fetch('/api/email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type: 'bilan', emailParent:e.email_parent, prenom:e.prenom, nom:e.nom, moyGlobale, totalSessions:rows.length, tempsTotal:rows.reduce((a,r)=>a+(r.temps_secondes||0),0), sousThemes }) })
     const data = await res.json()
     if (data.success) { btn.textContent='Envoyé ✓'; setTimeout(()=>{ btn.disabled=false; btn.textContent='Envoyer bilan parents' },3000) }
     else throw new Error(data.error)
