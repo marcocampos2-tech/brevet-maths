@@ -1,6 +1,6 @@
 // /api/email.js
 
-const { peutRecevoirEmailDetaille } = require('../lib/gating')
+const { peutRecevoirEmailDetaille, enPeriodeGratuite } = require('../lib/gating')
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -724,7 +724,12 @@ export default async function handler(req, res) {
       const m = Math.floor(tempsSecondes / 60)
       const s2 = tempsSecondes % 60
       const tempsFormat = m === 0 ? `${s2} sec` : `${m} min ${s2} sec`
-      const detailComplet = peutRecevoirEmailDetaille({ plan_actif })
+      // Pendant l'offre de lancement, tout le monde reçoit l'email détaillé,
+      // indépendamment de plan_actif — Stripe n'est pas encore en service
+      // réel (SIRET en attente, cf. CLAUDE.md § Bascule décembre 2026).
+      // S'auto-désactive au 01/12/2026 (même FIN_OFFRE_LANCEMENT que
+      // api/stripe-checkout.js, source unique dans lib/gating.js).
+      const detailComplet = peutRecevoirEmailDetaille({ plan_actif }) || enPeriodeGratuite()
 
       // Partagé par les deux branches — seuil "Acquis" identique partout
       // ailleurs dans le code (badges ci-dessous, bilan périodique

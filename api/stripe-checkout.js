@@ -64,6 +64,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import Stripe from 'stripe'
+import { FIN_OFFRE_LANCEMENT } from '../lib/gating'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
@@ -228,7 +229,8 @@ async function gererCheckout(req, res, { emailParent, customerId, premierEssai }
     // ce bloc s'auto-désactive de lui-même début décembre
     // (joursEssaiLancement <= 0) et retombe sur le comportement normal
     // (14 jours, 1er essai du foyer) — pas besoin d'y repenser à la bascule.
-    const FIN_OFFRE_LANCEMENT = new Date('2026-12-01T00:00:00+01:00') // minuit heure de Paris, pas UTC
+    // FIN_OFFRE_LANCEMENT importée de lib/gating.js — source unique,
+    // partagée avec api/email.js (voir recap-journalier-user).
     const joursEssaiLancement = Math.ceil((FIN_OFFRE_LANCEMENT - new Date()) / (1000 * 60 * 60 * 24))
 
     if (joursEssaiLancement > 0) {
