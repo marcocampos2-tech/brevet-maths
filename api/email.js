@@ -708,22 +708,26 @@ export default async function handler(req, res) {
       const tempsFormat = m === 0 ? `${s2} sec` : `${m} min ${s2} sec`
       const detailComplet = peutRecevoirEmailDetaille({ plan_actif })
 
+      // Partagé par les deux branches — seuil "Acquis" identique partout
+      // ailleurs dans le code (badges ci-dessous, bilan périodique
+      // cron-rappel.js, dashboard prof) : 70%, pas un autre chiffre.
+      const SEUIL_ACQUIS = 70
+      const NIVEAU_LABEL = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
+      const badgesData = Object.entries(sousThemesDetail).map(([nomSt, d]) => {
+        const p = d.total > 0 ? Math.round((d.ok / d.total) * 100) : 0
+        return { nom: esc(nomSt), pct: p, ok: d.ok, total: d.total, acquis: p >= SEUIL_ACQUIS, niveau: d.niveau }
+      })
+
       let html = ''
       let sujet = ''
 
       if (pct >= 40) {
-        const entries = Object.entries(sousThemesDetail)
-        const badgesData = entries.map(([nomSt, d]) => {
-          const p = d.total > 0 ? Math.round((d.ok / d.total) * 100) : 0
-          return { nom: esc(nomSt), pct: p, acquis: p >= 70, niveau: d.niveau }
-        })
         const nbAcquis = badgesData.filter(b => b.acquis).length
         const nbARevoir = badgesData.length - nbAcquis
         const messagePrincipal = badgesData.length === 0
           ? `${esc(prenom)} a travaillé aujourd'hui`
           : (nbAcquis >= badgesData.length / 2 ? `${esc(prenom)} a bien travaillé aujourd'hui` : `${esc(prenom)} a un peu buté aujourd'hui`)
 
-        const NIVEAU_LABEL = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
         const badgesHTML = badgesData.map(b => {
           const bg = b.acquis ? '#EAF6EF' : '#FBF4E4'
           const fg = b.acquis ? '#1f7a45' : '#8a6416'
@@ -777,21 +781,47 @@ export default async function handler(req, res) {
           </div>`
 
       } else {
-        sujet = `⚠️ ${prenom} a eu des difficultés aujourd'hui — ACADEMIKA`
+        sujet = `${prenom} a révisé aujourd'hui — ACADEMIKA`
 
-        const rateesHTML = questionsRatees.length > 0
-          ? (detailComplet
+        // Le meilleur sous-thème du jour, mis en avant seul s'il atteint le
+        // seuil Acquis — pas une liste complète des sous-thèmes réussis :
+        // un seul highlight positif, volontairement compact.
+        const meilleur = badgesData.filter(b => b.acquis).sort((a, b) => b.pct - a.pct)[0] || null
+        // Tous les sous-thèmes sous le seuil — même logique que la liste
+        // "À revoir" de la branche pct≥40 (sousThemesDetail/badgesData).
+        const aRevoir = badgesData.filter(b => !b.acquis)
+
+        const positifHTML = !detailComplet
+          ? `<div style="margin-top:16px">
+              <p style="font-size:13px;font-weight:600;color:#1f7a45;margin:0">✅ ${esc(prenom)} a pris le temps de s'entraîner aujourd'hui.</p>
+            </div>`
+          : meilleur
+            ? `<div style="margin-top:16px">
+                <p style="font-size:13px;font-weight:600;color:#1f7a45;margin-bottom:8px">✅ Ce qui a bien fonctionné</p>
+                <table style="width:100%;border-collapse:collapse"><tr style="background:#EAF6EF;border-radius:8px">
+                  <td style="padding:10px 12px;font-size:13px;color:#1f7a45">${meilleur.nom}</td>
+                  <td style="padding:10px 12px;font-size:12px;font-weight:600;color:#1f7a45;text-align:right;white-space:nowrap">${meilleur.ok}/${meilleur.total}</td>
+                </tr></table>
+              </div>`
+            : `<div style="margin-top:16px">
+                <p style="font-size:13px;color:#444">La régularité compte plus que le score du jour — <strong>${esc(prenom)}</strong> a quand même pris le temps de s'entraîner aujourd'hui.</p>
+              </div>`
+
+        const aRevoirHTML = !detailComplet
+          ? (badgesData.length > 0
               ? `<div style="margin-top:16px">
-                  <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:8px">📚 Points à retravailler :</p>
-                  ${questionsRatees.slice(0,5).map(q => `
-                    <div style="font-size:13px;color:#666;padding:4px 0">
-                      • ${esc(q)}
-                    </div>`).join('')}
+                  <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin:0">📚 Des points à retravailler ont été identifiés — le détail est disponible avec l'offre Accompagné.</p>
                 </div>`
-              : `<div style="margin-top:16px">
-                  <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:8px">📚 Des points à retravailler ont été identifiés — le détail est disponible avec l'offre Accompagné.</p>
-                </div>`)
-          : ''
+              : '')
+          : (aRevoir.length > 0
+              ? `<div style="margin-top:16px">
+                  <p style="font-size:13px;font-weight:600;color:#8a6416;margin-bottom:8px">📚 À retravailler</p>
+                  ${aRevoir.map(b => `<table style="width:100%;border-collapse:collapse;margin-bottom:6px"><tr style="background:#FBF4E4;border-radius:8px">
+                    <td style="padding:10px 12px;font-size:13px;color:#8a6416">${b.nom}</td>
+                    <td style="padding:10px 12px;font-size:12px;font-weight:600;color:#8a6416;text-align:right;white-space:nowrap">${b.ok}/${b.total}</td>
+                  </tr></table>`).join('')}
+                </div>`
+              : '')
 
         html = `
           <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
@@ -801,16 +831,16 @@ export default async function handler(req, res) {
             </div>
             <p style="margin-bottom:16px">Bonjour Madame, Monsieur,</p>
             <p style="margin-bottom:20px;color:#444">
-              <strong>${esc(prenom)}</strong> a passé ${totalSessions} session${totalSessions>1?'s':''} de révision aujourd'hui
-              qui nécessite${totalSessions>1?'nt':''} votre attention :
+              <strong>${esc(prenom)}</strong> a passé ${totalSessions} session${totalSessions>1?'s':''} de révision aujourd'hui.
             </p>
-            <div style="background:#fef2f2;border-left:4px solid #dc2626;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0">
-              <div style="font-size:24px;font-weight:700;color:#dc2626">
+            <div style="background:#f5f5f0;border-left:4px solid #3730a3;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0">
+              <div style="font-size:24px;font-weight:700;color:#3730a3">
                 ${scoreTotal}/${totalTotal} — ${pct}%
               </div>
               <div style="font-size:12px;color:#888;margin-top:4px">⏱️ ${tempsFormat}</div>
             </div>
-            ${rateesHTML}
+            ${positifHTML}
+            ${aRevoirHTML}
             <p style="color:#444;line-height:1.6;margin-top:20px">
               Un encouragement ce soir peut faire toute la différence !
               <strong>10 minutes par jour</strong> suffisent pour progresser.
