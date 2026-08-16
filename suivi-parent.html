@@ -172,7 +172,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <div id="zone-form-ajout" style="display:none">
   <div class="form-ajout">
     <div class="form-ajout-titre">Ajouter un enfant</div>
-    <div class="form-ajout-sub">Son compte sera créé immédiatement, avec l'offre choisie ci-dessous.</div>
+    <div class="form-ajout-sub" id="form-ajout-sub">Son compte sera créé immédiatement, avec l'offre choisie ci-dessous.</div>
 
     <label for="fa-prenom">Prénom de l'enfant</label>
     <input type="text" id="fa-prenom" placeholder="Ex: Lucas">
@@ -183,8 +183,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <label for="fa-password">Mot de passe de l'enfant</label>
     <input type="password" id="fa-password" placeholder="••••••••">
 
-    <label>Choisir une offre</label>
-    <div class="offre-grid">
+    <label id="label-choisir-offre">Choisir une offre</label>
+    <div class="offre-grid" id="offre-grid">
       <div class="offre-card selected" id="offre-autonomie" onclick="choisirOffre('autonomie')">
         <div class="offre-nom">Libre</div>
         <div class="offre-prix">0 €</div>
@@ -198,7 +198,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
       </div>
     </div>
 
-    <div class="form-ajout-note">Accompagné : sans engagement, résiliable à tout moment. Carte demandée, rien prélevé avant décembre 2026.</div>
+    <div class="form-ajout-note" id="form-ajout-note">Accompagné : sans engagement, résiliable à tout moment. Carte demandée, rien prélevé avant décembre 2026.</div>
 
     <div class="form-ajout-actions">
       <button class="form-ajout-annuler" onclick="fermerFormulaireAjout()">Annuler</button>
@@ -233,6 +233,15 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 let user = null, prenom = '', jours = 14, chart = null
 let eleveUserId = null, eleves = []
 let offreSelectionnee = 'autonomie'
+
+// Offre de lancement : Accompagné gratuit jusqu'au 01/12/2026 — même
+// constante que FIN_OFFRE_LANCEMENT dans api/stripe-checkout.js, à garder
+// synchronisée. Partagée par afficherBandeauSuivi() et
+// afficherFormulaireAjout() : aucun des deux ne doit exposer un chemin
+// vers /api/stripe-checkout pendant cette période (cf. CLAUDE.md
+// § Bascule décembre 2026).
+const FIN_OFFRE_LANCEMENT = new Date('2026-12-01T00:00:00+01:00')
+function enPeriodeGratuite() { return new Date() < FIN_OFFRE_LANCEMENT }
 
 async function init() {
   const { data } = await sb.auth.getSession()
@@ -277,7 +286,12 @@ function choisirEnfant(uid, btn, prenomDirect) {
 function afficherBandeauSuivi(uid) {
   const bandeau = document.getElementById('bandeau-suivi')
   const eleve = eleves.find(e => e.user_id === uid)
-  if (!eleve || eleve.plan_actif) {
+
+  // Pendant l'offre de lancement, aucune mention de passage à l'offre
+  // payante ne doit être affichée : le chemin Stripe n'est pas garanti
+  // opérationnel (SIRET en attente, cf. CLAUDE.md), et un CTA qui mène à
+  // une erreur de paiement est pire que pas de CTA.
+  if (!eleve || eleve.plan_actif || enPeriodeGratuite()) {
     bandeau.style.display = 'none'
     bandeau.innerHTML = ''
     return
@@ -768,6 +782,19 @@ function afficherFormulaireAjout() {
   document.getElementById('zone-form-ajout').style.display = 'block'
   document.getElementById('fa-msg').className = 'form-ajout-msg'
   document.getElementById('fa-msg').style.display = 'none'
+
+  // Pendant l'offre de lancement : pas de choix d'offre à afficher, donc
+  // pas de chemin possible vers /api/stripe-checkout depuis ce formulaire
+  // (même logique que afficherBandeauSuivi — cf. CLAUDE.md § Bascule
+  // décembre 2026). Le compte est toujours créé en 'autonomie'.
+  const gratuit = enPeriodeGratuite()
+  document.getElementById('label-choisir-offre').style.display = gratuit ? 'none' : ''
+  document.getElementById('offre-grid').style.display = gratuit ? 'none' : ''
+  document.getElementById('form-ajout-note').style.display = gratuit ? 'none' : ''
+  document.getElementById('form-ajout-sub').textContent = gratuit
+    ? 'Son compte sera créé immédiatement, avec un accès complet et gratuit pendant le lancement.'
+    : "Son compte sera créé immédiatement, avec l'offre choisie ci-dessous."
+  if (gratuit) choisirOffre('autonomie')
 }
 
 function fermerFormulaireAjout() {

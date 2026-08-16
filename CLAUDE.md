@@ -163,6 +163,14 @@ Basé sur la lecture du document CGV (fourni en pièce jointe dans une conversat
 5. Mise à jour rédactionnelle des CGV.
 6. Relecture juridique avant passage Stripe live.
 
+## CHANTIER — Bascule décembre 2026 (fin de l'offre de lancement)
+
+Deux points d'UI masquent volontairement tout ce qui mène à l'offre payante pendant la gratuité de lancement (jusqu'au 01/12/2026, `FIN_OFFRE_LANCEMENT` — la même constante existe indépendamment dans `api/stripe-checkout.js:231` et doit rester synchronisée si la date change).
+
+* **Bandeau "Suivi de la progression"** (`suivi-parent.html`, `afficherBandeauSuivi()`) — masqué en dur pendant la période gratuite (constat 16/08/2026 : le bandeau "{prénom} est en Libre" / accordéon détail Accompagné / CTA "Passer à Accompagné" s'affichaient malgré `plan_actif=false` voulu, et le clic sur le CTA échouait visiblement — Stripe non garanti opérationnel, SIRET en attente). Fix : garde étendue à `enPeriodeGratuite()` (`new Date() < FIN_OFFRE_LANCEMENT`), en plus de `plan_actif`.
+* **Sélecteur d'offre à la création de compte** (`suivi-parent.html`, `afficherFormulaireAjout()`, cartes `#offre-autonomie`/`#offre-suivi`) — même traitement, constat 16/08/2026 : impact plus fort que le bandeau puisqu'il intervient au tout premier contact d'un parent avec le produit. Choisir "Accompagné" pendant `creerEnfant()` déclenchait le même appel à `/api/stripe-checkout` en échec, avec un risque d'abandon avant même la création du compte. Fix : le bloc "Choisir une offre" (label + grid + note) est masqué pendant `enPeriodeGratuite()`, et `offreSelectionnee` est forcé à `'autonomie'` — le compte créé pendant le lancement ne peut plus passer par Stripe.
+* **`enPeriodeGratuite()`** — fonction partagée par les deux fixes ci-dessus (`suivi-parent.html`), basée sur la constante `FIN_OFFRE_LANCEMENT` (même valeur que `api/stripe-checkout.js:231`, à garder synchronisée si la date change). **Auto-réactivation des deux éléments le 01/12/2026 sans déploiement** — vérifier à cette date que Stripe est réellement opérationnel (SIRET obtenu) avant que les deux ne réapparaissent. Décision actée le 16/08/2026 : date seule, pas de flag manuel supplémentaire (un rappel agenda mi-novembre existe déjà pour la session de bascule ; un second mécanisme à ne pas oublier augmenterait le risque plutôt que de le réduire).
+
 ## Note — Gating du bilan manuel (`api/email.js`, type `bilan`)
 
 **`bilan` (bouton manuel "Envoyer bilan parents", `prof.html`) — gating volontairement absent.** Contrairement à `recap-journalier-user`, ce flux n'applique pas `peutRecevoirEmailDetaille`. C'est un choix commercial assumé : ce bouton sert au prof à envoyer manuellement un échantillon détaillé (sous-thème, Acquis/À revoir, tout l'historique de l'élève) à un parent en offre Libre, dans une logique de conversion vers l'offre Accompagné. Ne pas "corriger" en ajoutant le gating lors d'un futur audit.
