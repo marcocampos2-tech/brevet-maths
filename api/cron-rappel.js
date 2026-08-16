@@ -23,6 +23,23 @@
 //     les branches "été" et "fin d'année" — promesse non tenable pour
 //     cette année (produit pas encore lancé). À réintroduire l'été 2027
 //     sous forme d'invitation réelle, une fois Academika Seconde lancé.
+//
+// Modifié le 16/08/2026 — Cron seul déclencheur du récap journalier
+//   - Le déclenchement côté client (quiz.html, logout/terminer) a été
+//     retiré : ce bloc de rattrapage n'est plus un filet, c'est le seul
+//     mécanisme d'envoi.
+//   - CORRIGÉ : le rattrapage ne filtrait que sur "aujourd'hui" (jour Paris
+//     au moment où LE CRON tourne). Le cron ne passe qu'une fois/jour
+//     (19h UTC) : une session faite après son passage restait non couverte,
+//     et le lendemain "aujourd'hui" avait changé — cette session ne
+//     matchait plus jamais le filtre et n'était jamais rattrapée
+//     (perdue silencieusement, alerte_envoyee restait false pour toujours).
+//   - Le rattrapage groupe maintenant les sessions non couvertes par
+//     (user_id, date Paris DE LA SESSION elle-même, pas la date du jour
+//     du cron), et appelle recap-journalier-user une fois par couple avec
+//     ce jour explicite (nouveau paramètre `date` sur l'endpoint). Toute
+//     session dans la fenêtre de 48h est donc rattrapée sous son propre
+//     jour, quel que soit le nombre de passages du cron écoulés depuis.
 // ═══════════════════════════════════════════════════════════
 
 const ORDRE_DIFFICULTE = { facile: 1, moyen: 2, difficile: 3 }
@@ -53,7 +70,6 @@ export default async function handler(req, res) {
   let rattrapageResume = { traites: 0, ignores: 0, erreurs: 0 }
   try {
     const maintenantRattrapage = new Date()
-    const dateParisStr = maintenantRattrapage.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' }) // YYYY-MM-DD
 
     const depuisRes = await fetch(
       `${SUPA_URL}/rest/v1/resultats?select=id,user_id,created_at,alerte_envoyee` +
@@ -63,26 +79,28 @@ export default async function handler(req, res) {
     )
     const sessionsCandidates = await depuisRes.json()
 
-    const sessionsDuJourNonCouvertes = (sessionsCandidates || []).filter(s => {
+    // Regroupement par (user_id, date Paris DE LA SESSION) — voir
+    // commentaire en tête de fichier (16/08/2026).
+    const paires = new Map() // clé "user_id|date" → { user_id, date }
+    for (const s of (sessionsCandidates || [])) {
       const dateSessionParis = new Date(s.created_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
-      return dateSessionParis === dateParisStr
-    })
+      const cle = `${s.user_id}|${dateSessionParis}`
+      if (!paires.has(cle)) paires.set(cle, { user_id: s.user_id, date: dateSessionParis })
+    }
 
-    const userIdsATraiter = [...new Set(sessionsDuJourNonCouvertes.map(s => s.user_id))]
-
-    for (const user_id of userIdsATraiter) {
+    for (const { user_id, date } of paires.values()) {
       try {
         const resultRes = await fetch(`https://${req.headers.host}/api/email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'recap-journalier-user', user_id })
+          body: JSON.stringify({ type: 'recap-journalier-user', user_id, date })
         })
         const resultData = await resultRes.json()
         if (resultData.skip) rattrapageResume.ignores++
         else if (resultData.success) rattrapageResume.traites++
         else rattrapageResume.erreurs++
       } catch (e) {
-        console.log('Erreur rattrapage user', user_id, ':', e.message)
+        console.log('Erreur rattrapage user', user_id, 'date', date, ':', e.message)
         rattrapageResume.erreurs++
       }
     }

@@ -617,11 +617,17 @@ export default async function handler(req, res) {
 
   // ═══════════════════════════════════════════
   // RÉCAP JOURNALIER — recalculé côté serveur (source de vérité unique)
-  // Déclenché par : 1) le client (logout/terminer), 2) le job de rattrapage (cron-rappel.js)
-  // Remplace le calcul qui était fait côté client dans quiz.html (envoyerRecapJournalier)
+  // Modifié le 16/08/2026 : seul déclencheur restant, le cron quotidien
+  // (cron-rappel.js) — le déclenchement client (logout/terminer dans
+  // quiz.html) a été retiré pour garantir exactement un email consolidé
+  // par élève et par jour, plutôt qu'un email à chaque déconnexion.
+  // Paramètre `date` (YYYY-MM-DD, fuseau Paris) optionnel : permet au cron
+  // de traiter un jour antérieur au jour courant (rattrapage d'une session
+  // tombée après son unique passage quotidien). Sans ce paramètre,
+  // comportement inchangé : le jour Paris courant.
   // ═══════════════════════════════════════════
   if (req.body?.type === 'recap-journalier-user') {
-    const { user_id } = req.body
+    const { user_id, date } = req.body
     if (!user_id) return res.status(400).json({ error: 'user_id manquant' })
 
     const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -647,7 +653,7 @@ export default async function handler(req, res) {
       }
 
       const maintenant = new Date()
-      const dateParisStr = maintenant.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+      const dateParisStr = date || maintenant.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
       const sessionsRes = await fetch(
         `${SUPA_URL}/rest/v1/resultats?user_id=eq.${user_id}` +
         `&select=id,theme,sous_theme,difficulte,score,total,temps_secondes,questions_ratees,created_at,alerte_envoyee` +

@@ -464,21 +464,15 @@ function setDiffCard(el, val) {
 }
 
 // ═══════════════════════════════════════════════════
-// RÉCAP JOURNALIER — simplifié : tout le calcul (agrégat, seuils,
-// sous-thèmes) et l'envoi sont désormais faits côté serveur dans
-// api/email.js (type: 'recap-journalier-user'), pour garantir une
-// seule et même logique que le job de rattrapage du cron.
+// RÉCAP JOURNALIER — Modifié le 16/08/2026 : le déclenchement côté client
+// (à chaque logout()/terminer()) est retiré. Un élève qui enchaîne
+// plusieurs sessions dans la journée ne doit plus recevoir un email par
+// déconnexion — un seul email consolidé part désormais en fin de journée,
+// via le cron (cron-rappel.js, 0 19 * * * UTC = 21h Paris), qui couvre
+// aussi bien les sessions déclenchées ici que celles où l'élève ne se
+// déconnecte jamais explicitement. Calcul et envoi restent entièrement
+// côté serveur (api/email.js, type: 'recap-journalier-user').
 // ═══════════════════════════════════════════════════
-async function envoyerRecapJournalier() {
-  if (!user) return
-  try {
-    await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'recap-journalier-user', user_id: user.id })
-    })
-  } catch(e) { console.log('Erreur envoi récap:', e.message) }
-}
 
 async function afficherBanniereExamenPresentiel() {
   try {
@@ -552,7 +546,6 @@ async function logout(){
     if(!ok)return
     await sauvegarderAbandonne()
   }
-  await envoyerRecapJournalier()
   await sb.auth.signOut()
   window.location.href='index.html'
 }
@@ -842,7 +835,6 @@ async function nouvelleRonde(){
 }
 
 async function terminer(){
-  await envoyerRecapJournalier()
   await sb.auth.signOut()
   window.location.href='index.html'
 }
