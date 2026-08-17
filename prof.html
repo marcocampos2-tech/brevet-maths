@@ -87,7 +87,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .opt-row .radio-label { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); cursor: pointer; white-space: nowrap; }
 .opt-row input[type=radio] { cursor: pointer; }
 .loader { text-align: center; color: var(--muted); padding: 4rem 1rem; font-size: 13px; }
-.denied { text-align: center; color: var(--red); padding: 4rem 1rem; font-size: 14px; }
+.denied { text-align: center; color: var(--red); padding: 3rem 1rem 1rem; font-size: 14px; }
 .empty { color: var(--muted); font-size: 13px; padding: .5rem 0; }
 .dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .dash-table th { padding: 8px 6px; font-size: 10px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); text-align: center; text-transform: uppercase; letter-spacing: .03em; }
@@ -124,6 +124,21 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .places-bar-fill { height: 6px; border-radius: 4px; background: var(--green); transition: width 0.3s; }
 .places-bar-fill.warn { background: var(--amber); }
 .places-bar-fill.full { background: var(--red); }
+/* Formulaire OTP intégré — ajouté 17/08/2026, accès direct sans passer par une autre page */
+.login-wrap { max-width: 380px; margin: 3rem auto; }
+.login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; }
+.login-title { font-family: 'Newsreader', serif; font-size: 18px; font-weight: 600; color: var(--blue); margin-bottom: 6px; }
+.login-desc { font-size: 12.5px; color: var(--muted); margin-bottom: 1.25rem; line-height: 1.6; }
+.login-card .field input { margin-bottom: 0; }
+.login-card .btn { width: 100%; justify-content: center; padding: 10px 14px; font-size: 13px; margin-top: 12px; }
+.login-card .btn-blue { background: var(--blue); color: white; border-color: var(--blue); }
+.login-card .btn-blue:hover { background: #14213a; }
+.login-lien { background: none; border: none; color: var(--blue); font-size: 12px; text-decoration: underline; cursor: pointer; margin-top: 12px; font-family: 'Inter', sans-serif; display: block; text-align: center; width: 100%; }
+.login-code-input { text-align: center; font-size: 20px; letter-spacing: 6px; font-family: 'IBM Plex Mono', monospace; }
+.login-msg { font-size: 12.5px; border-radius: 8px; padding: 9px 12px; margin-top: 12px; line-height: 1.6; }
+.login-msg.erreur { background: var(--red-bg); color: var(--red); }
+.login-msg.succes { background: var(--green-bg); color: var(--green); }
+.login-msg.info { background: var(--blue-bg); color: var(--blue); }
 @media (max-width: 600px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
   .dash-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -135,7 +150,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <div class="wrap">
   <nav>
     <div class="logo">ACADEMIKA — PROF</div>
-    <button class="btn" onclick="logout()">Déconnexion</button>
+    <button class="btn" id="btn-logout-nav" onclick="logout()" style="display:none">Déconnexion</button>
   </nav>
   <div id="root"><div class="loader">Chargement…</div></div>
 </div>
@@ -221,6 +236,72 @@ let editCurrentTable = 'questions_banque'
 let noteCurrentId = null
 let adresseCurrentId = null
 
+// ═══════════════════════════════════════════════════
+// CONNEXION OTP INTÉGRÉE — ajouté 17/08/2026
+// Même mécanisme que espace-parent.html (sb.auth.signInWithOtp /
+// verifyOtp), mais shouldCreateUser: false — cette page ne doit jamais
+// créer de nouveau compte, uniquement authentifier un compte prof existant.
+// ═══════════════════════════════════════════════════
+let profEmailCourant = ''
+
+function renderLoginProf(messageInfo) {
+  document.getElementById('btn-logout-nav').style.display = 'none'
+  let html = ''
+  html += '<div class="login-wrap"><div class="login-card">'
+  html += '<div class="login-title">Connexion</div>'
+  html += '<div class="login-desc">Entre ton adresse email. Tu recevras un code de connexion à 6 chiffres.</div>'
+  html += '<div class="field"><label>Adresse email</label><input type="email" id="prof-login-email" placeholder="ton@email.fr" autocomplete="email"></div>'
+  html += '<button class="btn btn-blue" onclick="envoyerCodeProf()" id="prof-btn-envoyer">Recevoir mon code</button>'
+  html += '<div id="prof-login-msg">' + (messageInfo ? '<div class="login-msg info">'+messageInfo+'</div>' : '') + '</div>'
+  html += '</div></div>'
+  document.getElementById('root').innerHTML = html
+}
+
+function renderCodeStepProf() {
+  let html = ''
+  html += '<div class="login-wrap"><div class="login-card">'
+  html += '<div class="login-title">Vérifie ta boîte mail</div>'
+  html += '<div class="login-desc">Un code vient d\'être envoyé à <strong>'+profEmailCourant+'</strong>.</div>'
+  html += '<div class="field"><label>Code reçu par email</label><input type="text" id="prof-login-code" class="login-code-input" placeholder="000000" inputmode="numeric" autocomplete="one-time-code" oninput="this.value=this.value.replace(/\\D/g,\'\').slice(0,6)"></div>'
+  html += '<button class="btn btn-blue" onclick="verifierCodeProf()" id="prof-btn-verifier">Valider le code</button>'
+  html += '<button class="login-lien" onclick="renderLoginProf()">← Changer d\'adresse email</button>'
+  html += '<div id="prof-login-msg"></div>'
+  html += '</div></div>'
+  document.getElementById('root').innerHTML = html
+}
+
+async function envoyerCodeProf() {
+  const email = document.getElementById('prof-login-email').value.trim()
+  const msg = document.getElementById('prof-login-msg')
+  if (!email || !email.includes('@')) { msg.innerHTML = '<div class="login-msg erreur">Merci de saisir une adresse email valide.</div>'; return }
+  const btn = document.getElementById('prof-btn-envoyer')
+  btn.disabled = true; btn.textContent = 'Envoi…'
+  const { error } = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false } })
+  if (error) {
+    msg.innerHTML = '<div class="login-msg erreur">Impossible d\'envoyer le code. Vérifie l\'adresse ou réessaie.</div>'
+    btn.disabled = false; btn.textContent = 'Recevoir mon code'
+    return
+  }
+  profEmailCourant = email
+  renderCodeStepProf()
+}
+
+async function verifierCodeProf() {
+  const code = document.getElementById('prof-login-code').value.replace(/\D/g, '')
+  const msg = document.getElementById('prof-login-msg')
+  if (code.length !== 6) { msg.innerHTML = '<div class="login-msg erreur">Le code doit contenir 6 chiffres.</div>'; return }
+  const btn = document.getElementById('prof-btn-verifier')
+  btn.disabled = true; btn.textContent = 'Vérification…'
+  const { error } = await sb.auth.verifyOtp({ email: profEmailCourant, token: code, type: 'email' })
+  if (error) {
+    msg.innerHTML = '<div class="login-msg erreur">Code invalide ou expiré.</div>'
+    btn.disabled = false; btn.textContent = 'Valider le code'
+    return
+  }
+  document.getElementById('root').innerHTML = '<div class="loader">Connexion…</div>'
+  init()
+}
+
 const pct      = (ok, tot) => tot ? Math.round(ok / tot * 100) : 0
 const color    = p => p >= 70 ? '#2F9E5C' : p >= 50 ? '#8a6416' : '#9E2B25'
 const emoji    = p => p >= 70 ? '🟢' : p >= 50 ? '🟡' : '🔴'
@@ -266,7 +347,12 @@ function scoresExamen(th) {
   return { nombres: sc('nombre'), geo: sc('espace')||sc('geom'), stats: sc('organisation')||sc('stat'), grandeurs: sc('grandeur')||sc('algo') }
 }
 
-async function logout() { await sb.auth.signOut(); location.href = 'index.html' }
+// Modifié 17/08/2026 : au lieu de rediriger vers index.html, on réaffiche
+// le formulaire de connexion sur place — prof.html reste une page autonome.
+async function logout() {
+  await sb.auth.signOut()
+  renderLoginProf()
+}
 
 function setTab(id) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id))
@@ -1421,7 +1507,10 @@ function render() {
 // ═══════════════════════════════════════════════════
 async function init() {
   const { data: { session } } = await sb.auth.getSession()
-  if (!session) { location.href='index.html'; return }
+  // Modifié 17/08/2026 : plus de redirection vers index.html en l'absence
+  // de session — on affiche le formulaire OTP intégré, prof.html reste
+  // une page autonome (connexion et déconnexion sur place).
+  if (!session) { renderLoginProf(); return }
 
   // Contrôle d'accès — révisé le 10/08/2026 (chantier RLS, étape 1)
   // Avant : vérification via user_metadata (modifiable par l'utilisateur) puis
@@ -1432,9 +1521,14 @@ async function init() {
   // Étape 1 volontairement sans impact sur is_prof() : ce dernier reste la
   // véritable barrière RLS jusqu'à sa refonte (étape 2).
   if (session.user.app_metadata?.role !== 'prof') {
-    document.getElementById('root').innerHTML = '<div class="denied">Accès réservé au professeur.</div>'
+    document.getElementById('btn-logout-nav').style.display = 'none'
+    document.getElementById('root').innerHTML =
+      '<div class="denied">Accès réservé au professeur.' +
+      '<div style="margin-top:1rem"><button class="btn btn-red btn-sm" onclick="logout()">Se déconnecter</button></div></div>'
     return
   }
+
+  document.getElementById('btn-logout-nav').style.display = ''
 
   const [r1,r2,r3,r4,r5] = await Promise.all([
     sb.from('resultats').select('*').order('created_at',{ascending:false}),
