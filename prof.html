@@ -201,28 +201,33 @@ const SB_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const PROF   = 'marcocampos2@gmail.com'
 const sb     = supabase.createClient(SB_URL, SB_KEY)
 
+// Grille alignée sur le référentiel Eduscol (5 thèmes cycle 4) — migrée
+// depuis les 4 anciens domaines le 19/08/2026. Structure identique à
+// quiz.html pour garantir la cohérence (mêmes clés theme/sous_theme en base).
 const THEMES = [
   'Nombres et calculs',
   'Organisation et gestion de données, fonctions',
+  'Grandeurs et mesures',
   'Espace et géométrie',
-  'Grandeurs, mesures et algorithmique'
+  'Algorithmique et programmation'
 ]
-const THEMES_SHORT = ['Nombres', 'Organisation', 'Géométrie', 'Grandeurs']
+const THEMES_SHORT = ['Nombres', 'Organisation', 'Grandeurs', 'Géométrie', 'Algo']
 
 const SOUS_THEMES = {
   'Nombres et calculs': [
-    'Équations', 'Calcul littéral', 'Fractions',
-    'Pourcentages', 'Puissances', 'Arithmétique', 'Proportionnalité'
+    'Équations', 'Calcul littéral', 'Fractions', 'Puissances', 'Arithmétique'
   ],
   'Organisation et gestion de données, fonctions': [
-    'Fonctions', 'Probabilités', 'Statistiques', 'Proportionnalité'
+    'Fonctions', 'Statistiques', 'Probabilités', 'Proportionnalité', 'Pourcentages'
+  ],
+  'Grandeurs et mesures': [
+    'Aires et volumes', 'Conversions', 'Agrandissement'
   ],
   'Espace et géométrie': [
-    'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie',
-    'Volumes', 'Aires et périmètres', 'Transformations'
+    'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie', 'Transformations'
   ],
-  'Grandeurs, mesures et algorithmique': [
-    'Algorithmique', 'Aires et volumes', 'Conversions', 'Agrandissement'
+  'Algorithmique et programmation': [
+    'Algorithmique'
   ]
 }
 
@@ -339,6 +344,15 @@ function mentionLabel(p) {
   return 'À retravailler'
 }
 
+// scoresExamen() — volontairement NON migré vers 5 thèmes (décision du
+// 19/08/2026). Cette fonction lit examens_blancs.scores_themes, alimenté
+// par examen_questions, qui garde l'ancienne nomenclature à 4 parties
+// (chantier 2 séparé, reporté après audit de contenu de examen_questions).
+// La migrer maintenant casserait l'affichage du tableau "Examens en ligne"
+// tant que examen_questions n'a pas suivi. À corriger EN MÊME TEMPS que le
+// chantier 2 : passer de 4 clés avec repli || à 5 clés distinctes sans
+// repli — le repli actuel (sc('grandeur')||sc('algo')) est un bug latent
+// qui ne s'active que si les deux thèmes sont un jour séparés côté examen.
 function scoresExamen(th) {
   const sc = key => {
     const k = Object.keys(th).find(k => k.toLowerCase().includes(key))
@@ -1315,8 +1329,19 @@ async function envoyerBilan(userId) {
   } catch(err) { alert('Erreur : '+err.message); btn.disabled=false; btn.textContent='Envoyer bilan parents' }
 }
 
+// Se remplit dynamiquement selon le domaine choisi dans le formulaire
+// "Ajouter une question" — même pattern que renderFiltreSousTheme().
+function renderBqSousTheme() {
+  const themeSel = document.getElementById('bq-theme')
+  const sousSel = document.getElementById('bq-sous-theme')
+  if (!themeSel || !sousSel) return
+  const liste = SOUS_THEMES[themeSel.value] || []
+  sousSel.innerHTML = liste.map(st => '<option>'+st+'</option>').join('')
+}
+
 async function ajouterQuestion() {
   const theme=document.getElementById('bq-theme').value, difficulte=document.getElementById('bq-diff').value
+  const sous_theme=document.getElementById('bq-sous-theme').value
   const question=document.getElementById('bq-question').value.trim()
   const optA=document.getElementById('bq-optA').value.trim(), optB=document.getElementById('bq-optB').value.trim()
   const optC=document.getElementById('bq-optC').value.trim(), optD=document.getElementById('bq-optD').value.trim()
@@ -1326,7 +1351,10 @@ async function ajouterQuestion() {
   if (!question||!optA||!optB||!optC||!optD||!bonne||!explication) { msg.innerHTML='<span style="color:#9E2B25">⚠ Remplis tous les champs.</span>'; return }
   const opts=[optA,optB,optC,optD], answer=['A','B','C','D'].indexOf(bonne)
   msg.innerHTML='<span style="color:#888">Enregistrement…</span>'
-  const { error } = await sb.from('questions_banque').insert({ theme, difficulte, question, opts: JSON.stringify(opts), answer, explication, tableau: null, figure: null })
+  // Correctif 19/08/2026 : sous_theme ajouté à l'insert. Bug préexistant
+  // corrigé — une question ajoutée sans sous_theme est invisible dans
+  // quiz.html (qui filtre systématiquement sur sous_theme=eq.).
+  const { error } = await sb.from('questions_banque').insert({ theme, sous_theme, difficulte, question, opts: JSON.stringify(opts), answer, explication, tableau: null, figure: null })
   if (error) { msg.innerHTML='<span style="color:#9E2B25">Erreur : '+error.message+'</span>' }
   else {
     msg.innerHTML='<span style="color:#2F9E5C">✓ Question ajoutée !</span>'
@@ -1489,9 +1517,10 @@ function render() {
   h+='<div class="card"><div class="card-title">Questions de la banque</div><div id="banque-list"><div class="loader">Chargement…</div></div></div>'
   h+='<div class="card"><div class="card-title">➕ Ajouter une question</div>'
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'
-  h+='<div class="field"><label>Domaine</label><select id="bq-theme">'+THEMES.map(t=>'<option>'+t+'</option>').join('')+'</select></div>'
+  h+='<div class="field"><label>Domaine</label><select id="bq-theme" onchange="renderBqSousTheme()">'+THEMES.map(t=>'<option>'+t+'</option>').join('')+'</select></div>'
   h+='<div class="field"><label>Difficulté</label><select id="bq-diff"><option value="facile">Facile</option><option value="moyen" selected>Moyen</option><option value="difficile">Difficile</option></select></div>'
   h+='</div>'
+  h+='<div class="field"><label>Sous-thème</label><select id="bq-sous-theme"></select></div>'
   h+='<div class="field"><label>Question</label><textarea id="bq-question" placeholder="Énoncé complet…"></textarea></div>'
   h+=['A','B','C','D'].map(l=>'<div class="opt-row"><label>'+l+'</label><input type="text" id="bq-opt'+l+'" placeholder="Option '+l+'"><label class="radio-label"><input type="radio" name="bq-bonne" value="'+l+'"> Bonne réponse</label></div>').join('')
   h+='<div class="field" style="margin-top:10px"><label>Explication</label><textarea id="bq-explication" placeholder="Correction étape par étape…"></textarea></div>'
@@ -1500,6 +1529,7 @@ function render() {
   h+='</div>'
 
   document.getElementById('root').innerHTML = h
+  renderBqSousTheme()
 }
 
 // ═══════════════════════════════════════════════════
