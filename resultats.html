@@ -102,18 +102,23 @@ const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
+// Grille alignée sur le référentiel Eduscol (5 thèmes cycle 4) — migrée
+// depuis les 4 anciens domaines le 19/08/2026. Doit rester identique à
+// quiz.html et prof.html (même valeurs, même icônes).
 const THEMES = [
   { label: 'Nombres et calculs',        value: 'Nombres et calculs',                          icon: 'calc' },
   { label: 'Organisation et données',   value: 'Organisation et gestion de données, fonctions', icon: 'bar' },
+  { label: 'Grandeurs et mesures',      value: 'Grandeurs et mesures',                         icon: 'ruler' },
   { label: 'Espace et géométrie',       value: 'Espace et géométrie',                          icon: 'tri' },
-  { label: 'Grandeurs et mesures',      value: 'Grandeurs, mesures et algorithmique',           icon: 'ruler' },
+  { label: 'Algorithmique',             value: 'Algorithmique et programmation',               icon: 'algo' },
 ]
 
 const THEME_ICONS = {
   calc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8" y1="7" x2="16" y2="7"/><circle cx="9" cy="13" r="1.1"/><circle cx="15" cy="13" r="1.1"/><circle cx="9" cy="17" r="1.1"/><circle cx="15" cy="17" r="1.1"/></svg>',
   bar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="14" width="3" height="6"/><rect x="11" y="9" width="3" height="11"/><rect x="16" y="5" width="3" height="15"/></svg>',
   tri: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 5 L5 20 L20 20 Z"/><rect x="5" y="16.5" width="3.5" height="3.5"/></svg>',
-  ruler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1" transform="rotate(-8 12 12)"/><line x1="6.5" y1="9" x2="7" y2="11.3" transform="rotate(-8 12 12)"/><line x1="10" y1="8.4" x2="10.5" y2="10.7" transform="rotate(-8 12 12)"/><line x1="13.5" y1="7.8" x2="14" y2="10.1" transform="rotate(-8 12 12)"/><line x1="17" y1="7.2" x2="17.5" y2="9.5" transform="rotate(-8 12 12)"/></svg>'
+  ruler: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="8" rx="1" transform="rotate(-8 12 12)"/><line x1="6.5" y1="9" x2="7" y2="11.3" transform="rotate(-8 12 12)"/><line x1="10" y1="8.4" x2="10.5" y2="10.7" transform="rotate(-8 12 12)"/><line x1="13.5" y1="7.8" x2="14" y2="10.1" transform="rotate(-8 12 12)"/><line x1="17" y1="7.2" x2="17.5" y2="9.5" transform="rotate(-8 12 12)"/></svg>',
+  algo: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 6 3 12 8 18"/><polyline points="16 6 21 12 16 18"/></svg>'
 }
 
 function getStatut(pct) {
