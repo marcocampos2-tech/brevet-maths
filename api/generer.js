@@ -14,20 +14,26 @@ export default async function handler(req, res) {
     }
 
     // ── IA EN SECOURS (si banque vide) ────────────────────
+    // Grille alignée sur le référentiel Eduscol (5 thèmes cycle 4) — migrée
+    // depuis les 4 anciens domaines le 20/08/2026. Redistribution de
+    // contenu (pas un simple renommage) : Pourcentages est passé de
+    // "Nombres et calculs" à "Organisation et gestion de données, fonctions" ;
+    // Aires/volumes/Géométrie dans l'espace sont passés de
+    // "Espace et géométrie" vers le nouveau thème "Grandeurs et mesures" ;
+    // Algorithmique est devenu un thème à part entière (ex-sous-thème de
+    // l'ancien "Grandeurs, mesures et algorithmique"). Voir prof.html /
+    // quiz.html pour la structure THEMES/SOUS_THEMES de référence.
     const exemples = {
 
       'Nombres et calculs': `
 Exemples de BONNES questions pour ce domaine :
-Sous-thème Fractions et priorités opératoires :
+Sous-thème Fractions :
 - "Calcule : 3/4 + 2/3"
 - "Calcule en respectant les priorités : 3 + 2 × (5 - 1)"
-Sous-thème Puissances et écriture scientifique :
+Sous-thème Puissances (et écriture scientifique) :
 - "Écris 0,000045 en notation scientifique."
 - "Calcule : 2³ × 2⁴"
-Sous-thème Pourcentages :
-- "Une pizza coûte 12€. Le restaurant offre une réduction de 25%. Quel est le nouveau prix ?"
-- "Un article coûte 80€. Son prix augmente de 15%. Quel est le nouveau prix ?"
-Sous-thème Arithmétique (nombres premiers, divisibilité) :
+Sous-thème Arithmétique (nombres premiers, divisibilité, PGCD) :
 - "Décompose 84 en produit de facteurs premiers."
 - "Le nombre 91 est-il premier ?"
 Sous-thème Calcul littéral (développer, factoriser, identités remarquables) :
@@ -35,7 +41,7 @@ Sous-thème Calcul littéral (développer, factoriser, identités remarquables) 
 - "Factorise : 6x² + 9x"
 - "Développe : (x+5)²"
 - "Factorise : x² - 16"
-Sous-thème Équations du 1er degré et équations-produit :
+Sous-thème Équations (1er degré et équations-produit) :
 - "Résous : 5x - 3 = 2x + 9"
 - "Résous : (x-2)(3x+6) = 0"
 - "Une piscine a un périmètre de 36m. Sa longueur est le double de sa largeur. Quelles sont ses dimensions ?"`,
@@ -50,16 +56,35 @@ Sous-thème Probabilités :
 - "Un sac contient 3 billes rouges et 5 bleues. Quelle est la probabilité de tirer une bille bleue ?"
 - "On lance un dé. Quelle est la probabilité de NE PAS obtenir un 6 ?"
 - "On lance une pièce puis un dé. Quelle est la probabilité d'obtenir pile ET un nombre impair ?"
-Sous-thème Proportionnalité et vitesses :
+Sous-thème Proportionnalité (et vitesses) :
 - "Un train roule à 180 km/h. Combien de temps met-il pour parcourir 270 km ?"
 - "Sur une carte à l'échelle 1/25000, deux villes sont à 4cm. Quelle est la distance réelle ?"
 - "Dans une classe, 12 élèves sur 30 ont eu plus de 12. Quelle est la fréquence relative ?"
-Sous-thème Fonctions affines et linéaires :
+Sous-thème Pourcentages :
+- "Une pizza coûte 12€. Le restaurant offre une réduction de 25%. Quel est le nouveau prix ?"
+- "Un article coûte 80€. Son prix augmente de 15%. Quel est le nouveau prix ?"
+Sous-thème Fonctions (affines et linéaires) :
 - "Un plombier facture 50€ de déplacement plus 30€ par heure. Exprime le prix p(x) en fonction du nombre d'heures x."
 - "La fonction f est définie par f(x) = 3x - 5. Calcule f(4)."
 - "Quel est l'antécédent de 7 par la fonction f(x) = 2x - 1 ?"
 - "Une fonction affine passe par A(0;2) et B(3;8). Quelle est son expression ?"
 INTERDITS ABSOLUS : mode, classe modale, probabilité conditionnelle, tirage sans remise, composition de fonctions, fonctions du second degré, discriminant, systèmes d'équations.`,
+
+      'Grandeurs et mesures': `
+Exemples de BONNES questions pour ce domaine :
+Sous-thème Aires et volumes (y compris géométrie dans l'espace) :
+- "Un jardin circulaire a un rayon de 5m. Calcule son aire. (π≈3,14)"
+- "Une boîte cylindrique a un rayon de 3cm et une hauteur de 10cm. Calcule son volume."
+- "Un carré a un périmètre de 24cm. Calcule son aire."
+- "Un triangle a une base de 6cm et une hauteur de 4cm. Calcule son aire."
+- "Une pyramide a une base carrée de 4cm de côté et une hauteur de 6cm. Calcule son volume."
+Sous-thème Conversions (d'unités, et vitesses) :
+- "Convertis 2,5 km en mètres."
+- "Une voiture roule à 90 km/h. Quelle distance parcourt-elle en 20 minutes ?"
+- "Convertis 3,5 heures en minutes."
+Sous-thème Agrandissement (et réduction) :
+- "Une figure est agrandie avec un coefficient 3. Si un côté mesure 4cm, quelle est sa mesure agrandie ?"
+- "Sur une carte à l'échelle 1/50000, deux villes sont à 3cm. Quelle est la distance réelle ?"`,
 
       'Espace et géométrie': `
 Exemples de BONNES questions pour ce domaine :
@@ -71,28 +96,12 @@ Sous-thème Théorème de Thalès :
 - "Dans un triangle ABC, MN est parallèle à BC. AM=4cm, AB=6cm, AN=3cm. Calcule AC."
 Sous-thème Trigonométrie :
 - "Dans un triangle rectangle, l'angle A vaut 35° et l'hypoténuse mesure 10cm. Calcule le côté opposé à A."
-Sous-thème Aires, périmètres et volumes :
-- "Un jardin circulaire a un rayon de 5m. Calcule son aire. (π≈3,14)"
-- "Une boîte cylindrique a un rayon de 3cm et une hauteur de 10cm. Calcule son volume."
 Sous-thème Transformations :
-- "Le point A(2;3) subit une translation de vecteur (1;-2). Quelles sont les coordonnées de l'image ?"
-Sous-thème Géométrie dans l'espace :
-- "Une pyramide a une base carrée de 4cm de côté et une hauteur de 6cm. Calcule son volume."`,
+- "Le point A(2;3) subit une translation de vecteur (1;-2). Quelles sont les coordonnées de l'image ?"`,
 
-      'Grandeurs, mesures et algorithmique': `
+      'Algorithmique et programmation': `
 Exemples de BONNES questions pour ce domaine :
-Sous-thème Aires et volumes :
-- "Un carré a un périmètre de 24cm. Calcule son aire."
-- "Un cylindre a un rayon de 5cm et une hauteur de 8cm. Calcule son volume. (π≈3,14)"
-- "Un triangle a une base de 6cm et une hauteur de 4cm. Calcule son aire."
-Sous-thème Conversions d'unités et vitesses :
-- "Convertis 2,5 km en mètres."
-- "Une voiture roule à 90 km/h. Quelle distance parcourt-elle en 20 minutes ?"
-- "Convertis 3,5 heures en minutes."
-Sous-thème Agrandissement et réduction :
-- "Une figure est agrandie avec un coefficient 3. Si un côté mesure 4cm, quelle est sa mesure agrandie ?"
-- "Sur une carte à l'échelle 1/50000, deux villes sont à 3cm. Quelle est la distance réelle ?"
-Sous-thème Algorithmique Scratch :
+Sous-thème Algorithmique :
 - "Un programme Scratch répète 4 fois : avancer de 100 pas, tourner de 90°. Quelle figure est tracée ?"
 - "Un programme met x à 3, puis ajoute 5 à x, puis multiplie x par 2. Quelle est la valeur finale de x ?"
 - "Un programme répète 6 fois : avancer de 50 pas, tourner de 60°. Quelle figure est tracée ?"
@@ -108,7 +117,7 @@ INTERDITS ABSOLUS : Python, boucles Python, variables Python — ce domaine util
     const chapitres = {
       'Nombres et calculs': [
         'Fractions', 'Priorités opératoires', 'Puissances', 'Écriture scientifique',
-        'Nombres premiers', 'Divisibilité', 'PGCD', 'Pourcentages',
+        'Nombres premiers', 'Divisibilité', 'PGCD',
         'Calcul littéral', 'Développement', 'Factorisation',
         'Identités remarquables', 'Équations du 1er degré', 'Équations-produit'
       ],
@@ -116,17 +125,20 @@ INTERDITS ABSOLUS : Python, boucles Python, variables Python — ce domaine util
         'Moyenne', 'Médiane', 'Étendue', 'Statistiques descriptives',
         'Probabilités simples', 'Événement contraire', 'Arbre des possibles',
         'Proportionnalité', 'Vitesse', 'Échelles', 'Fréquence relative',
+        'Pourcentages',
         'Fonction affine', 'Fonction linéaire', 'Image et antécédent',
         'Tableau de valeurs', 'Graphique de fonction'
       ],
+      'Grandeurs et mesures': [
+        'Aires', 'Volumes', 'Géométrie dans l\'espace',
+        'Conversions d\'unités', 'Vitesse',
+        'Agrandissement', 'Réduction', 'Échelles'
+      ],
       'Espace et géométrie': [
         'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie',
-        'Aires et périmètres', 'Volumes', 'Symétrie centrale',
-        'Translation', 'Rotation', 'Homothétie', 'Géométrie dans l\'espace'
+        'Symétrie centrale', 'Translation', 'Rotation', 'Homothétie'
       ],
-      'Grandeurs, mesures et algorithmique': [
-        'Aires', 'Volumes', 'Conversions d\'unités', 'Vitesse',
-        'Agrandissement', 'Réduction', 'Échelles',
+      'Algorithmique et programmation': [
         'Boucles Scratch', 'Variables Scratch', 'Programmes de calcul'
       ]
     }
