@@ -1068,12 +1068,14 @@ async function chargerBanque() {
     const hasFigSVG = q.figure && q.figure.type
     const hasFigURL = q.figure_url
     const hasTab    = q.tableau
-    html += '<div class="q-card" id="qcard-'+q.id+'">'
+    const estArchive = q.statut === 'archive'
+    html += '<div class="q-card" id="qcard-'+q.id+'"'+(estArchive?' style="opacity:0.55"':'')+'>'
     html += '<div class="q-card-header"><div>'
     html += '<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">'
     html += '<span class="badge badge-blue">'+q.theme+'</span>'
     if (q.sous_theme) html += '<span class="badge" style="background:#f0f0f5;color:#555">'+q.sous_theme+'</span>'
     html += '<span class="badge '+(q.difficulte==='facile'?'badge-tb':q.difficulte==='moyen'?'badge-ab':'badge-insuf')+'">'+q.difficulte+'</span>'
+    if (estArchive) html += '<span class="badge" style="background:#f0f0f0;color:#888">📦 Archivée</span>'
     if (hasFigSVG) html += '<span class="badge" style="background:#f0f0ff;color:#3730a3">🔷 Figure SVG</span>'
     if (hasFigURL) html += '<span class="badge" style="background:#fff0f0;color:#9E2B25">🖼 Image</span>'
     if (hasTab)    html += '<span class="badge badge-banque">📊 Tableau</span>'
@@ -1354,7 +1356,7 @@ async function ajouterQuestion() {
   // Correctif 19/08/2026 : sous_theme ajouté à l'insert. Bug préexistant
   // corrigé — une question ajoutée sans sous_theme est invisible dans
   // quiz.html (qui filtre systématiquement sur sous_theme=eq.).
-  const { error } = await sb.from('questions_banque').insert({ theme, sous_theme, difficulte, question, opts: JSON.stringify(opts), answer, explication, tableau: null, figure: null })
+  const { error } = await sb.from('questions_banque').insert({ theme, sous_theme, difficulte, question, opts: JSON.stringify(opts), answer, explication, tableau: null, figure: null, statut: 'actif' })
   if (error) { msg.innerHTML='<span style="color:#9E2B25">Erreur : '+error.message+'</span>' }
   else {
     msg.innerHTML='<span style="color:#2F9E5C">✓ Question ajoutée !</span>'
