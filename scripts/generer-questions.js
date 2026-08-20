@@ -1,6 +1,6 @@
 // /api/generer-questions.js
 // Génère 15 questions pour le quiz quotidien (questions_banque)
-// Appel : POST /api/generer-questions { "secret": "academika2026", "theme": "Nombres et calculs", "difficulte": "facile" }
+// Appel : POST /api/generer-questions { "secret": "academika2026", "theme": "Nombres et calculs", "sous_theme": "Fractions", "difficulte": "facile" }
 
 export default async function handler(req, res) {
 
@@ -9,12 +9,12 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
 
-  const { secret, theme, difficulte } = req.body || {}
+  const { secret, theme, sous_theme, difficulte } = req.body || {}
   if (secret !== process.env.CRON_SECRET) {
     return res.status(401).json({ error: 'Non autorisé' })
   }
-  if (!theme || !difficulte) {
-    return res.status(400).json({ error: 'theme et difficulte requis' })
+  if (!theme || !sous_theme || !difficulte) {
+    return res.status(400).json({ error: 'theme, sous_theme et difficulte requis' })
   }
 
   const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -118,13 +118,15 @@ INTERDITS ABSOLUS :
     // Construire les lignes pour questions_banque
     const rows = questions.map(q => ({
       theme,
+      sous_theme,
       difficulte,
       question: q.question,
       opts: q.opts,
       answer: q.answer,
       explication: q.explication,
       tableau: null,
-      figure: null
+      figure: null,
+      statut: 'actif'
     }))
 
     // Insérer dans questions_banque
