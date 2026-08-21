@@ -899,15 +899,31 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Erreur email : ' + JSON.stringify(err) })
       }
 
-      await Promise.all(
+      // L'email est déjà parti à ce stade (emailRes.ok vérifié ci-dessus).
+      // fetch() ne rejette que sur erreur réseau, jamais sur un statut HTTP
+      // 4xx/5xx — sans ce contrôle explicite, un échec du PATCH Supabase
+      // passait inaperçu et la ligne restait alerte_envoyee=false alors que
+      // le handler répondait success:true. On journalise chaque échec par
+      // id de ligne sans faire échouer la réponse : l'email a déjà été
+      // délivré, seul le marquage a pu rater.
+      const patchResultats = await Promise.all(
         sessionsNonCouvertes.map(s =>
           fetch(`${SUPA_URL}/rest/v1/resultats?id=eq.${s.id}`, {
             method: 'PATCH',
             headers: { ...supaHeaders, 'Prefer': 'return=minimal' },
             body: JSON.stringify({ alerte_envoyee: true })
           })
+            .then(r => ({ id: s.id, ok: r.ok, status: r.status }))
+            .catch(e => ({ id: s.id, ok: false, status: null, error: e.message }))
         )
       )
+      patchResultats.filter(r => !r.ok).forEach(r => {
+        console.error(
+          'Échec PATCH alerte_envoyee — resultats.id=' + r.id +
+          (r.status != null ? ' status=' + r.status : '') +
+          (r.error ? ' erreur=' + r.error : '')
+        )
+      })
 
       return res.status(200).json({ success: true, envoye: true, totalSessions, moyGlobale })
 
