@@ -281,10 +281,14 @@ function dedoublonnerParTexte(liste) {
   )
 }
 
+// Le filtre user_id est redondant avec la RLS : c'est une défense en
+// profondeur. Il borne la lecture et surtout le DELETE au seul élève même
+// si la policy venait à sauter, ou si ces requêtes passaient un jour par la
+// clé service (qui contourne la RLS).
 // Longueur du filtre in.() bornée par le pool d'un seul couple
 // sous-thème/difficulté (quelques dizaines d'ids) — pas de risque d'URL trop longue.
 async function lireVues(ctx, ids) {
-  const url = `${SUPABASE_URL}/rest/v1/questions_vues?source=eq.banque&question_id=in.(${ids.join(',')})&select=question_id`
+  const url = `${SUPABASE_URL}/rest/v1/questions_vues?user_id=eq.${ctx.userId}&source=eq.banque&question_id=in.(${ids.join(',')})&select=question_id`
   const r = await fetch(url, { headers: ctx.headers })
   if (!r.ok) throw new Error(`lecture ${r.status} ${await r.text()}`)
   const data = await r.json()
@@ -293,7 +297,7 @@ async function lireVues(ctx, ids) {
 }
 
 async function purgerVues(ctx, ids) {
-  const url = `${SUPABASE_URL}/rest/v1/questions_vues?source=eq.banque&question_id=in.(${ids.join(',')})`
+  const url = `${SUPABASE_URL}/rest/v1/questions_vues?user_id=eq.${ctx.userId}&source=eq.banque&question_id=in.(${ids.join(',')})`
   const r = await fetch(url, { method: 'DELETE', headers: { ...ctx.headers, 'Prefer': 'return=minimal' } })
   if (!r.ok) throw new Error(`purge ${r.status} ${await r.text()}`)
 }
