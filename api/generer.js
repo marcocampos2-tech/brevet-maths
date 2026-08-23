@@ -231,19 +231,36 @@ Réponds UNIQUEMENT avec un tableau JSON de 5 chiffres : [0, 2, 1, 3, 0]`
 // pool redevient entièrement disponible — les autres sous-thèmes ne sont
 // jamais touchés.
 //
+// Un pool de SEUIL_REBOUCLE énoncés distincts ou moins court-circuite tout
+// le mécanisme : le tirage sert le pool entier de toute façon, filtrer puis
+// purger puis re-marquer reconstituerait le même ensemble à chaque quiz.
+//
 // Toutes les opérations sur questions_vues passent par le jeton de l'élève
 // (clé anon + Authorization: Bearer <access_token>), donc sous la policy RLS
 // `auth.uid() = user_id` : impossible d'écrire ou de purger sur le compte
 // d'un tiers, même en forgeant le corps de la requête.
 //
 // Fail-open assumé : toute panne du mécanisme laisse le quiz partir avec un
-// tirage non filtré. Pour que cet échec ne soit jamais silencieux, l'état
-// réel est journalisé (préfixe [questions_vues]) ET renvoyé au client dans
-// le champ `vues` de la réponse.
+// tirage non filtré. Pour que cet échec ne soit jamais silencieux, il est
+// journalisé (préfixe [questions_vues]) ET signalé au client dans le champ
+// `vues` de la réponse — mais sous une forme strictement close :
+//
+//   raison  état du tirage : filtre | reboucle | pool_insuffisant |
+//           non_filtre | anonyme | config_absente
+//   echec   opération fautive, absent si tout va bien : lecture | purge |
+//           marquage | inconnu
+//   statut  code HTTP nu, absent si l'échec n'est pas une réponse HTTP
+//
+// `raison` décrit toujours le tirage, `echec` ne l'écrase jamais : un
+// marquage refusé après une reboucle réussie doit rester lisible comme tel.
+//
+// AUCUNE chaîne provenant de PostgREST ou de fetch ne part au client — ni
+// corps d'erreur (qui expose noms de contraintes et de colonnes), ni message
+// d'exception réseau. Le détail complet ne va que dans le log Vercel.
 
 const SEUIL_REBOUCLE = 5
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 // Lit le `sub` du jeton sans en vérifier la signature : l'autorité reste
 // PostgREST, qui rejette un jeton invalide (401) ou un user_id qui ne
@@ -259,17 +276,28 @@ function lireSubJeton(access_token) {
   }
 }
 
+// Retourne { ctx, raison } : ctx non nul si le filtrage peut opérer, sinon
+// raison dit pourquoi il ne peut pas.
 function contexteEleve(access_token) {
-  if (!access_token || typeof access_token !== 'string') return null
+  if (!access_token || typeof access_token !== 'string') return { ctx: null, raison: 'anonyme' }
+  // Testé après le jeton, pour que le log ne se déclenche que sur une requête
+  // où le filtrage aurait réellement dû tourner.
+  if (!SUPABASE_ANON_KEY) {
+    console.log('[questions_vues] NEXT_PUBLIC_SUPABASE_ANON_KEY absente — filtrage désactivé')
+    return { ctx: null, raison: 'config_absente' }
+  }
   const userId = lireSubJeton(access_token)
-  if (!userId) return null
+  if (!userId) return { ctx: null, raison: 'anonyme' }
   return {
-    userId,
-    headers: {
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${access_token}`,
-      'Content-Type': 'application/json'
-    }
+    ctx: {
+      userId,
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${access_token}`,
+        'Content-Type': 'application/json'
+      }
+    },
+    raison: null
   }
 }
 
@@ -281,6 +309,42 @@ function dedoublonnerParTexte(liste) {
   )
 }
 
+// Point de passage unique de tous les appels à questions_vues : garantit que
+// chaque échec porte son opération, et que le corps PostgREST est capturé sur
+// l'erreur (destination log) sans jamais transiter par un message d'exception
+// susceptible d'être renvoyé au client.
+async function appelVues(operation, url, options = {}) {
+  let r
+  try {
+    r = await fetch(url, options)
+  } catch (e) {
+    e.operation = operation
+    throw e
+  }
+  if (!r.ok) {
+    const e = new Error(`${operation} ${r.status}`)
+    e.operation = operation
+    e.statut = r.status
+    e.corps = await r.text()
+    throw e
+  }
+  return r
+}
+
+function noterEchec(diag, e) {
+  diag.echec = e.operation || 'inconnu'
+  if (typeof e.statut === 'number') diag.statut = e.statut
+}
+
+function journaliserEchec(contexte, e) {
+  console.log(
+    `[questions_vues] ${contexte} —`,
+    e.operation || 'inconnu',
+    typeof e.statut === 'number' ? `HTTP ${e.statut}` : '',
+    e.corps || e.message
+  )
+}
+
 // Le filtre user_id est redondant avec la RLS : c'est une défense en
 // profondeur. Il borne la lecture et surtout le DELETE au seul élève même
 // si la policy venait à sauter, ou si ces requêtes passaient un jour par la
@@ -289,27 +353,28 @@ function dedoublonnerParTexte(liste) {
 // sous-thème/difficulté (quelques dizaines d'ids) — pas de risque d'URL trop longue.
 async function lireVues(ctx, ids) {
   const url = `${SUPABASE_URL}/rest/v1/questions_vues?user_id=eq.${ctx.userId}&source=eq.banque&question_id=in.(${ids.join(',')})&select=question_id`
-  const r = await fetch(url, { headers: ctx.headers })
-  if (!r.ok) throw new Error(`lecture ${r.status} ${await r.text()}`)
+  const r = await appelVues('lecture', url, { headers: ctx.headers })
   const data = await r.json()
-  if (!Array.isArray(data)) throw new Error('lecture : réponse inattendue')
+  if (!Array.isArray(data)) {
+    const e = new Error('réponse inattendue')
+    e.operation = 'lecture'
+    throw e
+  }
   return new Set(data.map(v => v.question_id))
 }
 
 async function purgerVues(ctx, ids) {
   const url = `${SUPABASE_URL}/rest/v1/questions_vues?user_id=eq.${ctx.userId}&source=eq.banque&question_id=in.(${ids.join(',')})`
-  const r = await fetch(url, { method: 'DELETE', headers: { ...ctx.headers, 'Prefer': 'return=minimal' } })
-  if (!r.ok) throw new Error(`purge ${r.status} ${await r.text()}`)
+  await appelVues('purge', url, { method: 'DELETE', headers: { ...ctx.headers, 'Prefer': 'return=minimal' } })
 }
 
 async function marquerVues(ctx, ids) {
   if (ids.length === 0) return
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/questions_vues`, {
+  await appelVues('marquage', `${SUPABASE_URL}/rest/v1/questions_vues`, {
     method: 'POST',
     headers: { ...ctx.headers, 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
     body: JSON.stringify(ids.map(id => ({ user_id: ctx.userId, question_id: id, source: 'banque' })))
   })
-  if (!r.ok) throw new Error(`marquage ${r.status} ${await r.text()}`)
 }
 
 async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
@@ -326,41 +391,48 @@ async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
     const data = await res.json()
     if (!Array.isArray(data) || data.length === 0) return { questions: [], diag }
 
-    // ── Filtrage des questions déjà vues + reboucle ──────────────
-    let candidats = dedoublonnerParTexte(data)
-    const ctx = contexteEleve(access_token)
+    const uniques = dedoublonnerParTexte(data)
+    let candidats = uniques
+    let ctx = null
 
-    if (ctx) {
-      try {
-        const idsPool = data.map(q => q.id)
-        const vues = await lireVues(ctx, idsPool)
-        const nonVues = dedoublonnerParTexte(data.filter(q => !vues.has(q.id)))
+    if (uniques.length <= SEUIL_REBOUCLE) {
+      // Court-circuit : le tirage sert le pool entier quoi qu'il arrive.
+      // Filtrer n'écarterait rien, et purger puis re-marquer rejouerait un
+      // DELETE + INSERT sans changement d'état à chaque quiz.
+      diag.raison = 'pool_insuffisant'
+      diag.uniques = uniques.length
+    } else {
+      const contexte = contexteEleve(access_token)
+      ctx = contexte.ctx
+      if (!ctx) {
+        diag.raison = contexte.raison
+      } else {
+        try {
+          const idsPool = data.map(q => q.id)
+          const vues = await lireVues(ctx, idsPool)
+          const nonVues = dedoublonnerParTexte(data.filter(q => !vues.has(q.id)))
 
-        if (nonVues.length >= SEUIL_REBOUCLE) {
-          candidats = nonVues
-          diag.actif = true
-          diag.raison = 'filtre'
-          diag.non_vues = nonVues.length
-        } else if (vues.size > 0) {
-          // Épuisement : on repart du pool complet pour ce sous-thème.
-          // Purge AVANT tirage et marquage, sinon on effacerait ce qu'on sert.
-          await purgerVues(ctx, idsPool)
-          diag.actif = true
-          diag.raison = 'reboucle'
-          diag.non_vues = nonVues.length
-        } else {
-          // Moins de 5 énoncés distincts en banque : rien à purger,
-          // la répétition est inévitable tant que le pool n'est pas étoffé.
-          candidats = nonVues
-          diag.actif = true
-          diag.raison = 'pool_insuffisant'
-          diag.non_vues = nonVues.length
+          if (nonVues.length >= SEUIL_REBOUCLE) {
+            candidats = nonVues
+            diag.actif = true
+            diag.raison = 'filtre'
+            diag.non_vues = nonVues.length
+          } else {
+            // vues.size > 0 est garanti ici : le pool compte plus de
+            // SEUIL_REBOUCLE énoncés distincts et il en reste moins que ça.
+            // Purge AVANT tirage et marquage, sinon on effacerait ce qu'on sert.
+            await purgerVues(ctx, idsPool)
+            diag.actif = true
+            diag.raison = 'reboucle'
+            diag.non_vues = nonVues.length
+          }
+        } catch (e) {
+          // Tirage non filtré plutôt qu'un quiz cassé — mais tracé des deux côtés.
+          diag.actif = false
+          diag.raison = 'non_filtre'
+          noterEchec(diag, e)
+          journaliserEchec('filtrage impossible, tirage non filtré', e)
         }
-      } catch (e) {
-        // Tirage non filtré plutôt qu'un quiz cassé — mais tracé des deux côtés.
-        diag.raison = 'erreur'
-        diag.erreur = e.message
-        console.log('[questions_vues] filtrage impossible, tirage non filtré :', e.message)
       }
     }
 
@@ -374,9 +446,10 @@ async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
         await marquerVues(ctx, idsAMarquer)
         diag.marquees = idsAMarquer.length
       } catch (e) {
-        diag.raison = 'erreur_marquage'
-        diag.erreur = e.message
-        console.log('[questions_vues] marquage impossible :', e.message)
+        // `raison` garde l'état du tirage : une reboucle réussie suivie d'un
+        // marquage refusé doit rester lisible comme telle.
+        noterEchec(diag, e)
+        journaliserEchec('marquage impossible', e)
       }
     }
 
@@ -399,7 +472,7 @@ async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
     return { questions, diag }
   } catch(e) {
     console.log('Erreur Supabase:', e.message)
-    return { questions: [], diag: { actif: false, raison: 'erreur', erreur: e.message } }
+    return { questions: [], diag: { actif: false, raison: 'non_filtre', echec: 'inconnu' } }
   }
 }
 
