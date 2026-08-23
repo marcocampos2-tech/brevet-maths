@@ -1,3 +1,5 @@
+import { memoireQuestionsVues, contexteEleve, noterEchec, journaliserEchec } from '../lib/questions-vues.js'
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST')
@@ -223,8 +225,12 @@ Réponds UNIQUEMENT avec un tableau JSON de 5 chiffres : [0, 2, 1, 3, 0]`
 }
 
 // ═══════════════════════════════════════════════════════════════
-// BANQUE + MÉMOIRE DES QUESTIONS VUES
+// BANQUE + MÉMOIRE DES QUESTIONS VUES (source = 'banque')
 // ═══════════════════════════════════════════════════════════════
+// Socle commun (contexte élève, lecture, purge, marquage, étanchéité des
+// erreurs) dans lib/questions-vues.js. Ce qui suit décrit ce qui est propre
+// au quiz normal.
+//
 // Le pool est filtré des questions déjà servies à cet élève (table
 // questions_vues, source='banque'). Quand il reste moins de SEUIL_REBOUCLE
 // énoncés non vus, les vues de CE sous-thème/difficulté sont purgées et le
@@ -260,46 +266,9 @@ Réponds UNIQUEMENT avec un tableau JSON de 5 chiffres : [0, 2, 1, 3, 0]`
 
 const SEUIL_REBOUCLE = 5
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// Lit le `sub` du jeton sans en vérifier la signature : l'autorité reste
-// PostgREST, qui rejette un jeton invalide (401) ou un user_id qui ne
-// correspond pas au porteur (violation WITH CHECK).
-function lireSubJeton(access_token) {
-  try {
-    const payload = access_token.split('.')[1]
-    if (!payload) return null
-    const json = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'))
-    return json.sub || null
-  } catch (e) {
-    return null
-  }
-}
-
-// Retourne { ctx, raison } : ctx non nul si le filtrage peut opérer, sinon
-// raison dit pourquoi il ne peut pas.
-function contexteEleve(access_token) {
-  if (!access_token || typeof access_token !== 'string') return { ctx: null, raison: 'anonyme' }
-  // Testé après le jeton, pour que le log ne se déclenche que sur une requête
-  // où le filtrage aurait réellement dû tourner.
-  if (!SUPABASE_ANON_KEY) {
-    console.log('[questions_vues] NEXT_PUBLIC_SUPABASE_ANON_KEY absente — filtrage désactivé')
-    return { ctx: null, raison: 'config_absente' }
-  }
-  const userId = lireSubJeton(access_token)
-  if (!userId) return { ctx: null, raison: 'anonyme' }
-  return {
-    ctx: {
-      userId,
-      headers: {
-        'apikey': SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${access_token}`,
-        'Content-Type': 'application/json'
-      }
-    },
-    raison: null
-  }
-}
+// Source liée une seule fois pour tout le fichier — voir lib/questions-vues.js.
+const vues = memoireQuestionsVues('banque')
 
 const texteNormalise = (q) => (q.question || '').trim()
 
@@ -307,74 +276,6 @@ function dedoublonnerParTexte(liste) {
   return liste.filter((q, idx, arr) =>
     arr.findIndex(x => texteNormalise(x) === texteNormalise(q)) === idx
   )
-}
-
-// Point de passage unique de tous les appels à questions_vues : garantit que
-// chaque échec porte son opération, et que le corps PostgREST est capturé sur
-// l'erreur (destination log) sans jamais transiter par un message d'exception
-// susceptible d'être renvoyé au client.
-async function appelVues(operation, url, options = {}) {
-  let r
-  try {
-    r = await fetch(url, options)
-  } catch (e) {
-    e.operation = operation
-    throw e
-  }
-  if (!r.ok) {
-    const e = new Error(`${operation} ${r.status}`)
-    e.operation = operation
-    e.statut = r.status
-    e.corps = await r.text()
-    throw e
-  }
-  return r
-}
-
-function noterEchec(diag, e) {
-  diag.echec = e.operation || 'inconnu'
-  if (typeof e.statut === 'number') diag.statut = e.statut
-}
-
-function journaliserEchec(contexte, e) {
-  console.log(
-    `[questions_vues] ${contexte} —`,
-    e.operation || 'inconnu',
-    typeof e.statut === 'number' ? `HTTP ${e.statut}` : '',
-    e.corps || e.message
-  )
-}
-
-// Le filtre user_id est redondant avec la RLS : c'est une défense en
-// profondeur. Il borne la lecture et surtout le DELETE au seul élève même
-// si la policy venait à sauter, ou si ces requêtes passaient un jour par la
-// clé service (qui contourne la RLS).
-// Longueur du filtre in.() bornée par le pool d'un seul couple
-// sous-thème/difficulté (quelques dizaines d'ids) — pas de risque d'URL trop longue.
-async function lireVues(ctx, ids) {
-  const url = `${SUPABASE_URL}/rest/v1/questions_vues?user_id=eq.${ctx.userId}&source=eq.banque&question_id=in.(${ids.join(',')})&select=question_id`
-  const r = await appelVues('lecture', url, { headers: ctx.headers })
-  const data = await r.json()
-  if (!Array.isArray(data)) {
-    const e = new Error('réponse inattendue')
-    e.operation = 'lecture'
-    throw e
-  }
-  return new Set(data.map(v => v.question_id))
-}
-
-async function purgerVues(ctx, ids) {
-  const url = `${SUPABASE_URL}/rest/v1/questions_vues?user_id=eq.${ctx.userId}&source=eq.banque&question_id=in.(${ids.join(',')})`
-  await appelVues('purge', url, { method: 'DELETE', headers: { ...ctx.headers, 'Prefer': 'return=minimal' } })
-}
-
-async function marquerVues(ctx, ids) {
-  if (ids.length === 0) return
-  await appelVues('marquage', `${SUPABASE_URL}/rest/v1/questions_vues`, {
-    method: 'POST',
-    headers: { ...ctx.headers, 'Prefer': 'resolution=ignore-duplicates,return=minimal' },
-    body: JSON.stringify(ids.map(id => ({ user_id: ctx.userId, question_id: id, source: 'banque' })))
-  })
 }
 
 async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
@@ -409,8 +310,8 @@ async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
       } else {
         try {
           const idsPool = data.map(q => q.id)
-          const vues = await lireVues(ctx, idsPool)
-          const nonVues = dedoublonnerParTexte(data.filter(q => !vues.has(q.id)))
+          const dejaVues = await vues.lire(ctx, idsPool)
+          const nonVues = dedoublonnerParTexte(data.filter(q => !dejaVues.has(q.id)))
 
           if (nonVues.length >= SEUIL_REBOUCLE) {
             candidats = nonVues
@@ -421,7 +322,7 @@ async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
             // vues.size > 0 est garanti ici : le pool compte plus de
             // SEUIL_REBOUCLE énoncés distincts et il en reste moins que ça.
             // Purge AVANT tirage et marquage, sinon on effacerait ce qu'on sert.
-            await purgerVues(ctx, idsPool)
+            await vues.purger(ctx, idsPool)
             diag.actif = true
             diag.raison = 'reboucle'
             diag.non_vues = nonVues.length
@@ -443,7 +344,7 @@ async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
       try {
         const textesServis = new Set(shuffled.map(texteNormalise))
         const idsAMarquer = data.filter(q => textesServis.has(texteNormalise(q))).map(q => q.id)
-        await marquerVues(ctx, idsAMarquer)
+        await vues.marquer(ctx, idsAMarquer)
         diag.marquees = idsAMarquer.length
       } catch (e) {
         // `raison` garde l'état du tirage : une reboucle réussie suivie d'un
