@@ -583,10 +583,15 @@ async function generer() {
   arreterChrono()
   document.getElementById('quiz-area').innerHTML='<div class="loader">⏳ Chargement des questions…</div>'
   try{
-    const res=await fetch('/api/generer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme,sous_theme:sousTheme,difficulte:diff})})
+    // Jeton de l'élève : sert côté API à filtrer les questions déjà vues
+    // (questions_vues, sous RLS). Absent ou expiré => tirage non filtré.
+    const {data:sess}=await sb.auth.getSession()
+    const accessToken=sess?.session?.access_token||null
+    const res=await fetch('/api/generer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({theme,sous_theme:sousTheme,difficulte:diff,access_token:accessToken})})
     const data=await res.json()
     if(data.error)throw new Error(data.error)
     questions=data.questions;sourceQuestions=data.source||'ia'
+    if(data.vues)console.log('[questions_vues]',data.vues)
     questions.forEach(function(q,i){const type=detecterTypeGraphique(q.tableau);if(type){modeAffichage[i]=Math.random()<0.5?'tableau':'graphique'}else{modeAffichage[i]='tableau'}})
     bloquerConfig();demarrerChrono();renderQuiz()
     setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
