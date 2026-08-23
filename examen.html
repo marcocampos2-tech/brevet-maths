@@ -321,13 +321,19 @@ async function renderIntro() {
 async function demarrerExamen() {
   document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de ton examen…</div>'
   try {
+    // Jeton de l'élève : sert côté API à filtrer les questions déjà vues
+    // (questions_vues, source='examen', sous RLS). Absent ou expiré => tirage
+    // non filtré, l'examen part quand même.
+    const {data:sess}=await sb.auth.getSession()
+    const accessToken=sess?.session?.access_token||null
     const res = await fetch('/api/examen', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'demarrer' })
+      body: JSON.stringify({ action: 'demarrer', access_token: accessToken })
     })
     const data = await res.json()
     if (!data.success) throw new Error(data.error || 'Erreur de chargement')
+    if (data.vues) console.log('[questions_vues]', data.vues)
 
     questions = data.questions
     answers={};saved=false;examEnCours=true;correction={};resultatServeur=null
