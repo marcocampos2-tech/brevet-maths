@@ -173,6 +173,70 @@ Trois points masquent volontairement tout ce qui suppose un accès payant pendan
 * **Détail complet du récap journalier** (`api/email.js`, `recap-journalier-user`) — constat 16/08/2026 (test réel) : un compte `plan_actif=false` recevait la version générique de l'email ("le détail est disponible avec l'offre Accompagné") pendant la gratuité, alors que rien ne doit suggérer une offre payante à ce stade. Fix : `detailComplet = peutRecevoirEmailDetaille({ plan_actif }) || enPeriodeGratuite()` — tout le monde reçoit l'email détaillé pendant le lancement, `peutRecevoirEmailDetaille()` elle-même reste inchangée (pas de risque de régression une fois la gratuité terminée).
 * **`enPeriodeGratuite()`** — fonction partagée par les trois fixes ci-dessus, exportée depuis `lib/gating.js` avec `FIN_OFFRE_LANCEMENT`. **Auto-réactivation des trois éléments le 01/12/2026 sans déploiement** — vérifier à cette date que Stripe est réellement opérationnel (SIRET obtenu) avant que les trois ne réapparaissent/se re-restreignent. Décision actée le 16/08/2026 : date seule, pas de flag manuel supplémentaire (un rappel agenda mi-novembre existe déjà pour la session de bascule ; un second mécanisme à ne pas oublier augmenterait le risque plutôt que de le réduire).
 
+## CHANTIER — Mémoire des questions vues (terminé)
+
+Quiz normal PR #24, durcissement du diagnostic PR #25, examen blanc PR #26, extraction du socle commun dans la PR qui a ajouté cette section.
+
+Avant ce chantier, rien n'empêchait un élève de revoir indéfiniment les mêmes questions : ni mémoire des questions servies, ni filtre au tirage, sur **aucun** des deux parcours.
+
+### Le mécanisme
+
+Table `questions_vues` (`user_id`, `question_id`, `source`, contrainte unique sur le triplet, RLS `auth.uid() = user_id`). `source` vaut `'banque'` (quiz normal) ou `'examen'` (examen blanc) — les deux tables de questions partagent le même espace d'ids, c'est cette colonne qui les sépare.
+
+Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge, marquage, étanchéité des erreurs. L'accès passe par `memoireQuestionsVues('banque' | 'examen')`, qui lie la source une fois pour tout le fichier appelant — une source erronée répétée aux points d'appel enverrait un `DELETE` sur les questions vues de l'autre parcours, sans rien signaler.
+
+**Ordre imposé partout : purge → tirage → marquage.** Purger après le marquage effacerait les questions qu'on vient de servir. Une session en cours n'est jamais affectée : le client garde ses questions en mémoire et ne relit pas la base pendant le quiz ou l'examen.
+
+**Le marquage a lieu au tirage, pas à la correction.** C'est ce qui rend le test rapide : démarrer, noter les ids en console, abandonner, recommencer et vérifier le non-recouvrement. `api/quiz-resultat.js` n'a délibérément aucun rôle ici — il ne reçoit pas les ids des questions, et il n'est pas appelé de façon fiable en cas d'abandon (`beforeunload` est best-effort).
+
+### Les deux seuils — ne pas les aligner
+
+| Parcours | Seuil | Pourquoi |
+|---|---|---|
+| `api/generer.js` | **5** | Taille d'un tirage de quiz |
+| `api/examen.js` | **6** | Le découpage en tiers ne rend 5 questions qu'à partir d'un pool de 6 (à 5, `floor(5/3)=1` donne 1+1+1=3) |
+
+**Le 6 de l'examen n'est pas un réglage de confort.** Le filtrage fait rétrécir le pool à chaque examen ; avec un seuil à 5, on aurait fini par tirer dans un pool filtré de 5 → 3 questions par partie → **un examen à 17 questions noté sur 20**. Et `20` est codé en dur à une douzaine d'endroits de `examen.html` (`total:20` des deux `insert` `examens_blancs`, `pct: nbOk/20` du payload email, tous les libellés). L'examen serait parti au parent avec un score faux, sans aucune erreur visible. **Ne pas ramener ce seuil à 5 « par cohérence » avec `generer.js` : ce sont deux contraintes différentes.**
+
+### Comportement
+
+* **Quiz normal** — filtrage sur la combinaison thème/sous-thème/difficulté. Purge bornée à cette seule combinaison, les autres sous-thèmes intacts. Un pool de 5 énoncés distincts ou moins court-circuite tout le mécanisme (le tirage sert le pool entier de toute façon).
+* **Examen blanc** — seuil et purge **par partie** : la purge ne porte que sur les ids des parties en reboucle. Trois requêtes au maximum quel que soit le nombre de parties concernées. Une partie de moins de 6 questions est laissée entièrement de côté : ni lue, ni purgée, ni marquée.
+* **Chiffres de référence** : 45 questions par partie → **8 examens sans recouvrement, reboucle au 9ᵉ** (pas 9 : après 8 examens il reste 5 non-vues par partie, sous le seuil de 6).
+
+### Le champ `vues` de la réponse — vocabulaire clos
+
+| Champ | Valeurs |
+|---|---|
+| `raison` | `filtre` · `reboucle` · `pool_insuffisant` · `non_filtre` · `anonyme` · `config_absente` — et `applique` côté examen, où le détail est dans `parties` |
+| `parties` | examen seulement, par partie : `filtre` · `reboucle` · `pool_insuffisant` |
+| `echec` | `lecture` · `purge` · `marquage` · `inconnu` — **n'écrase jamais `raison`** |
+| `statut` | code HTTP nu, absent si l'échec n'est pas une réponse HTTP |
+
+**Aucune chaîne provenant de PostgREST ou de `fetch` ne part au client** : un corps d'erreur PostgREST révèle des noms de contraintes, de colonnes et de policies. Le détail complet ne va que dans le log Vercel, préfixe `[questions_vues]`.
+
+### Trois choix délibérés — ne pas « corriger » lors d'un futur audit
+
+* **Le filtre `user_id` dans les URL est redondant avec la RLS.** C'est une défense en profondeur voulue : il borne la lecture et surtout le `DELETE` même si la policy sautait, ou si ces requêtes passaient un jour par la clé service (qui contourne la RLS).
+* **Le fail-open est assumé.** Toute panne du mécanisme laisse le quiz ou l'examen partir avec un tirage non filtré. Un mécanisme de confort ne doit pas empêcher un élève de travailler. Il n'est jamais silencieux pour autant : log Vercel + champ `vues`.
+* **Une partie sous le seuil n'est pas marquée.** Elle n'est ni lue ni purgée, donc la marquer créerait des lignes que rien ne viendrait jamais nettoyer.
+
+### Configuration
+
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` doit être posée sur les **trois scopes Vercel** (Production, Preview, Development). Il n'y a plus de repli en dur : son absence donne `raison: 'config_absente'` et un log explicite, plutôt qu'un fonctionnement apparent masquant une mauvaise configuration.
+
+`lib/` ne compte pas dans la limite de 12 fonctions serverless du plan Hobby — Vercel ne compte que les fichiers sous `api/`, qui sont exactement 12.
+
+### Tests
+
+**`node lib/questions-vues.manual-test.js`** — 107 assertions, faux Supabase en mémoire, les deux handlers exercés de bout en bout. Aucune dépendance, aucun accès réseau. À relancer après toute modification du mécanisme. Le fichier explique pourquoi il recopie les sources en `.mjs` dans un répertoire temporaire, et pourquoi il ne faut **pas** ajouter `"type": "module"` à `package.json` pour éviter ce détour.
+
+### Reste ouvert
+
+* **Découpage en tiers inopérant** (`api/examen.js`) : `acc`/`std`/`exp` sont découpés *après* `sort(() => Math.random() - 0.5)`, la stratification par difficulté ne produit rien. C'est aussi ce qui impose le seuil à 6 — le corriger rendrait le 9ᵉ examen sans recouvrement. À traiter avec le vrai sujet derrière : stratification réelle par difficulté, ou tirage aléatoire assumé.
+* **Pas de dédoublonnage par énoncé sur `examen_questions`**, contrairement à `questions_banque`. Si deux lignes portent le même texte sous des ids différents, marquer l'une ne protège pas de l'autre.
+* **`sort(() => Math.random() - 0.5)`** est un mélange biaisé, motif présent dans tout le dépôt.
+
 ## Note — Gating du bilan manuel (`api/email.js`, type `bilan`)
 
 **`bilan` (bouton manuel "Envoyer bilan parents", `prof.html`) — gating volontairement absent.** Contrairement à `recap-journalier-user`, ce flux n'applique pas `peutRecevoirEmailDetaille`. C'est un choix commercial assumé : ce bouton sert au prof à envoyer manuellement un échantillon détaillé (sous-thème, Acquis/À revoir, tout l'historique de l'élève) à un parent en offre Libre, dans une logique de conversion vers l'offre Accompagné. Ne pas "corriger" en ajoutant le gating lors d'un futur audit.
