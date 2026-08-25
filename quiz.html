@@ -643,15 +643,16 @@ function renderGraphique(tableau,questionIndex){
 
 // En mode graphique, l'enonce doit nommer le support reellement affiche : « diagramme » pour des barres,
 // « graphique » pour une fonction. Substitution a l'affichage uniquement — le texte en base est intact.
-// Seules les formules ci-dessous sont touchees. Le mot « tableau » isole n'est JAMAIS remplace : d'autres
-// sous-themes (Proportionnalite, Conversions) l'emploient comme objet mathematique, pas comme support.
+// Seules les quatre formules « le/du tableau ci-dessous/suivant » sont touchees. Le mot « tableau » isole
+// n'est JAMAIS remplace : d'autres sous-themes (Proportionnalite, Conversions) l'emploient comme objet
+// mathematique, pas comme support d'affichage.
+// Couvert par lib/quiz-enonce.manual-test.js.
 function adapterEnonce(q,i){
   var texte=(q&&q.q)||''
   if((modeAffichage[i]||'tableau')!=='graphique')return texte
   var type=detecterTypeGraphique(q.tableau);if(!type)return texte
   var mot=type==='barres'?'diagramme':'graphique'
-  return texte.replace(/\b(le|du)(\s+)tableau(\s+)(ci-dessous)\b/gi,function(m,det,e1,e2,suf){return det+e1+mot+e2+suf})
-              .replace(/\b(le)(\s+)tableau(\s+)(suivant)\b/gi,function(m,det,e1,e2,suf){return det+e1+mot+e2+suf})
+  return texte.replace(/\b(le|du)(\s+)tableau(\s+)(ci-dessous|suivant)\b/gi,function(m,det,e1,e2,suf){return det+e1+mot+e2+suf})
 }
 
 function renderVisuel(q,i){if(!q.tableau)return '';var mode=modeAffichage[i]||'tableau';if(mode==='graphique')return renderGraphique(q.tableau,i);return renderTableau(q.tableau)}
