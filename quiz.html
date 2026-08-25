@@ -622,6 +622,11 @@ function renderTableau(tableau){
   return '<table class="q-tableau"><tr>'+t.headers.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr>'+t.rows.map(function(row){return '<tr>'+row.map(function(cell){return '<td>'+cell+'</td>'}).join('')+'</tr>'}).join('')+'</table>'
 }
 
+// « ? » est une convention de la banque : la donnee que l'eleve doit justement retrouver (frequente en
+// Statistiques et Probabilites). C'est une valeur absente VOULUE, pas un incident — elle ne doit jamais
+// declencher d'avertissement, sous peine de rendre celui-ci inaudible le jour d'un vrai probleme.
+function estCaseATrouver(v){return String(v===null||v===undefined?'':v).replace(/[\s\u00A0\u202F]/g,'')==='?'}
+
 // Les valeurs d'un tableau arrivent en texte, dans les ecritures francaises et typographiques que
 // parseFloat ne sait pas lire : signe moins U+2212 « − » (et non le tiret ASCII), virgule decimale,
 // espace insecable en separateur de milliers.
@@ -645,11 +650,14 @@ function renderGraphique(tableau,questionIndex){
   if(!t||!t.headers||!t.rows||t.rows.length===0)return ''
   var type=detecterTypeGraphique(t);if(!type)return renderTableau(tableau)
   var chartId='chart-q-'+questionIndex
-  var labels=t.headers.slice(1);var values=t.rows[0].slice(1).map(nombreTableau)
-  // Une valeur illisible laisse un trou dans la courbe plutot qu'un faux point ; si RIEN n'est
-  // convertible, le graphique n'aurait aucun sens : on retombe sur le tableau, qui montre le vrai texte.
+  var labels=t.headers.slice(1);var brutes=t.rows[0].slice(1);var values=brutes.map(nombreTableau)
+  // Une valeur illisible laisse un trou dans la courbe plutot qu'un faux point. Les deux comptages
+  // ci-dessous sont volontairement distincts : le repli vers le tableau compte TOUTES les valeurs
+  // absentes — un tableau entierement fait de « ? » n'a rien a tracer — la ou l'avertissement ne
+  // compte que les anormales, « ? » exclu.
   var illisibles=values.filter(function(n){return n===null}).length
-  if(illisibles)console.warn('[graphique] '+illisibles+'/'+values.length+' valeur(s) non convertible(s) question '+questionIndex,t.rows[0].slice(1))
+  var anormales=values.filter(function(n,k){return n===null&&!estCaseATrouver(brutes[k])}).length
+  if(anormales)console.warn('[graphique] '+anormales+'/'+values.length+' valeur(s) non convertible(s) question '+questionIndex,brutes)
   if(illisibles===values.length)return renderTableau(tableau)
   var isDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches
   var textColor=isDark?'#ccc':'#555';var gridColor=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)'
