@@ -245,6 +245,12 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 
 **Une fois une PR mergée, ouvrir une nouvelle branche pour tout travail supplémentaire — ne jamais continuer à pousser sur une branche dont la PR est déjà fusionnée.** Incident constaté le 16/08/2026 : la branche `claude/academika-offers-pricing-9o9bjx` a reçu 6 commits après le merge de sa PR #21 ; seuls les 4 premiers ont été récupérés dans `main` par la suite, les 2 derniers (`992e5a1` — court-circuit `detailComplet` pendant la gratuité — et `628139d` — documentation associée dans CLAUDE.md) sont restés orphelins, jamais mergés, jusqu'à leur redécouverte fortuite ce même jour. Rien n'a été perdu (les commits existent toujours, `git show <hash>` les retrouve), mais le travail n'est jamais arrivé en production et sa disparition n'a été remarquée qu'après un test réel en boîte mail.
 
+**Ne jamais merger — c'est Marco qui merge, toujours.** Ne pas le proposer non plus : la décision de fusionner lui appartient, elle n'a pas à être remise sur la table à chaque PR.
+
+**Toujours ouvrir la PR après avoir poussé une branche.** Sans PR, le travail reste invisible et on croit à tort le correctif déployé alors qu'il dort sur une branche.
+
+**Ne jamais pousser directement sur `main`.**
+
 ## Rappel méthodologique
 
 Ne jamais exécuter de SQL, modifier RLS, ou toucher aux tables ci-dessus sans présenter d'abord : ce qui va changer, pourquoi, le risque principal, et un plan de test précis — puis attendre validation explicite. Tester une table/un changement à la fois, jamais un lot entier d'un coup. En cas de doute sur un usage client (une table lue/écrite directement depuis un fichier HTML), vérifier dans le code avant de formuler une hypothèse — ne pas supposer.
