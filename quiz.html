@@ -602,6 +602,8 @@ function detecterTypeGraphique(tableau){
   if(!tableau)return null
   var t=tableau;if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return null}}
   if(!t||!t.headers||!t.rows||t.rows.length===0)return null
+  // renderGraphique ne trace que t.rows[0] : au-delà d'une ligne, les suivantes seraient perdues silencieusement. On reste en tableau.
+  if(t.rows.length>1)return null
   var premierHeader=(t.headers[0]||'').toLowerCase()
   var premiereRow=(t.rows[0][0]||'').toLowerCase()
   if(premierHeader==='x'&&premiereRow.includes('f(x)'))return 'fonction'
