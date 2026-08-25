@@ -606,7 +606,10 @@ function detecterTypeGraphique(tableau){
   if(t.rows.length>1)return null
   var premierHeader=(t.headers[0]||'').toLowerCase()
   var premiereRow=(t.rows[0][0]||'').toLowerCase()
-  if(premierHeader==='x'&&premiereRow.includes('f(x)'))return 'fonction'
+  // Une lettre unique suivie de (x) — f(x), g(x), h(x)… : le nom de la fonction ne doit pas decider du
+  // mode d'affichage. Motif ancre, espaces retires : un libelle quelconque a parentheses (« prix (€) »)
+  // n'est pas une fonction.
+  if(premierHeader==='x'&&/^[a-z]\(x\)$/.test(premiereRow.replace(/\s+/g,'')))return 'fonction'
   if(premiereRow==='effectif')return 'barres'
   if(premiereRow==='fréquence'||premiereRow==='frequence')return 'barres'
   return null
