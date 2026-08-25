@@ -641,6 +641,20 @@ function renderGraphique(tableau,questionIndex){
   return html
 }
 
+// En mode graphique, l'enonce doit nommer le support reellement affiche : « diagramme » pour des barres,
+// « graphique » pour une fonction. Substitution a l'affichage uniquement — le texte en base est intact.
+// Seules les quatre formules « le/du tableau ci-dessous/suivant » sont touchees. Le mot « tableau » isole
+// n'est JAMAIS remplace : d'autres sous-themes (Proportionnalite, Conversions) l'emploient comme objet
+// mathematique, pas comme support d'affichage.
+// Couvert par lib/quiz-enonce.manual-test.js.
+function adapterEnonce(q,i){
+  var texte=(q&&q.q)||''
+  if((modeAffichage[i]||'tableau')!=='graphique')return texte
+  var type=detecterTypeGraphique(q.tableau);if(!type)return texte
+  var mot=type==='barres'?'diagramme':'graphique'
+  return texte.replace(/\b(le|du)(\s+)tableau(\s+)(ci-dessous|suivant)\b/gi,function(m,det,e1,e2,suf){return det+e1+mot+e2+suf})
+}
+
 function renderVisuel(q,i){if(!q.tableau)return '';var mode=modeAffichage[i]||'tableau';if(mode==='graphique')return renderGraphique(q.tableau,i);return renderTableau(q.tableau)}
 
 function renderFigure(fig){
@@ -707,7 +721,7 @@ function renderQuiz() {
   const toutFini=nbDone===questions.length&&questions.length>0
   if(toutFini){
     let html='';const letters=['A','B','C','D'];const i=questions.length-1;const q=questions[i];const sel=answers[i],estAucune=submitted[i]==='aucune'
-    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
+    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${adapterEnonce(q,i)}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
     q.opts.forEach((opt,j)=>{let cls='option';if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong';html+=`<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`})
     if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`}
     else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`}
@@ -719,7 +733,7 @@ function renderQuiz() {
   const letters=['A','B','C','D']
   questions.forEach((q,i)=>{
     const sel=answers[i],done=submitted[i]!==undefined,estAucune=submitted[i]==='aucune'
-    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${q.q}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
+    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${adapterEnonce(q,i)}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
     q.opts.forEach((opt,j)=>{let cls='option';if(done){if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong'}else if(j===sel)cls+=' selected';html+=`<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}><span class="letter">${letters[j]}</span>${opt}</div>`})
     if(!done){const aucuneSel=sel==='aucune';html+=`<div class="option ${aucuneSel?'aucune-selected':''}" onclick="pick(${i},'aucune')" style="margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`}
     else if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`}
@@ -813,7 +827,7 @@ async function renderResultats() {
   const letters = ['A','B','C','D']
   questions.forEach((q, i) => {
     const estAucune = submitted[i] === 'aucune'
-    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge" style="${submitted[i]==='correct'?'background:#EAF6EF;color:#1f7a45':'background:var(--bordeaux-light);color:var(--bordeaux)'}">${submitted[i]==='correct'?'✅ Correct':'❌ Raté'}</span></div><p class="q-text">${q.q}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
+    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge" style="${submitted[i]==='correct'?'background:#EAF6EF;color:#1f7a45':'background:var(--bordeaux-light);color:var(--bordeaux)'}">${submitted[i]==='correct'?'✅ Correct':'❌ Raté'}</span></div><p class="q-text">${adapterEnonce(q,i)}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
     q.opts.forEach((opt, j) => {
       let cls = 'option'
       if(j === q.answer) cls += ' correct'
