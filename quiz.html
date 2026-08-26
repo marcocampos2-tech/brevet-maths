@@ -757,6 +757,8 @@ function renderFigure(fig){
       '<text class="fig-lb" x="'+A.x+'" y="'+(A.y-7)+'" text-anchor="middle">A</text>'+
       '<text class="fig-lb" x="'+(B.x-7)+'" y="'+(B.y+4)+'" text-anchor="end">B</text>'+
       '<text class="fig-lb" x="'+(C.x+7)+'" y="'+(C.y+4)+'" text-anchor="start">C</text>'+
+      '<text class="fig-lb" x="'+(D.x-7)+'" y="'+(D.y+4)+'" text-anchor="end">M</text>'+
+      '<text class="fig-lb" x="'+(E.x+7)+'" y="'+(E.y+4)+'" text-anchor="start">N</text>'+
       '</svg></div>'
   }
   if(f.type==='trapeze'){const u=f.unite||'cm',sc=Math.min((S-2*P)/f.grande_base,(S-2*P)/f.hauteur)*0.82;const GB=f.grande_base*sc,PB=f.petite_base*sc,H=f.hauteur*sc,ox=(S-GB)/2,oy=S-P,off=(GB-PB)/2;return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+GB)+','+oy+' '+(ox+GB-off)+','+(oy-H)+' '+(ox+off)+','+(oy-H)+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+f.grande_base+' '+u+'</text><text class="fig-lb" x="'+(S/2)+'" y="'+(oy-H-7)+'" text-anchor="middle">'+f.petite_base+' '+u+'</text></svg></div>'}
