@@ -659,6 +659,22 @@ function renderGraphique(tableau,questionIndex){
   var anormales=values.filter(function(n,k){return n===null&&!estCaseATrouver(brutes[k])}).length
   if(anormales)console.warn('[graphique] '+anormales+'/'+values.length+' valeur(s) non convertible(s) question '+questionIndex,brutes)
   if(illisibles===values.length)return renderTableau(tableau)
+  // Repere mathematique complet (25/08/2026) — le mode fonction passe en echelle x lineaire reelle,
+  // axes croises a l'origine (x=0), au lieu de l'ancienne echelle categorielle qui positionnait l'axe
+  // vertical au bord gauche du cadre (a x_min) plutot qu'a x=0. Constate en production sur un domaine
+  // commencant avant 0 (ex. x de -2 a 3). Les headers (les x) passent desormais par nombreTableau,
+  // exactement comme les y depuis PR #32 — jusqu'ici jamais nettoyes, angle mort revele par ce
+  // changement. Un x illisible fait sauter le point entier, pas de repli a une position par defaut.
+  var points=null
+  if(type==='fonction'){
+    var xValues=labels.map(nombreTableau)
+    points=[]
+    for(var k=0;k<xValues.length;k++){
+      if(xValues[k]===null)continue
+      points.push({x:xValues[k],y:values[k]})
+    }
+    if(points.length===0)return renderTableau(tableau)
+  }
   var isDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches
   var textColor=isDark?'#ccc':'#555';var gridColor=isDark?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)'
   var height=type==='fonction'?200:160
@@ -668,7 +684,7 @@ function renderGraphique(tableau,questionIndex){
     var canvas=document.getElementById(chartId);if(!canvas)return
     var config={}
     if(type==='barres'){config={type:'bar',data:{labels:labels,datasets:[{data:values,backgroundColor:'#1B2A4A',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:t.headers[0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor,stepSize:1},grid:{color:gridColor},beginAtZero:true}}}}}
-    else if(type==='fonction'){config={type:'line',data:{labels:labels,datasets:[{data:values,borderColor:'#1B2A4A',backgroundColor:'#1B2A4A',pointRadius:5,pointBackgroundColor:'#1B2A4A',tension:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:'x',color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}}}}}}
+    else if(type==='fonction'){config={type:'line',data:{datasets:[{data:points,borderColor:'#1B2A4A',backgroundColor:'#1B2A4A',pointRadius:5,pointBackgroundColor:'#1B2A4A',tension:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{type:'linear',position:{y:0},title:{display:true,text:'x',color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{position:{x:0},title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}}}}}}
     charts[chartId]=new Chart(canvas,config)
   },50)
   return html
