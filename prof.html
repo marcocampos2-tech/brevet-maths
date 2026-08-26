@@ -1012,6 +1012,30 @@ function renderFigureSVG(fig) {
     const aL=aVal?aVal+' '+u:'?',bL=bVal?bVal+' '+u:'?',cL=(f.c&&f.c!=='?')?f.c+' '+u:'?'
     return open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+14)+'" text-anchor="middle">'+bL+'</text><text class="fig-lb" x="'+(ox-7)+'" y="'+(oy-A/2+4)+'" text-anchor="end">'+aL+'</text><text class="fig-lb" x="'+(ox+B/2+12)+'" y="'+(oy-A/2-5)+'" text-anchor="start">'+cL+'</text></svg>'
   }
+  if (f.type === 'thales') {
+    const ox=S/2,oy=P+8
+    const abVal=f.ab==='?'?6:Number(f.ab)||6
+    const amVal=f.am==='?'?3:Number(f.am)||3
+    const ratio=Math.min(Math.max(amVal/abVal,0.2),0.8)
+    const H=S-2*P,W=H*0.75
+    const A={x:ox,y:oy},B={x:ox-W/2,y:oy+H},C={x:ox+W/2,y:oy+H}
+    const D={x:ox-(W/2)*ratio,y:oy+H*ratio},E={x:ox+(W/2)*ratio,y:oy+H*ratio}
+    return open+
+      '<polygon class="fig-sh" points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'"/>'+
+      '<line class="fig-lnb" x1="'+D.x+'" y1="'+D.y+'" x2="'+E.x+'" y2="'+E.y+'"/>'+
+      '<line class="fig-lng" x1="'+B.x+'" y1="'+B.y+'" x2="'+C.x+'" y2="'+C.y+'"/>'+
+      '<circle class="fig-dot" cx="'+A.x+'" cy="'+A.y+'" r="2.5"/>'+
+      '<circle class="fig-dot" cx="'+D.x+'" cy="'+D.y+'" r="2.5"/>'+
+      '<circle class="fig-dot" cx="'+B.x+'" cy="'+B.y+'" r="2.5"/>'+
+      '<circle class="fig-dotg" cx="'+E.x+'" cy="'+E.y+'" r="2.5"/>'+
+      '<circle class="fig-dotg" cx="'+C.x+'" cy="'+C.y+'" r="2.5"/>'+
+      '<text class="fig-lb" x="'+A.x+'" y="'+(A.y-7)+'" text-anchor="middle">A</text>'+
+      '<text class="fig-lb" x="'+(B.x-7)+'" y="'+(B.y+4)+'" text-anchor="end">B</text>'+
+      '<text class="fig-lb" x="'+(C.x+7)+'" y="'+(C.y+4)+'" text-anchor="start">C</text>'+
+      '<text class="fig-lb" x="'+(D.x-7)+'" y="'+(D.y+4)+'" text-anchor="end">M</text>'+
+      '<text class="fig-lb" x="'+(E.x+7)+'" y="'+(E.y+4)+'" text-anchor="start">N</text>'+
+      '</svg>'
+  }
   if (f.type === 'triangle') {
     const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85
     const W=f.base*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=S-P,ax=ox+W*0.38,ay=oy-H
