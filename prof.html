@@ -1039,11 +1039,94 @@ function renderTableauHTML(tableau) {
 }
 
 // ═══════════════════════════════════════════════════
+// RENDU GRAPHIQUE — repris de quiz.html le 26/08/2026, pour vérifier
+// visuellement le rendu réel d'une question sans passer par un quiz élève.
+// Toujours affiché en graphique quand un motif est détecté (jamais en
+// tableau alterné aléatoirement, contrairement à quiz.html) : c'est un
+// outil d'audit, pas une expérience élève. Mêmes fonctions de détection
+// et de parsing que quiz.html, pour garantir un rendu identique.
+// ═══════════════════════════════════════════════════
+function detecterTypeGraphique(tableau){
+  if(!tableau)return null
+  var t=tableau;if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return null}}
+  if(!t||!t.headers||!t.rows||t.rows.length===0)return null
+  if(t.rows.length>1)return null
+  var premierHeader=(t.headers[0]||'').toLowerCase()
+  var premiereRow=(t.rows[0][0]||'').toLowerCase()
+  if(premierHeader==='x'&&/^[a-z]\(x\)$/.test(premiereRow.replace(/\s+/g,'')))return 'fonction'
+  if(premiereRow==='effectif')return 'barres'
+  if(premiereRow==='fréquence'||premiereRow==='frequence')return 'barres'
+  return null
+}
+
+function estCaseATrouver(v){return String(v===null||v===undefined?'':v).replace(/[\s\u00A0\u202F]/g,'')==='?'}
+
+function nombreTableau(v){
+  if(typeof v==='number')return isFinite(v)?v:null
+  if(v===null||v===undefined)return null
+  var s=String(v).replace(/\u2212/g,'-').replace(/[\s\u00A0\u202F]/g,'').replace(/,/g,'.')
+  if(s==='')return null
+  var n=parseFloat(s)
+  return isFinite(n)?n:null
+}
+
+// Adapte le mot « tableau » de l'énoncé quand la question est affichée en
+// graphique — même règle que adapterEnonce() dans quiz.html (4 formules
+// fermées, jamais le mot « tableau » isolé employé comme objet mathématique).
+function adapterEnonceProf(question, tableau){
+  var type=detecterTypeGraphique(tableau)
+  if(!type)return question
+  var mot=type==='barres'?'diagramme':'graphique'
+  return question.replace(/\b(le|du)(\s+)tableau(\s+)(ci-dessous|suivant)\b/gi,function(m,det,e1,e2,suf){return det+e1+mot+e2+suf})
+}
+
+// Instances Chart.js actives dans la banque, détruites à chaque
+// (re)chargement de chargerBanque() — sans ça, Chart.js lève "Canvas is
+// already in use" dès qu'on change de filtre ou de page.
+let PROF_CHARTS = {}
+
+function renderGraphiqueProf(tableau, qId){
+  if(!tableau)return ''
+  var t=tableau;if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return ''}}
+  if(!t||!t.headers||!t.rows||t.rows.length===0)return ''
+  var type=detecterTypeGraphique(t);if(!type)return renderTableauHTML(tableau)
+  var chartId='pchart-q-'+qId
+  var labels=t.headers.slice(1);var brutes=t.rows[0].slice(1);var values=brutes.map(nombreTableau)
+  var illisibles=values.filter(function(n){return n===null}).length
+  var anormales=values.filter(function(n,k){return n===null&&!estCaseATrouver(brutes[k])}).length
+  if(anormales)console.warn('[banque][graphique] '+anormales+'/'+values.length+' valeur(s) non convertible(s) question '+qId,brutes)
+  if(illisibles===values.length)return renderTableauHTML(tableau)
+  var points=null
+  if(type==='fonction'){
+    var xValues=labels.map(nombreTableau)
+    points=[]
+    for(var k=0;k<xValues.length;k++){
+      if(xValues[k]===null)continue
+      points.push({x:xValues[k],y:values[k]})
+    }
+    if(points.length===0)return renderTableauHTML(tableau)
+  }
+  var height=type==='fonction'?170:140
+  if(PROF_CHARTS[chartId]){PROF_CHARTS[chartId].destroy();delete PROF_CHARTS[chartId]}
+  var html='<div style="height:'+height+'px;margin:8px 0"><canvas id="'+chartId+'"></canvas></div>'
+  setTimeout(function(){
+    var canvas=document.getElementById(chartId);if(!canvas)return
+    var config={}
+    if(type==='barres'){config={type:'bar',data:{labels:labels,datasets:[{data:values,backgroundColor:'#1B2A4A',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:t.headers[0],font:{size:10}}},y:{title:{display:true,text:t.rows[0][0],font:{size:10}},ticks:{stepSize:1},beginAtZero:true}}}}}
+    else if(type==='fonction'){config={type:'line',data:{datasets:[{data:points,borderColor:'#1B2A4A',backgroundColor:'#1B2A4A',pointRadius:4,pointBackgroundColor:'#1B2A4A',tension:0}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{left:28}},plugins:{legend:{display:false}},scales:{x:{type:'linear',title:{display:true,text:'x',font:{size:10}}},y:{position:{x:0},title:{display:true,text:t.rows[0][0],font:{size:10}}}}}}}
+    PROF_CHARTS[chartId]=new Chart(canvas,config)
+  },50)
+  return html
+}
+
+// ═══════════════════════════════════════════════════
 // BANQUE
 // ═══════════════════════════════════════════════════
 async function chargerBanque() {
   const el = document.getElementById('banque-list')
   if (!el) return
+  Object.values(PROF_CHARTS).forEach(c => c.destroy())
+  PROF_CHARTS = {}
   el.innerHTML = '<div class="loader">Chargement…</div>'
   let query = sb.from('questions_banque').select('*').order('theme').order('difficulte')
   if (banqueFiltre.theme) query = query.eq('theme', banqueFiltre.theme)
@@ -1068,6 +1151,8 @@ async function chargerBanque() {
     const hasFigSVG = q.figure && q.figure.type
     const hasFigURL = q.figure_url
     const hasTab    = q.tableau
+    const typeGraph = hasTab ? detecterTypeGraphique(q.tableau) : null
+    const texteAffiche = typeGraph ? adapterEnonceProf(q.question, q.tableau) : q.question
     const estArchive = q.statut === 'archive'
     html += '<div class="q-card" id="qcard-'+q.id+'"'+(estArchive?' style="opacity:0.55"':'')+'>'
     html += '<div class="q-card-header"><div>'
@@ -1080,7 +1165,7 @@ async function chargerBanque() {
     if (hasFigURL) html += '<span class="badge" style="background:#fff0f0;color:#9E2B25">🖼 Image</span>'
     if (hasTab)    html += '<span class="badge badge-banque">📊 Tableau</span>'
     html += '</div>'
-    html += '<div class="q-card-text">'+q.question+'</div>'
+    html += '<div class="q-card-text">'+texteAffiche+'</div>'
     html += '</div>'
     html += '<div class="q-card-actions">'
     html += '<button class="btn btn-sm btn-blue" onclick="ouvrirEdit('+q.id+',\'questions_banque\')">✏️ Modifier</button>'
@@ -1089,7 +1174,7 @@ async function chargerBanque() {
     html += '</div></div>'
     if (hasFigSVG) { const svg = renderFigureSVG(q.figure); if (svg) html += '<div class="q-figure">'+svg+'</div>' }
     if (hasFigURL) html += '<div class="q-figure"><img src="'+q.figure_url+'" alt="figure"></div>'
-    if (hasTab)    html += renderTableauHTML(q.tableau)
+    if (hasTab)    html += typeGraph ? renderGraphiqueProf(q.tableau, q.id) : renderTableauHTML(q.tableau)
     html += '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px">'
     opts.forEach((opt, i) => {
       const correct = i === q.answer
