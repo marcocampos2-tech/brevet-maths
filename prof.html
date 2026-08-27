@@ -102,7 +102,13 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .q-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
 .q-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
 .q-card-text { font-size: 13px; color: var(--text); line-height: 1.6; flex: 1; }
-.q-card-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; }
+.q-card-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.q-card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.q-card-id { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); user-select: all; -webkit-user-select: all; }
+/* Le # est un ::before : le contenu d'un pseudo-element n'entre pas dans la selection, donc un
+   simple clic sur l'id copie « 101 » et non « #101 » — directement collable dans une requete. */
+.q-card-id::before { content: '#'; opacity: 0.5; }
+.banque-notice { font-size: 12px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; }
 .q-figure { margin: 8px 0; display: flex; justify-content: center; background: white; border-radius: 8px; padding: 10px; border: 1px solid var(--border); }
 .q-figure svg { max-width: 200px; height: auto; }
 .q-figure img { max-width: 200px; height: auto; border-radius: 6px; }
@@ -234,7 +240,7 @@ const SOUS_THEMES = {
 let ROWS = [], EXAMENS = [], PROFILS = {}, ELEVES = []
 let INSCRIPTIONS = [], SESSIONS = []
 let BANQUE_DATA = []
-let banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0 }
+let banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0, resetParId: false }
 const PER_PAGE = 20
 let editCurrentId = null
 let editCurrentTable = 'questions_banque'
@@ -371,7 +377,7 @@ async function logout() {
 function setTab(id) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id))
   document.querySelectorAll('.section').forEach(s => s.classList.toggle('active', s.id === 'sec-'+id))
-  if (id === 'banque') { banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0 }; chargerBanque() }
+  if (id === 'banque') { banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0, resetParId: false }; chargerBanque() }
   if (id === 'inscriptions') chargerInscriptions()
   if (id === 'stages') chargerStages()
 }
@@ -1198,14 +1204,22 @@ async function chargerBanque() {
   let filtered = data || []
   if (banqueFiltre.search) {
     const s = banqueFiltre.search.toLowerCase()
-    filtered = filtered.filter(q => q.question.toLowerCase().includes(s))
+    // Union volontaire id OU texte : une saisie purement numerique cherche l'id ET continue
+    // de chercher dans les enonces. Sans l'union, chercher « 2024 » cesserait de trouver les
+    // questions dont l'enonce contient 2024 — une regression silencieuse sur la recherche texte.
+    filtered = filtered.filter(q => String(q.id) === s || q.question.toLowerCase().includes(s))
   }
   BANQUE_DATA = filtered
   const total = filtered.length
   const start = banqueFiltre.page * PER_PAGE
   const page  = filtered.slice(start, start + PER_PAGE)
-  if (!page.length) { el.innerHTML='<div class="empty">Aucune question trouvée.</div>'; return }
-  let html = ''
+  // Le bandeau doit sortir AUSSI dans la branche « aucun resultat » : c'est precisement le cas
+  // ou l'utilisateur, filtres remis a zero sans le voir, ne comprendrait pas la liste affichee.
+  const notice = banqueFiltre.resetParId
+    ? '<div class="banque-notice">🔎 Recherche de l\'id <strong>#'+esc(banqueFiltre.search)+'</strong> — les filtres domaine, sous-thème et difficulté ont été remis à zéro pour chercher dans toute la banque.</div>'
+    : ''
+  if (!page.length) { el.innerHTML=notice+'<div class="empty">Aucune question trouvée.</div>'; return }
+  let html = notice
   page.forEach(q => {
     const opts = typeof q.opts === 'string' ? JSON.parse(q.opts) : (q.opts || [])
     const letters = ['A','B','C','D']
@@ -1228,11 +1242,13 @@ async function chargerBanque() {
     html += '</div>'
     html += '<div class="q-card-text">'+texteAffiche+'</div>'
     html += '</div>'
+    html += '<div class="q-card-right">'
+    html += '<span class="q-card-id" title="id de la question">'+q.id+'</span>'
     html += '<div class="q-card-actions">'
     html += '<button class="btn btn-sm btn-blue" onclick="ouvrirEdit('+q.id+',\'questions_banque\')">✏️ Modifier</button>'
     html += '<label class="btn btn-sm btn-amber" style="cursor:pointer">🖼 Image<input type="file" accept="image/*" style="display:none" onchange="uploadFigure(event,'+q.id+',\'questions_banque\')"></label>'
     if (hasFigSVG || hasFigURL) html += '<button class="btn btn-sm btn-red" onclick="supprimerFigure('+q.id+',\'questions_banque\')">🗑 Figure</button>'
-    html += '</div></div>'
+    html += '</div></div></div>'
     if (hasFigSVG) { const svg = renderFigureSVG(q.figure); if (svg) html += '<div class="q-figure">'+svg+'</div>' }
     if (hasFigURL) html += '<div class="q-figure"><img src="'+q.figure_url+'" alt="figure"></div>'
     if (hasTab)    html += typeGraph ? renderGraphiqueProf(q.tableau, q.id) : renderTableauHTML(q.tableau)
@@ -1255,12 +1271,30 @@ async function chargerBanque() {
 
 function banquePage(dir) { banqueFiltre.page += dir; chargerBanque() }
 
-function filtrerBanque() {
+function estRechercheId(s) { return /^[0-9]+$/.test(s) }
+
+// origine === 'search' : appel declenche par la frappe dans le champ de recherche, seul cas ou
+// la remise a zero des filtres est legitime. Les selects appellent filtrerBanque() sans argument,
+// pour qu'un choix de domaine fait APRES une recherche par id ne soit pas efface aussitot.
+function filtrerBanque(origine) {
   banqueFiltre.theme  = document.getElementById('filtre-theme').value
   banqueFiltre.sousTheme = document.getElementById('filtre-sous-theme').value
   banqueFiltre.diff   = document.getElementById('filtre-diff').value
   banqueFiltre.search = document.getElementById('filtre-search').value.trim()
   banqueFiltre.page   = 0
+  banqueFiltre.resetParId = false
+  // Les trois filtres sont appliques dans la requete Supabase, pas cote client : sans cette
+  // remise a zero, un id appartenant a un autre domaine que le filtre courant renverrait
+  // « Aucune question trouvée » alors que la question existe.
+  if (origine === 'search' && estRechercheId(banqueFiltre.search) && (banqueFiltre.theme || banqueFiltre.sousTheme || banqueFiltre.diff)) {
+    banqueFiltre.theme = ''
+    banqueFiltre.sousTheme = ''
+    banqueFiltre.diff = ''
+    document.getElementById('filtre-theme').value = ''
+    document.getElementById('filtre-diff').value = ''
+    renderFiltreSousTheme()
+    banqueFiltre.resetParId = true
+  }
   chargerBanque()
 }
 
@@ -1660,7 +1694,7 @@ function render() {
   h+='<select id="filtre-theme" onchange="onChangeFiltreTheme()"><option value="">Tous les domaines</option>'+THEMES.map(t=>'<option value="'+t+'">'+t+'</option>').join('')+'</select>'
   h+='<select id="filtre-sous-theme" onchange="filtrerBanque()" disabled><option value="">Tous les sous-thèmes</option></select>'
   h+='<select id="filtre-diff" onchange="filtrerBanque()"><option value="">Toutes difficultés</option><option value="facile">Facile</option><option value="moyen">Moyen</option><option value="difficile">Difficile</option></select>'
-  h+='<input type="text" id="filtre-search" placeholder="🔍 Rechercher…" oninput="filtrerBanque()">'
+  h+='<input type="text" id="filtre-search" placeholder="🔍 Rechercher un énoncé ou un id…" oninput="filtrerBanque(\'search\')">'
   h+='</div></div>'
   h+='<div class="card"><div class="card-title">Questions de la banque</div><div id="banque-list"><div class="loader">Chargement…</div></div></div>'
   h+='<div class="card"><div class="card-title">➕ Ajouter une question</div>'
