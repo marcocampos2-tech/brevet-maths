@@ -738,27 +738,73 @@ function renderFigure(fig){
     return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+bLabel+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy-A/2+4)+'" text-anchor="end">'+aLabel+'</text><text class="fig-lb" x="'+(ox+B/2+14)+'" y="'+(oy-A/2-6)+'" text-anchor="start">'+hypLabel+'</text></svg></div>'
   }
   if(f.type==='thales'){
-    const ox=S/2,oy=P+10
+    // Deux configurations partagent les memes cles ab / am, avec la meme semantique :
+    // ab = longueur AB, am = longueur AM, rapport = am/ab. Seule la position de M et N change —
+    // du meme cote de A qu'en emboitee, du cote oppose en papillon.
+    // La cle configuration est facultative : absente ou non reconnue, on rend l'emboitee, ce qui
+    // laisse le comportement des lignes deja en base strictement inchange.
+    const ox=S/2
     const abVal=f.ab==='?'?6:Number(f.ab)||6
     const amVal=f.am==='?'?3:Number(f.am)||3
-    const ratio=Math.min(Math.max(amVal/abVal,0.2),0.8)
-    const H=S-2*P,W=H*0.75
-    const A={x:ox,y:oy},B={x:ox-W/2,y:oy+H},C={x:ox+W/2,y:oy+H}
-    const D={x:ox-(W/2)*ratio,y:oy+H*ratio},E={x:ox+(W/2)*ratio,y:oy+H*ratio}
+    const papillon=String(f.configuration||'emboitee').toLowerCase()==='papillon'
+    let A,B,C,M,N
+    if(papillon){
+      // En papillon rien n'impose que le triangle AMN soit le plus petit : le rapport peut depasser 1,
+      // contrairement a l'emboitee ou M est forcement entre A et B. Les bornes sont donc reciproques
+      // l'une de l'autre (0,45 et ~1/0,45), et le cadrage se recalcule pour que les DEUX triangles
+      // reunis remplissent la zone, au lieu d'etre dimensionnes par un seul d'entre eux.
+      const ratio=Math.min(Math.max(amVal/abVal,0.45),2.2)
+      const demiLargeur=0.375
+      const zone=S-2*P
+      const sc=Math.min(zone/(1+ratio),zone/(2*demiLargeur*Math.max(1,ratio)))
+      const hB=sc,hM=sc*ratio,wB=sc*demiLargeur,wM=wB*ratio
+      const oy=P+hM
+      A={x:ox,y:oy}
+      B={x:ox-wB,y:oy+hB}
+      C={x:ox+wB,y:oy+hB}
+      M={x:ox+wM,y:oy-hM}
+      N={x:ox-wM,y:oy-hM}
+    } else {
+      const oy=P+10
+      const ratio=Math.min(Math.max(amVal/abVal,0.2),0.8)
+      const H=S-2*P,W=H*0.75
+      A={x:ox,y:oy}
+      B={x:ox-W/2,y:oy+H}
+      C={x:ox+W/2,y:oy+H}
+      M={x:ox-(W/2)*ratio,y:oy+H*ratio}
+      N={x:ox+(W/2)*ratio,y:oy+H*ratio}
+    }
+    // M suit B et N suit C dans les deux configurations, mais leur cote a l'ecran s'inverse en
+    // papillon : les etiquettes se placent donc par configuration, pas par nom de point. Le point A
+    // cesse d'etre le sommet haut en papillon — son etiquette part a droite, dans le secteur laisse
+    // libre entre les demi-droites [AM) et [AC).
+    const aX=papillon?A.x+9:A.x
+    const aY=papillon?A.y+4:A.y-7
+    const aAnchor=papillon?'start':'middle'
+    const mX=papillon?M.x+7:M.x-7
+    const mAnchor=papillon?'start':'end'
+    const nX=papillon?N.x-7:N.x+7
+    const nAnchor=papillon?'end':'start'
+    // En papillon, les pastilles sont coloriees par droite parallele (M et N bleus, B et C verts),
+    // ce qui rend le role des deux paralleles lisible. L'emboitee garde son coloriage historique.
+    const polyAMN=papillon?'<polygon class="fig-sh" points="'+A.x+','+A.y+' '+M.x+','+M.y+' '+N.x+','+N.y+'"/>':''
+    const dotN=papillon?'fig-dot':'fig-dotg'
+    const dotB=papillon?'fig-dotg':'fig-dot'
     return '<div class="q-figure">'+open+
       '<polygon class="fig-sh" points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'"/>'+
-      '<line class="fig-lnb" x1="'+D.x+'" y1="'+D.y+'" x2="'+E.x+'" y2="'+E.y+'"/>'+
+      polyAMN+
+      '<line class="fig-lnb" x1="'+M.x+'" y1="'+M.y+'" x2="'+N.x+'" y2="'+N.y+'"/>'+
       '<line class="fig-lng" x1="'+B.x+'" y1="'+B.y+'" x2="'+C.x+'" y2="'+C.y+'"/>'+
       '<circle class="fig-dot" cx="'+A.x+'" cy="'+A.y+'" r="3"/>'+
-      '<circle class="fig-dot" cx="'+D.x+'" cy="'+D.y+'" r="3"/>'+
-      '<circle class="fig-dot" cx="'+B.x+'" cy="'+B.y+'" r="3"/>'+
-      '<circle class="fig-dotg" cx="'+E.x+'" cy="'+E.y+'" r="3"/>'+
+      '<circle class="fig-dot" cx="'+M.x+'" cy="'+M.y+'" r="3"/>'+
+      '<circle class="'+dotN+'" cx="'+N.x+'" cy="'+N.y+'" r="3"/>'+
+      '<circle class="'+dotB+'" cx="'+B.x+'" cy="'+B.y+'" r="3"/>'+
       '<circle class="fig-dotg" cx="'+C.x+'" cy="'+C.y+'" r="3"/>'+
-      '<text class="fig-lb" x="'+A.x+'" y="'+(A.y-7)+'" text-anchor="middle">A</text>'+
+      '<text class="fig-lb" x="'+aX+'" y="'+aY+'" text-anchor="'+aAnchor+'">A</text>'+
+      '<text class="fig-lb" x="'+mX+'" y="'+(M.y+4)+'" text-anchor="'+mAnchor+'">M</text>'+
+      '<text class="fig-lb" x="'+nX+'" y="'+(N.y+4)+'" text-anchor="'+nAnchor+'">N</text>'+
       '<text class="fig-lb" x="'+(B.x-7)+'" y="'+(B.y+4)+'" text-anchor="end">B</text>'+
       '<text class="fig-lb" x="'+(C.x+7)+'" y="'+(C.y+4)+'" text-anchor="start">C</text>'+
-      '<text class="fig-lb" x="'+(D.x-7)+'" y="'+(D.y+4)+'" text-anchor="end">M</text>'+
-      '<text class="fig-lb" x="'+(E.x+7)+'" y="'+(E.y+4)+'" text-anchor="start">N</text>'+
       '</svg></div>'
   }
   if(f.type==='trapeze'){const u=f.unite||'cm',sc=Math.min((S-2*P)/f.grande_base,(S-2*P)/f.hauteur)*0.82;const GB=f.grande_base*sc,PB=f.petite_base*sc,H=f.hauteur*sc,ox=(S-GB)/2,oy=S-P,off=(GB-PB)/2;return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+GB)+','+oy+' '+(ox+GB-off)+','+(oy-H)+' '+(ox+off)+','+(oy-H)+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+f.grande_base+' '+u+'</text><text class="fig-lb" x="'+(S/2)+'" y="'+(oy-H-7)+'" text-anchor="middle">'+f.petite_base+' '+u+'</text></svg></div>'}
