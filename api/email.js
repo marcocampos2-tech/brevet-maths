@@ -1011,8 +1011,10 @@ export default async function handler(req, res) {
   // inconnu ferait de cet endpoint un relais de spam ouvert. La confirmation
   // est affichée à l'écran, côté client.
   //
-  // Aucune donnée n'est stockée (pas de table, pas d'insert) — c'est ce que
-  // promet la mention RGPD sous le bouton du formulaire.
+  // Le contenu de la demande n'est stocké nulle part : il ne vit que dans
+  // l'email envoyé. Seule exception, à garder en tête si la mention RGPD sous
+  // le formulaire est un jour retouchée : verifierRateLimit() écrit l'adresse
+  // du demandeur dans email_rate_limit, sous la clé 'contact-cours:<email>'.
   // ═══════════════════════════════════════════
   if (req.body?.type === 'contact-cours') {
     try {
