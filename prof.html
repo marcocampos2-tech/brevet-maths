@@ -320,7 +320,7 @@ const fmt      = (m, s) => m+'min '+s+'s'
 const fmtTemps = s => { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60); return h ? h+'h '+m+'min' : m+' min' }
 const dateStr  = d => new Date(d).toLocaleDateString('fr-FR')
 const initiales = (prenom, nom) => ((prenom||'?')[0] + (nom||'')[0]).toUpperCase()
-const origineLabel = s => ({ ami: 'Bouche à oreille', internet: 'Recherche internet', reseaux: 'Réseaux sociaux', autre: 'Autre' })[s] || '—'
+const origineLabel = s => ({ flyer: 'Flyer / affiche', ami: 'Bouche à oreille', internet: 'Recherche internet', reseaux: 'Réseaux sociaux', autre: 'Autre' })[s] || '—'
 
 // Échappe une chaîne pour une insertion sûre à l'intérieur d'un attribut onclick="...('...')"
 // (protège contre les apostrophes dans les prénoms/noms composés : D'Angelo, N'Diaye...)

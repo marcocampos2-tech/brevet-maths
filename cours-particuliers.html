@@ -29,25 +29,101 @@
   color: rgba(250,249,246,0.75);
   line-height: 1.6;
 }
-.presentiel-note {
-  background: var(--light-bg);
-  border-radius: 10px;
-  padding: 18px 22px;
-  margin: 0 auto 32px;
+.hero-mention {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: rgba(250,249,246,0.6);
+  margin-top: 8px;
+}
+
+/* Bloc de présentation du prof — entre le hero et le bloc visio */
+.prof-intro {
   max-width: 480px;
+  margin: 32px auto 0;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 18px;
 }
-.presentiel-note-title {
-  font-size: 13px;
-  font-weight: 500;
+.prof-intro-avatar {
+  flex: 0 0 auto;
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--light-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Newsreader', serif;
+  font-size: 22px;
   color: var(--navy);
 }
-.presentiel-note-desc {
-  font-size: 12px;
+.prof-intro-nom {
+  font-family: 'Newsreader', serif;
+  font-size: 18px;
+  color: var(--navy);
+  margin-bottom: 4px;
+}
+.prof-intro-desc {
+  font-size: 13px;
   color: #6B7280;
-  margin-top: 2px;
+  line-height: 1.6;
+}
+
+/* Présentiel — carte à part entière, sous le bloc visio */
+.presentiel-block {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--bordeaux);
+  border-radius: 10px;
+  padding: 24px 26px;
+  margin: 0 auto 32px;
+  max-width: 480px;
+  text-align: center;
+}
+.presentiel-block-icon {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+.presentiel-block-title {
+  font-family: 'Newsreader', serif;
+  font-size: 18px;
+  color: var(--navy);
+  margin-bottom: 10px;
+}
+.presentiel-block-desc {
+  font-size: 13px;
+  color: #41454C;
+  line-height: 1.65;
+}
+.presentiel-block-note {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--bordeaux);
+  margin-top: 12px;
+}
+
+/* La grille "Pourquoi passer par un vrai prof" ne compte plus que deux
+   colonnes depuis que "Continuité avec Academika" en a été sorti. */
+@media (min-width: 641px) {
+  .steps-grid { grid-template-columns: repeat(2, 1fr); max-width: 620px; margin: 0 auto; }
+}
+
+/* Continuité avec la plateforme — sorti des trois colonnes */
+.continuite-block {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 26px 28px;
+  margin: 32px auto 0;
+  max-width: 620px;
+  text-align: center;
+}
+.continuite-block-title {
+  font-family: 'Newsreader', serif;
+  font-size: 19px;
+  color: var(--navy);
+  margin-bottom: 10px;
+}
+.continuite-block-desc {
+  font-size: 14px;
+  color: #41454C;
+  line-height: 1.7;
 }
 .cta-intro {
   text-align: center;
@@ -123,20 +199,29 @@
 <section class="hero">
   <div class="hero-tag">Accompagnement individuel</div>
   <div class="hero-title">Un vrai prof, en visio</div>
+  <div class="hero-sub">Préparation au Brevet de maths · 30 €/h</div>
+  <div class="hero-mention">Cours ponctuels ou réguliers</div>
 </section>
 
 <section>
+  <div class="prof-intro">
+    <div class="prof-intro-avatar">MC</div>
+    <div>
+      <div class="prof-intro-nom">Marco Campos</div>
+      <div class="prof-intro-desc">Ingénieur de formation, dix ans de soutien scolaire, et je donne encore des cours chaque semaine.</div>
+    </div>
+  </div>
+
   <div class="visio-block">
-    <div class="visio-block-title">Cours en visioconférence</div>
+    <div class="visio-block-title">Cours en visioconférence — 30 €/h</div>
     <div class="visio-block-desc">Depuis chez vous, même flexibilité qu'en présentiel, tableau numérique partagé en direct</div>
   </div>
 
-  <div class="presentiel-note">
-    <div style="font-size:20px">📍</div>
-    <div>
-      <div class="presentiel-note-title">Besoin d'un cours en présentiel ?</div>
-      <div class="presentiel-note-desc">Cours à domicile sur demande : en semaine secteur Essonne, le dimanche bassin de Melun (Saint-Fargeau-Ponthierry et environs)</div>
-    </div>
+  <div class="presentiel-block">
+    <div class="presentiel-block-icon">📍</div>
+    <div class="presentiel-block-title">Cours à domicile — 40 €/h</div>
+    <div class="presentiel-block-desc">Cours à domicile sur demande : en semaine secteur Essonne, le dimanche bassin de Melun (Saint-Fargeau-Ponthierry et environs)</div>
+    <div class="presentiel-block-note">Créneaux limités en semaine</div>
   </div>
 </section>
 
@@ -151,10 +236,11 @@
       <div class="step-title">Expertise Brevet</div>
       <div class="step-desc">Connaissance précise du programme et des attentes</div>
     </div>
-    <div class="step">
-      <div class="step-title">Continuité avec Academika</div>
-      <div class="step-desc">Vos progrès sur l'application nourrissent chaque séance</div>
-    </div>
+  </div>
+
+  <div class="continuite-block">
+    <div class="continuite-block-title">Chaque séance part de ses erreurs réelles</div>
+    <div class="continuite-block-desc">Entre deux cours, votre enfant s'entraîne sur la plateforme Academika. Je vois ses résultats, ses chapitres fragiles, les erreurs qui reviennent — et je construis la séance suivante dessus.</div>
   </div>
 </section>
 
