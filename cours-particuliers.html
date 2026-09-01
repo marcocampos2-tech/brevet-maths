@@ -400,10 +400,24 @@ function toggleMenu() {
   document.getElementById('mobileMenu').classList.toggle('open')
 }
 
+// Le masquage et l'affichage passent uniquement par la classe : .contact-form-msg
+// est en display:none, ses variantes .succes/.erreur en display:block. Un
+// style en ligne poserait une déclaration plus spécifique que la feuille de
+// style et gagnerait sur ces règles — le texte serait écrit dans le DOM sans
+// jamais s'afficher. Le style.display est donc remis à vide ici, pour neutraliser
+// tout reste d'un masquage en ligne quel qu'en soit le chemin.
 function afficherMsgContact(type, texte) {
   const m = document.getElementById('cf-msg')
   m.textContent = texte
+  m.style.display = ''
   m.className = 'contact-form-msg ' + type
+}
+
+function masquerMsgContact() {
+  const m = document.getElementById('cf-msg')
+  m.textContent = ''
+  m.style.display = ''
+  m.className = 'contact-form-msg'
 }
 
 // La validation ci-dessous n'est qu'un confort d'affichage : /api/email
@@ -427,7 +441,7 @@ async function envoyerDemande(e) {
 
   btn.disabled = true
   btn.textContent = 'Envoi en cours…'
-  document.getElementById('cf-msg').style.display = 'none'
+  masquerMsgContact()
 
   try {
     const res = await fetch('/api/email', {
