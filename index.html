@@ -60,6 +60,26 @@
   text-align: center;
   margin-top: 24px;
 }
+.hero-lien-prof {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: rgba(250,249,246,0.7);
+  margin-top: 16px;
+}
+.hero-lien-prof a {
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(212,162,60,0.4);
+}
+.offer-lien {
+  display: inline-block;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--bordeaux);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(158,43,37,0.35);
+}
 /* Lien discret d'accès prof — ajouté 17/08/2026, cf. chantier "accès direct prof.html" */
 .footer-prof-link {
   display: block;
@@ -106,9 +126,10 @@
 
 <section class="hero">
   <div class="hero-tag">Brevet de maths · Élèves de 3e</div>
-  <div class="hero-title">Réussis ton brevet de maths, seul ou avec un vrai prof</div>
+  <div class="hero-title">Une plateforme pour t'entraîner seul, et un prof quand il faut aller plus loin</div>
   <div class="hero-sub">Quiz ciblés, explications détaillées, à ton rythme</div>
   <a href="espace-parent.html?action=inscription" class="btn-gold">Commencer gratuitement</a>
+  <div class="hero-lien-prof">Besoin d'un prof ? <a href="cours-particuliers.html">Cours particuliers en visio</a></div>
 </section>
 
 <div class="banniere-presentiel-accueil" id="banniere-presentiel-accueil">
@@ -133,7 +154,7 @@
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-title">Choisis ton domaine</div>
-      <div class="step-desc">Quatre domaines du brevet, du niveau facile au niveau expert</div>
+      <div class="step-desc">Cinq thèmes du brevet, du niveau facile au niveau expert</div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
@@ -147,12 +168,12 @@
   <div class="section-title">Une offre adaptée à chaque besoin</div>
   <div class="offers-grid">
     <div class="offer-card">
-      <div class="offer-label">Libre</div>
+      <div class="offer-label">Libre — en autonomie</div>
       <div class="offer-desc">Quiz illimités, corrigés et expliqués étape par étape, du niveau facile au niveau difficile</div>
       <div class="offer-price">0 €</div>
     </div>
     <div class="offer-card highlight">
-      <div class="offer-label">Accompagné</div>
+      <div class="offer-label">Accompagné — avec suivi parent</div>
       <div class="offer-desc">Email après chaque session, bilan tous les 21 jours, et examen blanc en ligne</div>
       <div class="offer-price">7,90€/mois</div>
       <div class="offer-note">Offert jusqu'à décembre 2026</div>
@@ -160,7 +181,7 @@
     <div class="offer-card">
       <div class="offer-label">Cours particuliers</div>
       <div class="offer-desc">Un accompagnement individuel, mené par un ingénieur expérimenté.</div>
-      <div class="offer-price">À partir de 30€/h</div>
+      <a href="cours-particuliers.html" class="offer-lien">En savoir plus →</a>
     </div>
   </div>
   <div class="voir-tarifs-wrap"><a href="tarifs.html" class="voir-tarifs-btn">Voir le détail des tarifs →</a></div>

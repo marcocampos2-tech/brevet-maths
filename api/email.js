@@ -997,6 +997,116 @@ export default async function handler(req, res) {
     }
   }
 
+
+  // ═══════════════════════════════════════════
+  // DEMANDE DE COURS PARTICULIERS — formulaire public de cours-particuliers.html
+  //
+  // Seule branche de ce fichier déclenchée par un visiteur non authentifié,
+  // depuis un formulaire ouvert à tous. D'où les trois protections ci-dessous
+  // (honeypot, validation stricte, rate-limit) : aucune des autres branches
+  // n'en a besoin, toutes étant derrière un compte ou un flux applicatif.
+  //
+  // Un seul email part, vers PROF_EMAIL. Pas d'accusé de réception au
+  // demandeur : envoyer un email à une adresse arbitraire fournie par un
+  // inconnu ferait de cet endpoint un relais de spam ouvert. La confirmation
+  // est affichée à l'écran, côté client.
+  //
+  // Le contenu de la demande n'est stocké nulle part : il ne vit que dans
+  // l'email envoyé. Seule exception, à garder en tête si la mention RGPD sous
+  // le formulaire est un jour retouchée : verifierRateLimit() écrit l'adresse
+  // du demandeur dans email_rate_limit, sous la clé 'contact-cours:<email>'.
+  // ═══════════════════════════════════════════
+  if (req.body?.type === 'contact-cours') {
+    try {
+      const PROF_EMAIL = 'contact@academika.fr'
+      const { prenom, telephone, email, niveau, format, message, societe } = req.body
+
+      // Honeypot : champ caché en CSS, invisible pour un humain, rempli par les
+      // robots qui remplissent tout formulaire trouvé. On répond 200 sans rien
+      // envoyer — un 4xx apprendrait au robot à contourner le piège.
+      if (societe) return res.status(200).json({ success: true })
+
+      const prenomN = String(prenom || '').trim()
+      const telephoneN = String(telephone || '').trim()
+      const emailN = String(email || '').trim().toLowerCase()
+      const messageN = String(message || '').trim().slice(0, 2000)
+
+      if (!prenomN || prenomN.length > 80) {
+        return res.status(400).json({ error: 'Prénom manquant ou invalide.' })
+      }
+      // L'email sert de reply_to : une chaîne libre y ouvrirait une injection
+      // d'en-tête. Validé avant toute utilisation, retour de compréhension pris.
+      if (!/^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]{2,}$/.test(emailN) || emailN.length > 160) {
+        return res.status(400).json({ error: 'Adresse email invalide.' })
+      }
+      if (!/^[0-9+().\-\s]{6,25}$/.test(telephoneN)) {
+        return res.status(400).json({ error: 'Numéro de téléphone invalide.' })
+      }
+
+      // Listes closes : les valeurs hors liste sont refusées, jamais réaffichées.
+      const NIVEAUX = { '4eme': '4ᵉ', '3eme': '3ᵉ', 'lycee': 'Lycée', 'autre': 'Autre' }
+      const FORMATS = { 'visio': 'Visio', 'domicile': 'À domicile' }
+      const niveauLibelle = NIVEAUX[String(niveau || '')]
+      const formatLibelle = FORMATS[String(format || '')]
+      if (!niveauLibelle) return res.status(400).json({ error: 'Niveau invalide.' })
+      if (!formatLibelle) return res.status(400).json({ error: 'Format invalide.' })
+
+      // Rate-limit sur une clé préfixée, PAS sur PROF_EMAIL : la clé destinataire
+      // étant fixe, dix requêtes suffiraient à bloquer le formulaire pour tous les
+      // prospects pendant une heure — la protection deviendrait le déni de service.
+      // Le préfixe évite toute collision avec une vraie adresse destinataire.
+      const rateOk = await verifierRateLimit('contact-cours:' + emailN)
+      if (!rateOk) return res.status(429).json({ error: 'Trop de demandes envoyées depuis cette adresse. Réessayez plus tard.' })
+
+      const ligneMessage = messageN
+        ? `<tr><td style="padding:8px;color:#666;vertical-align:top">Message</td><td style="padding:8px;white-space:pre-wrap">${esc(messageN)}</td></tr>`
+        : ''
+
+      const html = `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
+          <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
+            <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
+            <div style="font-size:12px;color:#666;margin-top:4px">Demande de cours particuliers</div>
+          </div>
+          <p style="margin-bottom:20px;color:#444;">Nouvelle demande de premier échange depuis la page Cours particuliers :</p>
+          <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0;">
+            <table style="width:100%;border-collapse:collapse">
+              <tr><td style="padding:8px;color:#666;border-bottom:1px solid #e8e8e4">Prénom</td><td style="padding:8px;font-weight:600;border-bottom:1px solid #e8e8e4">${esc(prenomN)}</td></tr>
+              <tr><td style="padding:8px;color:#666;border-bottom:1px solid #e8e8e4">Téléphone</td><td style="padding:8px;font-weight:600;border-bottom:1px solid #e8e8e4">${esc(telephoneN)}</td></tr>
+              <tr><td style="padding:8px;color:#666;border-bottom:1px solid #e8e8e4">Email</td><td style="padding:8px;font-weight:600;border-bottom:1px solid #e8e8e4">${esc(emailN)}</td></tr>
+              <tr><td style="padding:8px;color:#666;border-bottom:1px solid #e8e8e4">Niveau</td><td style="padding:8px;font-weight:600;border-bottom:1px solid #e8e8e4">${esc(niveauLibelle)}</td></tr>
+              <tr><td style="padding:8px;color:#666;${ligneMessage ? 'border-bottom:1px solid #e8e8e4' : ''}">Format</td><td style="padding:8px;font-weight:600;${ligneMessage ? 'border-bottom:1px solid #e8e8e4' : ''}">${esc(formatLibelle)}</td></tr>
+              ${ligneMessage}
+            </table>
+          </div>
+          <p style="color:#444;font-size:13px;">Rappel annoncé sous 48 h. Répondre directement à cet email écrit au demandeur.</p>
+        </div>`
+
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
+        body: JSON.stringify({
+          from: 'ACADEMIKA <noreply@academika.fr>',
+          to: PROF_EMAIL,
+          reply_to: emailN,
+          subject: `📞 Demande de cours : ${prenomN} (${niveauLibelle} · ${formatLibelle})`,
+          html
+        })
+      })
+
+      if (!response.ok) {
+        // Le corps de la réponse Resend ne part pas au client.
+        console.log('Erreur contact-cours (Resend):', await response.text())
+        return res.status(500).json({ error: "L'envoi a échoué. Réessayez ou appelez le 06 26 53 90 13." })
+      }
+      return res.status(200).json({ success: true })
+
+    } catch (e) {
+      console.log('Erreur contact-cours:', e.message)
+      return res.status(500).json({ error: "L'envoi a échoué. Réessayez ou appelez le 06 26 53 90 13." })
+    }
+  }
+
   // ═══════════════════════════════════════════
   // Type non reconnu
   // ═══════════════════════════════════════════

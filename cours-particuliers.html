@@ -29,65 +29,209 @@
   color: rgba(250,249,246,0.75);
   line-height: 1.6;
 }
-.presentiel-note {
-  background: var(--light-bg);
-  border-radius: 10px;
-  padding: 18px 22px;
-  margin: 0 auto 32px;
+.hero-mention {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: rgba(250,249,246,0.6);
+  margin-top: 8px;
+}
+
+/* Bloc de présentation du prof — entre le hero et le bloc visio */
+.prof-intro {
   max-width: 480px;
+  margin: 32px auto 0;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 18px;
 }
-.presentiel-note-title {
-  font-size: 13px;
-  font-weight: 500;
+.prof-intro-avatar {
+  flex: 0 0 auto;
+  width: 64px; height: 64px; border-radius: 50%;
+  background: var(--light-bg);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Newsreader', serif;
+  font-size: 22px;
   color: var(--navy);
 }
-.presentiel-note-desc {
-  font-size: 12px;
-  color: #6B7280;
-  margin-top: 2px;
+.prof-intro-nom {
+  font-family: 'Newsreader', serif;
+  font-size: 18px;
+  color: var(--navy);
+  margin-bottom: 4px;
 }
-.cta-intro {
+.prof-intro-desc {
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 1.6;
+}
+
+/* Présentiel — carte à part entière, sous le bloc visio */
+.presentiel-block {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--bordeaux);
+  border-radius: 10px;
+  padding: 24px 26px;
+  margin: 0 auto 32px;
+  max-width: 480px;
+  text-align: center;
+}
+.presentiel-block-icon {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+.presentiel-block-title {
+  font-family: 'Newsreader', serif;
+  font-size: 18px;
+  color: var(--navy);
+  margin-bottom: 10px;
+}
+.presentiel-block-desc {
+  font-size: 13px;
+  color: #41454C;
+  line-height: 1.65;
+}
+.presentiel-block-note {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--bordeaux);
+  margin-top: 12px;
+}
+
+/* La grille "Ce qu'un accompagnement humain apporte" ne compte plus que
+   deux colonnes depuis que "Continuité avec Academika" en a été sorti. */
+@media (min-width: 641px) {
+  .steps-grid { grid-template-columns: repeat(2, 1fr); max-width: 620px; margin: 0 auto; }
+}
+
+/* Continuité avec la plateforme — sorti des trois colonnes */
+.continuite-block {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 26px 28px;
+  margin: 32px auto 0;
+  max-width: 620px;
+  text-align: center;
+}
+.continuite-block-title {
+  font-family: 'Newsreader', serif;
+  font-size: 19px;
+  color: var(--navy);
+  margin-bottom: 10px;
+}
+.continuite-block-desc {
+  font-size: 14px;
+  color: #41454C;
+  line-height: 1.7;
+}
+/* Formulaire de demande de premier échange */
+.contact-form-card {
+  background: var(--cream);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 30px;
+  margin: 0 auto;
+  max-width: 520px;
+}
+.contact-form-titre {
+  font-family: 'Newsreader', serif;
+  font-size: 21px;
+  color: var(--navy);
+  text-align: center;
+}
+.contact-form-sous-titre {
+  font-size: 13px;
+  color: #6B7280;
+  text-align: center;
+  margin-bottom: 22px;
+}
+.contact-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.contact-form-card label {
+  display: block;
+  font-size: 12.5px;
+  color: #6B7280;
+  margin: 14px 0 5px;
+}
+.contact-form-optionnel { color: #9CA3AF; }
+.contact-form-card input,
+.contact-form-card select,
+.contact-form-card textarea {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: var(--navy);
+  background: white;
+}
+.contact-form-card textarea { resize: vertical; line-height: 1.55; }
+.contact-form-card input:focus,
+.contact-form-card select:focus,
+.contact-form-card textarea:focus {
+  outline: none;
+  border-color: var(--navy);
+}
+/* Honeypot — hors flux et hors lecture d'écran, jamais visible */
+.contact-form-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.contact-form-btn {
+  width: 100%;
+  margin-top: 22px;
+  padding: 13px;
+  border: none;
+  border-radius: 7px;
+  background: var(--bordeaux);
+  color: var(--cream);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.contact-form-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.contact-form-msg {
+  display: none;
+  font-size: 13px;
+  line-height: 1.55;
+  margin-top: 14px;
+  padding: 11px 14px;
+  border-radius: 7px;
+}
+.contact-form-msg.erreur { display: block; background: #FBEDEC; color: #9E2B25; }
+.contact-form-msg.succes { display: block; background: #EDF7F1; color: #23724A; }
+.contact-form-rgpd {
+  font-size: 11.5px;
+  color: #9CA3AF;
+  line-height: 1.6;
+  margin-top: 16px;
+  text-align: center;
+}
+.contact-form-tel {
   text-align: center;
   font-size: 13px;
   color: #6B7280;
-  margin-bottom: 16px;
+  margin-top: 20px;
 }
-.cta-row {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.btn-cta-primary {
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
+.contact-form-tel a {
+  color: var(--bordeaux);
   font-weight: 500;
-  color: var(--cream);
-  background: var(--bordeaux);
-  border: none;
-  border-radius: 6px;
-  padding: 12px 24px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
   text-decoration: none;
+  border-bottom: 1px solid rgba(158,43,37,0.35);
 }
-.btn-cta-secondary {
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--navy);
-  background: var(--cream);
-  border: 1px solid var(--navy);
-  border-radius: 6px;
-  padding: 12px 24px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
+
+@media (max-width: 640px) {
+  .contact-form-card { padding: 24px 20px; }
+  .contact-form-grid { grid-template-columns: 1fr; gap: 0; }
 }
 </style>
 </head>
@@ -122,26 +266,35 @@
 
 <section class="hero">
   <div class="hero-tag">Accompagnement individuel</div>
-  <div class="hero-title">Un vrai prof, en visio</div>
+  <div class="hero-title">Un professeur qui suit votre enfant</div>
+  <div class="hero-sub">Préparation au Brevet de maths</div>
+  <div class="hero-mention">Cours ponctuels ou réguliers</div>
 </section>
 
 <section>
+  <div class="prof-intro">
+    <div class="prof-intro-avatar">MC</div>
+    <div>
+      <div class="prof-intro-nom">Marco Campos</div>
+      <div class="prof-intro-desc">Ingénieur de formation, dix ans de soutien scolaire, et je donne encore des cours chaque semaine.</div>
+    </div>
+  </div>
+
   <div class="visio-block">
-    <div class="visio-block-title">Cours en visioconférence</div>
+    <div class="visio-block-title">Cours en visioconférence — 30 €/h</div>
     <div class="visio-block-desc">Depuis chez vous, même flexibilité qu'en présentiel, tableau numérique partagé en direct</div>
   </div>
 
-  <div class="presentiel-note">
-    <div style="font-size:20px">📍</div>
-    <div>
-      <div class="presentiel-note-title">Besoin d'un cours en présentiel ?</div>
-      <div class="presentiel-note-desc">Cours à domicile sur demande : en semaine secteur Essonne, le dimanche bassin de Melun (Saint-Fargeau-Ponthierry et environs)</div>
-    </div>
+  <div class="presentiel-block">
+    <div class="presentiel-block-icon">📍</div>
+    <div class="presentiel-block-title">Cours à domicile — 40 €/h</div>
+    <div class="presentiel-block-desc">En semaine secteur Essonne, le dimanche bassin de Melun (Saint-Fargeau-Ponthierry et environs)</div>
+    <div class="presentiel-block-note">Créneaux limités en semaine</div>
   </div>
 </section>
 
 <section class="alt-bg">
-  <div class="section-title">Pourquoi passer par un vrai prof</div>
+  <div class="section-title">Ce qu'un accompagnement humain apporte</div>
   <div class="steps-grid">
     <div class="step">
       <div class="step-title">Suivi personnalisé</div>
@@ -151,18 +304,78 @@
       <div class="step-title">Expertise Brevet</div>
       <div class="step-desc">Connaissance précise du programme et des attentes</div>
     </div>
-    <div class="step">
-      <div class="step-title">Continuité avec Academika</div>
-      <div class="step-desc">Vos progrès sur l'application nourrissent chaque séance</div>
-    </div>
+  </div>
+
+  <div class="continuite-block">
+    <div class="continuite-block-title">Chaque séance part de ses erreurs réelles</div>
+    <div class="continuite-block-desc">Entre deux cours, votre enfant s'entraîne sur la plateforme Academika. Je vois ses résultats, ses chapitres fragiles, les erreurs qui reviennent — et je construis la séance suivante dessus.</div>
   </div>
 </section>
 
 <section>
-  <div class="cta-intro">Envie d'un premier échange ?</div>
-  <div class="cta-row">
-    <a href="mailto:contact@academika.fr" class="btn-cta-primary">✉️ Écrire un email</a>
-    <a href="tel:+33626539013" class="btn-cta-secondary">📞 Appeler</a>
+  <div class="contact-form-card">
+    <div class="contact-form-titre">Demander un premier échange</div>
+    <div class="contact-form-sous-titre">Je vous rappelle sous 48 h</div>
+
+    <form id="contact-form" onsubmit="envoyerDemande(event)" novalidate>
+      <div class="contact-form-grid">
+        <div>
+          <label for="cf-prenom">Prénom</label>
+          <input type="text" id="cf-prenom" name="prenom" autocomplete="given-name" maxlength="80" required>
+        </div>
+        <div>
+          <label for="cf-telephone">Téléphone</label>
+          <input type="tel" id="cf-telephone" name="telephone" autocomplete="tel" maxlength="25" required>
+        </div>
+      </div>
+
+      <label for="cf-email">Email</label>
+      <input type="email" id="cf-email" name="email" autocomplete="email" maxlength="160" required>
+
+      <div class="contact-form-grid">
+        <div>
+          <label for="cf-niveau">Niveau de l'enfant</label>
+          <select id="cf-niveau" name="niveau" required>
+            <option value="">Choisir…</option>
+            <option value="4eme">4ᵉ</option>
+            <option value="3eme">3ᵉ</option>
+            <option value="lycee">Lycée</option>
+            <option value="autre">Autre</option>
+          </select>
+        </div>
+        <div>
+          <label for="cf-format">Format souhaité</label>
+          <select id="cf-format" name="format" required>
+            <option value="">Choisir…</option>
+            <option value="visio">Visio</option>
+            <option value="domicile">À domicile</option>
+          </select>
+        </div>
+      </div>
+
+      <label for="cf-message">Message <span class="contact-form-optionnel">(optionnel)</span></label>
+      <textarea id="cf-message" name="message" rows="4" maxlength="2000"></textarea>
+
+      <!-- Honeypot : invisible pour un humain, rempli par les robots.
+           Ne pas retirer, ne pas rendre visible, ne pas ajouter de label. -->
+      <div class="contact-form-hp" aria-hidden="true">
+        <label for="cf-societe">Société</label>
+        <input type="text" id="cf-societe" name="societe" tabindex="-1" autocomplete="off">
+      </div>
+
+      <button type="submit" class="contact-form-btn" id="cf-submit">Envoyer ma demande</button>
+    </form>
+
+    <div class="contact-form-msg" id="cf-msg"></div>
+
+    <div class="contact-form-rgpd">
+      Vos coordonnées servent uniquement à vous recontacter au sujet de cette demande. Elles ne sont
+      pas conservées au-delà de nos échanges, ni transmises à qui que ce soit.
+    </div>
+  </div>
+
+  <div class="contact-form-tel">
+    Vous préférez appeler ? <a href="tel:+33626539013">06 26 53 90 13</a>
   </div>
 </section>
 
@@ -185,6 +398,66 @@
 function toggleMenu() {
   document.getElementById('burger').classList.toggle('open')
   document.getElementById('mobileMenu').classList.toggle('open')
+}
+
+function afficherMsgContact(type, texte) {
+  const m = document.getElementById('cf-msg')
+  m.textContent = texte
+  m.className = 'contact-form-msg ' + type
+}
+
+// La validation ci-dessous n'est qu'un confort d'affichage : /api/email
+// revalide tout côté serveur et refuse en 400 ce qui ne passe pas.
+async function envoyerDemande(e) {
+  e.preventDefault()
+  const btn = document.getElementById('cf-submit')
+  const val = id => document.getElementById(id).value.trim()
+
+  const prenom = val('cf-prenom')
+  const telephone = val('cf-telephone')
+  const email = val('cf-email')
+  const niveau = val('cf-niveau')
+  const format = val('cf-format')
+
+  if (!prenom) { afficherMsgContact('erreur', 'Indiquez votre prénom.'); return }
+  if (!/^[0-9+().\-\s]{6,25}$/.test(telephone)) { afficherMsgContact('erreur', 'Indiquez un numéro de téléphone valide.'); return }
+  if (!/^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]{2,}$/.test(email)) { afficherMsgContact('erreur', 'Indiquez une adresse email valide.'); return }
+  if (!niveau) { afficherMsgContact('erreur', "Choisissez le niveau de l'enfant."); return }
+  if (!format) { afficherMsgContact('erreur', 'Choisissez le format souhaité.'); return }
+
+  btn.disabled = true
+  btn.textContent = 'Envoi en cours…'
+  document.getElementById('cf-msg').style.display = 'none'
+
+  try {
+    const res = await fetch('/api/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'contact-cours',
+        prenom, telephone, email, niveau, format,
+        message: val('cf-message'),
+        societe: document.getElementById('cf-societe').value
+      })
+    })
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
+      afficherMsgContact('erreur', data.error || "L'envoi a échoué. Réessayez ou appelez le 06 26 53 90 13.")
+      btn.disabled = false
+      btn.textContent = 'Envoyer ma demande'
+      return
+    }
+
+    // Le formulaire disparaît : rien à renvoyer, et ça évite les doubles envois.
+    document.getElementById('contact-form').style.display = 'none'
+    afficherMsgContact('succes', 'Demande envoyée. Je vous rappelle sous 48 h.')
+
+  } catch (err) {
+    afficherMsgContact('erreur', "L'envoi a échoué. Réessayez ou appelez le 06 26 53 90 13.")
+    btn.disabled = false
+    btn.textContent = 'Envoyer ma demande'
+  }
 }
 </script>
 <script>
