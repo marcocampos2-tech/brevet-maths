@@ -465,7 +465,7 @@ async function envoyerDemande(e) {
 
     // Le formulaire disparaît : rien à renvoyer, et ça évite les doubles envois.
     document.getElementById('contact-form').style.display = 'none'
-    afficherMsgContact('succes', 'Demande envoyée. Je vous rappelle sous 48 h.')
+    afficherMsgContact('succes', 'Demande envoyée.')
 
   } catch (err) {
     afficherMsgContact('erreur', "L'envoi a échoué. Réessayez ou appelez le 06 26 53 90 13.")
