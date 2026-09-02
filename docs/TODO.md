@@ -6,9 +6,11 @@
 
 ## ⚠️ Échéance critique — Bascule décembre 2026
 
-- L'offre **Libre** (quiz illimités) reste gratuite **à vie** ; seul le **Suivi** (7,90€/mois) devient payant à l'échéance. La bannière d'offre de lancement se masque automatiquement (constante `FIN_OFFRE_LANCEMENT`, déjà codé).
-- **Risque identifié, à vérifier en priorité** : le compte Stripe était noté "pas en mode live, en attente du SIRET" ; le SIRET a été obtenu le 24/08/2026, mais aucune confirmation trouvée que Stripe a été effectivement basculé en mode live depuis. Si ce n'est pas fait avant décembre, un parent voulant souscrire au Suivi tombera sur un mur.
-- Formulation marketing validée le 13/08 ("Gratuit jusqu'en décembre 2026, sans carte bancaire. Ensuite, les quiz restent gratuits. Le suivi parents passe à 7,90€/mois, sans engagement.") — à vérifier qu'elle est bien reprise partout (site, emails), pas seulement sur le flyer où elle a été fixée.
+*Corrigé le 02/09 après lecture de CLAUDE.md : le code est déjà fait (confirmation, pas hypothèse).*
+
+- L'offre **Libre** reste gratuite **à vie** ; seul le **Suivi** (7,90€/mois) devient payant à l'échéance. Trois éléments masqués pendant la période gratuite via `enPeriodeGratuite()` (`lib/gating.js`, constante `FIN_OFFRE_LANCEMENT`) : bandeau "Suivi de la progression", sélecteur d'offre à la création de compte (forcé sur Autonomie), détail complet du récap journalier. **Terminé et déployé** (16/08).
+- **Le vrai point ouvert, formulé par CLAUDE.md lui-même** : ces trois éléments se réactivent automatiquement le 01/12/2026, sans déploiement — il faut vérifier à cette date que Stripe est réellement opérationnel (SIRET obtenu, mode live actif) avant qu'ils ne réapparaissent. Un rappel agenda existe déjà mi-novembre pour cette session de bascule.
+- Formulation marketing validée le 13/08 ("Gratuit jusqu'en décembre 2026, sans carte bancaire...") — à vérifier qu'elle est bien reprise partout (site, emails), pas seulement sur le flyer.
 
 ---
 
@@ -24,13 +26,20 @@
 8. **Mention "figure pas en vraie grandeur"** — rétroactivité sur les sous-thèmes basculés avant le 27/08 : décision restée ouverte
 9. **Dénominateur de sous-thèmes possiblement codé en dur** (ex. "2/21 sous-thèmes travaillés") — à localiser par grep, généraliser en COUNT dynamique
 10. **`api/generer.js`** — "Triangles semblables" absent de `chapitres['Espace et géométrie']`, sans impact actuel, à corriger en fin de chantier
-11. **Refonte de `examen_questions` (chantier 2) — jamais entamée, symétrique à celle de `questions_banque`.** 180 questions, jamais auditées, aucune application de la grille Bloc A/B/C, aucune colonne `statut`. `scoresExamen()` reste volontairement sur l'ancienne nomenclature à 4 clés en attendant cet audit (5 clés distinctes visées, sans `||` de repli). Pas de trafic élève réel dessus actuellement, ce qui laisse de la marge, mais le chantier n'a pas de date ni de position dans la file d'attente des priorités — contrairement à `questions_banque` qui a un ordre de lots défini
+11. **Refonte de `examen_questions` (chantier 2) — jamais entamée, symétrique à celle de `questions_banque`.** 180 questions, jamais auditées, aucune application de la grille Bloc A/B/C, aucune colonne `statut`. `scoresExamen()` reste volontairement sur l'ancienne nomenclature à 4 clés en attendant cet audit (5 clés distinctes visées, sans `||` de repli). Pas de trafic élève réel dessus actuellement, ce qui laisse de la marge, mais le chantier n'a pas de date ni de position dans la file d'attente — contrairement à `questions_banque`. Confirmé par CLAUDE.md : **pas de dédoublonnage par énoncé** sur cette table (contrairement à `questions_banque`) — deux lignes au même texte sous des ids différents ne sont pas protégées entre elles par le mécanisme anti-répétition
+12. **Stratification par difficulté inopérante dans `api/examen.js`** — le découpage en tiers (facile/moyen/difficile) a lieu *après* un `sort(() => Math.random()-0.5)`, donc ne trie rien réellement ; tirage aléatoire pur en pratique. Corriger imposerait de revoir le seuil de reboucle à 6 (actuellement calé dessus)
+13. **Shuffle biaisé** (`sort(() => Math.random()-0.5)`) — motif présent dans tout le dépôt, documenté mais jamais corrigé
 
 ---
 
 ## 🟠 Plateforme Academika — technique
 
-1. **Cybersécurité, avant activation Stripe live** : clé service_role jamais exposée côté client, RLS stricte, rate-limiting OTP contre le brute-force. **Idempotency Stripe** : la clé actuelle (`Date.now()`) ne protège de rien, il manque une vraie table de log en base pour éviter un doublon si Stripe renvoie deux fois le même webhook
+1. **Cybersécurité, avant activation Stripe live** — confirmé par CLAUDE.md comme chantier différé « intégrité des comptes », toujours ouvert (⚠️ contredit un diff vu le 14/08 dans l'historique de conversation, qui semblait montrer un correctif conçu — à vérifier lequel des deux est à jour) :
+   - **`profils` INSERT** : la policy ne contrôle pas `email_parent`, un utilisateur peut s'attribuer n'importe quel email parent à l'insertion
+   - **`shouldCreateUser: true`** (`espace-parent.html`) : permet à n'importe qui de créer un compte Auth sur une adresse email arbitraire — c'est le vecteur d'entrée qui rend exploitable la faille `profils` ci-dessus
+   - **Idempotency Stripe (C1/C2)** : clé checkout actuelle (`Date.now()`) ne protège de rien ; pas de table de log DB pour le webhook
+   - **C3, nouveau** : `invoice.payment_failed` jamais écouté — un échec de paiement (carte expirée) ne coupe l'accès qu'après l'abandon définitif des relances Stripe (`customer.subscription.deleted`), délai potentiellement long où l'accès reste actif sans paiement
+   - Items mineurs : `alerte_envoyee` (table `resultats`) sans `NOT NULL` appliqué ; `jours_actifs` du bilan périodique calculé en UTC au lieu d'Europe/Paris (confirme et précise le point UTC ci-dessous)
 2. **Abandon d'examen blanc non enregistré** — aucune trace en base ni pour le parent (contrairement au quiz) ; questions ouvertes : affichage à prévoir ? reprise de session nécessaire (80 min, refresh accidentel coûteux) ?
 3. **Email récap parent** ne distingue pas abandon vs quiz terminé à 0% — colonne `abandonne` absente de `resultats`
 4. **Double email à l'inscription au brevet blanc présentiel** — repéré dès le 08/06/2026, jamais vérifié comme résolu depuis (dernière mention 27/07)
@@ -49,8 +58,9 @@
 
 ## 🟡 Plateforme Academika — légal
 
-1. **CGV** — finalisation : case à cocher (Art. A1/B4), droit de rétractation 14 jours, exclusion visio du crédit d'impôt SAP. **Contenu à corriger pour coller à la réalité commerciale** : Art. C1 dit "pas de présentiel" alors que stages/examens blancs présentiels existent ; Art. B2 mentionne une facturation annuelle abandonnée ; placeholders de tarifs à retirer (grille verrouillée depuis le 22/07)
-2. **Politique de confidentialité** — page inexistante, nécessaire indépendamment des cookies ; champ resté vide dans la configuration Stripe faute de page à lier
+1. **CGV** — finalisation : case à cocher Art. A1 (acceptation CGV, `espace-parent.html`) et Art. B4 (renonciation rétractation 14 jours, `suivi-parent.html`) — confirmées manquantes par CLAUDE.md. **Contenu à corriger** : Art. C1 dit "pas de présentiel" alors que stages/examens blancs présentiels existent ; Art. B2 mentionne une périodicité annuelle abandonnée ; placeholders de tarifs à retirer (grille verrouillée depuis le 22/07)
+2. **⚠️ Conformité résiliation "3 clics" (Art. L215-1-1)** — contradiction trouvée : CLAUDE.md dit encore non fait (portail Stripe en espagnol, nom d'entreprise "XXXXX", pas d'email de confirmation sur support durable) ; l'historique de conversation du 12/08 disait ces trois points corrigés (PR #14). À vérifier directement lequel est exact avant de considérer ce point clos ou non
+3. **Politique de confidentialité** — page inexistante, nécessaire indépendamment des cookies ; champ resté vide dans la configuration Stripe faute de page à lier
 3. **Consultation juridique** (Point-Justice ou équivalent) — jamais initiée, bloque la finalisation des CGV et la distribution des flyers
 4. **SIRET/SAP** — SIRET obtenu (24/08), dossier INPI activité secondaire déposé, en attente validation INSEE/URSSAF ; une fois débloqué : déclaration SAP sur NOVA, puis prix présentiel réel + mention crédit d'impôt sur le site
 5. **Bandeau cookies** — pas nécessaire aujourd'hui (Supabase auth, Analytics, Stripe exemptés), mais deviendra obligatoire si Meta/Facebook Ads est activé (actuellement repoussé après lancement)
