@@ -76,7 +76,7 @@
 4. **`index.html`** — corriger "après chaque session" en "après chaque journée d'activité"
 5. **Design system unifié** (`style.css` marketing vs CSS inline `quiz.html`/`resultats.html`) — plan déjà validé (Claude Design pour le design system, puis handoff Claude Code), jamais exécuté ; plus pertinent maintenant que le compte Instagram est actif et peut montrer ces pages
 6. **Réflexion produit non tranchée** : extension à un site dédié 4ème et/ou 2nde pour septembre 2026, mentionnée à deux reprises, jamais retranchée
-7. **Option "Flyer" à la création de compte** — nouvelle idée (02/09) : ajouter un champ/case "Comment avez-vous connu Academika ?" incluant "Flyer" lors de l'inscription, pour compléter la collecte d'origine du trafic déjà en place (qui distingue Instagram via `/insta` mais ne capte rien du flyer physique, sans URL trackée dédiée)
+7. **URL trackée dédiée pour le flyer** (`/flyer`, sur le modèle de `/insta`) — le bouton "Flyer / affiche" de l'encart origine capture une déclaration du parent, pas une mesure fiable : un parent ayant vu le flyer puis cherché sur Google répondra "Recherche internet" en toute bonne foi. Les deux mécanismes sont complémentaires (l'URL trackée ne capte pas un parent qui tape academika.fr directement plutôt que de scanner le QR code)
 
 ---
 
