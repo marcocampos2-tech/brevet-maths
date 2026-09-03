@@ -77,6 +77,9 @@
 6. **Réflexion produit non tranchée** : extension à un site dédié 4ème et/ou 2nde pour septembre 2026, mentionnée à deux reprises, jamais retranchée
 7. **URL trackée dédiée pour le flyer** (`/flyer`, sur le modèle de `/insta`) — le bouton "Flyer / affiche" de l'encart origine capture une déclaration du parent, pas une mesure fiable : un parent ayant vu le flyer puis cherché sur Google répondra "Recherche internet" en toute bonne foi. Les deux mécanismes sont complémentaires (l'URL trackée ne capte pas un parent qui tape academika.fr directement plutôt que de scanner le QR code)
 
+- [ ] **Captures d'écran de `suivi-parent.html` pour le site** — jeu de données de démo prêt (`scripts/demo-lucas.sql`) : compte « Lucas Démo » isolé, 40 sessions du 04/08 au 03/09/2026, élève moyen à 66% avec 2 sous-thèmes en Moyen débloqué. Reste à exécuter le SQL puis à prendre les captures (page parent, barres de déblocage de `quiz.html`, email de bilan)
+- [ ] **Réserve sur le jeu de démo — l'état `maitrise` n'est pas couvert** : il vit au niveau Difficile, volontairement exclu du jeu de données (non crédible sur 1 mois d'historique, et incompatible avec un élève moyen sur le même compte). Les états `decouverte`, `en_cours`, `en_difficulte` et « Moyen atteint » le sont. À vérifier manuellement lors de la refonte de `suivi-parent.html`, ou à couvrir par un second élève de démo « cas avancé »
+
 ---
 
 ## 🔵 La Hulotte
