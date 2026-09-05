@@ -4,6 +4,35 @@
 
 ---
 
+## 🚨 BUG BLOQUANT — les parents ne voient pas les résultats de leur enfant (découvert 03/09/2026)
+
+La table `resultats` n'a que deux policies RLS en SELECT : « Les élèves voient leurs résultats » (`auth.uid() = user_id`) et « Prof voit tout resultats » (`is_prof()`). Le cas parent est absent, alors qu'il existe sur `profils`. Trois points d'appel cassés dans `suivi-parent.html` : `chargerDonnees()` l.360 (graphe du dashboard), `getRangeEtGranularite()` l.527 et `genererPDF()` l.607 (les trois boutons d'export PDF). Aucune erreur remontée : la RLS filtre silencieusement et la page affiche « Aucun quiz effectué ». **C'est le produit facturé 7,90€/mois qui ne fonctionne pas.**
+
+- **Cause** : oubli lors du chantier RLS, pas une régression — la chronologie par OID le confirme (« Lecture profils » 19041 et « Prof voit tout resultats » 19136 posées dans la même session ; le cas parent a été traité sur `profils` et oublié sur `resultats`)
+- **Jamais détecté parce que** le seul compte parent testé (`marcocampos2@gmail.com`) porte aussi le rôle prof, et `is_prof()` masquait l'absence de policy parent. Révélé par le compte démo créé le même jour pour les captures d'écran
+- **Correctif validé, non appliqué** : fonction `est_parent_de(uuid)` en `SECURITY DEFINER` lisant `auth.users` (et non le claim JWT), plus une policy SELECT dédiée sur `resultats`, étendue à `examens_blancs` dans le même geste
+- **Point ouvert avant écriture** : la clause `email_confirmed_at is not null` proposée est probablement trop stricte — « Confirm email » étant vraisemblablement désactivé (`creerEnfant()` inscrit sur des `@academika.app` fictifs), elle rendrait les parents aveugles. « Secure email change » est ACTIVÉ, ce qui couvre déjà le risque d'usurpation par changement d'adresse que cette clause visait
+
+## 🚨 PRÉVENTION — la RLS n'est pas versionnée (cause racine)
+
+Aucune migration versionnée (`supabase_migrations.schema_migrations` n'existe pas), aucun DDL RLS dans les 79 commits, pilotage 100 % dashboard. Un pan entier de la logique de sécurité est invisible en revue de code. Décision prise : mettre en place `db/policies.sql` (idempotent) ET `db/policies.test.sql` (les blocs `set local role authenticated` avec le test sans clause `where`). Le fichier seul n'aurait rien attrapé — il aurait fidèlement reproduit l'absence de la policy.
+
+## ⏸️ REFONTE `suivi-parent.html` — en pause jusqu'au correctif RLS
+
+Indicateur central : le **niveau atteint** par sous-thème remplace le score (un score qui baisse peut signifier que l'élève est monté de niveau — colorer le score peut afficher l'inverse de la réalité). Affichage : niveau atteint + progression X/5 vers le prochain déblocage ; quatre états (`decouverte` < 3 sessions, `en_cours`, `en_difficulte` ≥ 6 sessions sans déblocage, `maitrise` = 5 réussites au niveau difficile) ; tri par priorité d'action avec repli ; dénominateur par `COUNT` dynamique sur les sous-thèmes actifs, jamais en dur. Règle de déblocage inchangée (5 sessions à ≥70%). Le module de calcul est partagé (`lib/progression.js` en UMD), avec refactor de `quiz.html` pour supprimer la duplication — vérifier que Vercel sert `/lib/*.js` AVANT de toucher `quiz.html`. L'email de bilan (`api/cron-rappel.js`) s'aligne dans le même chantier : son `sous_themes_snapshot` mesure la difficulté tentée sur la fenêtre, pas le niveau débloqué, ce qui produit des régressions fantômes.
+
+## 📸 Captures d'écran pour le site — bloquées par le bug RLS
+
+Le compte démo est prêt mais la page n'affiche rien tant que la policy manque. Une fois corrigé : capture « avant » (le graphe à 66 % montre un élève ayant débloqué deux niveaux comme une suite de journées dorées — c'est la démonstration visuelle du problème), puis capture « après ». Cibles : `suivi-parent.html`, les barres de déblocage de `quiz.html`, l'email de bilan.
+
+⚠️ **Les dates du jeu de démo sont ancrées au 03/09/2026.** La fenêtre 14 jours se dégrade chaque jour qui passe (jours actifs qui baissent, traînée de jours vides). Pour des captures ultérieures, décaler les dates.
+
+## 🖼️ Images sur `index.html` — sujet initial, jamais traité
+
+Maquette validée mais non implémentée : icônes dans les 3 étapes de « Comment ça marche », icônes dans les 3 cartes d'offres, photo réelle à la place de l'avatar initiales « MC » du bloc Méthode. Aucune ne modifie la structure. Écarté pour l'instant : une illustration dans le hero, qui passerait le bloc en 2 colonnes.
+
+---
+
 ## ⚠️ Échéance critique — Bascule décembre 2026
 
 *Corrigé le 02/09 après lecture de CLAUDE.md : le code est déjà fait (confirmation, pas hypothèse).*
@@ -53,6 +82,10 @@
 12. **Stages "Réserver une place"** — bouton mailto seulement, formulaire réel à construire (modèle : examen blanc présentiel)
 13. **Distinction gratuit/abonnement** — gating email fait (`lib/gating.js`), mais gating dashboard/PDF/examen blanc encore à construire ; sans lui un compte gratuit peut voir du contenu payant
 14. **Espace parent persistant (option B)** — en attente depuis le 24/07, sans date
+15. **`is_prof()` sans `search_path` figé** — contrairement à `verifier_disponibilite` et `verifier_login`. Exposition faible (la fonction n'appelle que `auth.jwt()`, pas de nom de table à détourner), à aligner au passage du correctif RLS parent
+16. **Presque toutes les policies ciblent le rôle `{public}` et non `{authenticated}`** — pas exploitable aujourd'hui (`auth.uid()` est nul pour un anonyme), mais fragile : une future policy à condition moins stricte deviendrait publique sans qu'on le veuille. Seule « Parent modifie source de son enfant » est correctement cadrée
+17. **`historique_bilans`, `rappels_envoyes` et `email_rate_limit`** ont la RLS activée et ZERO policy (refus total, accessibles seulement en clé service) — sans impact aujourd'hui, mais `historique_bilans` aura besoin d'une policy parent le jour où on l'exposera au tableau de bord
+18. **Le bandeau commercial de `suivi-parent.html` vend cinq bénéfices dont au moins un n'est pas implémenté** : « le résultat de chaque examen blanc en ligne » — la page ne lit jamais `examens_blancs`. Masqué jusqu'au 01/12/2026 par `enPeriodeGratuite()`, donc pas urgent, mais à traiter avant la bascule
 
 ---
 
@@ -79,6 +112,7 @@
 
 - [ ] **Captures d'écran de `suivi-parent.html` pour le site** — jeu de données de démo prêt (`scripts/demo-lucas.sql`) : compte « Lucas Démo » isolé, 40 sessions du 04/08 au 03/09/2026, élève moyen à 66% avec 2 sous-thèmes en Moyen débloqué. Reste à exécuter le SQL puis à prendre les captures (page parent, barres de déblocage de `quiz.html`, email de bilan)
 - [ ] **Réserve sur le jeu de démo — l'état `maitrise` n'est pas couvert** : il vit au niveau Difficile, volontairement exclu du jeu de données (non crédible sur 1 mois d'historique, et incompatible avec un élève moyen sur le même compte). Les états `decouverte`, `en_cours`, `en_difficulte` et « Moyen atteint » le sont. À vérifier manuellement lors de la refonte de `suivi-parent.html`, ou à couvrir par un second élève de démo « cas avancé »
+- [ ] **Ne jamais coller `scripts/demo-lucas.sql` en entier dans l'éditeur SQL** : les quatre blocs s'exécutent à la suite et le bloc 4 supprime ce que le bloc 2 vient de créer. Arrivé une fois le 03/09
 
 ---
 
