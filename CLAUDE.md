@@ -23,6 +23,8 @@ Fichiers non encore audités, à lire en priorité si pertinent : `resultats.htm
 
 ## CHANTIER — Audit sécurité & correction RLS
 
+⚠️ **CLAUDE.md n'est pas la source de vérité sur l'état des policies.** Erreur factuelle trouvée et corrigée le 03/09/2026 (cf. section « intégrité des comptes » ci-dessous) : ce document peut décrire une policy qui n'a jamais existé sous cette forme. Toujours dumper `pg_policies` avant toute décision touchant à la RLS — ne jamais se fier à la description ci-dessous sans revérifier.
+
 Un audit complet a été mené (8 fichiers, 13 tables, 1 fonction, 1 bucket Storage, 2 configurations) et a identifié 19 items de sécurité, dont plusieurs critiques et exploitables sans authentification. Correction menée par étapes indépendantes, chacune testée avant de passer à la suivante.
 
 ### Terminé et validé
@@ -110,7 +112,13 @@ $$;
 
 À traiter avant le passage Stripe live :
 
-* **`profils` INSERT** : la policy INSERT actuelle (`with_check: auth.uid()=user_id`) ne contrôle pas `email_parent` — un utilisateur peut s'attribuer n'importe quel email parent à l'insertion. Concrètement observé dans `suivi-parent.html` (`creerEnfant()`) : l'INSERT se fait avec la session de l'**enfant** (`sbEleve`, pas celle du parent), et `email_parent` est envoyé correctement par ce flux applicatif précis — mais RLS seule ne l'impose pas, donc rien n'empêche un appel direct à l'API Supabase avec une session valide et n'importe quel `email_parent`. Solution probable : valider `email_parent` côté serveur avant l'insertion plutôt qu'en RLS pur (RLS ne peut pas facilement comparer à une valeur externe).
+* **`profils` INSERT — ⚠️ CORRECTION FACTUELLE (03/09/2026)** : ce chantier reposait sur une description erronée de la policy. Ce qui était écrit ici (`with_check: auth.uid()=user_id`, policy ne contrôlant pas `email_parent`) **est faux**. Le dump réel de `pg_policies` donne :
+
+  ```
+  "Insertion profils" INSERT {public} with_check: (email_parent = (auth.jwt() ->> 'email'))
+  ```
+
+  Soit exactement ce que dit le commentaire de `suivi-parent.html` l.905-906 — la policy contrôle bien `email_parent` contre l'email du JWT de la session qui fait l'INSERT, elle ne se contente pas de `auth.uid()=user_id`. **Les conclusions de ce chantier (diagnostic de faille et solution proposée) sont donc à rejouer entièrement** à partir de la policy réelle avant toute action : reste à déterminer si `email_parent = auth.jwt()->>'email'` suffit à couvrir le scénario redouté (session enfant + email arbitraire) ou si un trou subsiste sous une autre forme.
 * **`shouldCreateUser: true`** : dans `espace-parent.html`, l'appel `sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })` (seule occurrence dans le dépôt) permet à n'importe qui de créer un compte Auth sur une adresse email arbitraire. C'est le vecteur d'entrée qui rend exploitable la faille `profils` INSERT ci-dessus — d'où leur regroupement dans ce même chantier.
 
 ### Reste ouvert — chantier Stripe (idempotency)
