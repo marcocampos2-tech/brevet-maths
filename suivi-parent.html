@@ -113,6 +113,22 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .encart-origine-btn { background: white; border: 1px solid var(--border); color: var(--marine); font-size: 12px; padding: 7px 12px; border-radius: 20px; cursor: pointer; font-family: 'Inter', sans-serif; }
 .encart-origine-btn:hover { border-color: var(--marine); }
 .encart-origine-passer { background: none; border: none; color: var(--muted); font-size: 11.5px; text-decoration: underline; cursor: pointer; font-family: 'Inter', sans-serif; padding: 4px; }
+.niveau-synthese { font-size: 13px; color: var(--ardoise); line-height: 1.5; margin-bottom: 1rem; }
+.niveau-groupe { margin-bottom: 14px; }
+.niveau-groupe:last-child { margin-bottom: 0; }
+.niveau-groupe-titre { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.niveau-ligne { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; border-left: 3px solid var(--border); background: var(--creme); margin-bottom: 6px; }
+.niveau-ligne:last-child { margin-bottom: 0; }
+.niveau-ligne-difficulte { border-left-color: var(--dore); }
+.niveau-ligne-en_cours { border-left-color: var(--marine); }
+.niveau-ligne-decouverte { border-left-color: var(--border); background: white; }
+.niveau-ligne-acquis { border-left-color: var(--vert); }
+.niveau-ligne-nom { font-size: 12.5px; font-weight: 500; color: var(--ardoise); }
+.niveau-ligne-info { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.niveau-voir-plus { display: block; background: none; border: none; color: var(--marine); font-size: 12px; text-decoration: underline; cursor: pointer; font-family: 'Inter', sans-serif; padding: 4px 2px; margin-top: 2px; }
+.niveau-acquis-toggle { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--marine); color: var(--marine); border-radius: 20px; padding: 9px 16px; font-size: 12.5px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; margin-top: 4px; }
+.niveau-acquis-detail { display: none; margin-top: 10px; }
+.niveau-acquis-detail.ouvert { display: block; }
 </style>
 </head>
 <body>
@@ -134,6 +150,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   <div class="page-sub" id="page-sub">Activité de <span id="prenom-affiche">votre enfant</span></div>
 
   <div id="bandeau-suivi" style="display:none"></div>
+
+  <div id="zone-niveaux"></div>
 
   <div class="info-bandeau">Le graphique montre le détail jour par jour sur 7, 14 ou 21 jours. Pour une période plus longue (un mois, un trimestre), utilisez les boutons de téléchargement en bas de page.</div>
 
@@ -244,6 +262,213 @@ let offreSelectionnee = 'autonomie'
 const FIN_OFFRE_LANCEMENT = new Date('2026-12-01T00:00:00+01:00')
 function enPeriodeGratuite() { return new Date() < FIN_OFFRE_LANCEMENT }
 
+// ═══════════════════════════════════════════════════════════
+// NIVEAU ATTEINT PAR SOUS-THÈME — recopié depuis quiz.html
+// (THEMES/SOUS_THEMES/SEUIL_SESSIONS/SEUIL_PCT, verifierDeblocage
+// lignes 265-307 et 377-390). Pas de module partagé entre les deux
+// fichiers HTML statiques : à resynchroniser manuellement si la liste
+// ou les seuils changent dans quiz.html. L'algorithme ci-dessous doit
+// rester rigoureusement identique à celui de quiz.html — c'est lui qui
+// détermine réellement, côté élève, quelle difficulté est jouable.
+// Toute divergence afficherait au parent un niveau différent de celui
+// que vit l'enfant.
+// ═══════════════════════════════════════════════════════════
+const SOUS_THEMES = {
+  'Nombres et calculs': [
+    'Équations', 'Calcul littéral', 'Fractions', 'Puissances', 'Arithmétique'
+  ],
+  'Organisation et gestion de données, fonctions': [
+    'Fonctions', 'Statistiques', 'Probabilités', 'Proportionnalité', 'Pourcentages'
+  ],
+  'Grandeurs et mesures': [
+    'Aires et volumes', 'Conversions', 'Agrandissement'
+  ],
+  'Espace et géométrie': [
+    'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie', 'Transformations', 'Triangles semblables'
+  ],
+  'Algorithmique et programmation': [
+    'Algorithmique'
+  ]
+}
+const SEUIL_SESSIONS = 5
+const SEUIL_PCT = 70
+
+// Réplique verifierDeblocage() de quiz.html:377-390 : compteur cumulatif
+// de toutes les sessions ≥70% depuis toujours à chaque difficulté,
+// aucune notion de consécutivité (une session ratée entre deux réussites
+// ne réinitialise rien). "difficile débloqué" ⇒ état 'acquis'.
+//
+// Classification (cahier validé) :
+//  - decouverte : < 3 sessions sur ce sous-thème, tous niveaux confondus
+//  - difficulte : ≥ 6 tentatives (réussites + échecs) au niveau actuel
+//                 sans avoir débloqué le suivant
+//  - en_cours   : le reste (progression normale)
+//  - acquis     : Difficile débloqué
+function calculerEtatSousTheme(sessions) {
+  const total = sessions.length
+  if (total < 3) {
+    return { etat: 'decouverte', niveau: null, progression: null, sessionsTotal: total, tentativesNiveauActuel: 0 }
+  }
+
+  const compte = { facile: 0, moyen: 0, difficile: 0 }
+  sessions.forEach(s => {
+    if (!(s.difficulte in compte)) return
+    if (s.total > 0 && Math.round((s.score / s.total) * 100) >= SEUIL_PCT) compte[s.difficulte]++
+  })
+
+  const moyenDebloque = compte.facile >= SEUIL_SESSIONS
+  const difficileDebloque = moyenDebloque && compte.moyen >= SEUIL_SESSIONS
+
+  let niveauActuel = 'facile'
+  if (moyenDebloque) niveauActuel = 'moyen'
+  if (difficileDebloque) niveauActuel = 'difficile'
+
+  if (difficileDebloque) {
+    return { etat: 'acquis', niveau: 'difficile', progression: null, sessionsTotal: total, tentativesNiveauActuel: 0 }
+  }
+
+  // Sûr par construction : niveauActuel n'est promu à 'moyen'/'difficile'
+  // que lorsque le niveau précédent est déjà débloqué (5 réussites), donc
+  // compte[niveauActuel] reste toujours < SEUIL_SESSIONS ici — seul le
+  // compteur de tentatives totales (réussites + échecs) peut dépasser 6.
+  const tentativesNiveauActuel = sessions.filter(s => s.difficulte === niveauActuel).length
+  const progressionActuel = Math.min(compte[niveauActuel], SEUIL_SESSIONS)
+  const etat = tentativesNiveauActuel >= 6 ? 'difficulte' : 'en_cours'
+
+  return {
+    etat, niveau: niveauActuel,
+    progression: { actuel: progressionActuel, cible: SEUIL_SESSIONS },
+    sessionsTotal: total, tentativesNiveauActuel
+  }
+}
+
+function classerSousThemes(sessions) {
+  const items = []
+  for (const [theme, liste] of Object.entries(SOUS_THEMES)) {
+    for (const sousTheme of liste) {
+      const sessionsFiltrees = sessions.filter(s => s.theme === theme && s.sous_theme === sousTheme)
+      items.push({ theme, sousTheme, ...calculerEtatSousTheme(sessionsFiltrees) })
+    }
+  }
+  return items
+}
+
+const LIBELLE_NIVEAU = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
+const NIVEAU_SUIVANT = { facile: 'Moyen', moyen: 'Difficile' }
+
+// Génération par règles, aucune saisie manuelle. Mode dégradé validé :
+// pas de lecture de historique_bilans (RLS verrouillée, aucun accès
+// client — confirmé par dump pg_policies) ni de comparaison "depuis le
+// dernier bilan" — cette comparaison attend la PR d'alignement de
+// cron-rappel.js. Phrase purement descriptive de l'état actuel.
+function genererPhraseSynthese(items, nomEleve) {
+  const nom = nomEleve || 'Votre enfant'
+  const M = items.length
+  const nAcquis = items.filter(it => it.etat === 'acquis').length
+  const nAuMoinsMoyen = items.filter(it => it.niveau === 'moyen' || it.etat === 'acquis').length
+  const nCommences = items.filter(it => it.etat !== 'decouverte').length
+
+  if (nAcquis > 0) {
+    return `${nom} a atteint le niveau Difficile sur ${nAcquis} sous-thème${nAcquis > 1 ? 's' : ''} sur ${M}.`
+  }
+  if (nAuMoinsMoyen > 0) {
+    return `${nom} a atteint le niveau Moyen sur ${nAuMoinsMoyen} sous-thème${nAuMoinsMoyen > 1 ? 's' : ''} sur ${M}.`
+  }
+  if (nCommences > 0) {
+    return `${nom} a commencé à travailler ${nCommences} sous-thème${nCommences > 1 ? 's' : ''} sur ${M}.`
+  }
+  return `${nom} découvre actuellement ses premiers sous-thèmes.`
+}
+
+function rendreLigneSousTheme(item) {
+  let infoDroite
+  if (item.etat === 'decouverte') {
+    infoDroite = `${item.sessionsTotal} session${item.sessionsTotal > 1 ? 's' : ''}`
+  } else if (item.etat === 'acquis') {
+    infoDroite = 'Difficile débloqué'
+  } else {
+    const suivant = NIVEAU_SUIVANT[item.niveau]
+    infoDroite = `${LIBELLE_NIVEAU[item.niveau]} · ${item.progression.actuel}/${item.progression.cible} vers ${suivant}`
+  }
+  return `
+    <div class="niveau-ligne niveau-ligne-${item.etat}">
+      <span class="niveau-ligne-nom">${item.sousTheme}</span>
+      <span class="niveau-ligne-info">${infoDroite}</span>
+    </div>`
+}
+
+function rendreGroupe(titre, items, id, plafond) {
+  if (items.length === 0) return ''
+  const limite = plafond || items.length
+  const visibles = items.slice(0, limite)
+  const reste = items.slice(limite)
+  let html = `<div class="niveau-groupe"><div class="niveau-groupe-titre">${titre}</div>`
+  html += visibles.map(rendreLigneSousTheme).join('')
+  if (reste.length > 0) {
+    html += `<div id="niveau-reste-${id}" style="display:none">${reste.map(rendreLigneSousTheme).join('')}</div>`
+    html += `<button class="niveau-voir-plus" data-ferme="+ ${reste.length} autre${reste.length > 1 ? 's' : ''}" data-ouvert="Voir moins" onclick="toggleResteGroupe('${id}', this)">+ ${reste.length} autre${reste.length > 1 ? 's' : ''}</button>`
+  }
+  html += `</div>`
+  return html
+}
+
+function toggleResteGroupe(id, btn) {
+  const el = document.getElementById('niveau-reste-' + id)
+  if (!el) return
+  const ouvert = el.style.display !== 'none'
+  el.style.display = ouvert ? 'none' : 'block'
+  btn.textContent = ouvert ? btn.dataset.ferme : btn.dataset.ouvert
+}
+
+function toggleAcquis() {
+  const detail = document.getElementById('detail-acquis')
+  const chevron = document.getElementById('chevron-acquis')
+  if (!detail) return
+  const ouvert = detail.classList.toggle('ouvert')
+  chevron.textContent = ouvert ? '⌃' : '⌄'
+}
+
+// Historique complet, sans fenêtre de date — volontairement séparé de
+// chargerDonnees() (fenêtrée 7/14/21 jours, propre au graphique de
+// régularité). Rappelée à chaque changement d'enfant (choisirEnfant).
+async function chargerNiveaux(uid) {
+  const zone = document.getElementById('zone-niveaux')
+  if (!zone) return
+  zone.innerHTML = '<div class="card"><div class="loader" style="padding:1.5rem">⏳ Chargement…</div></div>'
+
+  const { data, error } = await sb.from('resultats')
+    .select('theme, sous_theme, difficulte, score, total')
+    .eq('user_id', uid)
+
+  if (error) {
+    zone.innerHTML = '<div class="card"><div class="vide">Impossible de charger le niveau atteint pour le moment.</div></div>'
+    return
+  }
+
+  const sessions = data || []
+  if (sessions.length === 0) { zone.innerHTML = ''; return }
+
+  const items = classerSousThemes(sessions)
+  const groupes = { difficulte: [], en_cours: [], decouverte: [], acquis: [] }
+  items.forEach(it => groupes[it.etat].push(it))
+
+  groupes.difficulte.sort((a, b) => b.tentativesNiveauActuel - a.tentativesNiveauActuel)
+  groupes.en_cours.sort((a, b) => b.progression.actuel - a.progression.actuel)
+
+  let html = '<div class="card"><div class="card-titre">Niveau atteint par sous-thème</div>'
+  html += `<div class="niveau-synthese">${genererPhraseSynthese(items, prenom)}</div>`
+  html += rendreGroupe('En difficulté', groupes.difficulte, 'difficulte')
+  html += rendreGroupe('En cours', groupes.en_cours, 'en_cours', 4)
+  html += rendreGroupe('À découvrir', groupes.decouverte, 'decouverte')
+  if (groupes.acquis.length > 0) {
+    html += `
+      <button class="niveau-acquis-toggle" onclick="toggleAcquis()">Sous-thèmes acquis (${groupes.acquis.length}) <span id="chevron-acquis">⌄</span></button>
+      <div class="niveau-acquis-detail" id="detail-acquis">${groupes.acquis.map(rendreLigneSousTheme).join('')}</div>`
+  }
+  html += '</div>'
+  zone.innerHTML = html
+}
+
 async function init() {
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'espace-parent.html'; return }
@@ -281,6 +506,7 @@ function choisirEnfant(uid, btn, prenomDirect) {
   }
   document.getElementById('prenom-affiche').textContent = prenom || 'votre enfant'
   afficherBandeauSuivi(uid)
+  chargerNiveaux(uid)
   chargerDonnees()
 }
 
