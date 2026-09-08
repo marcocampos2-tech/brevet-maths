@@ -361,24 +361,45 @@ const NIVEAU_SUIVANT = { facile: 'Moyen', moyen: 'Difficile' }
 // pas de lecture de historique_bilans (RLS verrouillée, aucun accès
 // client — confirmé par dump pg_policies) ni de comparaison "depuis le
 // dernier bilan" — cette comparaison attend la PR d'alignement de
-// cron-rappel.js. Phrase purement descriptive de l'état actuel.
+// cron-rappel.js. Phrase purement descriptive de l'état actuel — jamais
+// une évaluation ni une garantie de préparation au Brevet.
+//
+// Jusqu'à trois lignes indépendantes, chacune avec sa propre définition
+// (cahier validé) :
+//  - ligne 1 : "abordé" = au moins 1 session, tous niveaux confondus.
+//    Seuil volontairement bas, différent de celui de la catégorie
+//    "À découvrir" (< 3 sessions, cf. calculerEtatSousTheme) — un
+//    sous-thème à 1 session est donc compté ici tout en apparaissant
+//    encore dans "À découvrir". Incohérence apparente ASSUMÉE : ne pas
+//    aligner les deux seuils, ce serait un chantier séparé (cf. TODO).
+//  - ligne 2 : "niveau Moyen atteint" = nMoyenPur, moyens STRICTS
+//    (etat !== 'acquis') — pas le calcul d'origine, qui comptait aussi
+//    les acquis (déjà passés en Difficile). Masquée à 0. Sans ce
+//    filtre, un élève entièrement acquis verrait deux lignes portant
+//    le même chiffre pour les mêmes sous-thèmes ("Moyen sur 3" et
+//    "Difficile sur 3") — redondant, et ça touche justement les élèves
+//    les plus avancés, dont l'écran doit être le plus valorisant.
+//  - ligne 3 : "niveau Difficile atteint" = nAcquis, masquée à 0. Ne
+//    s'exclut pas de la ligne 2 : un élève peut avoir des sous-thèmes
+//    en Moyen et d'autres déjà en Difficile en même temps — sous-vendre
+//    un acquis en Difficile en ne montrant que "Moyen" irait à
+//    l'encontre de l'objectif du chantier (descriptif, pas minimisant).
+//    Casse alignée sur LIBELLE_NIVEAU, la même que les badges de la liste.
 function genererPhraseSynthese(items, nomEleve) {
   const nom = nomEleve || 'Votre enfant'
   const M = items.length
+  const nAbordes = items.filter(it => it.sessionsTotal >= 1).length
+  const nMoyenPur = items.filter(it => it.niveau === 'moyen' && it.etat !== 'acquis').length
   const nAcquis = items.filter(it => it.etat === 'acquis').length
-  const nAuMoinsMoyen = items.filter(it => it.niveau === 'moyen' || it.etat === 'acquis').length
-  const nCommences = items.filter(it => it.etat !== 'decouverte').length
 
+  let html = `<div>${nom} a abordé ${nAbordes} sous-thème${nAbordes > 1 ? 's' : ''} sur les ${M} du programme de 3e.</div>`
+  if (nMoyenPur > 0) {
+    html += `<div>Niveau ${LIBELLE_NIVEAU.moyen} atteint sur ${nMoyenPur} d'entre eux.</div>`
+  }
   if (nAcquis > 0) {
-    return `${nom} a atteint le niveau Difficile sur ${nAcquis} sous-thème${nAcquis > 1 ? 's' : ''} sur ${M}.`
+    html += `<div>Niveau ${LIBELLE_NIVEAU.difficile} atteint sur ${nAcquis} d'entre eux.</div>`
   }
-  if (nAuMoinsMoyen > 0) {
-    return `${nom} a atteint le niveau Moyen sur ${nAuMoinsMoyen} sous-thème${nAuMoinsMoyen > 1 ? 's' : ''} sur ${M}.`
-  }
-  if (nCommences > 0) {
-    return `${nom} a commencé à travailler ${nCommences} sous-thème${nCommences > 1 ? 's' : ''} sur ${M}.`
-  }
-  return `${nom} découvre actuellement ses premiers sous-thèmes.`
+  return html
 }
 
 function rendreLigneSousTheme(item) {
