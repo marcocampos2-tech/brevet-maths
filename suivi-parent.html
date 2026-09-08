@@ -361,24 +361,31 @@ const NIVEAU_SUIVANT = { facile: 'Moyen', moyen: 'Difficile' }
 // pas de lecture de historique_bilans (RLS verrouillée, aucun accès
 // client — confirmé par dump pg_policies) ni de comparaison "depuis le
 // dernier bilan" — cette comparaison attend la PR d'alignement de
-// cron-rappel.js. Phrase purement descriptive de l'état actuel.
+// cron-rappel.js. Phrase purement descriptive de l'état actuel — jamais
+// une évaluation ni une garantie de préparation au Brevet.
+//
+// Deux lignes indépendantes, chacune avec sa propre définition (cahier
+// validé) :
+//  - ligne 1 : "abordé" = au moins 1 session, tous niveaux confondus.
+//    Seuil volontairement bas, différent de celui de la catégorie
+//    "À découvrir" (< 3 sessions, cf. calculerEtatSousTheme) — un
+//    sous-thème à 1 session est donc compté ici tout en apparaissant
+//    encore dans "À découvrir". Incohérence apparente ASSUMÉE : ne pas
+//    aligner les deux seuils, ce serait un chantier séparé (cf. TODO).
+//  - ligne 2 : "niveau moyen atteint" = calcul existant, inchangé
+//    (compte aussi les sous-thèmes déjà passés en Difficile/acquis,
+//    qui ont nécessairement débloqué Moyen au passage). Masquée à 0.
 function genererPhraseSynthese(items, nomEleve) {
   const nom = nomEleve || 'Votre enfant'
   const M = items.length
-  const nAcquis = items.filter(it => it.etat === 'acquis').length
+  const nAbordes = items.filter(it => it.sessionsTotal >= 1).length
   const nAuMoinsMoyen = items.filter(it => it.niveau === 'moyen' || it.etat === 'acquis').length
-  const nCommences = items.filter(it => it.etat !== 'decouverte').length
 
-  if (nAcquis > 0) {
-    return `${nom} a atteint le niveau Difficile sur ${nAcquis} sous-thème${nAcquis > 1 ? 's' : ''} sur ${M}.`
-  }
+  let html = `<div>${nom} a abordé ${nAbordes} sous-thème${nAbordes > 1 ? 's' : ''} sur les ${M} du programme de 3e.</div>`
   if (nAuMoinsMoyen > 0) {
-    return `${nom} a atteint le niveau Moyen sur ${nAuMoinsMoyen} sous-thème${nAuMoinsMoyen > 1 ? 's' : ''} sur ${M}.`
+    html += `<div>Niveau moyen atteint sur ${nAuMoinsMoyen} d'entre eux.</div>`
   }
-  if (nCommences > 0) {
-    return `${nom} a commencé à travailler ${nCommences} sous-thème${nCommences > 1 ? 's' : ''} sur ${M}.`
-  }
-  return `${nom} découvre actuellement ses premiers sous-thèmes.`
+  return html
 }
 
 function rendreLigneSousTheme(item) {
