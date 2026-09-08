@@ -364,26 +364,36 @@ const NIVEAU_SUIVANT = { facile: 'Moyen', moyen: 'Difficile' }
 // cron-rappel.js. Phrase purement descriptive de l'état actuel — jamais
 // une évaluation ni une garantie de préparation au Brevet.
 //
-// Deux lignes indépendantes, chacune avec sa propre définition (cahier
-// validé) :
+// Jusqu'à trois lignes indépendantes, chacune avec sa propre définition
+// (cahier validé) :
 //  - ligne 1 : "abordé" = au moins 1 session, tous niveaux confondus.
 //    Seuil volontairement bas, différent de celui de la catégorie
 //    "À découvrir" (< 3 sessions, cf. calculerEtatSousTheme) — un
 //    sous-thème à 1 session est donc compté ici tout en apparaissant
 //    encore dans "À découvrir". Incohérence apparente ASSUMÉE : ne pas
 //    aligner les deux seuils, ce serait un chantier séparé (cf. TODO).
-//  - ligne 2 : "niveau moyen atteint" = calcul existant, inchangé
+//  - ligne 2 : "niveau Moyen atteint" = calcul existant, inchangé
 //    (compte aussi les sous-thèmes déjà passés en Difficile/acquis,
 //    qui ont nécessairement débloqué Moyen au passage). Masquée à 0.
+//  - ligne 3 : "niveau Difficile atteint" = nAcquis, masquée à 0. Ne
+//    s'exclut pas de la ligne 2 : un élève peut avoir des sous-thèmes
+//    en Moyen et d'autres déjà en Difficile en même temps — sous-vendre
+//    un acquis en Difficile en ne montrant que "Moyen" irait à
+//    l'encontre de l'objectif du chantier (descriptif, pas minimisant).
+//    Casse alignée sur LIBELLE_NIVEAU, la même que les badges de la liste.
 function genererPhraseSynthese(items, nomEleve) {
   const nom = nomEleve || 'Votre enfant'
   const M = items.length
   const nAbordes = items.filter(it => it.sessionsTotal >= 1).length
   const nAuMoinsMoyen = items.filter(it => it.niveau === 'moyen' || it.etat === 'acquis').length
+  const nAcquis = items.filter(it => it.etat === 'acquis').length
 
   let html = `<div>${nom} a abordé ${nAbordes} sous-thème${nAbordes > 1 ? 's' : ''} sur les ${M} du programme de 3e.</div>`
   if (nAuMoinsMoyen > 0) {
-    html += `<div>Niveau moyen atteint sur ${nAuMoinsMoyen} d'entre eux.</div>`
+    html += `<div>Niveau ${LIBELLE_NIVEAU.moyen} atteint sur ${nAuMoinsMoyen} d'entre eux.</div>`
+  }
+  if (nAcquis > 0) {
+    html += `<div>Niveau ${LIBELLE_NIVEAU.difficile} atteint sur ${nAcquis} d'entre eux.</div>`
   }
   return html
 }
