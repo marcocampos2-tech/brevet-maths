@@ -263,6 +263,16 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 
 Chaque fois qu'un travail effectué dans une session résout, clôt, ou rend obsolète un point présent dans docs/TODO.md, coche la case correspondante (- [x]) ou supprime la ligne si elle ne demande plus de suivi — dans le même commit que le travail effectué, sans qu'on ait besoin de le redemander. Si un sujet nouveau et non trivial apparaît en cours de session et n'est pas traité immédiatement, l'ajouter à docs/TODO.md dans la section la plus pertinente, sous forme de case à cocher non cochée. Ne pas reformuler ni réorganiser les lignes existantes à cette occasion — seulement cocher, supprimer, ou ajouter.
 
+## Modification de docs/TODO.md
+
+Avant de fermer ou modifier un point dans docs/TODO.md :
+1. Chercher (grep) le sujet dans tout le fichier pour repérer TOUTES
+   les sections qui en parlent, pas seulement celle qu'on modifie
+   (un même sujet peut être mentionné à plusieurs endroits).
+2. Montrer le diff complet avant de committer.
+3. Ne jamais laisser un titre de section à jour au-dessus d'un texte
+   resté périmé, ni l'inverse.
+
 ## Rappel méthodologique
 
 Ne jamais exécuter de SQL, modifier RLS, ou toucher aux tables ci-dessus sans présenter d'abord : ce qui va changer, pourquoi, le risque principal, et un plan de test précis — puis attendre validation explicite. Tester une table/un changement à la fois, jamais un lot entier d'un coup. En cas de doute sur un usage client (une table lue/écrite directement depuis un fichier HTML), vérifier dans le code avant de formuler une hypothèse — ne pas supposer.
