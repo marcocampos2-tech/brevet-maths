@@ -140,6 +140,11 @@ section.alt-bg { background: var(--light-bg); }
 .step-title { font-size: 15px; font-weight: 500; color: var(--navy); margin-bottom: 8px; }
 .step-desc { font-size: 13px; color: #6B7280; line-height: 1.6; }
 
+.produit-shot { max-width: 420px; margin: 0 auto; text-align: center; }
+.produit-shot img { width: 100%; height: auto; display: block; border-radius: 10px; border: 0.5px solid var(--border); }
+.produit-shot-titre { font-size: 18px; margin: 20px 0 8px; }
+.produit-shot-texte { font-size: 14px; color: #6B7280; line-height: 1.6; }
+
 .offers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .offer-card {
   background: var(--cream);

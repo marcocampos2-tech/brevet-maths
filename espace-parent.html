@@ -49,6 +49,11 @@ input:focus { outline: none; border-color: var(--marine); }
 .presentation-point { display: flex; gap: 10px; align-items: flex-start; }
 .presentation-icone { font-size: 16px; color: var(--bordeaux); margin-top: 1px; flex-shrink: 0; line-height: 1; }
 .presentation-texte { font-size: 12.5px; color: var(--ardoise); line-height: 1.55; font-style: italic; }
+.produit-shots { max-width: 480px; margin: 0 auto; padding: 48px 1.25rem 56px; display: flex; flex-direction: column; gap: 48px; }
+.produit-shot { max-width: 420px; margin: 0 auto; text-align: center; }
+.produit-shot img { width: 100%; height: auto; display: block; border-radius: 14px; border: 1px solid var(--border); }
+.produit-shot-titre { font-family: 'Newsreader', serif; font-size: 18px; font-weight: 500; color: var(--marine); margin: 20px 0 8px; }
+.produit-shot-texte { font-size: 14px; color: var(--muted); line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -86,6 +91,24 @@ input:focus { outline: none; border-color: var(--marine); }
   </div>
 </div>
 </div>
+
+<section class="produit-shots">
+  <div class="produit-shot">
+    <img src="/img/produit-suivi-regularite.webp" alt="Capture d'écran du graphique de régularité des sessions" width="828" height="1648" loading="lazy">
+    <h3 class="produit-shot-titre">Suivez son travail au jour le jour</h3>
+    <p class="produit-shot-texte">Combien de sessions, combien de temps, quels jours. Tout est visible depuis votre espace.</p>
+  </div>
+  <div class="produit-shot">
+    <img src="/img/produit-suivi-bilan-pdf.webp" alt="Capture d'écran du bloc de téléchargement de bilan PDF" width="811" height="499" loading="lazy">
+    <h3 class="produit-shot-titre">Un bilan PDF quand vous voulez</h3>
+    <p class="produit-shot-texte">Ce mois-ci, les trois derniers mois, ou depuis le début. Un clic, rien à saisir.</p>
+  </div>
+  <div class="produit-shot">
+    <img src="/img/produit-suivi-progression.webp" alt="Capture d'écran du suivi de progression par sous-thème" width="828" height="1411" loading="lazy">
+    <h3 class="produit-shot-titre">Voyez où il en est, sous-thème par sous-thème</h3>
+    <p class="produit-shot-texte">Trois niveaux : facile, moyen, difficile. On voit d'un coup d'œil ce qui est acquis et ce qui coince.</p>
+  </div>
+</section>
 
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
