@@ -32,11 +32,9 @@ Le mail récap journalier affiche encore le score brut de la session + seuil "Ac
 
 POST serverless + écriture dans `historique_bilans` confirmés. Les deux items d'incertitude précédents (cause racine Vercel Hobby, doute Vercel vs GitHub Actions) sont clos.
 
-## 📸 Captures d'écran pour le site — en cours
+## ✅ Captures d'écran pour le site — intégrées (09/09/2026)
 
-Plus bloqué par le bug RLS. 4 images WebP produites (`produit-quiz-correction`, `produit-suivi-regularite`, `produit-suivi-bilan-pdf`, `produit-suivi-progression`). PR #47 mergée (reformulation phrase de synthèse sur la capture progression). Textes d'accompagnement validés pour `index.html` (bloc quiz) et `espace-parent.html` (3 blocs : Régularité, PDF bilans, Progression).
-
-**Reste à faire** : conversion WebP finale via Squoosh (<100 Ko/image) côté fondateur, confirmation existence du dossier `/img/`, puis spec d'intégration.
+`/img/` créé, 4 images WebP produites et intégrées (`produit-quiz-correction`, `produit-suivi-regularite`, `produit-suivi-bilan-pdf`, `produit-suivi-progression`), toutes <100 Ko. Bloc quiz (offre Libre) sur `index.html` et `tarifs.html`, 3 blocs Suivi (offre Accompagné) sur `tarifs.html` uniquement — pas sur `espace-parent.html` (retiré : redondant sous un formulaire de connexion pour un parent déjà abonné). Layout mobile 1 colonne partout ; desktop 2 colonnes image/texte pour le bloc quiz, 3 colonnes pour les blocs Suivi.
 
 ⚠️ Dates du jeu de démo ancrées au 03/09/2026, se dégradent chaque jour (fenêtre 14 jours).
 
@@ -93,6 +91,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 15. `historique_bilans`/`rappels_envoyes`/`email_rate_limit` — RLS active, zéro policy
 16. Bandeau commercial `suivi-parent.html` vend "résultat examen blanc en ligne" — jamais implémenté, masqué jusqu'au 01/12
 17. Deux seuils désalignés "abordé" (1 session) vs "À découvrir" (<3 sessions) — assumé, pas un bug
+18. Lien "Offres" corrigé (`#quiz`→`#offres`) sur `index.html`/`tarifs.html` (09/09) ; même décalage nom/cible jamais corrigé sur `stages-vacances.html`, `connexion.html`, `cours-particuliers.html`, `abonnement-confirme.html` (liens vers `index.html#quiz`)
 
 ---
 

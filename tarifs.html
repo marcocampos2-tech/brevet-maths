@@ -10,13 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
-.tarifs-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 14px;
-  max-width: 900px;
-  margin: 0 auto 16px;
-}
+.tarif-card-solo { max-width: 420px; margin: 0 auto; }
 .tarif-card {
   background: var(--light-bg);
   border-radius: 10px;
@@ -114,7 +108,7 @@
 <header class="site-header">
   <a href="index.html" class="logo">ACADEMIKA</a>
   <nav class="main-nav">
-    <a href="index.html#quiz">Offres</a>
+    <a href="index.html#offres">Offres</a>
     <a href="cours-particuliers.html">Cours particuliers</a>
     <a href="stages-vacances.html">Stages vacances</a>
     <a href="tarifs.html">Tarifs</a>
@@ -130,7 +124,7 @@
 </header>
 
 <div class="mobile-menu" id="mobileMenu">
-  <a href="index.html#quiz">Offres</a>
+  <a href="index.html#offres">Offres</a>
   <a href="cours-particuliers.html">Cours particuliers</a>
   <a href="stages-vacances.html">Stages vacances</a>
   <a href="tarifs.html">Tarifs</a>
@@ -145,8 +139,8 @@
 
 <section>
   <div style="max-width:560px;margin:0 auto 32px;padding:16px 24px;border-left:3px solid var(--bordeaux);font-size:14px;color:var(--navy);font-family:'Newsreader',serif;font-style:italic">Academika est construit pour un objectif : réussir le Brevet de maths. Chaque quiz, chaque niveau, chaque examen blanc est conçu pour cela — par un ingénieur qui donne encore des cours chaque semaine, à partir du programme officiel et des attendus de fin de 3e.</div>
-  <div class="tarifs-grid">
 
+  <div class="tarif-card-solo">
     <div class="tarif-card">
       <div class="tarif-nom">Libre</div>
       <div class="tarif-prix">0€</div>
@@ -154,7 +148,22 @@
       <div class="tarif-guide">Pour réviser seul, à son rythme</div>
       <a href="espace-parent.html?action=inscription" class="tarif-cta">Créer un compte</a>
     </div>
+  </div>
+</section>
 
+<section class="produit-apercu">
+  <div class="section-label">Ce que Libre contient</div>
+  <div class="produit-shot">
+    <img src="/img/produit-quiz-correction.webp" alt="Capture d'écran d'une question de quiz avec sa correction affichée" width="797" height="984" loading="lazy">
+    <div class="produit-shot-texte-bloc">
+      <h3 class="produit-shot-titre">Une explication après chaque question</h3>
+      <p class="produit-shot-texte">Le raisonnement complet s'affiche, que la réponse soit juste ou fausse.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="tarif-card-solo">
     <div class="tarif-card" id="carte-suivi">
       <div class="tarif-nom">Accompagné</div>
       <div class="tarif-prix">7,90€<span>/mois</span></div>
@@ -162,9 +171,28 @@
       <div class="tarif-guide">Gratuit pendant le lancement — 7,90€/mois à partir de décembre, sans engagement</div>
       <a href="espace-parent.html?action=inscription" class="tarif-cta">Créer un compte</a>
     </div>
-
   </div>
+</section>
 
+<section>
+  <div class="section-label">Ce que Accompagné ajoute</div>
+  <div class="produit-shots-grille">
+    <div class="produit-shot">
+      <img src="/img/produit-suivi-regularite.webp" alt="Capture d'écran du graphique de régularité des sessions" width="828" height="1648" loading="lazy">
+      <h3 class="produit-shot-titre">Suivez son travail au jour le jour</h3>
+      <p class="produit-shot-texte">Combien de sessions, combien de temps, quels jours. Tout est visible depuis votre espace.</p>
+    </div>
+    <div class="produit-shot">
+      <img src="/img/produit-suivi-bilan-pdf.webp" alt="Capture d'écran du bloc de téléchargement de bilan PDF" width="811" height="499" loading="lazy">
+      <h3 class="produit-shot-titre">Un bilan PDF quand vous voulez</h3>
+      <p class="produit-shot-texte">Ce mois-ci, les trois derniers mois, ou depuis le début. Un clic, rien à saisir.</p>
+    </div>
+    <div class="produit-shot">
+      <img src="/img/produit-suivi-progression.webp" alt="Capture d'écran du suivi de progression par sous-thème" width="828" height="1411" loading="lazy">
+      <h3 class="produit-shot-titre">Voyez où il en est, sous-thème par sous-thème</h3>
+      <p class="produit-shot-texte">Trois niveaux : facile, moyen, difficile. On voit d'un coup d'œil ce qui est acquis et ce qui coince.</p>
+    </div>
+  </div>
 </section>
 
 <section class="alt-bg">
@@ -178,7 +206,7 @@
 <footer class="site-footer">
   <span class="logo">ACADEMIKA</span>
   <div class="footer-links">
-    <a href="index.html#quiz">Offres</a>
+    <a href="index.html#offres">Offres</a>
     <a href="cours-particuliers.html">Cours particuliers</a>
     <a href="stages-vacances.html">Stages vacances</a>
     <a href="tarifs.html">Tarifs</a>
