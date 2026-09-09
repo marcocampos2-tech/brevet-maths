@@ -52,10 +52,17 @@ input:focus { outline: none; border-color: var(--marine); }
 .produit-shots { max-width: 480px; margin: 0 auto; padding: 20px 1.25rem 56px; display: flex; flex-direction: column; gap: 48px; }
 .produit-shots-label { font-size: 12px; font-weight: 500; letter-spacing: 1.5px; color: var(--bordeaux); text-transform: uppercase; text-align: center; margin-bottom: 10px; }
 .produit-shots-titre { font-family: 'Newsreader', serif; font-size: 22px; font-weight: 500; color: var(--marine); text-align: center; margin-bottom: 0; }
+.produit-shots-grille { display: contents; }
 .produit-shot { max-width: 420px; margin: 0 auto; text-align: center; }
 .produit-shot img { width: 100%; height: auto; display: block; border-radius: 14px; border: 1px solid var(--border); }
 .produit-shot-titre { font-family: 'Newsreader', serif; font-size: 18px; font-weight: 500; color: var(--marine); margin: 20px 0 8px; }
 .produit-shot-texte { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+@media (min-width: 641px) {
+  .produit-shots { max-width: 960px; }
+  .produit-shots-grille { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; align-items: start; }
+  .produit-shot { max-width: none; }
+}
 </style>
 </head>
 <body>
@@ -97,6 +104,7 @@ input:focus { outline: none; border-color: var(--marine); }
 <section class="produit-shots">
   <div class="produit-shots-label">Exemple de suivi</div>
   <div class="produit-shots-titre">Voici ce que vous retrouverez dans votre espace parent.</div>
+  <div class="produit-shots-grille">
   <div class="produit-shot">
     <img src="/img/produit-suivi-regularite.webp" alt="Capture d'écran du graphique de régularité des sessions" width="828" height="1648" loading="lazy">
     <h3 class="produit-shot-titre">Suivez son travail au jour le jour</h3>
@@ -111,6 +119,7 @@ input:focus { outline: none; border-color: var(--marine); }
     <img src="/img/produit-suivi-progression.webp" alt="Capture d'écran du suivi de progression par sous-thème" width="828" height="1411" loading="lazy">
     <h3 class="produit-shot-titre">Voyez où il en est, sous-thème par sous-thème</h3>
     <p class="produit-shot-texte">Trois niveaux : facile, moyen, difficile. On voit d'un coup d'œil ce qui est acquis et ce qui coince.</p>
+  </div>
   </div>
 </section>
 
