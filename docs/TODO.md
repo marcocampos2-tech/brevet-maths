@@ -48,6 +48,43 @@ Plus bloqué par le bug RLS. 4 images WebP produites (`produit-quiz-correction`,
 
 Maquette validée, non implémentée : icônes 3 étapes "Comment ça marche", icônes 3 cartes d'offres, photo réelle à la place de l'avatar "MC". Écarté : illustration hero (passerait le bloc en 2 colonnes).
 
+## Doublons d'enregistrement dans `resultats` (découvert 09/09/2026)
+
+**Statut** : diagnostiqué, non corrigé. Hypothèse non reproduite.
+
+### Constat
+Sur l'élève Timothée Andrianarivelo (`user_id 1af38361-a852-42de-9852-da19e530b84f`, 21 lignes le 09/09 entre 13:04 et 13:59) : 5 paires de lignes identiques (même sous-thème, même difficulté, même score) écrites à 0,4–1,2 s d'intervalle. 21 lignes en base = 16 sessions réelles.
+
+Paires : 13:04:30.779/31.217 (Calcul littéral 3/5) · 13:11:24.065/24.854 (CL 4/5) · 13:37:00.270/01.439 (CL 2/5) · 13:38:40.889/41.431 (CL 2/5) · 13:59:58.119/58.655 (Équations 3/5).
+
+### Conséquence avérée
+Le doublon de 13:11 a fait passer le compteur de `verifierDeblocage` de 4 à 5 sessions facile ≥70% sur Calcul littéral → **niveau Moyen débloqué à tort** (première session moyen à 13:42:16).
+En comparaison, le déblocage d'Équations (5 sessions distinctes 13:44→13:55, puis moyen à 13:59) est légitime : la règle 5/70% fonctionne sur données propres.
+
+Portée plus large : ces doublons polluent tout ce qui lit `resultats` — nombre de sessions affiché au parent, moyennes du récap journalier, compteurs du bilan, et le futur calcul de niveau du chantier `suivi-parent.html`. Invisibles : ils ressemblent à des sessions normales.
+
+### Cause probable (à confirmer)
+Dans `quiz.html` :
+- `valider(qi)` n'a que la garde `if(answers[qi] === undefined) return` — pas de `if(submitted[qi] !== undefined) return` comme dans `pick()`. Un double-tap sur « Valider » de la dernière question déclenche deux fois `renderResultats()`.
+- `sauvegarder()` positionne `saved=true` APRÈS le `await fetch` : les deux appels franchissent la garde `if(saved...)` avant que le premier ait terminé.
+
+Cohérent avec un trafic majoritairement mobile (double-tap involontaire fréquent). Non exclu sans vérification : un retry réseau navigateur donnerait le même symptôme.
+
+### Pistes de correction (non arbitrées)
+1. Garde de ré-entrance dans `valider()` — une ligne.
+2. Verrou optimiste dans `sauvegarder()` — `saved=true` avant le `fetch`, relâché sur échec.
+3. Idempotence serveur dans `api/quiz-resultat.js` — rejet d'une écriture identique dans une fenêtre courte. Seul niveau qui protège quel que soit le client ; cohérent avec l'exigence d'idempotence déjà listée dans l'audit cyber du 09/08.
+4. Nettoyage des lignes existantes — reverrouillerait mécaniquement le Moyen de Calcul littéral pour Timothée. Décision produit autant que technique.
+
+1+2 = correctif de surface. 3 = le seul durable. 4 = à trancher séparément.
+
+### À faire avant de coder
+- Audit : combien d'élèves et de lignes concernés (requête à écrire).
+- Reproduction du double-tap sur compte démo pour confirmer l'hypothèse.
+
+### Point connexe (distinct, non urgent)
+`api/generer.js` accepte `difficulte` du `req.body` sans revérifier le déblocage côté serveur — le gating n'existe qu'en dur dans `quiz.html`. Pas la cause du bug ci-dessus. À traiter dans le chantier `suivi-parent.html`, qui doit de toute façon recalculer le niveau depuis `resultats` : extraire la règle (`SEUIL_SESSIONS`, `SEUIL_PCT`, calcul `score/total`) dans un module partagé sur le modèle de `lib/questions-vues.js`, plutôt que de laisser diverger trois implémentations (quiz.html, cron-rappel.js, suivi-parent).
+
 ---
 
 ## ⚠️ Échéance critique — Bascule décembre 2026
