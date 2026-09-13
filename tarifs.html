@@ -17,14 +17,27 @@
   .produit-apercu .produit-shot-texte-bloc { order: 1; }
   .accompagne-intro { padding-top: 32px; }
   .produit-suivi-legende { padding-top: 32px; }
-  .produit-shots-grille .produit-shot { margin-bottom: 48px; }
+  .produit-shots-grille .produit-shot { display: flex; flex-direction: column; margin-bottom: 48px; }
 }
 @media (min-width: 641px) {
   .produit-suivi-legende { padding-top: 24px; }
   .produit-apercu .section-label { margin-bottom: 32px; }
+  /* Sans ça, les 3 images démarrent à des hauteurs différentes : chaque
+     colonne empile titre+texte+image indépendamment, et un titre sur
+     2 lignes ou un texte plus long décale son image vers le bas par
+     rapport aux 2 autres colonnes. On aligne donc titres/textes/images
+     sur 3 lignes de grille communes à toute la grille plutôt que 3
+     colonnes indépendantes. */
+  .produit-shots-grille { row-gap: 0; }
+  .produit-shots-grille .produit-shot { display: contents; }
+  .produit-shots-grille .produit-shot:nth-child(1) > * { grid-column: 1; }
+  .produit-shots-grille .produit-shot:nth-child(2) > * { grid-column: 2; }
+  .produit-shots-grille .produit-shot:nth-child(3) > * { grid-column: 3; }
+  .produit-shots-grille .produit-shot-titre { grid-row: 1; }
+  .produit-shots-grille .produit-shot-texte { grid-row: 2; }
+  .produit-shots-grille .produit-shot img { grid-row: 3; }
 }
 .produit-suivi-legende .section-label { margin-bottom: 32px; }
-.produit-shots-grille .produit-shot { display: flex; flex-direction: column; }
 .produit-shots-grille .produit-shot-titre { order: 1; margin: 0 0 8px; }
 .produit-shots-grille .produit-shot-texte { order: 2; }
 .produit-shots-grille .produit-shot img { order: 3; margin-top: 28px; }
