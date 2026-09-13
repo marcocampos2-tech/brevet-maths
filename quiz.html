@@ -329,7 +329,8 @@ async function sauvegarderAbandonne() {
         theme, sous_theme: sousTheme, difficulte: diff,
         abandonne: true,
         temps_secondes: chronoSecondes,
-        source_questions: sourceQuestions
+        source_questions: sourceQuestions,
+        client_key: crypto.randomUUID() // même clé d'idempotence que sauvegarder() — écrit dans la même table via le même endpoint
       })
     })
     saved=true
@@ -957,7 +958,8 @@ async function sauvegarder() {
         theme, sous_theme: sousTheme, difficulte: diff,
         questions, reponses: reponsesEnvoyees,
         temps_secondes: chronoSecondes,
-        source_questions: sourceQuestions
+        source_questions: sourceQuestions,
+        client_key: crypto.randomUUID() // clé d'idempotence : ferme le TOCTOU via la contrainte unique côté base
       })
     })
     const data = await res.json()

@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).json({ error: 'Méthode non autorisée' }); return }
 
   try {
-    const { user_id, email, prenom, theme, sous_theme, difficulte, questions, reponses, temps_secondes, source_questions, abandonne } = req.body
+    const { user_id, email, prenom, theme, sous_theme, difficulte, questions, reponses, temps_secondes, source_questions, abandonne, client_key } = req.body
 
     if (!user_id || !theme || !difficulte) {
       return res.status(400).json({ error: 'Paramètres manquants' })
@@ -20,7 +20,8 @@ export default async function handler(req, res) {
         questions_ratees: ['Quiz abandonné'],
         temps_secondes: temps_secondes || 0,
         aucune_idee: 0,
-        source_questions: source_questions || 'ia'
+        source_questions: source_questions || 'ia',
+        client_key
       })
       if (result.error) return res.status(500).json({ error: result.error })
       return res.status(200).json({ success: true, score: 0, total: 5 })
@@ -53,7 +54,8 @@ export default async function handler(req, res) {
       questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
       temps_secondes: temps_secondes || 0,
       aucune_idee: nbAucune,
-      source_questions: source_questions || 'ia'
+      source_questions: source_questions || 'ia',
+      client_key
     })
 
     if (result.error) {
@@ -68,7 +70,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function insererResultat({ user_id, email, prenom, theme, sous_theme, difficulte, score, total, questions_ratees, temps_secondes, aucune_idee, source_questions }) {
+async function insererResultat({ user_id, email, prenom, theme, sous_theme, difficulte, score, total, questions_ratees, temps_secondes, aucune_idee, source_questions, client_key }) {
   try {
     const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
     const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
@@ -117,13 +119,18 @@ async function insererResultat({ user_id, email, prenom, theme, sous_theme, diff
         'apikey': SERVICE_KEY,
         'Authorization': `Bearer ${SERVICE_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        // resolution=ignore-duplicates : upsert atomique (INSERT ... ON CONFLICT DO NOTHING)
+        // côté Postgres sur la contrainte resultats_client_key_unique. C'est la protection
+        // qui ferme réellement le TOCTOU laissé ouvert par le contrôle applicatif ci-dessus
+        // (celui-ci reste utile pour un client qui n'enverrait pas encore client_key).
+        'Prefer': 'return=minimal,resolution=ignore-duplicates'
       },
       body: JSON.stringify({
         user_id, email: email || '', prenom: prenom || '', email_parent,
         theme, sous_theme: sous_theme || '', difficulte, score, total,
         questions_ratees, temps_secondes, aucune_idee,
-        source_questions, alerte_envoyee: false
+        source_questions, alerte_envoyee: false,
+        client_key: client_key || null
       })
     })
 
