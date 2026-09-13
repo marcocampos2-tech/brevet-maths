@@ -34,7 +34,7 @@ POST serverless + écriture dans `historique_bilans` confirmés. Les deux items 
 
 ## ✅ Captures d'écran pour le site — intégrées (09/09/2026)
 
-`/img/` créé, 4 images WebP produites et intégrées (`produit-quiz-correction`, `produit-suivi-regularite`, `produit-suivi-bilan-pdf`, `produit-suivi-progression`), toutes <100 Ko. Bloc quiz (offre Libre) sur `index.html` et `tarifs.html`, 3 blocs Suivi (offre Accompagné) sur `tarifs.html` uniquement — pas sur `espace-parent.html` (retiré : redondant sous un formulaire de connexion pour un parent déjà abonné). Layout mobile 1 colonne partout ; desktop 2 colonnes image/texte pour le bloc quiz, 3 colonnes pour les blocs Suivi.
+`/img/` créé, 4 images WebP produites et intégrées (`produit-quiz-correction`, `produit-suivi-regularite`, `produit-suivi-bilan-pdf`, `produit-suivi-progression`), toutes <100 Ko. Bloc quiz (offre Libre) sur `index.html` et `tarifs.html`, 3 blocs Suivi (offre Accompagné) sur `tarifs.html` uniquement — pas sur `espace-parent.html` (retiré : redondant sous un formulaire de connexion pour un parent déjà abonné). Sur `tarifs.html`, organisation finale en pleine largeur, groupe après groupe : carte Libre → légende "Ce que Libre contient" → capture quiz → carte Accompagné → légende "Ce que Accompagné ajoute" → 3 blocs Suivi (une disposition à 2 colonnes carte+preuve a été tentée puis abandonnée, déséquilibre de hauteur trop marqué entre les deux offres). Layout mobile 1 colonne partout ; desktop 2 colonnes image/texte pour le bloc quiz, 3 colonnes pour les blocs Suivi (alignées sur une même hauteur via des lignes de grille communes, pas 3 colonnes indépendantes).
 
 ⚠️ Dates du jeu de démo ancrées au 03/09/2026, se dégradent chaque jour (fenêtre 14 jours).
 
@@ -114,6 +114,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 3. Design system unifié — plan validé, jamais exécuté
 4. Extension site dédié 4ème/2nde — non tranchée
 5. URL trackée dédiée flyer (`/flyer`) — à faire, complémentaire au champ source déclaratif
+6. Constat concret pendant le chantier captures produit (09-13/09) : `index.html`/`tarifs.html` partagent `style.css`, `espace-parent.html` a son propre `<style>` local avec des noms de variables différents pour les mêmes couleurs (`--navy`/`--bordeaux` vs `--marine`/`--bordeaux`, etc.) — a nécessité une duplication de `.produit-shot`/`.section-label` avant qu'on ne retire finalement tout ce contenu d'`espace-parent.html`. Illustration concrète du point 3 ci-dessus.
 
 ---
 
