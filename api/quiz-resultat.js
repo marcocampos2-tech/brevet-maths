@@ -73,6 +73,32 @@ async function insererResultat({ user_id, email, prenom, theme, sous_theme, diff
     const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
     const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
 
+    // ── Idempotence : ignore une écriture au fingerprint identique déjà
+    // enregistrée il y a moins de FENETRE_DOUBLON_MS (double-tap / retry réseau).
+    // Fail-open : toute panne de ce contrôle laisse l'insertion se faire normalement.
+    const FENETRE_DOUBLON_MS = 5000
+    try {
+      const dupRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/resultats?user_id=eq.${user_id}` +
+        `&theme=eq.${encodeURIComponent(theme)}` +
+        `&sous_theme=eq.${encodeURIComponent(sous_theme || '')}` +
+        `&difficulte=eq.${encodeURIComponent(difficulte)}` +
+        `&score=eq.${score}&total=eq.${total}` +
+        `&select=created_at&order=created_at.desc&limit=1`,
+        { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } }
+      )
+      const dupData = await dupRes.json()
+      if (Array.isArray(dupData) && dupData.length > 0) {
+        const ecartMs = Date.now() - new Date(dupData[0].created_at).getTime()
+        if (ecartMs >= 0 && ecartMs < FENETRE_DOUBLON_MS) {
+          console.log(`[quiz-resultat] doublon ignoré : user_id=${user_id} ${theme}/${sous_theme}/${difficulte} score=${score}/${total} écart=${ecartMs}ms`)
+          return { success: true, doublon: true }
+        }
+      }
+    } catch (e) {
+      console.log('[quiz-resultat] échec contrôle doublon, insertion normale (fail-open):', e.message)
+    }
+
     // Récupère email_parent depuis profils
     let email_parent = ''
     try {
