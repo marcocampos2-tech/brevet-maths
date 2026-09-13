@@ -329,7 +329,8 @@ async function sauvegarderAbandonne() {
         theme, sous_theme: sousTheme, difficulte: diff,
         abandonne: true,
         temps_secondes: chronoSecondes,
-        source_questions: sourceQuestions
+        source_questions: sourceQuestions,
+        client_key: crypto.randomUUID() // même clé d'idempotence que sauvegarder() — écrit dans la même table via le même endpoint
       })
     })
     saved=true
@@ -945,6 +946,7 @@ async function renderResultats() {
 
 async function sauvegarder() {
   if(saved||!user||questions.length===0)return
+  saved=true // verrou optimiste : posé avant le fetch pour bloquer tout appel concurrent ; relâché ci-dessous en cas d'échec
   const reponsesEnvoyees = {}
   Object.keys(submitted).forEach(i => { reponsesEnvoyees[i] = answers[i] })
   try{
@@ -956,14 +958,14 @@ async function sauvegarder() {
         theme, sous_theme: sousTheme, difficulte: diff,
         questions, reponses: reponsesEnvoyees,
         temps_secondes: chronoSecondes,
-        source_questions: sourceQuestions
+        source_questions: sourceQuestions,
+        client_key: crypto.randomUUID() // clé d'idempotence : ferme le TOCTOU via la contrainte unique côté base
       })
     })
     const data = await res.json()
-    if(data.error){console.log('Erreur sauvegarde:',data.error);return}
-    saved=true
+    if(data.error){console.log('Erreur sauvegarde:',data.error);saved=false;return}
     delete deblocageCache[cleDeblocage(theme,sousTheme)]
-  }catch(e){console.log('Erreur sauvegarde:',e.message)}
+  }catch(e){console.log('Erreur sauvegarde:',e.message);saved=false}
 }
 
 async function nouvelleRonde(){
@@ -983,6 +985,7 @@ async function terminer(){
 function pick(qi,oi){if(submitted[qi]!==undefined)return;answers[qi]=oi;renderQuiz()}
 
 async function valider(qi) {
+  if(submitted[qi] !== undefined) return
   if(answers[qi] === undefined) return
   const sel = answers[qi]
   submitted[qi] = sel === 'aucune' ? 'aucune' : (sel === questions[qi].answer ? 'correct' : 'wrong')
