@@ -42,6 +42,20 @@ POST serverless + écriture dans `historique_bilans` confirmés. Les deux items 
 
 **Piège** : ne jamais coller `scripts/demo-lucas.sql` en entier dans l'éditeur SQL (le bloc 4 supprime ce que le bloc 2 crée) — arrivé une fois le 03/09.
 
+## ✅ Doublons `resultats` — corrigé et déployé (13/09/2026)
+
+Diagnostic initial (double-tap mobile probable sur `quiz.html`, ayant fait passer à tort un compteur de déblocage de 4 à 5 sessions chez Timothée) traité en 4 points, chacun validé séparément. PR #52 mergée :
+- **Gardes client** (`quiz.html`) : garde de ré-entrance dans `valider(qi)` sur le modèle de `pick()` ; verrou optimiste dans `sauvegarder()` (`saved=true` posé avant le `fetch`, relâché explicitement sur échec).
+- **Idempotence serveur par fenêtre** (`api/quiz-resultat.js`) : rejet d'une écriture au fingerprint identique (`user_id`+`theme`+`sous_theme`+`difficulte`+`score`+`total`) déjà enregistrée il y a moins de 5 s, fail-open si le contrôle échoue.
+- **Fermeture du TOCTOU résiduel** — le contrôle par fenêtre est un check-then-insert, pas atomique. Clé de déduplication `client_key` (UUID généré une fois côté client par soumission réelle) + contrainte unique `resultats_client_key_unique` en base, upsert atomique via `Prefer: resolution=ignore-duplicates` (Postgres résout le conflit lui-même, sans lecture préalable). Couvre les deux chemins d'écriture vers `resultats` : `sauvegarder()` et `sauvegarderAbandonne()`.
+- **Migration SQL** exécutée et vérifiée en base : colonne nullable, aucune des lignes existantes affectée, doublon volontaire en test rejeté avec `23505`.
+- **Nettoyage** : 5 doublons identifiés chez Timothée (seul élève réel) supprimés par `id` figés après validation d'un `select` préalable — 21 → 16 lignes, requête de détection revérifiée à vide après coup. Conséquence acceptée : reverrouille mécaniquement le niveau Moyen de Calcul littéral débloqué à tort.
+- PR #50 (diagnostic initial, jamais mergée) fermée sans merge — remplacée par cette entrée.
+
+**Reste ouvert (découvert pendant ce chantier) :**
+- **Résultats orphelins** — 12 lignes `resultats` + 1 ligne `examens_blancs` rattachées à 4 `user_id` sans aucune ligne `profils` correspondante : `d2275364-e958-4f2d-bd76-1bbd6cf56314`, `b2236cc4-f3be-4bd5-8644-342efb67c667`, `27adbec9-b380-4a43-991b-ee3a92a9b6fd`, `fe4403c8-7a22-49be-8fcd-3fca73326977`. Ce dernier identifié : c'est le compte prof de CM lui-même (cf. section app_metadata ci-dessus) — n'a jamais eu de ligne `profils` car ce n'est pas un compte élève, résultats probablement issus de tests manuels sur `quiz.html`. **Seuls les 3 autres restent à expliquer.** Symptôme visible : `prof.html` affiche `—` à la place du prénom dans "30 dernières activités" — `PROFILS[r.user_id]` introuvable (le fallback ne se déclenche que si la ligne `profils` est totalement absente, pas si un champ interne est vide). Policy `Lecture profils` vérifiée (branche `is_prof()` présente) → cause RLS écartée. Deux hypothèses non départagées pour les 3 comptes restants : comptes supprimés (profil parti, résultats restés — bénin) ou création de compte qui échoue à écrire dans `profils` tout en laissant l'élève accéder au quiz (sérieux, prioritaire si confirmé).
+- **Doublons non nettoyés sur ces comptes orphelins** — nettoyage de ce chantier volontairement restreint à Timothée. Les comptes ci-dessus contiennent eux-mêmes des doublons du même type (ex. `d2275364…` : trois sessions "Puissances" à 10:15:07/10/11 le 13/09 ; `27adbec9…` : deux "Équations" à 1,2 s d'écart le 09/09). À traiter avec le point précédent, une fois l'origine de ces comptes établie — ne pas nettoyer avant d'avoir diagnostiqué cette fois.
+
 ## 🖼️ Images sur `index.html` — jamais traité
 
 Maquette validée, non implémentée : icônes 3 étapes "Comment ça marche", icônes 3 cartes d'offres, photo réelle à la place de l'avatar "MC". Écarté : illustration hero (passerait le bloc en 2 colonnes).
