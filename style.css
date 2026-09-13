@@ -159,7 +159,7 @@ section.alt-bg { background: var(--light-bg); }
   }
   .produit-apercu .produit-shot img { width: 260px; flex-shrink: 0; }
   .produit-apercu .produit-shot-titre { margin-top: 0; }
-  .produit-shots-grille { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; align-items: center; max-width: 960px; margin: 0 auto; }
+  .produit-shots-grille { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; align-items: start; max-width: 960px; margin: 0 auto; }
 }
 
 .offers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }

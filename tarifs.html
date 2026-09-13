@@ -13,17 +13,20 @@
 .tarif-card-solo { max-width: 420px; margin: 0 auto; }
 @media (max-width: 640px) {
   .produit-apercu .produit-shot { display: flex; flex-direction: column; }
-  .produit-apercu .produit-shot img { order: 2; }
+  .produit-apercu .produit-shot img { order: 2; margin-top: 20px; }
   .produit-apercu .produit-shot-texte-bloc { order: 1; }
+  .accompagne-intro { padding-top: 32px; }
+  .produit-suivi-legende { padding-top: 32px; }
 }
 @media (min-width: 641px) {
   .produit-suivi-legende { padding-top: 24px; }
+  .produit-apercu .section-label { margin-bottom: 32px; }
 }
 .produit-suivi-legende .section-label { margin-bottom: 32px; }
 .produit-shots-grille .produit-shot { display: flex; flex-direction: column; }
 .produit-shots-grille .produit-shot-titre { order: 1; margin: 0 0 8px; }
 .produit-shots-grille .produit-shot-texte { order: 2; }
-.produit-shots-grille .produit-shot img { order: 3; margin-top: 20px; }
+.produit-shots-grille .produit-shot img { order: 3; margin-top: 28px; }
 .tarif-card {
   background: var(--light-bg);
   border-radius: 10px;
@@ -175,7 +178,7 @@
   </div>
 </section>
 
-<section>
+<section class="accompagne-intro">
   <div class="tarif-card-solo">
     <div class="tarif-card" id="carte-suivi">
       <div class="tarif-nom">Accompagné</div>
