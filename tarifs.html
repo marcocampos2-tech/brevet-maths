@@ -11,6 +11,14 @@
 <link rel="stylesheet" href="style.css">
 <style>
 .tarif-card-solo { max-width: 420px; margin: 0 auto; }
+@media (max-width: 640px) {
+  .produit-apercu .produit-shot { display: flex; flex-direction: column; }
+  .produit-apercu .produit-shot img { order: 2; }
+  .produit-apercu .produit-shot-texte-bloc { order: 1; }
+}
+@media (min-width: 641px) {
+  .produit-suivi-legende { padding-top: 24px; }
+}
 .tarif-card {
   background: var(--light-bg);
   border-radius: 10px;
@@ -174,7 +182,7 @@
   </div>
 </section>
 
-<section>
+<section class="produit-suivi-legende">
   <div class="section-label">Ce que Accompagné ajoute</div>
   <div class="produit-shots-grille">
     <div class="produit-shot">
