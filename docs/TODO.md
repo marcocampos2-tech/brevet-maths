@@ -28,6 +28,8 @@ Le mail récap journalier affiche encore le score brut de la session + seuil "Ac
 
 **Point de contenu à trancher à la conception** : garder une mention de la session du jour en plus du niveau global, ou basculer entièrement sur niveau/progression.
 
+**Confirmé et complété (14/09)** : le récap journalier (`api/email.js`, `recap-journalier-user`) ne mentionne effectivement jamais le niveau atteint ni la progression de déblocage — seulement "acquis/à revoir" sur la journée. Découverte additionnelle : un quiz abandonné compte comme 0/5 dans la moyenne du jour et peut à lui seul faire basculer le ton de l'email (encourageant → "score faible") — à traiter dans ce même chantier, un abandon ne devrait probablement pas peser comme un échec dans la moyenne.
+
 ## ✅ Cron bilan périodique (21 jours) — vérifié fonctionnel de bout en bout (08/09/2026)
 
 POST serverless + écriture dans `historique_bilans` confirmés. Les deux items d'incertitude précédents (cause racine Vercel Hobby, doute Vercel vs GitHub Actions) sont clos.
@@ -53,8 +55,20 @@ Diagnostic initial (double-tap mobile probable sur `quiz.html`, ayant fait passe
 - PR #50 (diagnostic initial, jamais mergée) fermée sans merge — remplacée par cette entrée.
 
 **Reste ouvert (découvert pendant ce chantier) :**
-- **Résultats orphelins** — 12 lignes `resultats` + 1 ligne `examens_blancs` rattachées à 4 `user_id` sans aucune ligne `profils` correspondante : `d2275364-e958-4f2d-bd76-1bbd6cf56314`, `b2236cc4-f3be-4bd5-8644-342efb67c667`, `27adbec9-b380-4a43-991b-ee3a92a9b6fd`, `fe4403c8-7a22-49be-8fcd-3fca73326977`. Ce dernier identifié : c'est le compte prof de CM lui-même (cf. section app_metadata ci-dessus) — n'a jamais eu de ligne `profils` car ce n'est pas un compte élève, résultats probablement issus de tests manuels sur `quiz.html`. **Seuls les 3 autres restent à expliquer.** Symptôme visible : `prof.html` affiche `—` à la place du prénom dans "30 dernières activités" — `PROFILS[r.user_id]` introuvable (le fallback ne se déclenche que si la ligne `profils` est totalement absente, pas si un champ interne est vide). Policy `Lecture profils` vérifiée (branche `is_prof()` présente) → cause RLS écartée. Deux hypothèses non départagées pour les 3 comptes restants : comptes supprimés (profil parti, résultats restés — bénin) ou création de compte qui échoue à écrire dans `profils` tout en laissant l'élève accéder au quiz (sérieux, prioritaire si confirmé).
-- **Doublons non nettoyés sur ces comptes orphelins** — nettoyage de ce chantier volontairement restreint à Timothée. Les comptes ci-dessus contiennent eux-mêmes des doublons du même type (ex. `d2275364…` : trois sessions "Puissances" à 10:15:07/10/11 le 13/09 ; `27adbec9…` : deux "Équations" à 1,2 s d'écart le 09/09). À traiter avec le point précédent, une fois l'origine de ces comptes établie — ne pas nettoyer avant d'avoir diagnostiqué cette fois.
+- **Résultats orphelins — diagnostic établi (14/09/2026)** : cause racine identifiée, `connexion.html:107-112` — toute session valide redirige vers `quiz.html` sans vérifier le type de compte. C'est la seule porte vers `quiz.html`/`examen.html`/`resultats.html` en dehors d'une session déjà en cours (recherche exhaustive faite). Un parent connecté qui clique "Connexion" depuis n'importe quelle page marketing atterrit directement sur le quiz de son enfant, avec son propre compte — d'où les lignes `resultats` sans ligne `profils` (les comptes parents n'en ont jamais). Reproduit en production de bout en bout (inscription espace parent → nouvelle visite → clic "Connexion" → atterrissage direct sur `quiz.html`). Signal visible identifié : `quiz.html:520` affiche `prenom || user.email` — pour un compte parent, l'email s'affiche à la place du prénom, jamais repéré jusqu'ici.
+
+  3 familles réelles concernées (sur 27 comptes, dont 10 hérités d'Academika 1.0 hors sujet) :
+  - **Bertin** (sebastien.bertin86@gmail.com, enfant Juliette) — traité le 14/09 : doublons nettoyés (3 sessions Puissances identiques), 2 sessions réelles ré-attribuées au compte de Juliette, colonnes dénormalisées corrigées, email envoyé au parent avec la procédure de connexion.
+  - **Niazale** (kids.niazale@gmail.com, enfants kabi et divine) — pas traité. 2 sessions sur le compte parent, impossible de savoir lequel des deux enfants a travaillé sans réponse du parent. Email à envoyer avec la question, ré-attribution une fois la réponse obtenue.
+  - **Andrianarivelo** (Timothée) — cas résiduel déjà couvert par le chantier doublons précédent, 2 sessions sur un premier compte parent, l'enfant a son propre compte fonctionnel (16 sessions) — non prioritaire.
+
+  Correctif technique validé (recommandation A+B+C), pas encore codé :
+  - A — `connexion.html` aiguille selon le type de compte (session + ligne `profils` → quiz ; session sans profil → `suivi-parent.html`)
+  - B — gate sur les 3 pages élève (`quiz.html`, `examen.html`, `resultats.html`) : bloque si aucune ligne `profils`, message explicite ("vous êtes connecté en tant que parent — pour que {prénom} travaille, connectez-le avec son prénom, son nom et son mot de passe"), fail-open si la lecture échoue techniquement
+  - C — gate serveur dans `api/quiz-resultat.js` : refuse l'écriture si `user_id` n'a pas de ligne `profils`
+  - Discriminant : présence d'une ligne `profils`, jamais `user_metadata` (modifiable par l'utilisateur, même raison que l'audit RLS initial)
+
+  Sujet distinct, à concevoir après le correctif : aucun écran ni email actuel n'explique au parent comment connecter son enfant après création du compte — 2 familles sur 3 n'ont jamais utilisé le compte de leur enfant avant intervention manuelle.
 
 ## 🖼️ Images sur `index.html` — jamais traité
 
