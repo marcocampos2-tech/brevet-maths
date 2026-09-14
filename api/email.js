@@ -8,6 +8,15 @@ function esc(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
+// Échappe les métacaractères PostgREST/SQL d'un pattern ILIKE (% et _, tous
+// deux valides dans un email — ex. prenom_nom@gmail.com) avant de l'utiliser
+// comme filtre exact insensible à la casse. Ne couvre que la casse, pas un
+// éventuel espace parasite stocké côté email_parent — cf. commentaire au
+// point d'appel dans le handler reset-password.
+function escapeIlike(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
 // ═══════════════════════════════════════════
 // RATE-LIMIT PAR DESTINATAIRE — 10 emails / heure / adresse
 // Table email_rate_limit (destinataire text PK, compteur int, fenetre_debut timestamptz)
@@ -84,44 +93,106 @@ export default async function handler(req, res) {
     const reponseUniforme = { success: true, message: 'Si un compte existe avec cet email, un lien a été envoyé.' }
 
     try {
+      // Normalisation côté saisie (casse + espaces) + filtre ILIKE (casse
+      // insensible côté colonne) : couvre le cas réel — un parent qui tape
+      // son email avec une casse différente de celle enregistrée en base.
+      // Ne couvre pas un espace parasite qui serait stocké dans
+      // profils.email_parent lui-même (ILIKE ne trim pas la colonne) —
+      // contrairement à lower(trim(...)) des deux côtés utilisé dans les
+      // fonctions RLS de db/policies.sql, qui nécessiterait une fonction
+      // SQL dédiée pour être reproduit à l'identique ici. Résidu accepté :
+      // email_parent est renseigné par le parent authentifié (creerEnfant),
+      // jamais saisi librement ailleurs, donc un espace parasite stocké est
+      // hautement improbable en pratique.
+      const emailNormalise = String(email_parent).trim().toLowerCase()
+
       const profilRes = await fetch(
-        `${SUPA_URL}/rest/v1/profils?email_parent=eq.${encodeURIComponent(email_parent)}&select=faux_email,derniere_demande_reset`,
+        `${SUPA_URL}/rest/v1/profils?email_parent=ilike.${encodeURIComponent(escapeIlike(emailNormalise))}&select=user_id,faux_email,prenom_affiche,nom_affiche,derniere_demande_reset`,
         { headers }
       )
       const profils = await profilRes.json()
 
-      if (!profils || profils.length === 0) {
+      if (!Array.isArray(profils) || profils.length === 0) {
         return res.status(200).json(reponseUniforme)
       }
 
-      const { faux_email, derniere_demande_reset } = profils[0]
+      // Rate-limit par enfant (3 min) : un enfant récemment sollicité est
+      // exclu de cette demande, mais n'empêche plus ses frères et sœurs de
+      // recevoir leur propre lien.
+      const maintenant = new Date()
+      const eligibles = profils.filter(p => {
+        if (!p.derniere_demande_reset) return true
+        return (maintenant - new Date(p.derniere_demande_reset)) / 60000 >= 3
+      })
+      if (eligibles.length === 0) {
+        return res.status(200).json(reponseUniforme)
+      }
 
-      if (derniere_demande_reset) {
-        const diffMinutes = (new Date() - new Date(derniere_demande_reset)) / 60000
-        if (diffMinutes < 3) {
-          return res.status(200).json(reponseUniforme)
+      // Tri alphabétique sur prenom_affiche — ordre déterministe pour
+      // l'affichage dans l'email ; pas plus parlant pour un parent de trier
+      // par date de création du compte.
+      eligibles.sort((a, b) => (a.prenom_affiche || '').localeCompare(b.prenom_affiche || '', 'fr', { sensitivity: 'base' }))
+
+      // Un lien par enfant éligible. Un échec de génération pour l'un
+      // n'empêche pas les autres de recevoir le leur (fail-open, même
+      // logique que verifierRateLimit ci-dessus) : l'enfant en échec est
+      // simplement absent de l'email, journalisé, pas de blocage global.
+      const enfants = []
+      for (const p of eligibles) {
+        try {
+          const linkRes = await fetch(`${SUPA_URL}/auth/v1/admin/generate_link`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              type: 'recovery',
+              email: p.faux_email,
+              options: { redirectTo: 'https://www.academika.fr/index.html' }
+            })
+          })
+          const linkData = await linkRes.json()
+          const lienReset = linkData?.action_link || linkData?.properties?.action_link
+          if (!lienReset) {
+            console.log('Erreur génération lien pour', p.user_id, ':', JSON.stringify(linkData))
+            continue
+          }
+          enfants.push({ user_id: p.user_id, prenom_affiche: p.prenom_affiche, nom_affiche: p.nom_affiche, lien: lienReset })
+        } catch (e) {
+          console.log('Erreur génération lien pour', p.user_id, ':', e.message)
         }
       }
 
-      const linkRes = await fetch(`${SUPA_URL}/auth/v1/admin/generate_link`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          type: 'recovery',
-          email: faux_email,
-          options: { redirectTo: 'https://www.academika.fr/index.html' }
-        })
-      })
-      const linkData = await linkRes.json()
-      const lienReset = linkData?.action_link || linkData?.properties?.action_link
-
-      if (!lienReset) {
-        console.log('Erreur génération lien:', JSON.stringify(linkData))
+      if (enfants.length === 0) {
         return res.status(200).json(reponseUniforme)
       }
 
       const rateOk = await verifierRateLimit(email_parent)
       if (!rateOk) return res.status(429).json({ error: 'Trop de demandes pour cette adresse. Réessayez plus tard.' })
+
+      const nomComplet = e => `${e.prenom_affiche} ${e.nom_affiche}`.trim()
+
+      // Un seul enfant : phrase le nommant explicitement — il s'agit de son
+      // compte, pas de celui du parent. Plusieurs enfants : une intro qui le
+      // dit, puis un bouton par enfant, chacun nommé (prénom + nom, comme
+      // dans le bloc "Les accès" de suivi-parent.html — même raison :
+      // lever une ambiguïté en cas d'homonymie entre frères et sœurs).
+      const blocAcces = enfants.length === 1
+        ? `
+              <p style="color:#444;line-height:1.6;margin-bottom:20px">Une demande de réinitialisation de mot de passe a été effectuée pour le compte de <strong>${esc(nomComplet(enfants[0]))}</strong> sur ACADEMIKA.</p>
+              <div style="text-align:center;margin:28px 0">
+                <a href="${enfants[0].lien}" style="background:#1a1a1a;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
+                  Choisir un nouveau mot de passe pour ${esc(enfants[0].prenom_affiche)} →
+                </a>
+              </div>`
+        : `
+              <p style="color:#444;line-height:1.6;margin-bottom:20px">Une demande de réinitialisation de mot de passe a été effectuée sur ACADEMIKA. Plusieurs comptes enfants sont associés à cette adresse — choisissez celui concerné :</p>
+              <div style="margin:20px 0">
+                ${enfants.map(e => `
+                <div style="text-align:center;margin-bottom:12px">
+                  <a href="${e.lien}" style="display:block;background:#1a1a1a;color:white;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px">
+                    Choisir un nouveau mot de passe pour ${esc(nomComplet(e))} →
+                  </a>
+                </div>`).join('')}
+              </div>`
 
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -135,13 +206,7 @@ export default async function handler(req, res) {
               <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
                 <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
               </div>
-              <p style="margin-bottom:16px">Bonjour,</p>
-              <p style="color:#444;line-height:1.6;margin-bottom:20px">Une demande de réinitialisation de mot de passe a été effectuée pour votre compte ACADEMIKA.</p>
-              <div style="text-align:center;margin:28px 0">
-                <a href="${lienReset}" style="background:#1a1a1a;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
-                  Choisir un nouveau mot de passe →
-                </a>
-              </div>
+              <p style="margin-bottom:16px">Bonjour,</p>${blocAcces}
               <p style="color:#444;line-height:1.6;margin-bottom:20px">Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.</p>
               <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
                 <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
@@ -151,7 +216,11 @@ export default async function handler(req, res) {
         })
       })
 
-      await fetch(`${SUPA_URL}/rest/v1/profils?email_parent=eq.${encodeURIComponent(email_parent)}`, {
+      // PATCH uniquement les enfants réellement inclus dans l'email envoyé —
+      // ni les enfants filtrés par leur propre rate-limit (déjà exclus plus
+      // haut), ni un enfant dont generate_link a échoué (pas de lien reçu,
+      // ne doit pas être bloqué 3 min pour rien).
+      await fetch(`${SUPA_URL}/rest/v1/profils?user_id=in.(${enfants.map(e => e.user_id).join(',')})`, {
         method: 'PATCH',
         headers: { ...headers, 'Prefer': 'return=minimal' },
         body: JSON.stringify({ derniere_demande_reset: new Date().toISOString() })

@@ -113,6 +113,11 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .encart-origine-btn { background: white; border: 1px solid var(--border); color: var(--marine); font-size: 12px; padding: 7px 12px; border-radius: 20px; cursor: pointer; font-family: 'Inter', sans-serif; }
 .encart-origine-btn:hover { border-color: var(--marine); }
 .encart-origine-passer { background: none; border: none; color: var(--muted); font-size: 11.5px; text-decoration: underline; cursor: pointer; font-family: 'Inter', sans-serif; padding: 4px; }
+.encart-origine-acces { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 13px 14px; margin: 10px 0 16px; }
+.encart-origine-acces-titre { font-size: 11px; font-weight: 600; color: var(--marine); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 9px; }
+.encart-origine-acces-ligne { font-size: 12.5px; color: var(--ardoise); line-height: 1.55; }
+.encart-origine-acces-ligne + .encart-origine-acces-ligne { margin-top: 7px; }
+.encart-origine-acces-ligne strong { color: var(--marine); }
 .niveau-synthese { font-size: 13px; color: var(--ardoise); line-height: 1.5; margin-bottom: 1rem; }
 .niveau-groupe { margin-bottom: 14px; }
 .niveau-groupe:last-child { margin-bottom: 0; }
@@ -230,6 +235,13 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 
 <div class="encart-origine" id="encart-origine">
   <div class="encart-origine-confirmation">✅ Compte créé !</div>
+
+  <div class="encart-origine-acces">
+    <div class="encart-origine-acces-titre">Les accès</div>
+    <div class="encart-origine-acces-ligne">👦 <strong id="encart-origine-nom-complet"></strong> se connecte sur academika.fr avec ce prénom et ce nom, et le mot de passe que vous venez de créer.</div>
+    <div class="encart-origine-acces-ligne">👪 Vous accédez à votre espace parent sans mot de passe : saisissez votre adresse email, vous recevrez un code à usage unique valable quelques minutes.</div>
+  </div>
+
   <div class="encart-origine-titre">Comment avez-vous connu Academika ?</div>
   <div class="encart-origine-choix">
     <button class="encart-origine-btn" onclick="repondreOrigine('flyer')">Flyer / affiche</button>
@@ -1084,10 +1096,16 @@ function afficherMsgAjout(type, texte) {
 // en conditions réelles : 8s s'est révélé trop court, le parent n'avait
 // pas toujours le temps de répondre). Le rechargement du tableau de bord
 // ne se déclenche plus que via repondreOrigine(), sur interaction du parent.
-function afficherEncartOrigine(userIdEnfant) {
+function afficherEncartOrigine(userIdEnfant, prenom, nom) {
   const encart = document.getElementById('encart-origine')
   if (!encart) return
   encart.dataset.userId = userIdEnfant
+  // Identifiant de connexion affiché littéralement (pas juste décrit) : le
+  // parent voit exactement ce qu'il devra taper avec l'enfant — majuscules,
+  // accents et nom d'usage réels, pas une reformulation. textContent (pas
+  // innerHTML) : prenom/nom viennent du formulaire, jamais interpolés dans
+  // du HTML.
+  document.getElementById('encart-origine-nom-complet').textContent = `${prenom} ${nom}`
   encart.style.display = 'block'
 }
 
@@ -1214,7 +1232,7 @@ async function creerEnfant() {
       // (pas de rechargement de la page à ce stade) — elle réafficherait
       // à tort l'écran "Bienvenue" même quand un enfant vient d'être créé.
       document.getElementById('zone-form-ajout').style.display = 'none'
-      afficherEncartOrigine(signUpData.user.id)
+      afficherEncartOrigine(signUpData.user.id, prenomE, nomE)
     }
   } catch (e) {
     console.log('Erreur création enfant:', e.message)

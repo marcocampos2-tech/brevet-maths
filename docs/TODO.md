@@ -70,11 +70,9 @@ Diagnostic initial (double-tap mobile probable sur `quiz.html`, ayant fait passe
 
   Sujet distinct, à concevoir après le correctif : aucun écran ni email actuel n'explique au parent comment connecter son enfant après création du compte — 2 familles sur 3 n'ont jamais utilisé le compte de leur enfant avant intervention manuelle.
 
-## 🟠 Ouvert — `profils` INSERT sans contrôle `email_parent`
+## ✅ `profils` INSERT sans contrôle `email_parent` — confirmé déjà contrôlé, faux positif (14/09/2026)
 
-Repéré dans l'audit cybersécurité pré-Stripe (regroupé alors avec 5 autres items dans "Cybersécurité avant Stripe live"). Sorti et détaillé séparément le 14/09/2026 : en lien avec le diagnostic des comptes orphelins du même jour (`connexion.html:107-112`), mais distinct — le correctif A+B+C gate l'accès *après* la création d'une ligne `profils`, pas la validité d'`email_parent` *à* la création. Même avec A+B+C codés, une ligne `profils` avec un `email_parent` erroné ou usurpé continue de passer les trois gates.
-
-**À faire avant de coder** : identifier le(s) point(s) d'insertion réel(s) dans `profils` (formulaire d'inscription espace parent, création via `connexion.html`, autre) et vérifier si `email_parent` y est aujourd'hui contrôlé ou non.
+Vérifié en prod le 14/09/2026 via une tentative d'insertion réelle (session parent authentifiée, `email_parent` usurpé différent de l'email du compte connecté) : rejetée par PostgreSQL, `403`, code `42501`, "new row violates row-level security policy for table profils". Le contrôle existe déjà — policy RLS `Insertion profils` avec `email_parent_valide()` (introduite le 05/09, PR #41), antérieure à l'ouverture de cet item le 14/09. L'item venait de l'audit cybersécurité original (avant le 05/09) et n'avait jamais été retiré après le correctif RLS. Aucune action de code nécessaire — item fermé sans correctif.
 
 ## 🖼️ Images sur `index.html` — jamais traité
 
