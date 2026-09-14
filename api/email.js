@@ -146,7 +146,17 @@ export default async function handler(req, res) {
             body: JSON.stringify({
               type: 'recovery',
               email: p.faux_email,
-              options: { redirectTo: 'https://www.academika.fr/index.html' }
+              // connexion.html détecte le hash #type=recovery et affiche
+              // l'écran "Créer un nouveau mot de passe" (index.html n'a
+              // aucune logique de ce genre — un ancien redirectTo vers
+              // index.html a laissé ce parcours mort jusqu'au 14/09/2026).
+              // Dépendance externe invisible : cette URL doit figurer dans
+              // Authentication > URL Configuration > Redirect URLs du
+              // projet Supabase, sinon Supabase retombe silencieusement
+              // sur l'URL de site par défaut, sans erreur ni log d'aucune
+              // sorte — vérifié dans le dashboard avant chaque changement
+              // de cette valeur, pas seulement à la première mise en place.
+              options: { redirectTo: 'https://www.academika.fr/connexion.html' }
             })
           })
           const linkData = await linkRes.json()
