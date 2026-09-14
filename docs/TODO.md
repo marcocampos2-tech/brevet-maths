@@ -70,6 +70,12 @@ Diagnostic initial (double-tap mobile probable sur `quiz.html`, ayant fait passe
 
   Sujet distinct, à concevoir après le correctif : aucun écran ni email actuel n'explique au parent comment connecter son enfant après création du compte — 2 familles sur 3 n'ont jamais utilisé le compte de leur enfant avant intervention manuelle.
 
+## 🟠 Ouvert — `profils` INSERT sans contrôle `email_parent`
+
+Repéré dans l'audit cybersécurité pré-Stripe (regroupé alors avec 5 autres items dans "Cybersécurité avant Stripe live"). Sorti et détaillé séparément le 14/09/2026 : en lien avec le diagnostic des comptes orphelins du même jour (`connexion.html:107-112`), mais distinct — le correctif A+B+C gate l'accès *après* la création d'une ligne `profils`, pas la validité d'`email_parent` *à* la création. Même avec A+B+C codés, une ligne `profils` avec un `email_parent` erroné ou usurpé continue de passer les trois gates.
+
+**À faire avant de coder** : identifier le(s) point(s) d'insertion réel(s) dans `profils` (formulaire d'inscription espace parent, création via `connexion.html`, autre) et vérifier si `email_parent` y est aujourd'hui contrôlé ou non.
+
 ## 🖼️ Images sur `index.html` — jamais traité
 
 Maquette validée, non implémentée : icônes 3 étapes "Comment ça marche", icônes 3 cartes d'offres, photo réelle à la place de l'avatar "MC". Écarté : illustration hero (passerait le bloc en 2 colonnes).
@@ -102,7 +108,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 ## 🟠 Plateforme Academika — technique
 
-1. Cybersécurité avant Stripe live : `profils` INSERT sans contrôle `email_parent`, `shouldCreateUser: true` exploitable, idempotency Stripe absente, `invoice.payment_failed` jamais écouté, `alerte_envoyee` sans NOT NULL, UTC vs Europe/Paris sur bilan périodique
+1. Cybersécurité avant Stripe live : `shouldCreateUser: true` exploitable, idempotency Stripe absente, `invoice.payment_failed` jamais écouté, `alerte_envoyee` sans NOT NULL, UTC vs Europe/Paris sur bilan périodique
 2. Abandon examen blanc non enregistré — aucune trace en base ni pour le parent
 3. Email récap parent ne distingue pas abandon vs quiz terminé à 0% — colonne `abandonne` absente de `resultats`
 4. Double email inscription brevet blanc présentiel — jamais vérifié résolu depuis 08/06
