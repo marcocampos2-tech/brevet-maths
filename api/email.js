@@ -87,6 +87,19 @@ export default async function handler(req, res) {
     const RESEND_KEY = process.env.RESEND_API_KEY
     const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPA_KEY}`, 'apikey': SUPA_KEY }
 
+    // connexion.html détecte le hash #type=recovery et affiche l'écran
+    // "Créer un nouveau mot de passe" (index.html n'a aucune logique de ce
+    // genre — un ancien redirectTo vers index.html a laissé ce parcours mort
+    // jusqu'au 14/09/2026). Dépendance externe invisible : cette URL doit
+    // figurer dans Authentication > URL Configuration > Redirect URLs du
+    // projet Supabase, sinon Supabase retombe silencieusement sur l'URL de
+    // site par défaut, sans erreur ni log d'aucune sorte — vérifié dans le
+    // dashboard avant chaque changement de cette valeur, pas seulement à la
+    // première mise en place.
+    // Constante unique (plutôt qu'en dur dans le template string plus bas) :
+    // un seul endroit à changer le jour où cette URL bouge.
+    const URL_REDIRECT_RESET = 'https://www.academika.fr/connexion.html'
+
     const { email_parent } = req.body
     if (!email_parent) return res.status(400).json({ error: 'Email requis' })
 
@@ -140,24 +153,22 @@ export default async function handler(req, res) {
       const enfants = []
       for (const p of eligibles) {
         try {
-          const linkRes = await fetch(`${SUPA_URL}/auth/v1/admin/generate_link`, {
+          // redirect_to en paramètre de query string sur l'URL, pas dans le
+          // body JSON : c'est la forme réellement lue par l'API admin
+          // GoTrue (vérifié dans le source de gotrue-js — options.redirectTo
+          // y est explicitement retiré du body et transmis à part, ajouté
+          // ensuite à l'URL via `qs['redirect_to'] = ...`). Un
+          // `options: { redirectTo }` dans le body — convention du SDK JS
+          // côté appelant, pas celle de l'API REST elle-même — est une clé
+          // que le serveur ne reconnaît pas : ignorée silencieusement, sans
+          // erreur, avec repli sur la Site URL par défaut du projet. C'est
+          // cette confusion précise qui a laissé ce parcours mort jusqu'au
+          // 14/09/2026, y compris après le premier correctif (qui avait
+          // corrigé la page de destination mais gardé la mauvaise forme).
+          const linkRes = await fetch(`${SUPA_URL}/auth/v1/admin/generate_link?redirect_to=${encodeURIComponent(URL_REDIRECT_RESET)}`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({
-              type: 'recovery',
-              email: p.faux_email,
-              // connexion.html détecte le hash #type=recovery et affiche
-              // l'écran "Créer un nouveau mot de passe" (index.html n'a
-              // aucune logique de ce genre — un ancien redirectTo vers
-              // index.html a laissé ce parcours mort jusqu'au 14/09/2026).
-              // Dépendance externe invisible : cette URL doit figurer dans
-              // Authentication > URL Configuration > Redirect URLs du
-              // projet Supabase, sinon Supabase retombe silencieusement
-              // sur l'URL de site par défaut, sans erreur ni log d'aucune
-              // sorte — vérifié dans le dashboard avant chaque changement
-              // de cette valeur, pas seulement à la première mise en place.
-              options: { redirectTo: 'https://www.academika.fr/connexion.html' }
-            })
+            body: JSON.stringify({ type: 'recovery', email: p.faux_email })
           })
           const linkData = await linkRes.json()
           const lienReset = linkData?.action_link || linkData?.properties?.action_link
