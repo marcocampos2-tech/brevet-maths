@@ -20,9 +20,9 @@
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--creme); min-height: 100vh; color: var(--ardoise); }
 .container { max-width: 700px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
 nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
-.nav-left { font-family:'Newsreader',serif; font-size: 22px; font-weight: 500; color: var(--marine); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.nav-left a { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 400; color: var(--marine); text-decoration: none; }
-.nav-left a:hover { text-decoration: underline; }
+.nav-left { font-family:'Newsreader',serif; font-size: 22px; font-weight: 500; color: var(--marine); }
+.nav-right a { font-size: 13px; color: var(--marine); text-decoration: none; }
+.nav-right a:hover { text-decoration: underline; }
 .wrap { max-width: 480px; margin: 0 auto; }
 .card { background: white; border-radius: 14px; border: 1px solid var(--border); padding: 1.75rem; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 6px; color: var(--ardoise); }
@@ -53,7 +53,8 @@ input:focus { outline: none; border-color: var(--marine); }
 </head>
 <body>
 <nav>
-  <div class="nav-left">ACADEMIKA<a href="index.html">← Retour à l'accueil</a></div>
+  <div class="nav-left">ACADEMIKA</div>
+  <div class="nav-right"><a href="index.html">← Retour à l'accueil</a></div>
 </nav>
 
 <div class="hero-full">
