@@ -157,6 +157,19 @@ async function init() {
   var session = await sb.auth.getSession()
   if (!session.data.session) { window.location.href = 'index.html'; return }
   var user = session.data.session.user
+
+  // Gate comptes orphelins (cf. docs/TODO.md) : resultats.html réservé aux
+  // comptes élèves (ligne profils) et au prof (app_metadata, jamais
+  // user_metadata). Fail-open si la lecture échoue techniquement — jamais
+  // silencieux. resultats.html ne chargeait profils nulle part avant ce
+  // correctif.
+  var profilRes = await sb.from('profils').select('user_id').eq('user_id', user.id).limit(1)
+  if (profilRes.error) {
+    console.log('[gate profils] lecture échouée, gate non appliqué :', profilRes.error.message)
+  } else if (user.app_metadata?.role !== 'prof' && (!profilRes.data || profilRes.data.length === 0)) {
+    window.location.href = 'suivi-parent.html?from=gate'; return
+  }
+
   var res = await sb.from('resultats').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
   var rows = res.data
   if (!rows || rows.length === 0) {

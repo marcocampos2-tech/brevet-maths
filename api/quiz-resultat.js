@@ -101,17 +101,46 @@ async function insererResultat({ user_id, email, prenom, theme, sous_theme, diff
       console.log('[quiz-resultat] échec contrôle doublon, insertion normale (fail-open):', e.message)
     }
 
-    // Récupère email_parent depuis profils
+    // Récupère email_parent depuis profils. Sert aussi de gate comptes
+    // orphelins (cf. docs/TODO.md) : refuse l'écriture si user_id n'a
+    // aucune ligne profils, sauf compte prof (tests manuels délibérés
+    // depuis quiz.html, confirmé). Fail-open sur cette lecture elle-même —
+    // réponse inattendue (pas un tableau) ou requête en échec ne bloquent
+    // jamais un élève légitime, jamais silencieux (log dans les deux cas).
     let email_parent = ''
+    let profilsVide = false
     try {
       const profilRes = await fetch(`${SUPABASE_URL}/rest/v1/profils?user_id=eq.${user_id}&select=email_parent&limit=1`, {
         headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
       })
       const profilData = await profilRes.json()
-      if (Array.isArray(profilData) && profilData.length > 0) {
-        email_parent = profilData[0].email_parent || ''
+      if (Array.isArray(profilData)) {
+        if (profilData.length > 0) {
+          email_parent = profilData[0].email_parent || ''
+        } else {
+          profilsVide = true
+        }
+      } else {
+        console.log('[quiz-resultat] réponse profils inattendue, gate non appliqué (fail-open):', JSON.stringify(profilData))
       }
-    } catch (e) { console.log('Erreur récupération profil:', e.message) }
+    } catch (e) {
+      console.log('[quiz-resultat] échec lecture profil, gate non appliqué (fail-open):', e.message)
+    }
+
+    if (profilsVide) {
+      // Contrairement au fail-open ci-dessus : ici on est déjà dans la
+      // branche anormale "aucune ligne profils" (signal positif, pas une
+      // panne). Un échec de CETTE vérification refuse l'exemption plutôt
+      // que de fail-open une seconde fois — le seul effet d'un refus à
+      // tort est qu'une sauvegarde de test manuel du prof échoue
+      // silencieusement une fois (aucune erreur visible, cf. sauvegarder()
+      // dans quiz.html), jamais qu'un compte orphelin repasse.
+      const estProf = await estCompteProf(user_id, SUPABASE_URL, SERVICE_KEY)
+      if (!estProf) {
+        console.log(`[quiz-resultat] écriture refusée, aucune ligne profils pour user_id=${user_id}`)
+        return { error: 'Compte sans profil élève.' }
+      }
+    }
 
     const res = await fetch(`${SUPABASE_URL}/rest/v1/resultats`, {
       method: 'POST',
@@ -141,5 +170,30 @@ async function insererResultat({ user_id, email, prenom, theme, sous_theme, diff
     return { success: true }
   } catch (e) {
     return { error: e.message }
+  }
+}
+
+// Vérifie via l'API Admin Supabase (clé service) si user_id porte
+// app_metadata.role === 'prof' — jamais user_metadata (modifiable par
+// l'utilisateur), jamais un id codé en dur (source de vérité unique : le
+// rôle posé en base via service_role, même principe qu'ailleurs dans le
+// dépôt, ex. prof.html). Cette route ne reçoit aucun JWT de session à
+// décoder (quiz.html poste sans Authorization), d'où ce détour par l'API
+// Admin plutôt qu'une lecture directe du token côté client.
+async function estCompteProf(user_id, SUPABASE_URL, SERVICE_KEY) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/admin/users/${user_id}`, {
+      headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` }
+    })
+    if (!r.ok) return false
+    const data = await r.json()
+    // Double lecture (racine ou sous .user) : même prudence que le
+    // linkData?.action_link || linkData?.properties?.action_link déjà
+    // utilisé dans api/email.js pour generate_link — la forme exacte de la
+    // réponse de l'API Admin a varié selon les versions.
+    return (data?.app_metadata?.role || data?.user?.app_metadata?.role) === 'prof'
+  } catch (e) {
+    console.log('[quiz-resultat] échec vérification prof, exemption refusée:', e.message)
+    return false
   }
 }

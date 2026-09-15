@@ -105,10 +105,35 @@ function toggleMenu() {
 }
 
 async function init() {
+  // La détection du hash de recovery reste en tout premier, avant tout
+  // appel async, et sort avec un return : le parcours de réinitialisation
+  // (connexion.html) en dépend — ne pas la faire passer après l'aiguillage
+  // ci-dessous.
   const hash = window.location.hash
   if (hash && hash.includes('type=recovery')) { afficherNouveauMdp(); return }
+
   const { data } = await sb.auth.getSession()
-  if (data.session) { window.location.href = 'quiz.html'; return }
+  if (!data.session) return
+  const user = data.session.user
+
+  // Correctif comptes orphelins (14-15/09/2026, cf. docs/TODO.md) : avant,
+  // toute session valide redirigeait vers quiz.html sans vérifier le type
+  // de compte — un parent connecté atterrissait sur le quiz de son enfant,
+  // avec son propre compte. Discriminant : présence d'une ligne profils,
+  // jamais user_metadata (modifiable par l'utilisateur). Exemption prof via
+  // app_metadata, seul champ du token non modifiable côté client — même
+  // principe que prof.html.
+  if (user.app_metadata?.role === 'prof') { window.location.href = 'quiz.html'; return }
+
+  const { data: profil, error: errProfil } = await sb.from('profils').select('user_id').eq('user_id', user.id).limit(1)
+  if (errProfil) {
+    // Fail-open : comportement d'avant ce correctif, jamais silencieux.
+    console.log('[gate profils] lecture échouée, aiguillage non appliqué :', errProfil.message)
+    window.location.href = 'quiz.html'; return
+  }
+  if (profil && profil.length > 0) { window.location.href = 'quiz.html'; return }
+
+  window.location.href = 'suivi-parent.html?from=gate'
 }
 
 async function soumettre() {

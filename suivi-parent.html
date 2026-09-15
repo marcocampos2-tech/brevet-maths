@@ -46,6 +46,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .loader { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
 .vide { text-align: center; padding: 2rem 1rem; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
 .info-bandeau { background: var(--marine-light); border-left: 3px solid var(--marine); border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 1.25rem; font-size: 12px; color: var(--marine); line-height: 1.6; }
+.bandeau-gate-titre { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+.bandeau-gate-corps { margin-bottom: 8px; }
+.bandeau-gate-discret { color: var(--muted); font-size: 11px; margin-bottom: 12px; }
+.info-bandeau .btn-ajouter { margin-bottom: 0; }
 .pdf-sub { font-size: 11.5px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
 .pdf-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; background: white; cursor: pointer; font-family: 'Inter', sans-serif; margin-bottom: 8px; }
 .pdf-btn:last-child { margin-bottom: 0; }
@@ -147,6 +151,13 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 </nav>
 
 <div class="container">
+
+<div class="info-bandeau" id="bandeau-gate-parent" style="display:none">
+  <div class="bandeau-gate-titre">Vous êtes connecté avec votre compte parent.</div>
+  <div class="bandeau-gate-corps">Le quiz est réservé au compte de votre enfant. Pour qu'il travaille, connectez-le avec son prénom, son nom et son mot de passe.</div>
+  <div class="bandeau-gate-discret">Mot de passe oublié ? Vous pouvez le réinitialiser depuis la page de connexion, avec votre adresse email.</div>
+  <button class="btn-ajouter" onclick="deconnecterVersConnexion()">Se déconnecter et connecter mon enfant →</button>
+</div>
 
 <div id="selecteur-enfant"></div>
 
@@ -509,6 +520,19 @@ async function init() {
   user = data.session.user
   document.getElementById('user-email').textContent = user.email
   document.getElementById('btn-nav-ajouter').style.display = 'inline-flex'
+
+  // Correctif comptes orphelins (cf. docs/TODO.md) : bandeau affiché
+  // uniquement quand on arrive depuis une des gates (connexion.html,
+  // quiz.html, examen.html, resultats.html), jamais par défaut. Nettoyage
+  // de l'URL immédiatement après lecture — un rafraîchissement de la page
+  // ne doit pas le réafficher.
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('from') === 'gate') {
+    document.getElementById('bandeau-gate-parent').style.display = 'block'
+    params.delete('from')
+    const nouvelleUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '')
+    window.history.replaceState({}, '', nouvelleUrl)
+  }
 
   const { data: profils, error } = await sb.from('profils')
     .select('user_id, prenom_affiche, plan_actif, plan_souhaite')
@@ -1032,6 +1056,16 @@ async function genererPDF(mode) {
 async function logout() {
   await sb.auth.signOut()
   window.location.href = 'espace-parent.html?deconnecte=1'
+}
+
+// Bouton du bandeau gate (cf. init()) : distinct de logout() ci-dessus, qui
+// ramène vers espace-parent.html — ici il faut atterrir sur connexion.html,
+// le formulaire prénom/nom/mot de passe de l'enfant. Les deux étapes sont
+// nécessaires : sans signOut(), le parent reboucle sur ce même bandeau avec
+// sa session encore active.
+async function deconnecterVersConnexion() {
+  await sb.auth.signOut()
+  window.location.href = 'connexion.html'
 }
 
 // ═══════════════════════════════════════════════════════════
