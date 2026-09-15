@@ -153,6 +153,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 18. Lien "Offres" corrigé (`#quiz`→`#offres`) sur `index.html`/`tarifs.html` (09/09) ; même décalage nom/cible jamais corrigé sur `stages-vacances.html`, `connexion.html`, `cours-particuliers.html`, `abonnement-confirme.html` (liens vers `index.html#quiz`)
 19. **Chantier RGPD suppression des comptes — NON CADRÉ** (constat du 15/09/2026). La contrainte `rappels_envoyes_user_id_fkey` sans `ON DELETE CASCADE` n'est pas un chantier isolé mais le symptôme d'un chantier jamais conçu.
 
+    Incident réel rencontré le 15/09/2026 : erreur « Database error deleting user » à la suppression d'un compte `auth.users` ; contourné manuellement en supprimant d'abord les lignes `rappels_envoyes` de l'élève concerné. Le blocage n'est donc pas théorique et se reproduira à chaque suppression tant que le mécanisme n'est pas conçu.
+
     État réel du schéma (dump `pg_constraint` du 15/09/2026) :
     - `profils` : `ON DELETE CASCADE` (se nettoie seul)
     - `resultats`, `rappels_envoyes` : FK sans CASCADE (bloquent un `DELETE` sur `auth.users` — garde-fou, pas défaut)
