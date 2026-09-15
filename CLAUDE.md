@@ -261,6 +261,16 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 
 **Ne jamais pousser directement sur `main`.**
 
+## Arrêt obligatoire avant commit
+
+Quand Marco a demandé à voir un diff avant commit, ou quand Claude propose lui-même de montrer quelque chose avant de committer :
+
+**TERMINE TON TOUR après avoir affiché le diff.** N'exécute aucun `git commit`, `git push` ni ouverture de PR dans la même réponse.
+
+Une phrase du type « je committe dès ton feu vert » suivie d'un commit dans la même réponse est une violation de cette règle, même si le contenu est correct. Le feu vert est un message de la part de Marco, pas une formule dans celle de Claude.
+
+Cette règle s'applique aussi quand Claude est certain que le changement est trivial : c'est précisément dans ces cas-là qu'elle est facile à enfreindre sans conséquence visible, et c'est ce qui la rend inopérante le jour où le changement ne l'est pas.
+
 ## Rappel — tenue de docs/TODO.md
 
 Chaque fois qu'un travail effectué dans une session résout, clôt, ou rend obsolète un point présent dans docs/TODO.md, coche la case correspondante (- [x]) ou supprime la ligne si elle ne demande plus de suivi — dans le même commit que le travail effectué, sans qu'on ait besoin de le redemander. Si un sujet nouveau et non trivial apparaît en cours de session et n'est pas traité immédiatement, l'ajouter à docs/TODO.md dans la section la plus pertinente, sous forme de case à cocher non cochée. Ne pas reformuler ni réorganiser les lignes existantes à cette occasion — seulement cocher, supprimer, ou ajouter.
