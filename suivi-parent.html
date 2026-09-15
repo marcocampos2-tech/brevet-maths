@@ -24,6 +24,8 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 28px; border-bottom: 1px solid var(--border); margin-bottom: 1.75rem; flex-wrap: wrap; gap: 10px; }
 .nav-left { font-family:'Newsreader',serif; font-size: 22px; font-weight: 500; color: var(--marine); }
 .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nav-right a { font-size: 13px; color: var(--marine); text-decoration: none; }
+.nav-right a:hover { text-decoration: underline; }
 .nav-email { font-size: 13px; color: var(--muted); margin-right: 4px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: white; color: var(--ardoise); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; font-family:'Inter',sans-serif; }
 .btn:hover { background: var(--creme); }
@@ -144,6 +146,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <nav>
   <div class="nav-left">ACADEMIKA</div>
   <div class="nav-right">
+    <a href="index.html">← Retour à l'accueil</a>
     <span class="nav-email" id="user-email"></span>
     <button class="btn" id="btn-nav-ajouter" onclick="afficherFormulaireAjout()" style="display:none">+ Ajouter un enfant</button>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
@@ -216,7 +219,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <input type="text" id="fa-nom" placeholder="Ex: Martin">
 
     <label for="fa-password">Mot de passe de l'enfant</label>
-    <input type="password" id="fa-password" placeholder="••••••••">
+    <div style="position:relative">
+      <input type="password" id="fa-password" placeholder="••••••••" style="padding-right:40px;width:100%">
+      <span onclick="toggleFaMdp()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="fa-oeil">👁️</span>
+    </div>
 
     <label id="label-choisir-offre">Choisir une offre</label>
     <div class="offre-grid" id="offre-grid">
@@ -1102,6 +1108,12 @@ function fermerFormulaireAjout() {
   } else {
     document.getElementById('zone-dashboard').style.display = 'block'
   }
+}
+
+function toggleFaMdp() {
+  const i = document.getElementById('fa-password'), o = document.getElementById('fa-oeil')
+  i.type = i.type === 'password' ? 'text' : 'password'
+  o.textContent = i.type === 'password' ? '👁️' : '🙈'
 }
 
 function choisirOffre(offre) {
