@@ -151,7 +151,23 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 16. Bandeau commercial `suivi-parent.html` vend "résultat examen blanc en ligne" — jamais implémenté, masqué jusqu'au 01/12
 17. Deux seuils désalignés "abordé" (1 session) vs "À découvrir" (<3 sessions) — assumé, pas un bug
 18. Lien "Offres" corrigé (`#quiz`→`#offres`) sur `index.html`/`tarifs.html` (09/09) ; même décalage nom/cible jamais corrigé sur `stages-vacances.html`, `connexion.html`, `cours-particuliers.html`, `abonnement-confirme.html` (liens vers `index.html#quiz`)
-19. `rappels_envoyes_user_id_fkey` sans `ON DELETE CASCADE` — bloque la suppression d'un compte `auth.users` ("Database error deleting user", rencontré le 15/09, contournement manuel en supprimant d'abord les lignes `rappels_envoyes`) ; impacte directement le futur chantier RGPD de suppression des comptes élèves en fin d'année ; à trancher : cascade sur la contrainte, ou nettoyage explicite dans le script de suppression
+19. **Chantier RGPD suppression des comptes — NON CADRÉ** (constat du 15/09/2026). La contrainte `rappels_envoyes_user_id_fkey` sans `ON DELETE CASCADE` n'est pas un chantier isolé mais le symptôme d'un chantier jamais conçu.
+
+    Incident réel rencontré le 15/09/2026 : erreur « Database error deleting user » à la suppression d'un compte `auth.users` ; contourné manuellement en supprimant d'abord les lignes `rappels_envoyes` de l'élève concerné. Le blocage n'est donc pas théorique et se reproduira à chaque suppression tant que le mécanisme n'est pas conçu.
+
+    État réel du schéma (dump `pg_constraint` du 15/09/2026) :
+    - `profils` : `ON DELETE CASCADE` (se nettoie seul)
+    - `resultats`, `rappels_envoyes` : FK sans CASCADE (bloquent un `DELETE` sur `auth.users` — garde-fou, pas défaut)
+    - `examens_blancs`, `historique_bilans`, `questions_vues` : colonne `user_id` mais AUCUNE FK (lignes orphelines après suppression, jamais nettoyées)
+    - `inscriptions_stages`, `inscriptions_brevet`, `sessions_examen_blanc` : pas de `user_id`, probablement liées par email/prénom — contiennent potentiellement des données de mineurs NON couvertes par une suppression basée sur `user_id`
+
+    Points à trancher AVANT toute modification de contrainte :
+    1. Périmètre réel des données personnelles à supprimer (au-delà des tables à `user_id`)
+    2. Mécanisme : CASCADE vs suppression applicative orchestrée (la seconde est traçable, la première détruit sans trace)
+    3. Traçabilité de la suppression (preuve de conformité)
+    4. Déclenchement (cron ? manuel ? notification parent préalable ?)
+
+    **Ne PAS modifier les contraintes FK maintenant** : elles doivent être décidées pendant la conception du mécanisme, pas avant.
 20. Pas de retour vers l'accueil depuis `suivi-parent.html` — logo non cliquable, aucune flèche retour, contrairement à `espace-parent.html` qui en a une ; constaté le 15/09 en test mobile, aucun moyen pour le parent de revenir au site
 21. Pas d'œil pour révéler le mot de passe sur `suivi-parent.html` (formulaire de création d'enfant) — le parent choisit un mot de passe qu'il doit transmettre à son enfant sans pouvoir le relire ; l'écran de recovery de `connexion.html` a déjà cet œil, à répliquer ; vérifier aussi la saisie élève de `connexion.html`
 22. Découvrabilité du reset de mot de passe — le mécanisme fonctionne désormais (cf. chantiers 14/09 ci-dessus), mais le lien ne vit que sur `connexion.html`, page dont la gate A+B+C éloigne justement le parent ; rien dans l'espace parent ne le mentionne
