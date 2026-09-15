@@ -62,13 +62,17 @@ Diagnostic initial (double-tap mobile probable sur `quiz.html`, ayant fait passe
   - **Niazale** (kids.niazale@gmail.com, enfants kabi et divine) — pas traité. 2 sessions sur le compte parent, impossible de savoir lequel des deux enfants a travaillé sans réponse du parent. Email à envoyer avec la question, ré-attribution une fois la réponse obtenue.
   - **Andrianarivelo** (Timothée) — cas résiduel déjà couvert par le chantier doublons précédent, 2 sessions sur un premier compte parent, l'enfant a son propre compte fonctionnel (16 sessions) — non prioritaire.
 
-  Correctif technique validé (recommandation A+B+C), pas encore codé :
+  Correctif technique validé (recommandation A+B+C) — codé le 15/09/2026 :
   - A — `connexion.html` aiguille selon le type de compte (session + ligne `profils` → quiz ; session sans profil → `suivi-parent.html`)
   - B — gate sur les 3 pages élève (`quiz.html`, `examen.html`, `resultats.html`) : bloque si aucune ligne `profils`, message explicite ("vous êtes connecté en tant que parent — pour que {prénom} travaille, connectez-le avec son prénom, son nom et son mot de passe"), fail-open si la lecture échoue techniquement
   - C — gate serveur dans `api/quiz-resultat.js` : refuse l'écriture si `user_id` n'a pas de ligne `profils`
   - Discriminant : présence d'une ligne `profils`, jamais `user_metadata` (modifiable par l'utilisateur, même raison que l'audit RLS initial)
+  - Exemption prof : `app_metadata.role` lu depuis le JWT de session côté client (A/B) ; côté serveur (C), pas de JWT reçu par `api/quiz-resultat.js` — appel à l'API Admin Supabase (`/auth/v1/admin/users/{user_id}`, clé service) uniquement quand `profils` est vide, pour ne pas faire confiance au client
+  - Fail-open jamais silencieux sur les 4 gates (3 client + 1 serveur) : `console.log` systématique sur l'échec de lecture
 
-  Sujet distinct, à concevoir après le correctif : aucun écran ni email actuel n'explique au parent comment connecter son enfant après création du compte — 2 familles sur 3 n'ont jamais utilisé le compte de leur enfant avant intervention manuelle.
+  Sujet distinct, déjà traité (14/09/2026, avant ce correctif) : le bloc "Les accès" ajouté à l'encart post-création de `suivi-parent.html` explique désormais explicitement au parent comment connecter son enfant (prénom, nom, mot de passe).
+
+- **`examens_blancs` a le même trou, non traité ici (15/09/2026)** — découvert pendant la conception du correctif A+B+C ci-dessus. La policy RLS `"Eleve gere ses examens_blancs"` (`db/policies.sql`, `ALL`, `auth.uid() = user_id`) ne vérifie pas la présence d'une ligne `profils`, contrairement au gate tout juste codé pour `resultats`/`api/quiz-resultat.js`. Contrairement aux quiz, `examen.html` insère directement dans `examens_blancs` depuis le client (clé anon, aux points d'abandon et de fin d'examen) — pas d'intermédiaire serverless à gater comme le point C ci-dessus, donc pas de backstop serveur possible sans toucher RLS. Le gate client ajouté sur `examen.html` (point B) couvre le cas normal (redirection avant même d'atteindre l'examen), mais un appel direct à l'API Supabase avec le JWT du parent contournerait ce gate — seule une policy RLS peut fermer ça complètement. Pas traité dans ce commit : changement RLS, nécessite sa propre présentation, validation et test isolé (règle du dépôt).
 
 ## ✅ `profils` INSERT sans contrôle `email_parent` — confirmé déjà contrôlé, faux positif (14/09/2026)
 
