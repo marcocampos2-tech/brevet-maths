@@ -55,12 +55,14 @@ Diagnostic initial (double-tap mobile probable sur `quiz.html`, ayant fait passe
 - PR #50 (diagnostic initial, jamais mergée) fermée sans merge — remplacée par cette entrée.
 
 **Reste ouvert (découvert pendant ce chantier) :**
-- **Résultats orphelins — diagnostic établi (14/09/2026)** : cause racine identifiée, `connexion.html:107-112` — toute session valide redirige vers `quiz.html` sans vérifier le type de compte. C'est la seule porte vers `quiz.html`/`examen.html`/`resultats.html` en dehors d'une session déjà en cours (recherche exhaustive faite). Un parent connecté qui clique "Connexion" depuis n'importe quelle page marketing atterrit directement sur le quiz de son enfant, avec son propre compte — d'où les lignes `resultats` sans ligne `profils` (les comptes parents n'en ont jamais). Reproduit en production de bout en bout (inscription espace parent → nouvelle visite → clic "Connexion" → atterrissage direct sur `quiz.html`). Signal visible identifié : `quiz.html:520` affiche `prenom || user.email` — pour un compte parent, l'email s'affiche à la place du prénom, jamais repéré jusqu'ici.
+- **Résultats orphelins — corrigé et validé en prod (15/09/2026)** : cause racine identifiée, `connexion.html:107-112` — toute session valide redirige vers `quiz.html` sans vérifier le type de compte. C'est la seule porte vers `quiz.html`/`examen.html`/`resultats.html` en dehors d'une session déjà en cours (recherche exhaustive faite). Un parent connecté qui clique "Connexion" depuis n'importe quelle page marketing atterrit directement sur le quiz de son enfant, avec son propre compte — d'où les lignes `resultats` sans ligne `profils` (les comptes parents n'en ont jamais). Reproduit en production de bout en bout (inscription espace parent → nouvelle visite → clic "Connexion" → atterrissage direct sur `quiz.html`). Signal visible identifié : `quiz.html:520` affiche `prenom || user.email` — pour un compte parent, l'email s'affiche à la place du prénom, jamais repéré jusqu'ici.
 
   3 familles réelles concernées (sur 27 comptes, dont 10 hérités d'Academika 1.0 hors sujet) :
   - **Bertin** (sebastien.bertin86@gmail.com, enfant Juliette) — traité le 14/09 : doublons nettoyés (3 sessions Puissances identiques), 2 sessions réelles ré-attribuées au compte de Juliette, colonnes dénormalisées corrigées, email envoyé au parent avec la procédure de connexion.
   - **Niazale** (kids.niazale@gmail.com, enfants kabi et divine) — pas traité. 2 sessions sur le compte parent, impossible de savoir lequel des deux enfants a travaillé sans réponse du parent. Email à envoyer avec la question, ré-attribution une fois la réponse obtenue.
   - **Andrianarivelo** (Timothée) — cas résiduel déjà couvert par le chantier doublons précédent, 2 sessions sur un premier compte parent, l'enfant a son propre compte fonctionnel (16 sessions) — non prioritaire.
+
+  **Nettoyage des comptes — fait le 15/09/2026** : base passée de 27 à 11 comptes (suppression des comptes de test et des 10 comptes hérités d'Academika 1.0, tous vides). Conservés : comptes de travail de CM, démo Lucas, et les 3 familles réelles ci-dessus. Les résultats orphelins restants sont volontaires : 2 sur le compte parent Niazale (en attente de réponse pour réattribution), 2 sur Andrianarivelo (résiduel non prioritaire).
 
   Correctif technique validé (recommandation A+B+C) — codé le 15/09/2026 :
   - A — `connexion.html` aiguille selon le type de compte (session + ligne `profils` → quiz ; session sans profil → `suivi-parent.html`)
@@ -70,6 +72,8 @@ Diagnostic initial (double-tap mobile probable sur `quiz.html`, ayant fait passe
   - Exemption prof : `app_metadata.role` lu depuis le JWT de session côté client (A/B) ; côté serveur (C), pas de JWT reçu par `api/quiz-resultat.js` — appel à l'API Admin Supabase (`/auth/v1/admin/users/{user_id}`, clé service) uniquement quand `profils` est vide, pour ne pas faire confiance au client
   - Fail-open jamais silencieux sur les 4 gates (3 client + 1 serveur) : `console.log` systématique sur l'échec de lecture
 
+  **Validé en prod le 15/09/2026, 5 tests** : non-régression élève (quiz enregistré, email de récap reçu) ; parent redirigé de `connexion.html` vers `suivi-parent.html` avec bandeau affiché et URL nettoyée ; bouton "Se déconnecter et connecter mon enfant" fonctionnel ; exemption prof confirmée côté client et côté serveur (écriture acceptée sans ligne `profils`, la double lecture de l'API Admin trouve bien `app_metadata.role`) ; non-régression du parcours recovery.
+
   Sujet distinct, déjà traité (14/09/2026, avant ce correctif) : le bloc "Les accès" ajouté à l'encart post-création de `suivi-parent.html` explique désormais explicitement au parent comment connecter son enfant (prénom, nom, mot de passe).
 
 - **`examens_blancs` a le même trou, non traité ici (15/09/2026)** — découvert pendant la conception du correctif A+B+C ci-dessus. La policy RLS `"Eleve gere ses examens_blancs"` (`db/policies.sql`, `ALL`, `auth.uid() = user_id`) ne vérifie pas la présence d'une ligne `profils`, contrairement au gate tout juste codé pour `resultats`/`api/quiz-resultat.js`. Contrairement aux quiz, `examen.html` insère directement dans `examens_blancs` depuis le client (clé anon, aux points d'abandon et de fin d'examen) — pas d'intermédiaire serverless à gater comme le point C ci-dessus, donc pas de backstop serveur possible sans toucher RLS. Le gate client ajouté sur `examen.html` (point B) couvre le cas normal (redirection avant même d'atteindre l'examen), mais un appel direct à l'API Supabase avec le JWT du parent contournerait ce gate — seule une policy RLS peut fermer ça complètement. Pas traité dans ce commit : changement RLS, nécessite sa propre présentation, validation et test isolé (règle du dépôt).
@@ -77,6 +81,25 @@ Diagnostic initial (double-tap mobile probable sur `quiz.html`, ayant fait passe
 ## ✅ `profils` INSERT sans contrôle `email_parent` — confirmé déjà contrôlé, faux positif (14/09/2026)
 
 Vérifié en prod le 14/09/2026 via une tentative d'insertion réelle (session parent authentifiée, `email_parent` usurpé différent de l'email du compte connecté) : rejetée par PostgreSQL, `403`, code `42501`, "new row violates row-level security policy for table profils". Le contrôle existe déjà — policy RLS `Insertion profils` avec `email_parent_valide()` (introduite le 05/09, PR #41), antérieure à l'ouverture de cet item le 14/09. L'item venait de l'audit cybersécurité original (avant le 05/09) et n'avait jamais été retiré après le correctif RLS. Aucune action de code nécessaire — item fermé sans correctif.
+
+## ✅ Parcours de réinitialisation de mot de passe — réparé (14/09/2026)
+
+Deux bugs empilés, découverts en test de bout en bout, tous deux dans `api/email.js` (handler `reset-password`) :
+
+- **Bug 1** — `redirectTo` pointait sur `index.html`, qui n'a aucune logique de traitement du hash `type=recovery` (ni même le SDK Supabase chargé) — le lien atterrissait sur la page d'accueil avec un token valide mais inerte. Corrigé → `connexion.html`, qui porte l'écran "Créer un nouveau mot de passe".
+- **Bug 2** — même après le bug 1 corrigé, le lien retombait toujours sur la Site URL du projet. Cause : l'API admin `generate_link` ne lit `redirect_to` qu'en paramètre de query string sur l'URL, jamais dans le body JSON — `options: { redirectTo }` est la convention du SDK client `supabase-js`, pas celle de l'API REST elle-même. Une clé non reconnue dans le body est ignorée silencieusement, sans erreur, d'où le repli permanent sur la Site URL. Vérifié directement dans le source de `gotrue-js`, pas supposé.
+
+Conséquence : ce parcours n'avait probablement jamais abouti depuis sa mise en place. Validé de bout en bout en prod le 14/09/2026 : lien reçu → écran "Créer un nouveau mot de passe" → connexion de l'enfant avec le nouveau mot de passe.
+
+## ✅ Reset mot de passe — cas "parent avec plusieurs enfants" (14/09/2026)
+
+Trois défauts corrigés dans le même handler (`api/email.js`, `reset-password`) : `profils[0]` sans `order by` (enfant choisi arbitrairement sur un parent qui en a plusieurs), email ne nommant pas l'enfant ("votre compte ACADEMIKA", ambigu pour un parent), rate-limit de 3 min appliqué à toute la fratrie en lecture comme en écriture.
+
+Corrigés : tous les enfants du parent récupérés et triés alphabétiquement, un lien de recovery par enfant, email listant un bouton par enfant nommé (prénom + nom, pour lever une éventuelle homonymie), rate-limit et `PATCH derniere_demande_reset` restreints aux enfants réellement inclus dans l'email envoyé.
+
+Correctif additionnel dans le même chantier : recherche `email_parent` passée de `eq.` (exact) à `ilike.` (insensible à la casse) sur l'email normalisé, avec échappement des jokers `%` et `_` — testé contre un vrai Postgres local (le faux positif redouté, `marco_campos@x.fr` matchant à tort `marcoXcampos@x.fr` sans échappement, reproduit puis exclu une fois l'échappement en place).
+
+Validé en prod le 14/09/2026 sur deux comptes de test créés pour l'occasion. **Jamais testé sur la configuration réelle de la famille Niazale** (2 enfants) — à faire si l'occasion se présente.
 
 ## 🖼️ Images sur `index.html` — jamais traité
 
@@ -128,6 +151,10 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 16. Bandeau commercial `suivi-parent.html` vend "résultat examen blanc en ligne" — jamais implémenté, masqué jusqu'au 01/12
 17. Deux seuils désalignés "abordé" (1 session) vs "À découvrir" (<3 sessions) — assumé, pas un bug
 18. Lien "Offres" corrigé (`#quiz`→`#offres`) sur `index.html`/`tarifs.html` (09/09) ; même décalage nom/cible jamais corrigé sur `stages-vacances.html`, `connexion.html`, `cours-particuliers.html`, `abonnement-confirme.html` (liens vers `index.html#quiz`)
+19. `rappels_envoyes_user_id_fkey` sans `ON DELETE CASCADE` — bloque la suppression d'un compte `auth.users` ("Database error deleting user", rencontré le 15/09, contournement manuel en supprimant d'abord les lignes `rappels_envoyes`) ; impacte directement le futur chantier RGPD de suppression des comptes élèves en fin d'année ; à trancher : cascade sur la contrainte, ou nettoyage explicite dans le script de suppression
+20. Pas de retour vers l'accueil depuis `suivi-parent.html` — logo non cliquable, aucune flèche retour, contrairement à `espace-parent.html` qui en a une ; constaté le 15/09 en test mobile, aucun moyen pour le parent de revenir au site
+21. Pas d'œil pour révéler le mot de passe sur `suivi-parent.html` (formulaire de création d'enfant) — le parent choisit un mot de passe qu'il doit transmettre à son enfant sans pouvoir le relire ; l'écran de recovery de `connexion.html` a déjà cet œil, à répliquer ; vérifier aussi la saisie élève de `connexion.html`
+22. Découvrabilité du reset de mot de passe — le mécanisme fonctionne désormais (cf. chantiers 14/09 ci-dessus), mais le lien ne vit que sur `connexion.html`, page dont la gate A+B+C éloigne justement le parent ; rien dans l'espace parent ne le mentionne
 
 ---
 
