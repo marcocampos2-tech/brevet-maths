@@ -515,7 +515,13 @@ async function init() {
   user=data.session.user
   prenom=user.user_metadata?.prenom||''
   emailParent=user.user_metadata?.email_parent||''
-  const {data:profil}=await sb.from('profils').select('prenom_affiche,email_parent').eq('user_id',user.id).limit(1)
+  const {data:profil,error:errProfil}=await sb.from('profils').select('prenom_affiche,email_parent').eq('user_id',user.id).limit(1)
+  // Gate comptes orphelins (cf. docs/TODO.md) : quiz.html réservé aux
+  // comptes élèves (ligne profils) et au prof (app_metadata, jamais
+  // user_metadata). Fail-open si la lecture échoue techniquement — jamais
+  // silencieux.
+  if(errProfil){console.log('[gate profils] lecture échouée, gate non appliqué :',errProfil.message)}
+  else if(user.app_metadata?.role!=='prof'&&(!profil||profil.length===0)){window.location.href='suivi-parent.html?from=gate';return}
   if(profil&&profil.length>0){prenom=prenom||profil[0].prenom_affiche||'';emailParent=emailParent||profil[0].email_parent||''}
   document.getElementById('user-email').textContent=prenom||user.email
   renderThemes()
