@@ -144,6 +144,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <nav>
   <div class="nav-left">ACADEMIKA</div>
   <div class="nav-right">
+    <a href="index.html">← Retour à l'accueil</a>
     <span class="nav-email" id="user-email"></span>
     <button class="btn" id="btn-nav-ajouter" onclick="afficherFormulaireAjout()" style="display:none">+ Ajouter un enfant</button>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
@@ -216,7 +217,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <input type="text" id="fa-nom" placeholder="Ex: Martin">
 
     <label for="fa-password">Mot de passe de l'enfant</label>
-    <input type="password" id="fa-password" placeholder="••••••••">
+    <div style="position:relative">
+      <input type="password" id="fa-password" placeholder="••••••••" style="padding-right:40px;width:100%">
+      <span onclick="toggleFaMdp()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;color:#999" id="fa-oeil">👁️</span>
+    </div>
 
     <label id="label-choisir-offre">Choisir une offre</label>
     <div class="offre-grid" id="offre-grid">
@@ -1102,6 +1106,12 @@ function fermerFormulaireAjout() {
   } else {
     document.getElementById('zone-dashboard').style.display = 'block'
   }
+}
+
+function toggleFaMdp() {
+  const i = document.getElementById('fa-password'), o = document.getElementById('fa-oeil')
+  i.type = i.type === 'password' ? 'text' : 'password'
+  o.textContent = i.type === 'password' ? '👁️' : '🙈'
 }
 
 function choisirOffre(offre) {
