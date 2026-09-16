@@ -1,4 +1,6 @@
 import { memoireQuestionsVues, contexteEleve, noterEchec, journaliserEchec } from '../lib/questions-vues.js'
+import { corrigerExamen } from '../lib/examen-score.js'
+import { verifierGateEleve } from '../lib/auth-eleve.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -144,38 +146,7 @@ export default async function handler(req, res) {
       const { reponses } = req.body // [{ id, choix }, ...] choix peut être null si pas répondu
       if (!reponses || !Array.isArray(reponses)) return res.status(400).json({ error: 'Réponses manquantes' })
 
-      const ids = reponses.map(r => r.id).join(',')
-      const r = await fetch(`${SUPA_URL}/rest/v1/examen_questions?id=in.(${ids})&select=id,answer,explication,theme,chapitre,opts`, { headers })
-      const questionsCompletes = await r.json()
-
-      const questionsMap = {}
-      questionsCompletes.forEach(q => { questionsMap[q.id] = q })
-
-      let nbOk = 0
-      const themes = {}
-      const questionsRatees = []
-      const correction = {}
-
-      reponses.forEach(rep => {
-        const q = questionsMap[rep.id]
-        if (!q) return
-        const opts = typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts
-        const bonneReponse = q.answer
-        const correct = rep.choix === bonneReponse
-
-        if (correct) nbOk++
-
-        const key = q.theme || 'Partie'
-        if (!themes[key]) themes[key] = { ok: 0, total: 0 }
-        themes[key].total++
-        if (correct) themes[key].ok++
-
-        if (rep.choix !== null && rep.choix !== undefined && !correct) {
-          questionsRatees.push(q.theme + ' — ' + (q.chapitre || ''))
-        }
-
-        correction[rep.id] = { answer: bonneReponse, explication: q.explication, opts }
-      })
+      const { nbOk, themes, questionsRatees, correction } = await corrigerExamen({ reponses, supabaseUrl: SUPA_URL, headers })
 
       return res.status(200).json({ success: true, nbOk, themes, questionsRatees, correction })
     } catch (e) {
@@ -183,7 +154,102 @@ export default async function handler(req, res) {
     }
   }
 
+  // ═══════════════════════════════════════════
+  // ENREGISTRER — persiste le résultat final (fin normale ou abandon).
+  // Transposition de api/quiz-resultat.js pour examens_blancs, fusionnée
+  // ici plutôt qu'un fichier api/examen-resultat.js séparé : le plan
+  // Vercel Hobby plafonne à 12 fonctions serverless sous api/, déjà
+  // atteint — même contrainte, même résolution que stripe-checkout.js
+  // (action 'portal' fusionnée depuis stripe-portal.js, cf. CLAUDE.md).
+  // ═══════════════════════════════════════════
+  if (action === 'enregistrer') {
+    try {
+      const { user_id, email, prenom, reponses, temps_secondes, abandonne, client_key } = req.body
+      if (!user_id) return res.status(400).json({ error: 'Paramètres manquants' })
+
+      // ── Cas abandon : score forcé à 0, pas de recalcul — même principe
+      // que quiz-resultat.js (rien à corriger sur des réponses en grande
+      // partie vides).
+      if (abandonne) {
+        const result = await enregistrerExamen({
+          user_id, email, prenom,
+          score: 0, total: 20,
+          scores_themes: {}, questions_ratees: [],
+          questions_posees: Array.isArray(reponses) ? reponses.map(r => r.id) : [],
+          temps_secondes: temps_secondes || 0,
+          client_key,
+          abandonne: true
+        })
+        if (result.error) return res.status(500).json({ error: result.error })
+        return res.status(200).json({ success: true, score: 0, total: 20 })
+      }
+
+      if (!reponses || !Array.isArray(reponses)) return res.status(400).json({ error: 'Réponses manquantes' })
+
+      // ── Recalcul du score côté serveur, jamais celui du client — même
+      // fonction que l'action 'corriger', appelée indépendamment ici :
+      // aucune confiance dans un score renvoyé par le client entre les
+      // deux appels.
+      const { nbOk, themes, questionsRatees } = await corrigerExamen({ reponses, supabaseUrl: SUPA_URL, headers })
+
+      const result = await enregistrerExamen({
+        user_id, email, prenom,
+        score: nbOk, total: reponses.length,
+        scores_themes: themes, questions_ratees: questionsRatees,
+        questions_posees: reponses.map(r => r.id),
+        temps_secondes: temps_secondes || 0,
+        client_key
+      })
+
+      if (result.error) return res.status(500).json({ error: result.error })
+
+      return res.status(200).json({ success: true, score: nbOk, total: reponses.length })
+    } catch (e) {
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
   return res.status(400).json({ error: 'Action inconnue' })
+}
+
+async function enregistrerExamen({ user_id, email, prenom, score, total, scores_themes, questions_ratees, questions_posees, temps_secondes, client_key, abandonne }) {
+  try {
+    const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+    const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
+
+    // Gate comptes orphelins + email_parent : voir lib/auth-eleve.js,
+    // partagé avec api/quiz-resultat.js.
+    const gate = await verifierGateEleve(user_id, SUPABASE_URL, SERVICE_KEY)
+    if (!gate.ok) return { error: 'Compte sans profil élève.' }
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/examens_blancs`, {
+      method: 'POST',
+      headers: {
+        'apikey': SERVICE_KEY,
+        'Authorization': `Bearer ${SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        // resolution=ignore-duplicates : upsert atomique sur la contrainte
+        // examens_blancs_client_key_unique — même mécanisme que resultats
+        // côté quiz-resultat.js.
+        'Prefer': 'return=minimal,resolution=ignore-duplicates'
+      },
+      body: JSON.stringify({
+        user_id, email: email || '', prenom: prenom || '', email_parent: gate.email_parent,
+        score, total, temps_secondes,
+        scores_themes, questions_ratees, questions_posees,
+        client_key: client_key || null,
+        ...(abandonne ? { abandonne: true } : {})
+      })
+    })
+
+    if (!res.ok) {
+      const errText = await res.text()
+      return { error: errText }
+    }
+    return { success: true }
+  } catch (e) {
+    return { error: e.message }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
