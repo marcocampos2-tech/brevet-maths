@@ -84,6 +84,29 @@ as $$
   );
 $$;
 
+-- a_un_profil(uuid) — p_user_id a-t-il une ligne profils ? Ferme le trou
+-- documenté dans docs/TODO.md (« examens_blancs a le même trou ») : la
+-- policy élève sur examens_blancs ne vérifiait que auth.uid() = user_id, pas
+-- la présence d'un profil élève — un parent connecté (qui n'a jamais de
+-- ligne profils) pouvait donc lire/écrire examens_blancs par un appel direct
+-- à l'API Supabase avec son propre JWT, en contournant le gate client ajouté
+-- sur examen.html. SECURITY DEFINER nécessaire : la policy elle-même
+-- restreint déjà la lecture de profils, il faut pouvoir la vérifier sans
+-- dépendre de cette même policy.
+create or replace function a_un_profil(p_user_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from profils p
+    where p.user_id = p_user_id
+  );
+$$;
+
 -- ---------------------------------------------------------------------------
 -- resultats
 -- ---------------------------------------------------------------------------
@@ -120,6 +143,22 @@ on examens_blancs
 for select
 to authenticated
 using (est_parent_de(user_id));
+
+-- Rejeu de "Eleve gere ses examens_blancs" : ajout de a_un_profil(auth.uid())
+-- en plus de auth.uid() = user_id, sur qual et with_check. Corrige le trou
+-- décrit ci-dessus (voir a_un_profil()) — validé en base le 15/09/2026 :
+-- positif (compte élève réel, 14 lignes toujours visibles) et négatif
+-- (compte tiers sans profil, 0 ligne, aucune erreur), directement en SQL
+-- Editor. Rôle {authenticated} confirmé par dump pg_policies (select
+-- policyname, roles from pg_policies), repris ici pour que ce fichier
+-- reflète exactement ce qui tourne en production.
+drop policy if exists "Eleve gere ses examens_blancs" on examens_blancs;
+create policy "Eleve gere ses examens_blancs"
+on examens_blancs
+for all
+to authenticated
+using (auth.uid() = user_id and a_un_profil(auth.uid()))
+with check (auth.uid() = user_id and a_un_profil(auth.uid()));
 
 -- ---------------------------------------------------------------------------
 -- profils
