@@ -21,7 +21,8 @@ export default async function handler(req, res) {
         temps_secondes: temps_secondes || 0,
         aucune_idee: 0,
         source_questions: source_questions || 'ia',
-        client_key
+        client_key,
+        abandonne: true
       })
       if (result.error) return res.status(500).json({ error: result.error })
       return res.status(200).json({ success: true, score: 0, total: 5 })
@@ -70,7 +71,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function insererResultat({ user_id, email, prenom, theme, sous_theme, difficulte, score, total, questions_ratees, temps_secondes, aucune_idee, source_questions, client_key }) {
+async function insererResultat({ user_id, email, prenom, theme, sous_theme, difficulte, score, total, questions_ratees, temps_secondes, aucune_idee, source_questions, client_key, abandonne }) {
   try {
     const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
     const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
@@ -159,7 +160,10 @@ async function insererResultat({ user_id, email, prenom, theme, sous_theme, diff
         theme, sous_theme: sous_theme || '', difficulte, score, total,
         questions_ratees, temps_secondes, aucune_idee,
         source_questions, alerte_envoyee: false,
-        client_key: client_key || null
+        client_key: client_key || null,
+        // Clé omise sur le chemin normal : la colonne prend son défaut
+        // (false) côté Postgres, pas besoin de l'envoyer explicitement.
+        ...(abandonne ? { abandonne: true } : {})
       })
     })
 

@@ -1410,6 +1410,13 @@ function openFiche(userId) {
   const chapitresRates = {}
   rows.forEach(r => { (r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q => { if (!chapitresRates[r.theme]) chapitresRates[r.theme]={}; chapitresRates[r.theme][q]=(chapitresRates[r.theme][q]||0)+1 }) })
   const niveauEmoji = { facile: '😊 Facile', moyen: '😐 Moyen', difficile: '😤 Difficile' }
+  // Deux compteurs séparés (quiz vs examen blanc) — cf. docs/TODO.md.
+  // Affichés en ligne secondaire discrète, pas en miniStat pleine taille :
+  // un compte de travail/démo peut en accumuler des dizaines (bruit de
+  // développement), ça ne doit pas rivaliser visuellement avec les stats
+  // d'apprentissage réelles. Absente plutôt qu'à "0" quand rien à signaler.
+  const nbAbandonsQuiz = rows.filter(r => r.abandonne).length
+  const nbAbandonsExamen = EXAMENS.filter(ex => ex.user_id === userId && ex.abandonne).length
   document.getElementById('fiche-titre').textContent = e.prenom + ' ' + e.nom
   let body = ''
   body += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem">'
@@ -1417,6 +1424,12 @@ function openFiche(userId) {
   body += miniStat(rows.length, 'Sessions', 'var(--blue)')
   body += miniStat(fmtTemps(tempsTot), 'Temps total', 'var(--blue)')
   body += '</div>'
+  if (nbAbandonsQuiz > 0 || nbAbandonsExamen > 0) {
+    const parts = []
+    if (nbAbandonsQuiz > 0) parts.push(nbAbandonsQuiz + ' quiz abandonné' + (nbAbandonsQuiz > 1 ? 's' : ''))
+    if (nbAbandonsExamen > 0) parts.push(nbAbandonsExamen + ' examen' + (nbAbandonsExamen > 1 ? 's' : '') + ' abandonné' + (nbAbandonsExamen > 1 ? 's' : ''))
+    body += '<div style="font-size:11px;color:#999;margin:-10px 0 14px">⚠️ ' + parts.join(' · ') + '</div>'
+  }
   const examMap = {}
   EXAMENS.filter(e=>!e.abandonne).forEach(e=>{ if(!examMap[e.user_id]) examMap[e.user_id]=e })
   const exam = examMap[userId]
