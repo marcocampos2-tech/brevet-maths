@@ -189,6 +189,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 1. Distribution flyer A5 — bloquée en attente consultation juridique
 2. SEO Phase 7bis — pages statiques indexables par sous-thème, analysé non implémenté
 3. Design system unifié — plan validé, jamais exécuté
+4. Refonte design de `suivi-parent.html` — envisagée le 15/09/2026, pas encore cadrée. Contrainte à respecter : le bloc "Examens blancs" (ajouté le 16/09/2026, `chargerExamensBlancs()` + `#zone-examens`) doit être conservé — il expose une donnée qui n'est visible nulle part ailleurs pour le parent. Sa présentation peut évoluer, son existence non. Autre point déjà identifié : le bouton "+ Ajouter un enfant" est une action de contenu placée dans la barre de navigation, à déplacer probablement dans la page ; noter qu'un compte parent sans aucun enfant masque déjà ce bouton et affiche une action dédiée dans l'état vide.
 4. Extension site dédié 4ème/2nde — non tranchée
 5. URL trackée dédiée flyer (`/flyer`) — à faire, complémentaire au champ source déclaratif
 6. Constat concret pendant le chantier captures produit (09-13/09) : `index.html`/`tarifs.html` partagent `style.css`, `espace-parent.html` a son propre `<style>` local avec des noms de variables différents pour les mêmes couleurs (`--navy`/`--bordeaux` vs `--marine`/`--bordeaux`, etc.) — a nécessité une duplication de `.produit-shot`/`.section-label` avant qu'on ne retire finalement tout ce contenu d'`espace-parent.html`. Illustration concrète du point 3 ci-dessus.
