@@ -136,7 +136,6 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 1. Cybersécurité avant Stripe live : `shouldCreateUser: true` exploitable, idempotency Stripe absente, `invoice.payment_failed` jamais écouté, `alerte_envoyee` sans NOT NULL, UTC vs Europe/Paris sur bilan périodique
 
    `/api/email` : l'endpoint `reset-password` n'a aucune vérification d'authentification, de CSRF ni d'origine, avec CORS ouvert à `*` (constaté 15/09/2026). Le rate-limiting limite les dégâts (3 min par enfant via `derniere_demande_reset`, 10/h par adresse via `email_rate_limit`) et l'anti-énumération est correctement implémenté (réponse uniforme même en cas d'erreur). Risque = nuisance (déclenchement d'emails vers des adresses de parents inscrits), pas compromission. À arbitrer avec le reste de l'audit.
-2. Abandon examen blanc non enregistré — aucune trace en base ni pour le parent
 3. Email récap parent ne distingue pas abandon vs quiz terminé à 0% — colonne `abandonne` absente de `resultats`
 4. Double email inscription brevet blanc présentiel — jamais vérifié résolu depuis 08/06
 5. Erreurs SVG `NaN` dans l'examen blanc — cosmétique
@@ -170,7 +169,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     4. Déclenchement (cron ? manuel ? notification parent préalable ?)
 
     **Ne PAS modifier les contraintes FK maintenant** : elles doivent être décidées pendant la conception du mécanisme, pas avant.
-20. Affichage parent des examens blancs (constaté 15/09/2026 via vérification Claude Code) — aucune requête vers `examens_blancs` dans `suivi-parent.html` (confirmé par grep : seules `resultats` et `profils` sont interrogées, lignes 484/537/644/811/891/1155/1207) ; la policy RLS "Parent voit examens_blancs de son enfant" existe côté base (`db/policies.sql:118`, prête, jamais exploitée côté front) — l'infrastructure permet déjà au parent de lire les résultats d'examen blanc de son enfant, mais aucun affichage n'a été construit ; chantier important mais non urgent, à regrouper probablement avec la refonte "niveau atteint" déjà en discussion pour `suivi-parent.html` plutôt que de le traiter isolément
+20. Affichage parent des examens blancs (constaté 15/09/2026 via vérification Claude Code) — aucune requête vers `examens_blancs` dans `suivi-parent.html` (confirmé par grep : seules `resultats` et `profils` sont interrogées, lignes 484/537/644/811/891/1155/1207) ; la policy RLS "Parent voit examens_blancs de son enfant" existe côté base (`db/policies.sql:118`, prête, jamais exploitée côté front) — l'infrastructure permet déjà au parent de lire les résultats d'examen blanc de son enfant, mais aucun affichage n'a été construit ; chantier important mais non urgent, à regrouper probablement avec la refonte "niveau atteint" déjà en discussion pour `suivi-parent.html` plutôt que de le traiter isolément. Vérifié le 16/09/2026 : un abandon d'examen blanc n'est pas non plus visible côté parent aujourd'hui, faute d'affichage — à couvrir par le même chantier d'affichage.
 
 ---
 
