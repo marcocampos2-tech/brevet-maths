@@ -169,7 +169,6 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     4. Déclenchement (cron ? manuel ? notification parent préalable ?)
 
     **Ne PAS modifier les contraintes FK maintenant** : elles doivent être décidées pendant la conception du mécanisme, pas avant.
-20. Affichage parent des examens blancs (constaté 15/09/2026 via vérification Claude Code) — aucune requête vers `examens_blancs` dans `suivi-parent.html` (confirmé par grep : seules `resultats` et `profils` sont interrogées, lignes 484/537/644/811/891/1155/1207) ; la policy RLS "Parent voit examens_blancs de son enfant" existe côté base (`db/policies.sql:118`, prête, jamais exploitée côté front) — l'infrastructure permet déjà au parent de lire les résultats d'examen blanc de son enfant, mais aucun affichage n'a été construit ; chantier important mais non urgent, à regrouper probablement avec la refonte "niveau atteint" déjà en discussion pour `suivi-parent.html` plutôt que de le traiter isolément. Vérifié le 16/09/2026 : un abandon d'examen blanc n'est pas non plus visible côté parent aujourd'hui, faute d'affichage — à couvrir par le même chantier d'affichage.
 
 ---
 

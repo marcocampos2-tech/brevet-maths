@@ -140,6 +140,12 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .niveau-acquis-toggle { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--marine); color: var(--marine); border-radius: 20px; padding: 9px 16px; font-size: 12.5px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; margin-top: 4px; }
 .niveau-acquis-detail { display: none; margin-top: 10px; }
 .niveau-acquis-detail.ouvert { display: block; }
+.examen-ligne { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; border-left: 3px solid var(--marine); background: var(--creme); margin-bottom: 6px; }
+.examen-ligne:last-child { margin-bottom: 0; }
+.examen-ligne-abandon { border-left-color: var(--border); background: white; }
+.examen-ligne-date { font-size: 12.5px; font-weight: 500; color: var(--ardoise); }
+.examen-ligne-score { font-size: 12.5px; font-weight: 600; color: var(--marine); }
+.examen-ligne-abandon .examen-ligne-score { font-weight: 500; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -184,6 +190,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   <div id="contenu">
     <div class="loader">⏳ Chargement…</div>
   </div>
+
+  <div id="zone-examens"></div>
 
   <div class="card">
     <div class="card-titre">Télécharger un bilan</div>
@@ -584,7 +592,30 @@ function choisirEnfant(uid, btn, prenomDirect) {
   document.getElementById('prenom-affiche').textContent = prenom || 'votre enfant'
   afficherBandeauSuivi(uid)
   chargerNiveaux(uid)
+  chargerExamensBlancs(uid)
   chargerDonnees()
+}
+
+async function chargerExamensBlancs(uid) {
+  const zone = document.getElementById('zone-examens')
+  if (!zone) return
+
+  const { data, error } = await sb.from('examens_blancs')
+    .select('created_at, score, total, abandonne')
+    .eq('user_id', uid)
+    .order('created_at', { ascending: false })
+
+  if (error || !data || data.length === 0) { zone.innerHTML = ''; return }
+
+  const lignes = data.map(e => {
+    const date = parseUTC(e.created_at).toLocaleDateString('fr-FR')
+    if (e.abandonne) {
+      return `<div class="examen-ligne examen-ligne-abandon"><span class="examen-ligne-date">${date}</span><span class="examen-ligne-score">Abandonné</span></div>`
+    }
+    return `<div class="examen-ligne"><span class="examen-ligne-date">${date}</span><span class="examen-ligne-score">${e.score}/${e.total}</span></div>`
+  }).join('')
+
+  zone.innerHTML = `<div class="card"><div class="card-titre">Examens blancs</div>${lignes}</div>`
 }
 
 function afficherBandeauSuivi(uid) {
