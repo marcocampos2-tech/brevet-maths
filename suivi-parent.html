@@ -302,6 +302,11 @@ function enPeriodeGratuite() { return new Date() < FIN_OFFRE_LANCEMENT }
 // détermine réellement, côté élève, quelle difficulté est jouable.
 // Toute divergence afficherait au parent un niveau différent de celui
 // que vit l'enfant.
+// Exception volontaire, pas une divergence à corriger : le filtre sur
+// resultats.abandonne dans calculerEtatSousTheme() (sessionsTotal,
+// tentativesNiveauActuel) n'a pas d'équivalent dans quiz.html, qui ne
+// connaît ni "découverte" ni "difficulté" — verifierDeblocage() n'a rien
+// à resynchroniser sur ce point (cf. docs/TODO.md, chantier abandons).
 // ═══════════════════════════════════════════════════════════
 const SOUS_THEMES = {
   'Nombres et calculs': [
@@ -335,7 +340,15 @@ const SEUIL_PCT = 70
 //  - en_cours   : le reste (progression normale)
 //  - acquis     : Difficile débloqué
 function calculerEtatSousTheme(sessions) {
-  const total = sessions.length
+  // Un abandon (resultats.abandonne=true) ne doit pas sortir un sous-thème
+  // de "découverte" trop tôt, ni gonfler tentativesNiveauActuel jusqu'à
+  // déclencher "difficulté" à tort — cf. docs/TODO.md. La boucle compte[...]
+  // ci-dessous continue d'itérer sur sessions brut, volontairement : un
+  // abandon (score 0/5) échoue déjà structurellement au seuil SEUIL_PCT,
+  // donc l'exclure ici n'aurait aucun effet — ne pas y toucher (cf. logique
+  // de déblocage, doit rester identique à quiz.html).
+  const sessionsReelles = sessions.filter(s => !s.abandonne)
+  const total = sessionsReelles.length
   if (total < 3) {
     return { etat: 'decouverte', niveau: null, progression: null, sessionsTotal: total, tentativesNiveauActuel: 0 }
   }
@@ -361,7 +374,7 @@ function calculerEtatSousTheme(sessions) {
   // que lorsque le niveau précédent est déjà débloqué (5 réussites), donc
   // compte[niveauActuel] reste toujours < SEUIL_SESSIONS ici — seul le
   // compteur de tentatives totales (réussites + échecs) peut dépasser 6.
-  const tentativesNiveauActuel = sessions.filter(s => s.difficulte === niveauActuel).length
+  const tentativesNiveauActuel = sessionsReelles.filter(s => s.difficulte === niveauActuel).length
   const progressionActuel = Math.min(compte[niveauActuel], SEUIL_SESSIONS)
   const etat = tentativesNiveauActuel >= 6 ? 'difficulte' : 'en_cours'
 
@@ -488,7 +501,7 @@ async function chargerNiveaux(uid) {
   zone.innerHTML = '<div class="card"><div class="loader" style="padding:1.5rem">⏳ Chargement…</div></div>'
 
   const { data, error } = await sb.from('resultats')
-    .select('theme, sous_theme, difficulte, score, total')
+    .select('theme, sous_theme, difficulte, score, total, abandonne')
     .eq('user_id', uid)
 
   if (error) {

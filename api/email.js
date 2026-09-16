@@ -764,7 +764,7 @@ export default async function handler(req, res) {
       const dateParisStr = date || maintenant.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
       const sessionsRes = await fetch(
         `${SUPA_URL}/rest/v1/resultats?user_id=eq.${user_id}` +
-        `&select=id,theme,sous_theme,difficulte,score,total,temps_secondes,questions_ratees,created_at,alerte_envoyee` +
+        `&select=id,theme,sous_theme,difficulte,score,total,temps_secondes,questions_ratees,created_at,alerte_envoyee,abandonne` +
         `&order=created_at.asc`,
         { headers: supaHeaders }
       )
@@ -784,16 +784,52 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, skip: 'déjà envoyé aujourd\'hui' })
       }
 
-      const totalSessions = sessionsDuJour.length
-      const scoreTotal = sessionsDuJour.reduce((a, s) => a + (s.score || 0), 0)
-      const totalTotal = sessionsDuJour.reduce((a, s) => a + (s.total || 0), 0)
+      // Marque une liste de lignes resultats comme couvertes — utilisé à la
+      // fois par l'envoi normal ci-dessous et par le skip "aucune session
+      // réelle" (un abandon doit être marqué comme les autres, sinon il
+      // reste indéfiniment non couvert pour ce jour). Fail-open loggé,
+      // jamais bloquant : quand un email part, il est déjà délivré à ce
+      // stade — seul le marquage peut rater.
+      async function marquerCouvertes(liste) {
+        const patchResultats = await Promise.all(
+          liste.map(s =>
+            fetch(`${SUPA_URL}/rest/v1/resultats?id=eq.${s.id}`, {
+              method: 'PATCH',
+              headers: { ...supaHeaders, 'Prefer': 'return=minimal' },
+              body: JSON.stringify({ alerte_envoyee: true })
+            })
+              .then(r => ({ id: s.id, ok: r.ok, status: r.status }))
+              .catch(e => ({ id: s.id, ok: false, status: null, error: e.message }))
+          )
+        )
+        patchResultats.filter(r => !r.ok).forEach(r => {
+          console.error(
+            'Échec PATCH alerte_envoyee — resultats.id=' + r.id +
+            (r.status != null ? ' status=' + r.status : '') +
+            (r.error ? ' erreur=' + r.error : '')
+          )
+        })
+      }
+
+      // Un abandon (resultats.abandonne=true) ne doit fausser ni la moyenne,
+      // ni les badges par sous-thème, ni le nombre de sessions annoncé au
+      // parent — cf. docs/TODO.md. Exclu de tous les calculs ci-dessous.
+      const sessionsReelles = sessionsDuJour.filter(s => !s.abandonne)
+      if (sessionsReelles.length === 0) {
+        await marquerCouvertes(sessionsNonCouvertes)
+        return res.status(200).json({ success: true, skip: 'aucune session réelle aujourd\'hui' })
+      }
+
+      const totalSessions = sessionsReelles.length
+      const scoreTotal = sessionsReelles.reduce((a, s) => a + (s.score || 0), 0)
+      const totalTotal = sessionsReelles.reduce((a, s) => a + (s.total || 0), 0)
       const moyGlobale = totalTotal > 0 ? Math.round((scoreTotal / totalTotal) * 100) : 0
-      const tempsSecondes = sessionsDuJour.reduce((a, s) => a + (s.temps_secondes || 0), 0)
+      const tempsSecondes = sessionsReelles.reduce((a, s) => a + (s.temps_secondes || 0), 0)
       const pct = moyGlobale
 
       const ORDRE_NIVEAUX = { facile: 1, moyen: 2, difficile: 3 }
       const sousThemesDetail = {}
-      sessionsDuJour.forEach(s => {
+      sessionsReelles.forEach(s => {
         if (!s.sous_theme) return
         if (!sousThemesDetail[s.sous_theme]) {
           sousThemesDetail[s.sous_theme] = { ok: 0, total: 0, niveau: s.difficulte }
@@ -805,7 +841,7 @@ export default async function handler(req, res) {
         }
       })
 
-      const questionsRatees = sessionsDuJour
+      const questionsRatees = sessionsReelles
         .flatMap(s => s.questions_ratees || [])
         .filter(q => typeof q === 'string' && !q.includes('abandonné'))
 
@@ -989,31 +1025,10 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: 'Erreur email : ' + JSON.stringify(err) })
       }
 
-      // L'email est déjà parti à ce stade (emailRes.ok vérifié ci-dessus).
-      // fetch() ne rejette que sur erreur réseau, jamais sur un statut HTTP
-      // 4xx/5xx — sans ce contrôle explicite, un échec du PATCH Supabase
-      // passait inaperçu et la ligne restait alerte_envoyee=false alors que
-      // le handler répondait success:true. On journalise chaque échec par
-      // id de ligne sans faire échouer la réponse : l'email a déjà été
-      // délivré, seul le marquage a pu rater.
-      const patchResultats = await Promise.all(
-        sessionsNonCouvertes.map(s =>
-          fetch(`${SUPA_URL}/rest/v1/resultats?id=eq.${s.id}`, {
-            method: 'PATCH',
-            headers: { ...supaHeaders, 'Prefer': 'return=minimal' },
-            body: JSON.stringify({ alerte_envoyee: true })
-          })
-            .then(r => ({ id: s.id, ok: r.ok, status: r.status }))
-            .catch(e => ({ id: s.id, ok: false, status: null, error: e.message }))
-        )
-      )
-      patchResultats.filter(r => !r.ok).forEach(r => {
-        console.error(
-          'Échec PATCH alerte_envoyee — resultats.id=' + r.id +
-          (r.status != null ? ' status=' + r.status : '') +
-          (r.error ? ' erreur=' + r.error : '')
-        )
-      })
+      // L'email est déjà parti à ce stade (emailRes.ok vérifié ci-dessus) —
+      // marquerCouvertes() est fail-open et ne fait jamais échouer la
+      // réponse (voir sa définition plus haut).
+      await marquerCouvertes(sessionsNonCouvertes)
 
       return res.status(200).json({ success: true, envoye: true, totalSessions, moyGlobale })
 
