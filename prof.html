@@ -238,6 +238,7 @@ const SOUS_THEMES = {
 }
 
 let ROWS = [], EXAMENS = [], PROFILS = {}, ELEVES = []
+let userIdCourant = null
 let INSCRIPTIONS = [], SESSIONS = []
 let BANQUE_DATA = []
 let banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0, resetParId: false }
@@ -1648,18 +1649,22 @@ function render() {
   })
   h+='</tbody></table></div></div>'
 
-  // EXAMENS BLANCS
-  const examensValides=EXAMENS.filter(e=>!e.abandonne)
+  // EXAMENS BLANCS — abandons inclus comme lignes distinctes (jamais 0/20,
+  // cf. docs/TODO.md pour le même défaut côté email parent, pas reproduit ici).
+  // EXAMENS est déjà l'ensemble complet trié desc sur created_at (requête
+  // ligne ~1760) : pas de refiltrage/retri ici.
   h+='<div class="section" id="sec-examens"><div class="card"><div class="card-title">Résultats Examens En Ligne</div>'
-  if (!examensValides.length) { h+='<p class="empty">Aucun examen passé.</p>' }
+  if (!EXAMENS.length) { h+='<p class="empty">Aucun examen passé.</p>' }
   else {
-    h+='<table class="tbl"><thead><tr><th>Élève</th><th>Score</th><th>Mention</th><th>Temps</th><th>Nombres</th><th>Organisation</th><th>Géométrie</th><th>Grandeurs</th></tr></thead><tbody>'
-    examensValides.forEach(e=>{
+    h+='<table class="tbl"><thead><tr><th>Date</th><th>Élève</th><th>Score</th><th>Mention</th><th>Temps</th><th>Nombres</th><th>Organisation</th><th>Géométrie</th><th>Grandeurs</th></tr></thead><tbody>'
+    EXAMENS.forEach(e=>{
       const p=pct(e.score,e.total),th=e.scores_themes||{},sc=scoresExamen(th)
       const mins=Math.floor(e.temps_secondes/60),secs=e.temps_secondes%60
-      const profil=PROFILS[e.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:e.prenom||'—'
-      h+='<tr><td><strong>'+nom+'</strong></td><td><strong>'+e.score+'/20</strong> <span style="font-size:11px;color:'+(p>=50?'#2F9E5C':'#9E2B25')+'">'+p+'%</span></td>'
-      h+='<td>'+mentionBadge(p)+'</td><td style="font-size:12px">'+fmt(mins,secs)+'</td>'
+      const profil=PROFILS[e.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:(e.user_id===userIdCourant?'Prof':(e.prenom||'—'))
+      const scoreCell=e.abandonne?'<span style="color:#999">Abandonné</span>':'<strong>'+e.score+'/20</strong> <span style="font-size:11px;color:'+(p>=50?'#2F9E5C':'#9E2B25')+'">'+p+'%</span>'
+      const mentionCell=e.abandonne?'':mentionBadge(p)
+      h+='<tr><td style="font-size:12px;color:#999">'+dateStr(e.created_at)+'</td><td><strong>'+nom+'</strong></td>'
+      h+='<td>'+scoreCell+'</td><td>'+mentionCell+'</td><td style="font-size:12px">'+fmt(mins,secs)+'</td>'
       h+='<td style="text-align:center;font-size:12px">'+sc.nombres+'</td><td style="text-align:center;font-size:12px">'+sc.stats+'</td>'
       h+='<td style="text-align:center;font-size:12px">'+sc.geo+'</td><td style="text-align:center;font-size:12px">'+sc.grandeurs+'</td></tr>'
     })
@@ -1754,6 +1759,7 @@ async function init() {
   }
 
   document.getElementById('btn-logout-nav').style.display = ''
+  userIdCourant = session.user.id
 
   const [r1,r2,r3,r4,r5] = await Promise.all([
     sb.from('resultats').select('*').order('created_at',{ascending:false}),
