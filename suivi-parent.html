@@ -608,7 +608,7 @@ async function chargerExamensBlancs(uid) {
   if (error || !data || data.length === 0) { zone.innerHTML = ''; return }
 
   const lignes = data.map(e => {
-    const date = parseUTC(e.created_at).toLocaleDateString('fr-FR')
+    const date = new Date(e.created_at).toLocaleDateString('fr-FR')
     if (e.abandonne) {
       return `<div class="examen-ligne examen-ligne-abandon"><span class="examen-ligne-date">${date}</span><span class="examen-ligne-score">Abandonné</span></div>`
     }
@@ -867,6 +867,8 @@ async function getRangeEtGranularite(mode) {
   return { debut, fin: maintenant, granularite: 'mois', libelle: 'Depuis le début' }
 }
 
+// Ne vaut que pour les colonnes timestamp SANS fuseau (ex. resultats.created_at) :
+// examens_blancs.created_at est en timestamptz, déjà formaté avec fuseau — ne pas y appliquer parseUTC().
 function parseUTC(chaine) {
   return new Date(chaine.replace(' ', 'T') + 'Z')
 }
