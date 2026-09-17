@@ -139,28 +139,17 @@ export default async function handler(req, res) {
   }
 
   // ═══════════════════════════════════════════
-  // CORRIGER — reçoit les réponses choisies, renvoie score + corrections
-  // ═══════════════════════════════════════════
-  if (action === 'corriger') {
-    try {
-      const { reponses } = req.body // [{ id, choix }, ...] choix peut être null si pas répondu
-      if (!reponses || !Array.isArray(reponses)) return res.status(400).json({ error: 'Réponses manquantes' })
-
-      const { nbOk, themes, questionsRatees, correction } = await corrigerExamen({ reponses, supabaseUrl: SUPA_URL, headers })
-
-      return res.status(200).json({ success: true, nbOk, themes, questionsRatees, correction })
-    } catch (e) {
-      return res.status(500).json({ error: e.message })
-    }
-  }
-
-  // ═══════════════════════════════════════════
   // ENREGISTRER — persiste le résultat final (fin normale ou abandon).
   // Transposition de api/quiz-resultat.js pour examens_blancs, fusionnée
   // ici plutôt qu'un fichier api/examen-resultat.js séparé : le plan
   // Vercel Hobby plafonne à 12 fonctions serverless sous api/, déjà
   // atteint — même contrainte, même résolution que stripe-checkout.js
   // (action 'portal' fusionnée depuis stripe-portal.js, cf. CLAUDE.md).
+  // Unique appel de fin d'examen depuis examen.html : renvoie aussi
+  // correction/themes/questionsRatees, l'action 'corriger' a disparu
+  // (plus aucun appelant, un seul aller-retour serveur pour la fin
+  // d'examen plutôt que deux corrections indépendantes de deux lectures
+  // de base).
   // ═══════════════════════════════════════════
   if (action === 'enregistrer') {
     try {
@@ -186,11 +175,8 @@ export default async function handler(req, res) {
 
       if (!reponses || !Array.isArray(reponses)) return res.status(400).json({ error: 'Réponses manquantes' })
 
-      // ── Recalcul du score côté serveur, jamais celui du client — même
-      // fonction que l'action 'corriger', appelée indépendamment ici :
-      // aucune confiance dans un score renvoyé par le client entre les
-      // deux appels.
-      const { nbOk, themes, questionsRatees } = await corrigerExamen({ reponses, supabaseUrl: SUPA_URL, headers })
+      // ── Recalcul du score côté serveur, jamais celui du client.
+      const { nbOk, themes, questionsRatees, correction } = await corrigerExamen({ reponses, supabaseUrl: SUPA_URL, headers })
 
       const result = await enregistrerExamen({
         user_id, email, prenom,
@@ -203,7 +189,7 @@ export default async function handler(req, res) {
 
       if (result.error) return res.status(500).json({ error: result.error })
 
-      return res.status(200).json({ success: true, score: nbOk, total: reponses.length })
+      return res.status(200).json({ success: true, score: nbOk, total: reponses.length, correction, themes, questionsRatees })
     } catch (e) {
       return res.status(500).json({ error: e.message })
     }

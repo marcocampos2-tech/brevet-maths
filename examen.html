@@ -115,7 +115,6 @@ let questions=[], answers={}, saved=false
 let chronoInterval=null, chronoSecondes=0
 let examEnCours=false
 let heureFin=null
-let questionsIds=[]
 let correction={}
 let resultatServeur=null
 
@@ -123,12 +122,27 @@ window.addEventListener('beforeunload', function(e) {
   if(examEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Examen en cours !';sauvegarderAbandonne()}
 })
 
+function construireReponses(){
+  return questions.map(function(q, i) {
+    return { id: q.id, choix: answers[i] !== undefined ? answers[i] : null }
+  })
+}
+
 async function sauvegarderAbandonne() {
   if(saved||!user||questions.length===0)return
   try{
     const tempsSecondes=heureFin?Math.floor((40*60*1000-Math.max(0,heureFin-Date.now()))/1000):chronoSecondes
-    const {error}=await sb.from('examens_blancs').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',score:0,total:20,temps_secondes:tempsSecondes,scores_themes:{},questions_ratees:[],abandonne:true,questions_posees:questionsIds})
-    if(error){console.log('Erreur abandon:',error.message);return}
+    await fetch('/api/examen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'enregistrer', abandonne: true,
+        user_id: user.id, email: user.email, prenom,
+        reponses: construireReponses(), temps_secondes: tempsSecondes,
+        client_key: crypto.randomUUID()
+      }),
+      keepalive: true
+    })
     saved=true
   }catch(e){console.log('Erreur abandon:',e.message)}
 }
@@ -343,7 +357,6 @@ async function demarrerExamen() {
 
     questions = data.questions
     answers={};saved=false;examEnCours=true;correction={};resultatServeur=null
-    questionsIds=questions.map(function(q){ return q.id })
     demarrerChrono()
     renderExamen()
   } catch(e){
@@ -451,28 +464,28 @@ async function sauvegarder(){
   if(saved||!user)return
   if(!emailParent){const {data:profil}=await sb.from('profils').select('email_parent').eq('user_id',user.id).limit(1);if(profil&&profil.length>0)emailParent=profil[0].email_parent}
 
-  const reponses = questions.map(function(q, i) {
-    return { id: q.id, choix: answers[i] !== undefined ? answers[i] : null }
-  })
+  const reponses = construireReponses()
   const tempsSecondes=heureFin?Math.floor((40*60*1000-Math.max(0,heureFin-Date.now()))/1000):chronoSecondes
 
   try {
     const res = await fetch('/api/examen', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'corriger', reponses })
+      body: JSON.stringify({
+        action: 'enregistrer',
+        user_id: user.id, email: user.email, prenom,
+        reponses, temps_secondes: tempsSecondes,
+        client_key: crypto.randomUUID()
+      })
     })
     const data = await res.json()
-    if (!data.success) { console.error('Erreur correction:', data.error); return }
+    if (!data.success) { console.error('Erreur enregistrement:', data.error); return }
 
     correction = data.correction
-    resultatServeur = { nbOk: data.nbOk, themes: data.themes, questionsRatees: data.questionsRatees, tempsSecondes }
+    resultatServeur = { nbOk: data.score, themes: data.themes, questionsRatees: data.questionsRatees, tempsSecondes }
+    saved=true;console.log('✅ Examen enregistré')
 
-    const {error}=await sb.from('examens_blancs').insert({user_id:user.id,email:user.email,prenom:prenom||'',email_parent:emailParent||'',score:data.nbOk,total:20,temps_secondes:tempsSecondes,scores_themes:data.themes,questions_ratees:data.questionsRatees,abandonne:false,questions_posees:questionsIds})
-    if(error){console.error('Erreur sauvegarde:',error.message)}
-    saved=true;console.log('✅ Examen sauvegardé')
-
-    if(emailParent){try{await fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'brevet-blanc',emailParent:emailParent,prenom:prenom||'',nom:nom||'',score:data.nbOk,total:20,pct:Math.round((data.nbOk/20)*100),scoresThemes:data.themes,tempsSecondes:tempsSecondes})});console.log('✅ Email envoyé')}catch(emailErr){console.error('Erreur email:',emailErr.message)}}
+    if(emailParent){try{await fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'brevet-blanc',emailParent:emailParent,prenom:prenom||'',nom:nom||'',score:data.score,total:20,pct:Math.round((data.score/20)*100),scoresThemes:data.themes,tempsSecondes:tempsSecondes})});console.log('✅ Email envoyé')}catch(emailErr){console.error('Erreur email:',emailErr.message)}}
   } catch(e){console.log('Erreur:',e.message)}
 }
 

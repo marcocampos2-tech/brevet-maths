@@ -169,6 +169,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     4. Déclenchement (cron ? manuel ? notification parent préalable ?)
 
     **Ne PAS modifier les contraintes FK maintenant** : elles doivent être décidées pendant la conception du mécanisme, pas avant.
+20. `renderResultats()` (`examen.html`) affiche « ✅ Résultats enregistrés » en dur, sans vérifier que l'écriture a réussi — si `sauvegarder()` échoue (`data.success` faux ou exception réseau), l'écran affiche quand même ce message.
 
 ---
 
