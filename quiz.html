@@ -331,7 +331,8 @@ async function sauvegarderAbandonne() {
         temps_secondes: chronoSecondes,
         source_questions: sourceQuestions,
         client_key: crypto.randomUUID() // même clé d'idempotence que sauvegarder() — écrit dans la même table via le même endpoint
-      })
+      }),
+      keepalive: true
     })
     saved=true
   }catch(e){console.log('Erreur abandon:',e.message)}
