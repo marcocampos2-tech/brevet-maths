@@ -169,7 +169,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     4. Déclenchement (cron ? manuel ? notification parent préalable ?)
 
     **Ne PAS modifier les contraintes FK maintenant** : elles doivent être décidées pendant la conception du mécanisme, pas avant.
-20. `renderResultats()` (`examen.html`) affiche « ✅ Résultats enregistrés » en dur, sans vérifier que l'écriture a réussi — si `sauvegarder()` échoue (`data.success` faux ou exception réseau), l'écran affiche quand même ce message.
+20. `renderResultats()` (`examen.html`) ne vérifie pas que `sauvegarder()` a réussi — introduit par la PR #71 (fusion avec l'action `enregistrer`, qui porte maintenant aussi la correction). Si `sauvegarder()` échoue (`data.success` faux ou exception réseau), `resultatServeur` reste `null` : l'écran affiche un score de 0/20 (au lieu du vrai score, faute de correction disponible) sous le message « ✅ Résultats enregistrés » — un score faux ET un message mensonger, pas seulement un message optimiste sur une écriture par ailleurs correcte. Avant la PR #71, la correction venait d'un appel serveur séparé (`corriger`) : un échec de l'écriture seule laissait l'affichage du score juste.
 
 ---
 
