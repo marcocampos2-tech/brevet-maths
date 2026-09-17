@@ -1398,10 +1398,11 @@ function openFiche(userId) {
   if (!e) return
   const rows = ROWS.filter(r => r.user_id === userId)
   if (!rows.length) { alert('Pas encore de données pour cet élève.'); return }
-  const moyPct = Math.round((rows.reduce((a,r) => a + r.score/r.total, 0)/rows.length)*100)
+  const rowsValides = rows.filter(r => !r.abandonne)
+  const moyPct = rowsValides.length ? Math.round((rowsValides.reduce((a,r) => a + r.score/r.total, 0)/rowsValides.length)*100) : 0
   const tempsTot = rows.reduce((a,r) => a + (r.temps_secondes||0), 0)
   const themes = {}
-  rows.forEach(r => {
+  rowsValides.forEach(r => {
     if (!themes[r.theme]) themes[r.theme] = { ok:0, tot:0, n:0, niveaux: { facile:{ok:0,tot:0}, moyen:{ok:0,tot:0}, difficile:{ok:0,tot:0} }, sousThemes: {} }
     themes[r.theme].ok += r.score; themes[r.theme].tot += r.total; themes[r.theme].n++
     if (r.difficulte && themes[r.theme].niveaux[r.difficulte]) { themes[r.theme].niveaux[r.difficulte].ok += r.score; themes[r.theme].niveaux[r.difficulte].tot += r.total }
@@ -1497,8 +1498,9 @@ async function envoyerBilan(userId) {
   const btn = document.getElementById('btn-bilan')
   btn.disabled = true; btn.textContent = 'Envoi…'
   const rows = ROWS.filter(r => r.user_id === userId)
-  const gSBilan = rows.reduce((a,r)=>a+r.score,0)
-  const gTBilan = rows.reduce((a,r)=>a+r.total,0)
+  const rowsValides = rows.filter(r => !r.abandonne)
+  const gSBilan = rowsValides.reduce((a,r)=>a+r.score,0)
+  const gTBilan = rowsValides.reduce((a,r)=>a+r.total,0)
   const moyGlobale = pct(gSBilan, gTBilan)
 
   // Modifié le 16/08/2026 — aligné sur le bilan périodique automatique
@@ -1507,9 +1509,12 @@ async function envoyerBilan(userId) {
   // Portée volontairement conservée sur tout l'historique de l'élève
   // (ROWS non filtré par période) — ce bouton sert d'échantillon complet
   // à un parent en offre Libre, pas d'un suivi limité à une fenêtre.
+  // rowsValides (17/09/2026) : un abandon (score 0, api/quiz-resultat.js)
+  // ne doit ni faire baisser une moyenne ni compter comme le niveau de
+  // difficulté atteint sur un sous-thème.
   const ORDRE_DIFFICULTE_BILAN = { facile: 1, moyen: 2, difficile: 3 }
   const parSousTheme = {}
-  rows.forEach(r => { if (!r.sous_theme || !r.difficulte) return; (parSousTheme[r.sous_theme] ||= []).push(r) })
+  rowsValides.forEach(r => { if (!r.sous_theme || !r.difficulte) return; (parSousTheme[r.sous_theme] ||= []).push(r) })
   const sousThemes = {}
   Object.entries(parSousTheme).forEach(([st, list]) => {
     let difficulteMax = null
@@ -1568,14 +1573,14 @@ async function ajouterQuestion() {
 // ═══════════════════════════════════════════════════
 function render() {
   const nbEleves=[...new Set(ROWS.map(r=>r.user_id))].length
-  const gAllS=ROWS.reduce((a,r)=>a+r.score,0), gAllT=ROWS.reduce((a,r)=>a+r.total,0)
+  const gAllS=ROWS.filter(r=>!r.abandonne).reduce((a,r)=>a+r.score,0), gAllT=ROWS.filter(r=>!r.abandonne).reduce((a,r)=>a+r.total,0)
   const moyGlo=pct(gAllS,gAllT)
   const nbIA=ROWS.filter(r=>!r.source_questions||r.source_questions==='ia').length
   const nbBanque=ROWS.filter(r=>r.source_questions==='banque').length
   const nbExamens=EXAMENS.filter(e=>!e.abandonne).length
   const pctIA=ROWS.length?Math.round(nbIA/ROWS.length*100):0
   const themeStats={}
-  ROWS.forEach(r=>{ if (!themeStats[r.theme]) themeStats[r.theme]={ok:0,tot:0,n:0}; themeStats[r.theme].ok+=r.score; themeStats[r.theme].tot+=r.total; themeStats[r.theme].n++ })
+  ROWS.filter(r=>!r.abandonne).forEach(r=>{ if (!themeStats[r.theme]) themeStats[r.theme]={ok:0,tot:0,n:0}; themeStats[r.theme].ok+=r.score; themeStats[r.theme].tot+=r.total; themeStats[r.theme].n++ })
   const rateeMap={}
   ROWS.forEach(r=>(r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1))
   const topRatees=Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
@@ -1622,7 +1627,7 @@ function render() {
   THEMES_SHORT.forEach(t => { h+='<th>'+t+'</th>' })
   h+='<th>Examen en ligne</th></tr></thead><tbody>'
   ELEVES.forEach(e => {
-    const rows=ROWS.filter(r=>r.user_id===e.user_id), exam=examMap[e.user_id]
+    const rows=ROWS.filter(r=>r.user_id===e.user_id).filter(r=>!r.abandonne), exam=examMap[e.user_id]
     const nomCell = '<div class="eleve-cell"><div class="avatar">'+initiales(e.prenom,e.nom)+'</div><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></div>'
     const examCell=!exam?'<td style="color:#999;font-size:11px">—</td>':(()=>{ const ep=pct(exam.score,exam.total); return '<td><span style="color:'+color(ep)+';font-weight:700">'+exam.score+'/20</span><br><span style="font-size:10px;color:'+color(ep)+'">'+mentionLabel(ep)+'</span></td>' })()
     if (!rows.length) { h+='<tr><td>'+nomCell+'</td><td style="color:#999">—</td>'; THEMES.forEach(()=>{h+='<td style="color:#999">—</td>'}); h+=examCell+'</tr>'; return }
@@ -1639,6 +1644,7 @@ function render() {
   })
   h+='</tbody></table></div>'
   h+='<p style="font-size:11px;color:#888;margin-top:10px">🟢 ≥70% Maîtrisé | 🟡 50-69% En cours | 🔴 &lt;50% À retravailler</p>'
+  h+='<p style="font-size:11px;color:#888;margin-top:4px">Global = réponses correctes / questions des sessions terminées (abandons exclus). Un thème très travaillé pèse davantage.</p>'
   h+='</div></div>'
 
   // ÉLÈVES
@@ -1775,7 +1781,7 @@ async function init() {
   const profils=r3.data||[]
   PROFILS={}; profils.forEach(p=>PROFILS[p.user_id]=p)
   ELEVES=profils.map(p=>({user_id:p.user_id,prenom:p.prenom_affiche||'—',nom:p.nom_affiche||'',email_parent:p.email_parent||'—',source:p.source||null,sessions:0,totalScore:0,totalQ:0}))
-  ROWS.forEach(r=>{ const e=ELEVES.find(x=>x.user_id===r.user_id); if(e){ e.sessions++; e.totalScore+=r.score; e.totalQ+=r.total } })
+  ROWS.forEach(r=>{ const e=ELEVES.find(x=>x.user_id===r.user_id); if(e){ e.sessions++; if(!r.abandonne){ e.totalScore+=r.score; e.totalQ+=r.total } } })
   INSCRIPTIONS=r4.data||[]
   SESSIONS=r5.data||[]
   render()
