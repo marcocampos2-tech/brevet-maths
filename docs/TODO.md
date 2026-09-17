@@ -10,7 +10,6 @@ Les parents peuvent désormais voir les résultats de leur enfant (PR #41 mergé
 - `db/policies.test.sql` — jamais fait (seul `db/policies.sql` existe)
 - `historique_bilans` — RLS active, ZÉRO policy dumpée, possiblement invisible pour tout le monde y compris en clé service selon le contexte — à vérifier
 - Normaliser l'email dans le formulaire d'inscription (au lieu de dépendre du rattrapage `lower(trim(...))` en lecture)
-- Lecture positive de `examens_blancs` par un parent — jamais testée, faute d'examen dans le jeu de données démo
 
 ## ✅ Refonte `suivi-parent.html` — livrée (PR #43, 07/09/2026)
 
@@ -77,6 +76,8 @@ Diagnostic initial (double-tap mobile probable sur `quiz.html`, ayant fait passe
   Sujet distinct, déjà traité (14/09/2026, avant ce correctif) : le bloc "Les accès" ajouté à l'encart post-création de `suivi-parent.html` explique désormais explicitement au parent comment connecter son enfant (prénom, nom, mot de passe).
 
 - **`examens_blancs` a le même trou — corrigé et validé en base (15/09/2026)** : découvert pendant la conception du correctif A+B+C ci-dessus. La policy RLS `"Eleve gere ses examens_blancs"` (`db/policies.sql`, `ALL`, `auth.uid() = user_id`) ne vérifiait pas la présence d'une ligne `profils`, contrairement au gate codé pour `resultats`/`api/quiz-resultat.js`. Contrairement aux quiz, `examen.html` insère directement dans `examens_blancs` depuis le client (clé anon, aux points d'abandon et de fin d'examen) — pas d'intermédiaire serverless à gater comme le point C ci-dessus, donc pas de backstop serveur possible sans toucher RLS. Le gate client sur `examen.html` (point B) couvre le cas normal, mais un appel direct à l'API Supabase avec le JWT du parent contournait ce gate. Corrigé : nouvelle fonction `a_un_profil(uuid)` (SECURITY DEFINER) et policy `"Eleve gere ses examens_blancs"` resserrée pour exiger `a_un_profil(auth.uid())` en plus de `auth.uid() = user_id`, sur qual et with_check — ajoutées dans `db/policies.sql`. Testé positif (compte élève réel, 14 lignes toujours visibles) et négatif (compte tiers sans profil, 0 ligne, aucune erreur) le 15/09/2026 directement en SQL Editor.
+
+  **Mise à jour (17/09/2026, PR #73)** : cette policy `ALL` a été remplacée — renommée `"Eleve lit ses examens_blancs"`, désormais en `SELECT` seul (qual identique : `auth.uid() = user_id and a_un_profil(auth.uid())`). Les droits INSERT/UPDATE/DELETE décrits ci-dessus n'existent plus en prod : depuis PR #71, `examen.html` n'écrit plus jamais directement dans `examens_blancs` (toute écriture passe par `api/examen.js`, clé service) — c'était un accès mort. `db/policies.sql` reflète désormais ce nom et cette portée.
 
 ## ✅ `profils` INSERT sans contrôle `email_parent` — confirmé déjà contrôlé, faux positif (14/09/2026)
 
@@ -170,6 +171,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
     **Ne PAS modifier les contraintes FK maintenant** : elles doivent être décidées pendant la conception du mécanisme, pas avant.
 20. `renderResultats()` (`examen.html`) ne vérifie pas que `sauvegarder()` a réussi — introduit par la PR #71 (fusion avec l'action `enregistrer`, qui porte maintenant aussi la correction). Si `sauvegarder()` échoue (`data.success` faux ou exception réseau), `resultatServeur` reste `null` : l'écran affiche un score de 0/20 (au lieu du vrai score, faute de correction disponible) sous le message « ✅ Résultats enregistrés » — un score faux ET un message mensonger, pas seulement un message optimiste sur une écriture par ailleurs correcte. Avant la PR #71, la correction venait d'un appel serveur séparé (`corriger`) : un échec de l'écriture seule laissait l'affichage du score juste.
+21. **Reprise de session d'examen blanc après rafraîchissement accidentel** — un examen dure 40 minutes ; un F5 involontaire enregistre un abandon (score 0) et la session est perdue. Le volet technique de l'abandon est clos (PR #71 : écriture serveur, keepalive, symétrie avec `quiz.html`), mais la question produit ne l'est pas : faut-il permettre de reprendre un examen interrompu, et sous quelles conditions (fenêtre de temps, une seule reprise, chrono qui continue ou repart) ? Question ouverte depuis le 23/08/2026, effacée par erreur du TODO le 16/09, réintroduite le 17/09.
 
 ---
 
@@ -194,6 +196,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 4. Extension site dédié 4ème/2nde — non tranchée
 5. URL trackée dédiée flyer (`/flyer`) — à faire, complémentaire au champ source déclaratif
 6. Constat concret pendant le chantier captures produit (09-13/09) : `index.html`/`tarifs.html` partagent `style.css`, `espace-parent.html` a son propre `<style>` local avec des noms de variables différents pour les mêmes couleurs (`--navy`/`--bordeaux` vs `--marine`/`--bordeaux`, etc.) — a nécessité une duplication de `.produit-shot`/`.section-label` avant qu'on ne retire finalement tout ce contenu d'`espace-parent.html`. Illustration concrète du point 3 ci-dessus.
+7. **Pondération non expliquée du "Tableau comparatif — tous les élèves" (`prof.html`)** — le pourcentage global est pondéré par le nombre de questions (`sum(score)/sum(total)` sur `resultats`), pas une moyenne des colonnes de thèmes. Vérifié le 17/09/2026 : 50/275 = 18,2 %, chiffre exact, alors que les colonnes affichent 11/16/40/47 % — l'écart vient d'un thème pesant 175 des 275 questions. Rien à corriger côté calcul. Mais rien n'explique cette pondération dans l'interface : un élève travaillant intensément un thème faible verra son global baisser pendant que ses colonnes progressent, et un parent lira l'écart comme une incohérence. Une légende d'une ligne suffirait — décision produit, pas technique, non tranchée.
 
 ---
 
