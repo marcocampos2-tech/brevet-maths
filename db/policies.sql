@@ -144,21 +144,48 @@ for select
 to authenticated
 using (est_parent_de(user_id));
 
--- Rejeu de "Eleve gere ses examens_blancs" : ajout de a_un_profil(auth.uid())
--- en plus de auth.uid() = user_id, sur qual et with_check. Corrige le trou
--- décrit ci-dessus (voir a_un_profil()) — validé en base le 15/09/2026 :
--- positif (compte élève réel, 14 lignes toujours visibles) et négatif
--- (compte tiers sans profil, 0 ligne, aucune erreur), directement en SQL
--- Editor. Rôle {authenticated} confirmé par dump pg_policies (select
--- policyname, roles from pg_policies), repris ici pour que ce fichier
--- reflète exactement ce qui tourne en production.
+-- Historique : "Eleve gere ses examens_blancs" a été rejouée le 15/09/2026
+-- avec ajout de a_un_profil(auth.uid()) en plus de auth.uid() = user_id, sur
+-- qual et with_check, pour corriger le trou décrit ci-dessus (voir
+-- a_un_profil()) — validé en base positif (compte élève réel, 14 lignes
+-- toujours visibles) et négatif (compte tiers sans profil, 0 ligne, aucune
+-- erreur), directement en SQL Editor. Cette policy ALL a depuis été
+-- remplacée par la policy SELECT ci-dessous et n'existe plus en production.
+
+-- Resserrement de "Eleve gere ses examens_blancs" (ALL) en lecture seule.
+-- Depuis la PR #71 (api/examen.js, action 'enregistrer'), toute écriture
+-- dans examens_blancs passe par le service serveur (clé service) ; le front
+-- n'écrit plus jamais directement dans cette table — confirmé par recherche
+-- exhaustive dans le dépôt avant cette migration (aucun insert/update/
+-- delete/upsert client restant, dans aucun fichier .html). Les droits
+-- INSERT/UPDATE/DELETE de l'ancienne policy ALL étaient donc un accès mort,
+-- jamais emprunté par le code, et une fausse impression de contrôle.
+--
+-- Renommée "Eleve lit ses examens_blancs" plutôt que rejouée sous le même
+-- nom : "gere" décrivait un droit ALL qui n'existe plus, et Postgres
+-- interdit deux policies de même nom sur une même table — la migration
+-- réelle crée la policy SELECT avant de supprimer l'ancienne (pour ne
+-- laisser aucune fenêtre sans lecture élève), ce qui imposait de toute
+-- façon un nom distinct le temps que les deux coexistent.
+--
+-- qual strictement identique à l'ancienne policy ALL : auth.uid() = user_id
+-- and a_un_profil(auth.uid()). Aucun changement de portée pour la lecture
+-- élève. Hors périmètre de cette migration, non touchées : "Prof gere
+-- examens_blancs" (ALL, is_prof() — ses droits d'écriture ne sont pas non
+-- plus exercés côté client, mais on ne resserre pas deux policies dans la
+-- même migration) et "Parent voit examens_blancs de son enfant".
+--
+-- ⚠️ Ordre de ce fichier (drop puis create) différent de l'ordre exécuté en
+-- production pour cette migration (create de la nouvelle policy d'abord,
+-- puis drop de l'ancienne) : ce fichier documente l'état final voulu,
+-- rejouable depuis n'importe quel état de départ — il ne reflète pas la
+-- chronologie exacte des deux instructions passées en SQL Editor.
 drop policy if exists "Eleve gere ses examens_blancs" on examens_blancs;
-create policy "Eleve gere ses examens_blancs"
+create policy "Eleve lit ses examens_blancs"
 on examens_blancs
-for all
+for select
 to authenticated
-using (auth.uid() = user_id and a_un_profil(auth.uid()))
-with check (auth.uid() = user_id and a_un_profil(auth.uid()));
+using (auth.uid() = user_id and a_un_profil(auth.uid()));
 
 -- ---------------------------------------------------------------------------
 -- profils
