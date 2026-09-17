@@ -8,7 +8,7 @@ Les parents peuvent désormais voir les résultats de leur enfant (PR #41 mergé
 
 **Reste ouvert :**
 - `db/policies.test.sql` — jamais fait (seul `db/policies.sql` existe)
-- `historique_bilans` — RLS active, ZÉRO policy dumpée, possiblement invisible pour tout le monde y compris en clé service selon le contexte — à vérifier
+- `historique_bilans` — RLS active sans aucune policy : VÉRIFIÉ le 17/09/2026, c'est l'état voulu, pas un défaut. La table n'est touchée que par `api/cron-rappel.js` (lecture du dernier bilan ligne ~260, écriture après envoi ligne ~450) avec `SUPABASE_SERVICE_KEY`, qui contourne RLS par construction — l'absence de policy n'a jamais rien bloqué. Aucun accès client n'existe ni n'est prévu : `suivi-parent.html:411` documente son mode dégradé sans cette lecture. La comparaison "depuis le dernier bilan" côté parent reste attendue, mais elle est déjà tracée dans la section "aligner `cron-rappel.js` sur la logique niveau". Rien à faire ici.
 - Normaliser l'email dans le formulaire d'inscription (au lieu de dépendre du rattrapage `lower(trim(...))` en lecture)
 
 ## ✅ Refonte `suivi-parent.html` — livrée (PR #43, 07/09/2026)
@@ -142,7 +142,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 5. Erreurs SVG `NaN` dans l'examen blanc — cosmétique
 6. Déconnexion lente — piste : `logout()` attend fin d'appels réseau
 7. Chevauchement contenu email récap si plusieurs sessions le même jour — mineur
-8. Bug fuseau horaire UTC — seule `resultats` corrigée, pas de vérification généralisée
+8. Fuseaux horaires — recensé le 17/09/2026, aucun bug actif, deux points de fragilité. (a) Les conversions serveur vers la date Paris sont correctes (`api/cron-rappel.js:86`, `api/email.js:764` et `774`, `api/stripe-webhook.js:247` utilisent toutes `timeZone: 'Europe/Paris'`), mais elles reposent implicitement sur le fait que Vercel tourne en UTC : `new Date()` sur un timestamp naïf de `resultats` l'interprète comme heure locale du serveur. Juste aujourd'hui, silencieusement faux si le fuseau du runtime changeait — hypothèse à documenter, pas à corriger. (b) `suivi-parent.html` (lignes 728, 866, 973) regroupe les sessions par jour selon le fuseau du NAVIGATEUR du parent (`dateLocaleISO`), pas selon Paris : identique pour un parent en France, découpage des journées différent de l'email reçu pour un parent à l'étranger. Cas limite jamais rencontré, correction non prioritaire.
 9. Warning console — meta tag `apple-mobile-web-app-capable` déprécié
 10. Stages "Réserver une place" — mailto seulement, formulaire réel à construire
 11. Distinction gratuit/abonnement — gating email fait, dashboard/PDF/examen blanc à construire
@@ -150,6 +150,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 13. `is_prof()` sans `search_path` figé — exposition faible, à aligner au passage
 14. Policies ciblant `{public}` au lieu de `{authenticated}` — pas exploitable aujourd'hui, fragile
 15. `historique_bilans`/`rappels_envoyes`/`email_rate_limit` — RLS active, zéro policy
+
+    Sur les trois, seule `historique_bilans` a été vérifiée (17/09/2026, cf. bullet dédié) : état voulu, accès serveur uniquement. `rappels_envoyes` et `email_rate_limit` restent à vérifier — probablement le même cas, non confirmé.
 16. Bandeau commercial `suivi-parent.html` vend "résultat examen blanc en ligne" — jamais implémenté, masqué jusqu'au 01/12
 17. Deux seuils désalignés "abordé" (1 session) vs "À découvrir" (<3 sessions) — assumé, pas un bug
 18. Lien "Offres" corrigé (`#quiz`→`#offres`) sur `index.html`/`tarifs.html` (09/09) ; même décalage nom/cible jamais corrigé sur `stages-vacances.html`, `connexion.html`, `cours-particuliers.html`, `abonnement-confirme.html` (liens vers `index.html#quiz`)

@@ -1568,14 +1568,14 @@ async function ajouterQuestion() {
 // ═══════════════════════════════════════════════════
 function render() {
   const nbEleves=[...new Set(ROWS.map(r=>r.user_id))].length
-  const gAllS=ROWS.reduce((a,r)=>a+r.score,0), gAllT=ROWS.reduce((a,r)=>a+r.total,0)
+  const gAllS=ROWS.filter(r=>!r.abandonne).reduce((a,r)=>a+r.score,0), gAllT=ROWS.filter(r=>!r.abandonne).reduce((a,r)=>a+r.total,0)
   const moyGlo=pct(gAllS,gAllT)
   const nbIA=ROWS.filter(r=>!r.source_questions||r.source_questions==='ia').length
   const nbBanque=ROWS.filter(r=>r.source_questions==='banque').length
   const nbExamens=EXAMENS.filter(e=>!e.abandonne).length
   const pctIA=ROWS.length?Math.round(nbIA/ROWS.length*100):0
   const themeStats={}
-  ROWS.forEach(r=>{ if (!themeStats[r.theme]) themeStats[r.theme]={ok:0,tot:0,n:0}; themeStats[r.theme].ok+=r.score; themeStats[r.theme].tot+=r.total; themeStats[r.theme].n++ })
+  ROWS.filter(r=>!r.abandonne).forEach(r=>{ if (!themeStats[r.theme]) themeStats[r.theme]={ok:0,tot:0,n:0}; themeStats[r.theme].ok+=r.score; themeStats[r.theme].tot+=r.total; themeStats[r.theme].n++ })
   const rateeMap={}
   ROWS.forEach(r=>(r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1))
   const topRatees=Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
@@ -1639,6 +1639,7 @@ function render() {
   })
   h+='</tbody></table></div>'
   h+='<p style="font-size:11px;color:#888;margin-top:10px">🟢 ≥70% Maîtrisé | 🟡 50-69% En cours | 🔴 &lt;50% À retravailler</p>'
+  h+='<p style="font-size:11px;color:#888;margin-top:4px">Global = réponses correctes / questions des sessions terminées (abandons exclus). Un thème très travaillé pèse davantage.</p>'
   h+='</div></div>'
 
   // ÉLÈVES
@@ -1775,7 +1776,7 @@ async function init() {
   const profils=r3.data||[]
   PROFILS={}; profils.forEach(p=>PROFILS[p.user_id]=p)
   ELEVES=profils.map(p=>({user_id:p.user_id,prenom:p.prenom_affiche||'—',nom:p.nom_affiche||'',email_parent:p.email_parent||'—',source:p.source||null,sessions:0,totalScore:0,totalQ:0}))
-  ROWS.forEach(r=>{ const e=ELEVES.find(x=>x.user_id===r.user_id); if(e){ e.sessions++; e.totalScore+=r.score; e.totalQ+=r.total } })
+  ROWS.forEach(r=>{ const e=ELEVES.find(x=>x.user_id===r.user_id); if(e){ e.sessions++; if(!r.abandonne){ e.totalScore+=r.score; e.totalQ+=r.total } } })
   INSCRIPTIONS=r4.data||[]
   SESSIONS=r5.data||[]
   render()
