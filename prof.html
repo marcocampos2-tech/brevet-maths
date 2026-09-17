@@ -238,6 +238,7 @@ const SOUS_THEMES = {
 }
 
 let ROWS = [], EXAMENS = [], PROFILS = {}, ELEVES = []
+let userIdCourant = null
 let INSCRIPTIONS = [], SESSIONS = []
 let BANQUE_DATA = []
 let banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0, resetParId: false }
@@ -1659,7 +1660,7 @@ function render() {
     EXAMENS.forEach(e=>{
       const p=pct(e.score,e.total),th=e.scores_themes||{},sc=scoresExamen(th)
       const mins=Math.floor(e.temps_secondes/60),secs=e.temps_secondes%60
-      const profil=PROFILS[e.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:e.prenom||'—'
+      const profil=PROFILS[e.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:(e.user_id===userIdCourant?'Prof':(e.prenom||'—'))
       const scoreCell=e.abandonne?'<span style="color:#999">Abandonné</span>':'<strong>'+e.score+'/20</strong> <span style="font-size:11px;color:'+(p>=50?'#2F9E5C':'#9E2B25')+'">'+p+'%</span>'
       const mentionCell=e.abandonne?'':mentionBadge(p)
       h+='<tr><td style="font-size:12px;color:#999">'+dateStr(e.created_at)+'</td><td><strong>'+nom+'</strong></td>'
@@ -1758,6 +1759,7 @@ async function init() {
   }
 
   document.getElementById('btn-logout-nav').style.display = ''
+  userIdCourant = session.user.id
 
   const [r1,r2,r3,r4,r5] = await Promise.all([
     sb.from('resultats').select('*').order('created_at',{ascending:false}),
