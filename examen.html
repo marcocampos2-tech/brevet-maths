@@ -508,7 +508,9 @@ function renderResultats(){
   html+='<div class="themes-recap">'
   Object.keys(themes).forEach(function(theme){const s=themes[theme];const tpct=Math.round((s.ok/s.total)*100);html+='<div class="theme-score"><div class="theme-score-num" style="color:'+(tpct>=50?'#16a34a':'#dc2626')+'">'+s.ok+'/'+s.total+'</div><div class="theme-score-label">'+theme.split(' ')[0]+'</div></div>'})
   html+='</div>'
-  html+='<div style="font-size:12px;color:#16a34a;margin-bottom:1.5rem">✅ Résultats enregistrés</div>'
+  html+= resultatServeur !== null
+    ? '<div style="font-size:12px;color:#16a34a;margin-bottom:1.5rem">✅ Résultats enregistrés</div>'
+    : '<div style="font-size:12px;color:#dc2626;margin-bottom:1.5rem">⚠️ Une erreur est survenue, tes résultats n\'ont peut-être pas été enregistrés — contacte ton professeur si le problème persiste</div>'
   html+='<div class="results-btns">'
   html+='<button class="btn btn-primary btn-full" onclick="voirCorrection()">📋 Voir la correction complète</button>'
   html+='<button class="btn btn-green btn-full" onclick="demarrerExamen()">🔄 Recommencer un nouvel examen</button>'
