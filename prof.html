@@ -1652,8 +1652,9 @@ function render() {
   h+='<table class="tbl"><thead><tr><th>Élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th><th>Examen</th><th>Origine</th><th>Actions</th></tr></thead><tbody>'
   ELEVES.forEach(e=>{
     const p=e.totalQ>0?pct(e.totalScore,e.totalQ):0, exam=examMap[e.user_id]
+    const moyCell=e.totalQ>0?'<strong style="color:'+color(p)+'">'+p+'%</strong>':'<span style="color:#999">—</span>'
     const examCell=exam?mentionBadge(pct(exam.score,exam.total))+' <span style="font-size:12px">'+exam.score+'/20</span>':'<span style="color:#999;font-size:12px">—</span>'
-    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+initiales(e.prenom,e.nom)+'</div><strong>'+e.prenom+' '+e.nom+'</strong></div></td><td style="color:var(--blue);font-size:12px">'+e.email_parent+'</td><td>'+e.sessions+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td><td>'+examCell+'</td><td style="font-size:12px">'+origineLabel(e.source)+'</td>'
+    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+initiales(e.prenom,e.nom)+'</div><strong>'+e.prenom+' '+e.nom+'</strong></div></td><td style="color:var(--blue);font-size:12px">'+e.email_parent+'</td><td>'+e.sessions+'</td><td>'+moyCell+'</td><td>'+examCell+'</td><td style="font-size:12px">'+origineLabel(e.source)+'</td>'
     h+='<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">Fiche</button></td></tr>'
   })
   h+='</tbody></table></div></div>'
@@ -1700,12 +1701,13 @@ function render() {
   // SESSIONS
   h+='<div class="section" id="sec-sessions"><div class="card"><div class="card-title">30 dernières activités</div>'
   h+='<table class="tbl"><thead><tr><th>Élève</th><th>Type</th><th>Détail</th><th>Score</th><th>Date</th></tr></thead><tbody>'
-  const toutesActivites=[...ROWS.map(r=>({user_id:r.user_id,type:'quiz',detail:r.theme+' — '+r.difficulte,score:r.score,total:r.total,created_at:r.created_at})),...EXAMENS.filter(e=>!e.abandonne).map(e=>({user_id:e.user_id,type:'examen',detail:'Examen blanc',score:e.score,total:e.total,created_at:e.created_at}))]
+  const toutesActivites=[...ROWS.map(r=>({user_id:r.user_id,type:'quiz',detail:r.theme+' — '+r.difficulte,score:r.score,total:r.total,abandonne:r.abandonne,created_at:r.created_at})),...EXAMENS.filter(e=>!e.abandonne).map(e=>({user_id:e.user_id,type:'examen',detail:'Examen blanc',score:e.score,total:e.total,abandonne:e.abandonne,created_at:e.created_at}))]
   toutesActivites.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,30).forEach(r=>{
     const profil=PROFILS[r.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:'—',p=pct(r.score,r.total)
     const typeBadge=r.type==='examen'?'<span class="badge badge-blue">📝 Examen en ligne</span>':'<span class="badge badge-banque">🎲 Quiz</span>'
+    const scoreCell=r.abandonne?'<span style="color:#999">Abandonné</span>':'<strong style="color:'+color(p)+'">'+r.score+'/'+r.total+'</strong>'
     h+='<tr><td><strong>'+nom+'</strong></td><td>'+typeBadge+'</td><td style="font-size:12px;color:#555">'+r.detail+'</td>'
-    h+='<td><strong style="color:'+color(p)+'">'+r.score+'/'+r.total+'</strong></td><td style="font-size:12px;color:#999">'+dateStr(r.created_at)+'</td></tr>'
+    h+='<td>'+scoreCell+'</td><td style="font-size:12px;color:#999">'+dateStr(r.created_at)+'</td></tr>'
   })
   h+='</tbody></table></div></div>'
 
