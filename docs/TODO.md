@@ -184,6 +184,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
     À ne pas refaire en reprenant ce point : le diagnostic a déjà établi que le code source sur `main` est correct et que le diff des deux PR (#78, deux commits) est conforme à ce qui était voulu. Le problème est côté déploiement/cache, pas côté code.
 25. **Aucun échec de `sauvegarder()` (`examen.html`) n'est remonté côté serveur** — constaté le 20/09/2026 en corrigeant le message d'erreur affiché à l'élève (item 20). Le `console.error` en cas d'échec meurt dans le navigateur de l'élève ; tant qu'il n'y a pas de trafic, personne ne le voit. Le jour où il y aura du trafic, un échec sera découvert par un parent mécontent, pas par le prof. À cadrer séparément (remontée serveur, alerte prof, ou autre mécanisme).
+26. **Libellés de domaines tronqués dans `renderResultats()` (`examen.html:522`)** — `theme.split(' ')[0]` coupe au premier espace, laissant une virgule parasite sur les domaines multi-mots (« Organisation, », « Grandeurs, »). Antérieur aux PR #81/#82, découvert en cours de chantier reprise de session (21/09/2026), non traité ici. Idée à valider : libellé court explicite par domaine, ou retrait de la ponctuation finale.
+27. **`api/quiz-resultat.js` fait probablement confiance au `user_id` du body, comme `enregistrer` de `api/examen.js` avant le chantier reprise de session (21/09/2026)** — même angle mort a priori : rien n'empêche un appel direct à l'API d'écrire un faux résultat de quiz au nom de n'importe quel `user_id` existant. Constat seulement, non vérifié en détail ni corrigé ici — `api/examen.js` vient d'être corrigé (vérification du jeton via `/auth/v1/user`, même modèle que `api/stripe-checkout.js`) ; à auditer et aligner séparément si confirmé.
 
 ---
 
