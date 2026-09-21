@@ -41,8 +41,12 @@ export default async function handler(req, res) {
 
       for (const partie of parties) {
         const r = await fetch(`${SUPA_URL}/rest/v1/examen_questions?partie=eq.${partie}&select=*`, { headers })
+        if (!r.ok) {
+          console.error('[demarrer] lecture examen_questions refusée, partie', partie, ':', r.status, await r.text())
+          throw new Error('Questions partie ' + partie + ' introuvables')
+        }
         const data = await r.json()
-        if (!data || data.length === 0) throw new Error('Questions partie ' + partie + ' introuvables')
+        if (!Array.isArray(data) || data.length === 0) throw new Error('Questions partie ' + partie + ' introuvables')
         pools[partie] = data
       }
 
@@ -169,6 +173,7 @@ export default async function handler(req, res) {
 
       return res.status(200).json({ success: true, questions: questionsFinales, vues: diag, tentative_id: tentativeId, heure_fin: heureFin })
     } catch (e) {
+      console.error('[demarrer] échec inattendu:', e.message)
       return res.status(500).json({ error: e.message })
     }
   }
@@ -195,6 +200,7 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({ success: true })
     } catch (e) {
+      console.error('[progression] échec inattendu:', e.message)
       return res.status(500).json({ error: e.message })
     }
   }
@@ -213,16 +219,36 @@ export default async function handler(req, res) {
       const reponsesStockees = Array.isArray(prog.reponses) ? prog.reponses : []
       const questionIds = Array.isArray(prog.question_ids) ? prog.question_ids : []
 
+      if (questionIds.length === 0) {
+        // Ligne corrompue/vide (ne devrait pas arriver : 'demarrer' écrit
+        // toujours 20 ids) — id=in.() est un filtre invalide pour PostgREST,
+        // traité comme "rien à reprendre" plutôt que de planter dessus.
+        console.error('[reprise] question_ids vide/invalide pour la tentative', prog.tentative_id, '— traité comme aucune tentative en cours')
+        return res.status(200).json({ success: true, encours: false })
+      }
+
       // Questions complètes, RÉORDONNÉES exactement selon question_ids : cet
       // ordre conditionne l'indexation answers[i] côté client (construireReponses()
       // s'appuie sur la position dans le tableau `questions`), il ne doit
       // jamais être re-mélangé ici comme au tirage initial.
       const idsStr = questionIds.join(',')
       const rq = await fetch(`${SUPA_URL}/rest/v1/examen_questions?id=in.(${idsStr})&select=id,question,opts,theme,chapitre,partie,figure,tableau`, { headers })
+      if (!rq.ok) {
+        console.error('[reprise] lecture examen_questions refusée:', rq.status, await rq.text())
+        return res.status(500).json({ error: 'Lecture des questions échouée' })
+      }
       const data = await rq.json()
+      if (!Array.isArray(data)) {
+        console.error('[reprise] réponse examen_questions inattendue (pas un tableau):', JSON.stringify(data).slice(0, 500))
+        return res.status(500).json({ error: 'Réponse inattendue' })
+      }
       const qMap = {}
       data.forEach(q => { qMap[q.id] = q })
       const questionsFinales = questionIds.map(id => qMap[id]).filter(Boolean).map(mapperQuestionPourClient)
+
+      if (questionsFinales.length !== questionIds.length) {
+        console.error('[reprise] questions manquantes pour la tentative', prog.tentative_id, ': demandées=' + questionIds.length, 'trouvées=' + questionsFinales.length)
+      }
 
       if (Date.now() >= finMs) {
         // Temps écoulé pendant l'absence : soumission automatique des
@@ -238,7 +264,10 @@ export default async function handler(req, res) {
           temps_secondes: DUREE_EXAMEN_S,
           tentative_id: prog.tentative_id, abandonne: false
         })
-        if (result.error) return res.status(500).json({ error: result.error })
+        if (result.error) {
+          console.error('[reprise] soumission automatique échouée:', result.error)
+          return res.status(500).json({ error: result.error })
+        }
 
         await supprimerProgression(userId, prog.tentative_id, SUPA_URL, headers)
 
@@ -255,6 +284,7 @@ export default async function handler(req, res) {
         heure_fin: prog.heure_fin, tentative_id: prog.tentative_id
       })
     } catch (e) {
+      console.error('[reprise] échec inattendu:', e.message)
       return res.status(500).json({ error: e.message })
     }
   }
@@ -310,7 +340,10 @@ export default async function handler(req, res) {
           questions_posees: Array.isArray(reponses) ? reponses.map(r => r.id) : [],
           temps_secondes: tempsSecondesServeur, client_key, tentative_id, abandonne: true
         })
-        if (result.error) return res.status(500).json({ error: result.error })
+        if (result.error) {
+          console.error('[enregistrer] abandon échoué:', result.error)
+          return res.status(500).json({ error: result.error })
+        }
 
         // Abandon explicite et confirmé (retourAccueil()/logout(), après le
         // confirm() qui prévient l'élève qu'il perd sa progression) : la
@@ -342,7 +375,10 @@ export default async function handler(req, res) {
         questions_posees: reponsesValides.map(r => r.id),
         temps_secondes: tempsSecondesServeur, client_key, tentative_id, abandonne: false
       })
-      if (result.error) return res.status(500).json({ error: result.error })
+      if (result.error) {
+        console.error('[enregistrer] soumission finale échouée:', result.error)
+        return res.status(500).json({ error: result.error })
+      }
 
       // Suppression uniquement à la soumission finale réussie — jamais sur
       // abandon (cf. ci-dessus).
@@ -350,6 +386,7 @@ export default async function handler(req, res) {
 
       return res.status(200).json({ success: true, score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: tempsSecondesServeur })
     } catch (e) {
+      console.error('[enregistrer] échec inattendu:', e.message)
       return res.status(500).json({ error: e.message })
     }
   }
@@ -440,7 +477,7 @@ async function supprimerProgression(userId, tentativeId, SUPA_URL, headers) {
 async function lireExamenParTentative(tentativeId, SUPA_URL, headers) {
   try {
     const r = await fetch(`${SUPA_URL}/rest/v1/examens_blancs?tentative_id=eq.${tentativeId}&select=abandonne&limit=1`, { headers })
-    if (!r.ok) return null
+    if (!r.ok) { console.error('[examens_blancs] lecture transition refusée:', r.status, await r.text()); return null }
     const data = await r.json()
     return Array.isArray(data) && data.length > 0 ? data[0] : null
   } catch (e) {
