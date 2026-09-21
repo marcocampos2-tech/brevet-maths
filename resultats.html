@@ -184,14 +184,12 @@ async function init() {
 
 function renderDashboard(rows) {
   // Un abandon (score forcé à 0, cf. api/quiz-resultat.js) ne mesure pas une
-  // compétence : exclu du score global, des scores par domaine et du
-  // compteur de sessions — même principe que prof.html (openFiche(),
-  // rowsValides = rows.filter(r => !r.abandonne)). temps_secondes reste
-  // calculé sur toutes les lignes : le temps passé est réel même sur une
-  // session interrompue, hors périmètre de ce correctif.
+  // compétence : exclu du score global, des scores par domaine, du
+  // compteur de sessions et du temps total — même principe que prof.html
+  // (openFiche(), rowsValides = rows.filter(r => !r.abandonne)).
   var rowsValides = rows.filter(function(r) { return !r.abandonne })
   var totalSessions = rowsValides.length
-  var totalSecondes = rows.reduce(function(s, r) { return s + (r.temps_secondes || 0) }, 0)
+  var totalSecondes = rowsValides.reduce(function(s, r) { return s + (r.temps_secondes || 0) }, 0)
   var totalScore = rowsValides.reduce(function(s, r) { return s + (r.score || 0) }, 0)
   var totalTotal = rowsValides.reduce(function(s, r) { return s + (r.total || 5) }, 0)
   var globalPct = totalTotal > 0 ? Math.round((totalScore / totalTotal) * 100) : 0
