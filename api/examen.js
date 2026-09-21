@@ -2,6 +2,10 @@ import { memoireQuestionsVues, contexteEleve, noterEchec, journaliserEchec } fro
 import { corrigerExamen } from '../lib/examen-score.js'
 import { verifierGateEleve } from '../lib/auth-eleve.js'
 
+const ACTIONS_VALIDES = ['demarrer', 'progression', 'reprise', 'enregistrer']
+const DUREE_EXAMEN_MS = 40 * 60 * 1000
+const DUREE_EXAMEN_S = 40 * 60
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST')
@@ -14,6 +18,18 @@ export default async function handler(req, res) {
   const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPA_KEY}`, 'apikey': SUPA_KEY }
 
   const { action } = req.body
+  if (!ACTIONS_VALIDES.includes(action)) return res.status(400).json({ error: 'Action inconnue' })
+
+  // ── Authentification — commune aux 4 actions ─────────────────────────
+  // examens_progression n'a AUCUNE policy RLS côté client (cf. db/policies.sql) :
+  // sa seule protection est ici. Le user_id du corps de la requête n'est donc
+  // plus jamais utilisé comme identité — on vérifie le jeton auprès de
+  // Supabase Auth, même mécanisme que api/stripe-checkout.js (fetch
+  // /auth/v1/user avec Bearer <token>). Avant ce chantier, 'enregistrer'
+  // faisait confiance au user_id du body (cf. docs/TODO.md, item 27, pour le
+  // même angle mort probable sur api/quiz-resultat.js, non traité ici).
+  const userId = await verifierToken(req.body.access_token, SUPA_URL, SUPA_KEY)
+  if (!userId) return res.status(401).json({ error: 'Session invalide' })
 
   // ═══════════════════════════════════════════
   // DEMARRER — sélectionne 20 questions, SANS answer ni explication
@@ -121,84 +137,319 @@ export default async function handler(req, res) {
         }
       }
 
-      const questionsFinales = toutesLesQuestions.sort(() => Math.random() - 0.5).map(q => ({
-        id: q.id,
-        q: q.question,
-        opts: typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts,
-        theme: q.theme,
-        chapitre: q.chapitre,
-        partie: q.partie,
-        figure: q.figure ? (typeof q.figure === 'string' ? JSON.parse(q.figure) : q.figure) : null,
-        tableau: q.tableau ? (typeof q.tableau === 'string' ? JSON.parse(q.tableau) : q.tableau) : null
-      }))
+      const questionsFinales = toutesLesQuestions.sort(() => Math.random() - 0.5).map(mapperQuestionPourClient)
 
-      return res.status(200).json({ success: true, questions: questionsFinales, vues: diag })
+      // ── Progression : bootstrap d'une nouvelle tentative ──────────
+      // tentative_id/heure_fin ne sont plus jamais modifiables par le client
+      // ensuite (cf. 'progression'). Upsert sur user_id (clé primaire) :
+      // écrase silencieusement une tentative précédente abandonnée, comme
+      // voulu. Best-effort et fail-open : un échec d'écriture ici ne doit pas
+      // empêcher l'examen de démarrer, seulement priver cette tentative de
+      // la reprise si une coupure survient (dégradation vers le comportement
+      // d'avant ce chantier, pas un blocage).
+      const tentativeId = crypto.randomUUID()
+      const heureFin = new Date(Date.now() + DUREE_EXAMEN_MS).toISOString()
+      try {
+        const rProg = await fetch(`${SUPA_URL}/rest/v1/examens_progression?on_conflict=user_id`, {
+          method: 'POST',
+          headers: { ...headers, 'Prefer': 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify({
+            user_id: userId,
+            tentative_id: tentativeId,
+            question_ids: questionsFinales.map(q => q.id),
+            reponses: [],
+            heure_fin: heureFin,
+            updated_at: new Date().toISOString()
+          })
+        })
+        if (!rProg.ok) console.error('[examens_progression] écriture demarrer refusée:', rProg.status, await rProg.text())
+      } catch (e) {
+        console.error('[examens_progression] écriture demarrer échouée:', e.message)
+      }
+
+      return res.status(200).json({ success: true, questions: questionsFinales, vues: diag, tentative_id: tentativeId, heure_fin: heureFin })
     } catch (e) {
       return res.status(500).json({ error: e.message })
     }
   }
 
   // ═══════════════════════════════════════════
-  // ENREGISTRER — persiste le résultat final (fin normale ou abandon).
-  // Transposition de api/quiz-resultat.js pour examens_blancs, fusionnée
-  // ici plutôt qu'un fichier api/examen-resultat.js séparé : le plan
-  // Vercel Hobby plafonne à 12 fonctions serverless sous api/, déjà
-  // atteint — même contrainte, même résolution que stripe-checkout.js
-  // (action 'portal' fusionnée depuis stripe-portal.js, cf. CLAUDE.md).
-  // Unique appel de fin d'examen depuis examen.html : renvoie aussi
-  // correction/themes/questionsRatees, l'action 'corriger' a disparu
-  // (plus aucun appelant, un seul aller-retour serveur pour la fin
-  // d'examen plutôt que deux corrections indépendantes de deux lectures
-  // de base).
+  // PROGRESSION — sauvegarde best-effort des réponses en cours, appelée à
+  // chaque pick(). Ne touche jamais heure_fin ni question_ids (absents du
+  // payload envoyé : rien à "refuser" explicitement, ils ne sont simplement
+  // jamais dans la clause PATCH).
+  // ═══════════════════════════════════════════
+  if (action === 'progression') {
+    try {
+      const { tentative_id, reponses } = req.body
+      if (!tentative_id || !Array.isArray(reponses)) return res.status(400).json({ error: 'Paramètres manquants' })
+
+      const r = await fetch(`${SUPA_URL}/rest/v1/examens_progression?user_id=eq.${userId}&tentative_id=eq.${tentative_id}`, {
+        method: 'PATCH',
+        headers: { ...headers, 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ reponses, updated_at: new Date().toISOString() })
+      })
+      if (!r.ok) {
+        journaliserEchecProgression('patch', r.status, await r.text())
+        return res.status(500).json({ error: 'Sauvegarde échouée' })
+      }
+      return res.status(200).json({ success: true })
+    } catch (e) {
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // REPRISE — état de la tentative en cours du user (questions sans answer
+  // ni explication, comme 'demarrer', + reponses déjà enregistrées +
+  // heure_fin), ou soumission automatique si heure_fin est dépassé.
+  // ═══════════════════════════════════════════
+  if (action === 'reprise') {
+    try {
+      const prog = await lireProgression(userId, SUPA_URL, headers)
+      if (!prog) return res.status(200).json({ success: true, encours: false })
+
+      const finMs = new Date(prog.heure_fin).getTime()
+      const reponsesStockees = Array.isArray(prog.reponses) ? prog.reponses : []
+      const questionIds = Array.isArray(prog.question_ids) ? prog.question_ids : []
+
+      // Questions complètes, RÉORDONNÉES exactement selon question_ids : cet
+      // ordre conditionne l'indexation answers[i] côté client (construireReponses()
+      // s'appuie sur la position dans le tableau `questions`), il ne doit
+      // jamais être re-mélangé ici comme au tirage initial.
+      const idsStr = questionIds.join(',')
+      const rq = await fetch(`${SUPA_URL}/rest/v1/examen_questions?id=in.(${idsStr})&select=id,question,opts,theme,chapitre,partie,figure,tableau`, { headers })
+      const data = await rq.json()
+      const qMap = {}
+      data.forEach(q => { qMap[q.id] = q })
+      const questionsFinales = questionIds.map(id => qMap[id]).filter(Boolean).map(mapperQuestionPourClient)
+
+      if (Date.now() >= finMs) {
+        // Temps écoulé pendant l'absence : soumission automatique des
+        // réponses enregistrées jusqu'ici — pas un abandon à 0, même chemin
+        // que le timeout normal côté client.
+        const reponsesValides = filtrerReponsesValides(reponsesStockees, questionIds)
+        const { nbOk, themes, questionsRatees, correction } = await corrigerExamen({ reponses: reponsesValides, supabaseUrl: SUPA_URL, headers })
+
+        const result = await enregistrerExamen({
+          user_id: userId, email: req.body.email || '', prenom: req.body.prenom || '',
+          score: nbOk, total: 20, scores_themes: themes, questions_ratees: questionsRatees,
+          questions_posees: reponsesValides.map(r => r.id),
+          temps_secondes: DUREE_EXAMEN_S,
+          tentative_id: prog.tentative_id, abandonne: false
+        })
+        if (result.error) return res.status(500).json({ error: result.error })
+
+        await supprimerProgression(userId, prog.tentative_id, SUPA_URL, headers)
+
+        return res.status(200).json({
+          success: true, encours: true, soumisAuto: true,
+          questions: questionsFinales, reponses: reponsesStockees,
+          score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: DUREE_EXAMEN_S
+        })
+      }
+
+      return res.status(200).json({
+        success: true, encours: true,
+        questions: questionsFinales, reponses: reponsesStockees,
+        heure_fin: prog.heure_fin, tentative_id: prog.tentative_id
+      })
+    } catch (e) {
+      return res.status(500).json({ error: e.message })
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // ENREGISTRER — persiste le résultat final (fin normale, soumission
+  // manuelle, ou abandon). Transposition de api/quiz-resultat.js pour
+  // examens_blancs, fusionnée ici plutôt qu'un fichier api/examen-resultat.js
+  // séparé : le plan Vercel Hobby plafonne à 12 fonctions serverless sous
+  // api/, déjà atteint — même contrainte, même résolution que
+  // stripe-checkout.js (action 'portal' fusionnée depuis stripe-portal.js,
+  // cf. CLAUDE.md).
+  //
+  // tentative_id (colonne + contrainte UNIQUE côté examens_blancs) est
+  // désormais la clé d'upsert : une soumission finale écrase un abandon déjà
+  // écrit pour la même tentative, mais jamais l'inverse (cf. transition
+  // ci-dessous). client_key reste une colonne à part pour l'idempotence
+  // HTTP, sans fusion avec tentative_id comme cible de conflit.
   // ═══════════════════════════════════════════
   if (action === 'enregistrer') {
     try {
-      const { user_id, email, prenom, reponses, temps_secondes, abandonne, client_key } = req.body
-      if (!user_id) return res.status(400).json({ error: 'Paramètres manquants' })
+      const { tentative_id, email, prenom, reponses, temps_secondes, abandonne, definitif, client_key } = req.body
+      if (!tentative_id) return res.status(400).json({ error: 'Paramètres manquants' })
 
-      // ── Cas abandon : score forcé à 0, pas de recalcul — même principe
-      // que quiz-resultat.js (rien à corriger sur des réponses en grande
-      // partie vides).
+      const prog = await lireProgression(userId, SUPA_URL, headers, tentative_id)
+
+      // Le temps est calculé côté serveur à partir de heure_fin quand la
+      // ligne de progression est disponible — jamais d'après le
+      // temps_secondes envoyé par le client. Fail-open sur le temps client
+      // si la ligne est absente (échec d'écriture au démarrage, ou tentative
+      // remplacée par un "Recommencer" lancé dans un autre onglet).
+      let tempsSecondesServeur = temps_secondes || 0
+      if (prog && prog.heure_fin) {
+        const finMs = new Date(prog.heure_fin).getTime()
+        tempsSecondesServeur = Math.max(0, Math.min(DUREE_EXAMEN_S, Math.floor((DUREE_EXAMEN_MS - Math.max(0, finMs - Date.now())) / 1000)))
+      }
+
       if (abandonne) {
+        // Transition interdite : un abandon ne doit jamais écraser un
+        // résultat déjà terminé (retry tardif du beacon pagehide après une
+        // soumission réussie). La fenêtre de concurrence réelle est
+        // théorique — saved=true bloque déjà pagehide côté client une fois
+        // la soumission passée — cette lecture est la seconde ligne de
+        // défense côté serveur.
+        const existant = await lireExamenParTentative(tentative_id, SUPA_URL, headers)
+        if (existant && existant.abandonne === false) {
+          return res.status(200).json({ success: true })
+        }
+
         const result = await enregistrerExamen({
-          user_id, email, prenom,
-          score: 0, total: 20,
-          scores_themes: {}, questions_ratees: [],
+          user_id: userId, email: email || '', prenom: prenom || '',
+          score: 0, total: 20, scores_themes: {}, questions_ratees: [],
           questions_posees: Array.isArray(reponses) ? reponses.map(r => r.id) : [],
-          temps_secondes: temps_secondes || 0,
-          client_key,
-          abandonne: true
+          temps_secondes: tempsSecondesServeur, client_key, tentative_id, abandonne: true
         })
         if (result.error) return res.status(500).json({ error: result.error })
+
+        // Abandon explicite et confirmé (retourAccueil()/logout(), après le
+        // confirm() qui prévient l'élève qu'il perd sa progression) : la
+        // tentative est définitivement close, la ligne de progression est
+        // supprimée — cohérent avec le message déjà affiché, écran d'intro à
+        // la prochaine visite. Un abandon incertain (pagehide : F5, onglet
+        // fermé, crash) la CONSERVE, pour que la reprise reste possible.
+        if (definitif) await supprimerProgression(userId, tentative_id, SUPA_URL, headers)
+
         return res.status(200).json({ success: true, score: 0, total: 20 })
       }
 
       if (!reponses || !Array.isArray(reponses)) return res.status(400).json({ error: 'Réponses manquantes' })
 
-      // ── Recalcul du score côté serveur, jamais celui du client.
-      const { nbOk, themes, questionsRatees, correction } = await corrigerExamen({ reponses, supabaseUrl: SUPA_URL, headers })
+      // Écarte les ids absents de question_ids (tentative falsifiée) et les
+      // doublons — garde la première occurrence (répéter l'id d'une question
+      // facile pour gonfler le score). Fail-open (reponses non filtrées) si
+      // la ligne de progression est absente : même compromis que pour le
+      // temps ci-dessus.
+      const reponsesValides = prog && Array.isArray(prog.question_ids)
+        ? filtrerReponsesValides(reponses, prog.question_ids)
+        : reponses
+
+      const { nbOk, themes, questionsRatees, correction } = await corrigerExamen({ reponses: reponsesValides, supabaseUrl: SUPA_URL, headers })
 
       const result = await enregistrerExamen({
-        user_id, email, prenom,
-        score: nbOk, total: reponses.length,
-        scores_themes: themes, questions_ratees: questionsRatees,
-        questions_posees: reponses.map(r => r.id),
-        temps_secondes: temps_secondes || 0,
-        client_key
+        user_id: userId, email: email || '', prenom: prenom || '',
+        score: nbOk, total: 20, scores_themes: themes, questions_ratees: questionsRatees,
+        questions_posees: reponsesValides.map(r => r.id),
+        temps_secondes: tempsSecondesServeur, client_key, tentative_id, abandonne: false
       })
-
       if (result.error) return res.status(500).json({ error: result.error })
 
-      return res.status(200).json({ success: true, score: nbOk, total: reponses.length, correction, themes, questionsRatees })
+      // Suppression uniquement à la soumission finale réussie — jamais sur
+      // abandon (cf. ci-dessus).
+      await supprimerProgression(userId, tentative_id, SUPA_URL, headers)
+
+      return res.status(200).json({ success: true, score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: tempsSecondesServeur })
     } catch (e) {
       return res.status(500).json({ error: e.message })
     }
   }
-
-  return res.status(400).json({ error: 'Action inconnue' })
 }
 
-async function enregistrerExamen({ user_id, email, prenom, score, total, scores_themes, questions_ratees, questions_posees, temps_secondes, client_key, abandonne }) {
+// ═══════════════════════════════════════════════════════════════
+// AUTHENTIFICATION — vérifie le jeton auprès de Supabase Auth, même modèle
+// que api/stripe-checkout.js. Ne fait jamais confiance à un user_id lu dans
+// le corps de la requête.
+// ═══════════════════════════════════════════════════════════════
+async function verifierToken(access_token, SUPA_URL, SUPA_KEY) {
+  if (!access_token || typeof access_token !== 'string') return null
+  try {
+    const r = await fetch(`${SUPA_URL}/auth/v1/user`, {
+      headers: { 'Authorization': `Bearer ${access_token}`, 'apikey': SUPA_KEY }
+    })
+    if (!r.ok) return null
+    const data = await r.json()
+    return data && data.id ? data.id : null
+  } catch (e) {
+    return null
+  }
+}
+
+// Forme envoyée au client : jamais answer/explication avant la fin de
+// l'examen. Partagée par 'demarrer' et 'reprise' pour rester identique dans
+// les deux cas.
+function mapperQuestionPourClient(q) {
+  return {
+    id: q.id,
+    q: q.question,
+    opts: typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts,
+    theme: q.theme,
+    chapitre: q.chapitre,
+    partie: q.partie,
+    figure: q.figure ? (typeof q.figure === 'string' ? JSON.parse(q.figure) : q.figure) : null,
+    tableau: q.tableau ? (typeof q.tableau === 'string' ? JSON.parse(q.tableau) : q.tableau) : null
+  }
+}
+
+// Écarte les ids absents de questionIds et les doublons (garde la première
+// occurrence) — défense contre une tentative de gonfler le score en
+// répétant l'id d'une question facile dans les réponses soumises.
+function filtrerReponsesValides(reponses, questionIds) {
+  if (!Array.isArray(questionIds)) return reponses
+  const valides = new Set(questionIds)
+  const vues = new Set()
+  return reponses.filter(function (r) {
+    if (!valides.has(r.id) || vues.has(r.id)) return false
+    vues.add(r.id)
+    return true
+  })
+}
+
+function journaliserEchecProgression(operation, statut, corps) {
+  console.error('[examens_progression]', operation, statut, corps)
+}
+
+async function lireProgression(userId, SUPA_URL, headers, tentativeId) {
+  try {
+    let url = `${SUPA_URL}/rest/v1/examens_progression?user_id=eq.${userId}`
+    if (tentativeId) url += `&tentative_id=eq.${tentativeId}`
+    url += '&select=*'
+    const r = await fetch(url, { headers })
+    if (!r.ok) { journaliserEchecProgression('lecture', r.status, await r.text()); return null }
+    const data = await r.json()
+    return Array.isArray(data) && data.length > 0 ? data[0] : null
+  } catch (e) {
+    journaliserEchecProgression('lecture', null, e.message)
+    return null
+  }
+}
+
+async function supprimerProgression(userId, tentativeId, SUPA_URL, headers) {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/examens_progression?user_id=eq.${userId}&tentative_id=eq.${tentativeId}`, {
+      method: 'DELETE',
+      headers: { ...headers, 'Prefer': 'return=minimal' }
+    })
+    if (!r.ok) journaliserEchecProgression('suppression', r.status, await r.text())
+  } catch (e) {
+    journaliserEchecProgression('suppression', null, e.message)
+  }
+}
+
+// Lecture minimale pour la règle de transition (jamais terminé → abandon) —
+// une seule colonne, jamais exposée au client.
+async function lireExamenParTentative(tentativeId, SUPA_URL, headers) {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/examens_blancs?tentative_id=eq.${tentativeId}&select=abandonne&limit=1`, { headers })
+    if (!r.ok) return null
+    const data = await r.json()
+    return Array.isArray(data) && data.length > 0 ? data[0] : null
+  } catch (e) {
+    console.error('[examens_blancs] lecture transition échouée:', e.message)
+    return null
+  }
+}
+
+async function enregistrerExamen({ user_id, email, prenom, score, total, scores_themes, questions_ratees, questions_posees, temps_secondes, client_key, tentative_id, abandonne }) {
   try {
     const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
     const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
@@ -208,23 +459,28 @@ async function enregistrerExamen({ user_id, email, prenom, score, total, scores_
     const gate = await verifierGateEleve(user_id, SUPABASE_URL, SERVICE_KEY)
     if (!gate.ok) return { error: 'Compte sans profil élève.' }
 
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/examens_blancs`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/examens_blancs?on_conflict=tentative_id`, {
       method: 'POST',
       headers: {
         'apikey': SERVICE_KEY,
         'Authorization': `Bearer ${SERVICE_KEY}`,
         'Content-Type': 'application/json',
-        // resolution=ignore-duplicates : upsert atomique sur la contrainte
-        // examens_blancs_client_key_unique — même mécanisme que resultats
-        // côté quiz-resultat.js.
-        'Prefer': 'return=minimal,resolution=ignore-duplicates'
+        // resolution=merge-duplicates sur tentative_id : une soumission
+        // finale doit pouvoir écraser un abandon déjà écrit pour la même
+        // tentative (cf. lireExamenParTentative pour l'interdiction inverse).
+        // abandonne est TOUJOURS envoyé explicitement (jamais omis) : sur un
+        // merge, PostgREST ne touche que les colonnes présentes dans le
+        // payload — l'omettre laisserait un abandonne:true antérieur
+        // inchangé alors que la tentative vient d'être terminée normalement.
+        'Prefer': 'return=minimal,resolution=merge-duplicates'
       },
       body: JSON.stringify({
         user_id, email: email || '', prenom: prenom || '', email_parent: gate.email_parent,
         score, total, temps_secondes,
         scores_themes, questions_ratees, questions_posees,
         client_key: client_key || null,
-        ...(abandonne ? { abandonne: true } : {})
+        tentative_id: tentative_id || null,
+        abandonne: !!abandonne
       })
     })
 

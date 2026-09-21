@@ -117,6 +117,12 @@ let examEnCours=false
 let heureFin=null
 let correction={}
 let resultatServeur=null
+// accessToken : tenu à jour via onAuthStateChange (pas juste initialisé à
+// init()) car il sert dans pagehide, où on ne peut pas attendre un
+// getSession() async — sans ça, un abandon après expiration/renouvellement
+// du jeton en cours d'examen échouerait en 401.
+let accessToken=null
+let tentativeId=null
 
 // beforeunload : dialogue de confirmation UNIQUEMENT. Ne pas y appeler
 // sauvegarderAbandonne() — ce handler se déclenche avant que l'utilisateur
@@ -141,7 +147,7 @@ function construireReponses(){
   })
 }
 
-async function sauvegarderAbandonne() {
+async function sauvegarderAbandonne(definitif) {
   if(saved||!user||questions.length===0)return
   try{
     const tempsSecondes=heureFin?Math.floor((40*60*1000-Math.max(0,heureFin-Date.now()))/1000):chronoSecondes
@@ -149,8 +155,9 @@ async function sauvegarderAbandonne() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'enregistrer', abandonne: true,
-        user_id: user.id, email: user.email, prenom,
+        action: 'enregistrer', abandonne: true, definitif: !!definitif,
+        access_token: accessToken, tentative_id: tentativeId,
+        email: user.email, prenom,
         reponses: construireReponses(), temps_secondes: tempsSecondes,
         client_key: crypto.randomUUID()
       }),
@@ -160,12 +167,17 @@ async function sauvegarderAbandonne() {
   }catch(e){console.log('Erreur abandon:',e.message)}
 }
 
+// Abandon EXPLICITE et confirmé (l'élève a vu le confirm() ci-dessous et
+// choisi de quitter quand même) : definitif=true, la ligne de progression
+// est supprimée côté serveur, la reprise ne sera plus proposée — cohérent
+// avec le message affiché. Différent d'un abandon incertain via pagehide
+// (F5, onglet fermé, crash), qui conserve la ligne pour permettre la reprise.
 async function retourAccueil() {
   if(examEnCours&&!saved){
     const ok=confirm('⚠️ Examen en cours. Si tu quittes, tu perdras ta progression. Continuer quand même ?')
     if(!ok)return
     examEnCours=false
-    await sauvegarderAbandonne()
+    await sauvegarderAbandonne(true)
   }
   window.location.href='quiz.html'
 }
@@ -174,6 +186,8 @@ async function init() {
   const {data}=await sb.auth.getSession()
   if(!data.session){window.location.href='index.html';return}
   user=data.session.user
+  accessToken=data.session.access_token
+  sb.auth.onAuthStateChange(function(event,session){ if(session&&session.access_token) accessToken=session.access_token })
   prenom=user.user_metadata?.prenom||''
   nom=user.user_metadata?.nom||''
   emailParent=user.user_metadata?.email_parent||''
@@ -190,7 +204,51 @@ async function init() {
     emailParent=emailParent||profil[0].email_parent||''
   }
   document.getElementById('user-email').textContent=prenom||user.email
-  await renderIntro()
+  await tenterReprise()
+}
+
+// Vérifie toujours côté serveur s'il existe une tentative en cours — pas de
+// cache local (localStorage) : le serveur fait foi dans tous les cas, un
+// cache n'aurait fait qu'ajouter une logique de purge sans rien éviter
+// puisque cet appel a lieu systématiquement, cache ou pas.
+async function tenterReprise() {
+  document.getElementById('main-area').innerHTML='<div class="loader">⏳ Vérification d\'une tentative en cours…</div>'
+  try {
+    const res = await fetch('/api/examen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reprise', access_token: accessToken, email: user.email, prenom })
+    })
+    const data = await res.json()
+    if (!data.success || !data.encours) { await renderIntro(); return }
+
+    questions = data.questions
+    tentativeId = data.tentative_id
+    answers = {}
+    ;(data.reponses||[]).forEach(function(r){
+      const idx = questions.findIndex(function(q){ return q.id===r.id })
+      if (idx!==-1 && r.choix!==null && r.choix!==undefined) answers[idx]=r.choix
+    })
+
+    if (data.soumisAuto) {
+      // heure_fin dépassé pendant l'absence : le serveur a déjà soumis les
+      // réponses enregistrées (pas un abandon à 0) et supprimé la ligne de
+      // progression. On affiche directement l'écran résultats, comme une
+      // fin normale.
+      correction = data.correction
+      resultatServeur = { nbOk: data.score, themes: data.themes, questionsRatees: data.questionsRatees, tempsSecondes: data.temps_secondes }
+      saved=true; examEnCours=false
+      renderResultats()
+      return
+    }
+
+    saved=false;examEnCours=true;correction={};resultatServeur=null
+    demarrerChrono(data.heure_fin ? new Date(data.heure_fin).getTime() : null)
+    renderExamen()
+  } catch(e) {
+    console.log('[reprise] échec, écran d\'intro :', e.message)
+    await renderIntro()
+  }
 }
 
 function getMention(pct){
@@ -354,11 +412,9 @@ async function renderIntro() {
 async function demarrerExamen() {
   document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de ton examen…</div>'
   try {
-    // Jeton de l'élève : sert côté API à filtrer les questions déjà vues
-    // (questions_vues, source='examen', sous RLS). Absent ou expiré => tirage
-    // non filtré, l'examen part quand même.
-    const {data:sess}=await sb.auth.getSession()
-    const accessToken=sess?.session?.access_token||null
+    // access_token : sert à la fois à l'authentification (obligatoire,
+    // 401 sinon — cf. api/examen.js) et, pour la partie élève identifiée,
+    // au filtrage des questions déjà vues (questions_vues, source='examen').
     const res = await fetch('/api/examen', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -369,16 +425,19 @@ async function demarrerExamen() {
     if (data.vues) console.log('[questions_vues]', data.vues)
 
     questions = data.questions
+    tentativeId = data.tentative_id
     answers={};saved=false;examEnCours=true;correction={};resultatServeur=null
-    demarrerChrono()
+    demarrerChrono(data.heure_fin ? new Date(data.heure_fin).getTime() : null)
     renderExamen()
   } catch(e){
     document.getElementById('main-area').innerHTML='<div class="loader">❌ '+e.message+'</div>'
   }
 }
 
-function demarrerChrono(){
-  heureFin=Date.now()+40*60*1000
+// heureFinExistant : passé lors d'une reprise (chrono continue depuis la
+// heure_fin déjà fixée côté serveur) — sinon, calculé fraîchement ici.
+function demarrerChrono(heureFinExistant){
+  heureFin=heureFinExistant||(Date.now()+40*60*1000)
   document.getElementById('chrono').style.display='flex'
   document.getElementById('chrono').classList.remove('chrono-warning')
   var alerte10=false,alerte5=false,alerte1=false
@@ -453,7 +512,20 @@ function pick(qi,oi){
     const s=restant?Math.floor((restant%60000)/1000).toString().padStart(2,'0'):'00'
     btn.textContent=urgence?'✅ Terminer l\'examen ('+nbRepondues+'/20 répondues) — '+m+':'+s+' restantes':'✅ Terminer l\'examen ('+nbRepondues+'/20 répondues)'
   }
+  sauvegarderProgression()
   setTimeout(function(){const cards=document.querySelectorAll('.card');if(cards[qi+1])cards[qi+1].scrollIntoView({behavior:'smooth',block:'start'})},200)
+}
+
+// Best-effort, jamais attendu : ne doit jamais ralentir la sélection d'une
+// réponse. Échec silencieux (juste loggué) — la reprise se dégrade au pire
+// vers les dernières réponses effectivement sauvegardées, jamais un blocage.
+function sauvegarderProgression(){
+  if(!tentativeId||!accessToken)return
+  fetch('/api/examen', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'progression', access_token: accessToken, tentative_id: tentativeId, reponses: construireReponses() })
+  }).catch(function(e){ console.log('[progression] échec sauvegarde:', e.message) })
 }
 
 function confirmerTerminer(){
@@ -486,7 +558,8 @@ async function sauvegarder(){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'enregistrer',
-        user_id: user.id, email: user.email, prenom,
+        access_token: accessToken, tentative_id: tentativeId,
+        email: user.email, prenom,
         reponses, temps_secondes: tempsSecondes,
         client_key: crypto.randomUUID()
       })
@@ -495,7 +568,10 @@ async function sauvegarder(){
     if (!data.success) { console.error('Erreur enregistrement:', data.error); return }
 
     correction = data.correction
-    resultatServeur = { nbOk: data.score, themes: data.themes, questionsRatees: data.questionsRatees, tempsSecondes }
+    // temps_secondes du serveur (calculé à partir de heure_fin) prioritaire
+    // sur la valeur locale : celle-ci n'est plus qu'un repli d'affichage si
+    // jamais absente de la réponse.
+    resultatServeur = { nbOk: data.score, themes: data.themes, questionsRatees: data.questionsRatees, tempsSecondes: data.temps_secondes!==undefined?data.temps_secondes:tempsSecondes }
     saved=true;console.log('✅ Examen enregistré')
 
     if(emailParent){try{await fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'brevet-blanc',emailParent:emailParent,prenom:prenom||'',nom:nom||'',score:data.score,total:20,pct:Math.round((data.score/20)*100),scoresThemes:data.themes,tempsSecondes:tempsSecondes})});console.log('✅ Email envoyé')}catch(emailErr){console.error('Erreur email:',emailErr.message)}}
@@ -569,7 +645,7 @@ async function logout(){
     const ok=confirm('⚠️ Examen en cours. Tes résultats seront perdus. Continuer ?')
     if(!ok)return
     examEnCours=false
-    await sauvegarderAbandonne()
+    await sauvegarderAbandonne(true)
   }
   await sb.auth.signOut()
   window.location.href='index.html'
