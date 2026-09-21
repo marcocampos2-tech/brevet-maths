@@ -118,8 +118,21 @@ let heureFin=null
 let correction={}
 let resultatServeur=null
 
+// beforeunload : dialogue de confirmation UNIQUEMENT. Ne pas y appeler
+// sauvegarderAbandonne() — ce handler se déclenche avant que l'utilisateur
+// ait répondu, donc un clic sur "Annuler" (qui garde la page ouverte)
+// enregistrerait quand même l'examen comme abandonné. L'écriture réelle est
+// déportée sur pagehide, qui ne se déclenche que si la page se décharge
+// effectivement. Même correctif que quiz.html (PR #81).
 window.addEventListener('beforeunload', function(e) {
-  if(examEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Examen en cours !';sauvegarderAbandonne()}
+  if(examEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Examen en cours !'}
+})
+
+// pagehide : event.persisted=true signifie mise en cache bfcache (retour
+// possible via le bouton précédent), pas un vrai déchargement — ne pas
+// sauvegarder l'abandon dans ce cas.
+window.addEventListener('pagehide', function(e) {
+  if(!e.persisted&&examEnCours&&!saved){sauvegarderAbandonne()}
 })
 
 function construireReponses(){
