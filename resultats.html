@@ -192,8 +192,12 @@ function renderDashboard(rows) {
   var totalSecondes = rowsValides.reduce(function(s, r) { return s + (r.temps_secondes || 0) }, 0)
   var totalScore = rowsValides.reduce(function(s, r) { return s + (r.score || 0) }, 0)
   var totalTotal = rowsValides.reduce(function(s, r) { return s + (r.total || 5) }, 0)
+  // Aucune session valide (que des abandons, ou pas encore de résultat) :
+  // "—" plutôt qu'un 0/20 ou un statut "À retravailler" trompeurs — même
+  // convention que prof.html (moyCell : e.totalQ>0 ? ... : "—").
+  var aucuneSessionValide = totalTotal === 0
   var globalPct = totalTotal > 0 ? Math.round((totalScore / totalTotal) * 100) : 0
-  var globalNote20 = totalTotal > 0 ? (totalScore / totalTotal * 20).toFixed(1).replace('.0', '') : 0
+  var globalNote20 = totalTotal > 0 ? (totalScore / totalTotal * 20).toFixed(1).replace('.0', '') : '—'
   var globalStatut = getStatut(globalPct)
 
   var statsByTheme = {}
@@ -216,8 +220,10 @@ function renderDashboard(rows) {
   var html = ''
   html += '<div class="hero">'
   html += '<div class="hero-label">Score global</div>'
-  html += '<div class="hero-score">' + globalNote20 + '<span style="font-size:22px;color:var(--muted)">/20</span></div>'
-  html += '<div class="hero-statut">' + globalStatut.emoji + ' ' + globalStatut.label + ' — ' + globalPct + '%</div>'
+  html += '<div class="hero-score">' + globalNote20 + (aucuneSessionValide ? '' : '<span style="font-size:22px;color:var(--muted)">/20</span>') + '</div>'
+  html += aucuneSessionValide
+    ? '<div class="hero-statut">Aucune session valide pour l\'instant</div>'
+    : '<div class="hero-statut">' + globalStatut.emoji + ' ' + globalStatut.label + ' — ' + globalPct + '%</div>'
   html += '<div class="hero-stats">'
   html += '<div class="hero-stat"><div class="hero-stat-val">' + totalSessions + '</div><div class="hero-stat-label">sessions</div></div>'
   html += '<div class="hero-stat"><div class="hero-stat-val">' + formatTemps(totalSecondes) + '</div><div class="hero-stat-label">temps total</div></div>'
