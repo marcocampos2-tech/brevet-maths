@@ -228,3 +228,29 @@ for update
 to authenticated
 using (email_parent_valide(email_parent))
 with check (email_parent_valide(email_parent));
+
+-- ============================================================================
+-- Lot C (21/09/2026) — chantier reprise de session d'examen blanc.
+-- Table examens_progression : DDL exécuté directement par Marco sur
+-- Supabase (create table + alter table examens_blancs add column
+-- tentative_id), pas versionné ici (ce fichier ne porte que des policies).
+-- ============================================================================
+
+-- ---------------------------------------------------------------------------
+-- examens_progression
+-- ---------------------------------------------------------------------------
+
+-- RLS activée, AUCUNE policy créée — délibéré, pas un oubli. Toute lecture et
+-- toute écriture passent exclusivement par api/examen.js (clé service, qui
+-- bypass RLS nativement), lui-même protégé par une vérification réelle du
+-- jeton (fetch /auth/v1/user, même modèle que api/stripe-checkout.js) : le
+-- user_id du corps de la requête n'est jamais utilisé comme identité pour
+-- cette table. Même motif que historique_bilans/rappels_envoyes/
+-- email_rate_limit (docs/TODO.md, item 15) : RLS active + zéro policy =
+-- accès refusé à tout rôle autre que service_role.
+--
+-- Ne pas "corriger" lors d'un futur audit en ajoutant une policy SELECT pour
+-- l'élève (auth.uid() = user_id) : ce serait retirer la seule garantie
+-- structurelle qui rend la reprise invisible à toute lecture RLS-scoped, et
+-- rouvrirait la table à un appel direct à l'API Supabase avec un JWT valide
+-- mais sans passer par la validation de tentative_id/heure_fin côté serveur.
