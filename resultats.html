@@ -71,6 +71,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .hist-score.bon { color: var(--vert); }
 .hist-score.moyen { color: #8a6416; }
 .hist-score.faible { color: var(--bordeaux); }
+.hist-score.abandon { color: var(--muted); font-family:'Inter',sans-serif; font-size: 13px; font-weight: 600; }
 .hist-ratees { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .hist-ratees-label { font-size: 11px; color: var(--bordeaux); font-weight: 600; margin-bottom: 5px; }
 .hist-ratee { font-size: 12px; color: var(--muted); padding: 2px 0; }
@@ -182,17 +183,26 @@ async function init() {
 }
 
 function renderDashboard(rows) {
-  var totalSessions = rows.length
-  var totalSecondes = rows.reduce(function(s, r) { return s + (r.temps_secondes || 0) }, 0)
-  var totalScore = rows.reduce(function(s, r) { return s + (r.score || 0) }, 0)
-  var totalTotal = rows.reduce(function(s, r) { return s + (r.total || 5) }, 0)
+  // Un abandon (score forcé à 0, cf. api/quiz-resultat.js) ne mesure pas une
+  // compétence : exclu du score global, des scores par domaine, du
+  // compteur de sessions et du temps total — même principe que prof.html
+  // (openFiche(), rowsValides = rows.filter(r => !r.abandonne)).
+  var rowsValides = rows.filter(function(r) { return !r.abandonne })
+  var totalSessions = rowsValides.length
+  var totalSecondes = rowsValides.reduce(function(s, r) { return s + (r.temps_secondes || 0) }, 0)
+  var totalScore = rowsValides.reduce(function(s, r) { return s + (r.score || 0) }, 0)
+  var totalTotal = rowsValides.reduce(function(s, r) { return s + (r.total || 5) }, 0)
+  // Aucune session valide (que des abandons, ou pas encore de résultat) :
+  // "—" plutôt qu'un 0/20 ou un statut "À retravailler" trompeurs — même
+  // convention que prof.html (moyCell : e.totalQ>0 ? ... : "—").
+  var aucuneSessionValide = totalTotal === 0
   var globalPct = totalTotal > 0 ? Math.round((totalScore / totalTotal) * 100) : 0
-  var globalNote20 = totalTotal > 0 ? (totalScore / totalTotal * 20).toFixed(1).replace('.0', '') : 0
+  var globalNote20 = totalTotal > 0 ? (totalScore / totalTotal * 20).toFixed(1).replace('.0', '') : '—'
   var globalStatut = getStatut(globalPct)
 
   var statsByTheme = {}
   THEMES.forEach(function(t) { statsByTheme[t.value] = { score: 0, total: 0 } })
-  rows.forEach(function(r) {
+  rowsValides.forEach(function(r) {
     if (statsByTheme[r.theme] !== undefined) {
       statsByTheme[r.theme].score += r.score || 0
       statsByTheme[r.theme].total += r.total || 5
@@ -210,8 +220,10 @@ function renderDashboard(rows) {
   var html = ''
   html += '<div class="hero">'
   html += '<div class="hero-label">Score global</div>'
-  html += '<div class="hero-score">' + globalNote20 + '<span style="font-size:22px;color:var(--muted)">/20</span></div>'
-  html += '<div class="hero-statut">' + globalStatut.emoji + ' ' + globalStatut.label + ' — ' + globalPct + '%</div>'
+  html += '<div class="hero-score">' + globalNote20 + (aucuneSessionValide ? '' : '<span style="font-size:22px;color:var(--muted)">/20</span>') + '</div>'
+  html += aucuneSessionValide
+    ? '<div class="hero-statut">Aucune session valide pour l\'instant</div>'
+    : '<div class="hero-statut">' + globalStatut.emoji + ' ' + globalStatut.label + ' — ' + globalPct + '%</div>'
   html += '<div class="hero-stats">'
   html += '<div class="hero-stat"><div class="hero-stat-val">' + totalSessions + '</div><div class="hero-stat-label">sessions</div></div>'
   html += '<div class="hero-stat"><div class="hero-stat-val">' + formatTemps(totalSecondes) + '</div><div class="hero-stat-label">temps total</div></div>'
@@ -255,18 +267,26 @@ function renderHistorique(rows) {
       html += '<div class="jour-sep"><span class="jour-sep-label">' + jour + '</span><span class="jour-sep-line"></span></div>'
       dernierJour = jour
     }
-    var pct = Math.round((r.score / r.total) * 100)
-    var statut = getStatut(pct)
     var heure = new Date(r.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
     var themeLabel = (THEMES.find(function(t){ return t.value === r.theme }) || {}).label || r.theme
-    var ratees = ''
-    if (r.questions_ratees && r.questions_ratees.length) {
-      ratees = '<div class="hist-ratees"><div class="hist-ratees-label">Question' + (r.questions_ratees.length > 1 ? 's ratées' : ' ratée') + '</div>' + r.questions_ratees.map(function(q) { return '<div class="hist-ratee">• ' + q + '</div>' }).join('') + '</div>'
+    var ratees = '', scoreHtml
+    if (r.abandonne) {
+      // Score forcé à 0 côté serveur sur un abandon (cf. api/quiz-resultat.js) :
+      // ni un score réel à afficher, ni une "question ratée" à lister — le
+      // placeholder questions_ratees:['Quiz abandonné'] n'en est pas une.
+      scoreHtml = '<div class="hist-score abandon">Abandonné</div>'
+    } else {
+      var pct = Math.round((r.score / r.total) * 100)
+      var statut = getStatut(pct)
+      scoreHtml = '<div class="hist-score ' + statut.classe + '">' + r.score + '/' + r.total + '</div>'
+      if (r.questions_ratees && r.questions_ratees.length) {
+        ratees = '<div class="hist-ratees"><div class="hist-ratees-label">Question' + (r.questions_ratees.length > 1 ? 's ratées' : ' ratée') + '</div>' + r.questions_ratees.map(function(q) { return '<div class="hist-ratee">• ' + q + '</div>' }).join('') + '</div>'
+      }
     }
     html += '<div class="hist-card">' +
       '<div class="hist-top">' +
       '<div><span class="hist-theme">' + themeLabel + '</span><span class="hist-badge">' + r.difficulte + '</span><div class="hist-date">' + heure + '</div></div>' +
-      '<div class="hist-score ' + statut.classe + '">' + r.score + '/' + r.total + '</div>' +
+      scoreHtml +
       '</div>' + ratees + '</div>'
   })
   document.getElementById('tab-historique').innerHTML = html
