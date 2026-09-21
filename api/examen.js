@@ -40,7 +40,7 @@ export default async function handler(req, res) {
       const pools = {}
 
       for (const partie of parties) {
-        const r = await fetch(`${SUPA_URL}/rest/v1/examen_questions?partie=eq.${partie}&select=*`, { headers })
+        const r = await fetch(`${SUPA_URL}/rest/v1/examen_questions?partie=eq.${partie}&select=${COLONNES_QUESTION_CLIENT}`, { headers })
         if (!r.ok) {
           console.error('[demarrer] lecture examen_questions refusée, partie', partie, ':', r.status, await r.text())
           throw new Error('Questions partie ' + partie + ' introuvables')
@@ -232,7 +232,7 @@ export default async function handler(req, res) {
       // s'appuie sur la position dans le tableau `questions`), il ne doit
       // jamais être re-mélangé ici comme au tirage initial.
       const idsStr = questionIds.join(',')
-      const rq = await fetch(`${SUPA_URL}/rest/v1/examen_questions?id=in.(${idsStr})&select=id,question,opts,theme,chapitre,partie,figure,tableau`, { headers })
+      const rq = await fetch(`${SUPA_URL}/rest/v1/examen_questions?id=in.(${idsStr})&select=${COLONNES_QUESTION_CLIENT}`, { headers })
       if (!rq.ok) {
         console.error('[reprise] lecture examen_questions refusée:', rq.status, await rq.text())
         return res.status(500).json({ error: 'Lecture des questions échouée' })
@@ -411,9 +411,24 @@ async function verifierToken(access_token, SUPA_URL, SUPA_KEY) {
   }
 }
 
+// Colonnes réelles de examen_questions (information_schema, vérifié le
+// 21/09/2026) : id, numero, theme, question, opts, answer, explication,
+// annee, partie, chapitre, figure, figure_url. Pas de colonne "tableau".
+//
+// Liste UNIQUE utilisée par 'demarrer' (fetch par partie) ET 'reprise'
+// (fetch par question_ids) : deux listes tenues à la main avaient fini par
+// diverger — c'est exactement l'origine du 500 constaté sur F5 (colonne
+// "tableau" demandée explicitement par 'reprise' seule, jamais par
+// 'demarrer' qui utilisait select=*, donc jamais vérifiée par ce chemin-là).
+// N'inclut jamais answer/explication (réponse correcte, jamais envoyée
+// avant la fin de l'examen) ni numero/annee/figure_url (colonnes réelles
+// mais non consommées par mapperQuestionPourClient).
+const COLONNES_QUESTION_CLIENT = 'id,question,opts,theme,chapitre,partie,figure'
+
 // Forme envoyée au client : jamais answer/explication avant la fin de
 // l'examen. Partagée par 'demarrer' et 'reprise' pour rester identique dans
-// les deux cas.
+// les deux cas — mêmes noms de champs que ceux attendus par renderExamen()
+// côté client (examen.html).
 function mapperQuestionPourClient(q) {
   return {
     id: q.id,
@@ -423,7 +438,12 @@ function mapperQuestionPourClient(q) {
     chapitre: q.chapitre,
     partie: q.partie,
     figure: q.figure ? (typeof q.figure === 'string' ? JSON.parse(q.figure) : q.figure) : null,
-    tableau: q.tableau ? (typeof q.tableau === 'string' ? JSON.parse(q.tableau) : q.tableau) : null
+    // Aucune colonne "tableau" dans examen_questions (cf. ci-dessus) :
+    // toujours null, comme c'était déjà le cas de fait via demarrer avant
+    // ce correctif (select=* n'exposait jamais une colonne qui n'existe
+    // pas). Champ conservé dans la forme renvoyée : renderTableau(q.tableau)
+    // côté client l'attend, null y est un no-op sans effet visible.
+    tableau: null
   }
 }
 
