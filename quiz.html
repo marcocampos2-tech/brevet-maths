@@ -314,8 +314,21 @@ let quizEnCours=false
 let modeAffichage={}, charts={}
 let deblocageCache={}
 
+// beforeunload : dialogue de confirmation UNIQUEMENT. Ne pas y appeler
+// sauvegarderAbandonne() — ce handler se déclenche avant que l'utilisateur
+// ait répondu, donc un clic sur "Annuler" (qui garde la page ouverte)
+// enregistrerait quand même le quiz comme abandonné. L'écriture réelle est
+// déportée sur pagehide, qui ne se déclenche que si la page se décharge
+// effectivement.
 window.addEventListener('beforeunload', function(e) {
-  if(quizEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Si vous quittez, votre quiz sera enregistré avec un score de 0.';sauvegarderAbandonne()}
+  if(quizEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Si vous quittez, votre quiz sera enregistré avec un score de 0.'}
+})
+
+// pagehide : event.persisted=true signifie mise en cache bfcache (retour
+// possible via le bouton précédent), pas un vrai déchargement — ne pas
+// sauvegarder l'abandon dans ce cas.
+window.addEventListener('pagehide', function(e) {
+  if(!e.persisted&&quizEnCours&&!saved){sauvegarderAbandonne()}
 })
 
 async function sauvegarderAbandonne() {
