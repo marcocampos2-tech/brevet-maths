@@ -184,8 +184,31 @@ function afficherEcranReconnexion(){
     '<div class="intro-icon">🔒</div>'+
     '<div class="intro-title">Session expirée</div>'+
     '<div class="intro-sub">Ta session a expiré et n\'a pas pu être renouvelée automatiquement. Reconnecte-toi pour continuer.</div>'+
-    '<a href="index.html" class="btn btn-primary btn-full" style="font-size:16px;padding:14px;text-decoration:none;display:block;text-align:center">🔑 Se reconnecter</a>'+
+    '<button onclick="seReconnecter()" class="btn btn-primary btn-full" style="font-size:16px;padding:14px">🔑 Se reconnecter</button>'+
     '</div>'
+}
+
+// Sans ce nettoyage, la session corrompue reste dans localStorage : sur
+// connexion.html, sb.auth.getSession() la renvoie quand même comme
+// "présente", et son propre gate (fail-open sur l'échec de lecture profils,
+// provoqué par le même jeton corrompu) redirige alors directement vers
+// quiz.html SANS jamais afficher le formulaire de connexion — boucle
+// "Session expirée" constatée sur preview (22/09/2026). scope:'local' :
+// n'invalide que la session de CET appareil, pas les autres sessions actives
+// de l'élève.
+async function seReconnecter(){
+  try {
+    const { error } = await sb.auth.signOut({ scope: 'local' })
+    if (error) throw error
+  } catch(e) {
+    console.log('[reconnexion] signOut a échoué, nettoyage manuel du localStorage :', e.message)
+    try {
+      Object.keys(localStorage)
+        .filter(function(k){ return k.startsWith('sb-') && k.endsWith('-auth-token') })
+        .forEach(function(k){ localStorage.removeItem(k) })
+    } catch(e2) { console.log('[reconnexion] nettoyage manuel a aussi échoué :', e2.message) }
+  }
+  window.location.href='index.html'
 }
 
 // pagehide UNIQUEMENT (cf. plus bas) : keepalive nécessaire pour survivre au
