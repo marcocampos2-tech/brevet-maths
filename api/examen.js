@@ -31,6 +31,13 @@ export default async function handler(req, res) {
   const userId = await verifierToken(req.body.access_token, SUPA_URL, SUPA_KEY)
   if (!userId) return res.status(401).json({ error: 'Session invalide' })
 
+  // Un console.log par requête — action/tentative_id/abandonne — pour que
+  // deux requêtes concurrentes (ex. reprise + abandon pagehide tardif)
+  // soient distinguables dans les logs Vercel. Absent avant l'incident du
+  // 22/09/2026 (F5, expiration) : impossible de savoir a posteriori laquelle
+  // des deux requêtes loggées correspondait à quelle action.
+  console.log('[examen]', action, 'user=' + userId, 'tentative_id=' + (req.body.tentative_id || '-'), 'abandonne=' + (req.body.abandonne === undefined ? '-' : req.body.abandonne))
+
   // ═══════════════════════════════════════════
   // DEMARRER — sélectionne 20 questions, SANS answer ni explication
   // ═══════════════════════════════════════════
@@ -325,15 +332,14 @@ export default async function handler(req, res) {
       if (abandonne) {
         // Transition interdite : un abandon ne doit jamais écraser un
         // résultat déjà terminé (retry tardif du beacon pagehide après une
-        // soumission réussie). La fenêtre de concurrence réelle est
-        // théorique — saved=true bloque déjà pagehide côté client une fois
-        // la soumission passée — cette lecture est la seconde ligne de
-        // défense côté serveur.
-        const existant = await lireExamenParTentative(tentative_id, SUPA_URL, headers)
-        if (existant && existant.abandonne === false) {
-          return res.status(200).json({ success: true })
-        }
-
+        // soumission réussie, ou course avec la soumission automatique de
+        // 'reprise'). Auparavant appliquée ici par une lecture puis une
+        // écriture séparées — non atomique, donc battable par une écriture
+        // concurrente entre la lecture et l'écriture, quel que soit l'écart
+        // observé entre deux requêtes dans les logs (incident F5+expiration
+        // du 22/09/2026, score réel écrasé par un abandon malgré ce garde).
+        // La garantie est désormais dans enregistrerExamen() elle-même,
+        // portée par le WHERE de l'écriture, pas par une lecture préalable.
         const result = await enregistrerExamen({
           user_id: userId, email: email || '', prenom: prenom || '',
           score: 0, total: 20, scores_themes: {}, questions_ratees: [],
@@ -492,59 +498,78 @@ async function supprimerProgression(userId, tentativeId, SUPA_URL, headers) {
   }
 }
 
-// Lecture minimale pour la règle de transition (jamais terminé → abandon) —
-// une seule colonne, jamais exposée au client.
-async function lireExamenParTentative(tentativeId, SUPA_URL, headers) {
-  try {
-    const r = await fetch(`${SUPA_URL}/rest/v1/examens_blancs?tentative_id=eq.${tentativeId}&select=abandonne&limit=1`, { headers })
-    if (!r.ok) { console.error('[examens_blancs] lecture transition refusée:', r.status, await r.text()); return null }
-    const data = await r.json()
-    return Array.isArray(data) && data.length > 0 ? data[0] : null
-  } catch (e) {
-    console.error('[examens_blancs] lecture transition échouée:', e.message)
-    return null
-  }
-}
-
 async function enregistrerExamen({ user_id, email, prenom, score, total, scores_themes, questions_ratees, questions_posees, temps_secondes, client_key, tentative_id, abandonne }) {
   try {
     const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
     const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
+    const headersEcriture = { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' }
 
     // Gate comptes orphelins + email_parent : voir lib/auth-eleve.js,
     // partagé avec api/quiz-resultat.js.
     const gate = await verifierGateEleve(user_id, SUPABASE_URL, SERVICE_KEY)
     if (!gate.ok) return { error: 'Compte sans profil élève.' }
 
+    // abandonne est TOUJOURS envoyé explicitement dans le corps (jamais
+    // omis) : PostgREST, sur un merge/patch, ne touche que les colonnes
+    // présentes dans le payload — l'omettre laisserait un abandonne
+    // antérieur inchangé.
+    const corps = {
+      user_id, email: email || '', prenom: prenom || '', email_parent: gate.email_parent,
+      score, total, temps_secondes,
+      scores_themes, questions_ratees, questions_posees,
+      client_key: client_key || null,
+      tentative_id: tentative_id || null,
+      abandonne: !!abandonne
+    }
+
+    if (abandonne) {
+      // Transition interdite (jamais terminé → abandon) garantie par le
+      // WHERE d'une écriture atomique côté base — PAS par une lecture puis
+      // une écriture séparées (ancien garde, retiré : lireExamenParTentative
+      // + vérification applicative, battable par toute écriture concurrente
+      // entre la lecture et l'écriture, quel que soit l'écart de temps
+      // observé entre deux requêtes — incident F5+expiration du 22/09/2026).
+      //
+      // 1. PATCH filtré sur abandonne=eq.true : ne modifie la ligne QUE si
+      // elle existe déjà ET est elle-même un abandon (rejoue un F5 après un
+      // F5) — Postgres évalue le WHERE et écrit en une seule opération, il
+      // n'existe aucune fenêtre entre "lire" et "écrire" à l'intérieur de
+      // cette seule requête.
+      const rPatch = await fetch(`${SUPABASE_URL}/rest/v1/examens_blancs?tentative_id=eq.${tentative_id}&abandonne=eq.true`, {
+        method: 'PATCH',
+        headers: { ...headersEcriture, 'Prefer': 'return=representation' },
+        body: JSON.stringify(corps)
+      })
+      if (!rPatch.ok) return { error: await rPatch.text() }
+      const patched = await rPatch.json()
+      if (Array.isArray(patched) && patched.length > 0) return { success: true }
+
+      // 2. Rien modifié par le PATCH : soit la ligne n'existe pas encore,
+      // soit elle est déjà terminée (abandonne=false) — un INSERT
+      // ignore-duplicates est sûr dans les deux cas : crée la ligne si
+      // absente, ne touche RIEN si elle existe déjà, quelle que soit sa
+      // valeur d'abandonne (si c'était un abandon, le PATCH l'aurait déjà
+      // pris ; si c'est un résultat réel, ignore-duplicates ne l'écrase
+      // jamais — contrairement à merge-duplicates).
+      const rInsert = await fetch(`${SUPABASE_URL}/rest/v1/examens_blancs?on_conflict=tentative_id`, {
+        method: 'POST',
+        headers: { ...headersEcriture, 'Prefer': 'return=minimal,resolution=ignore-duplicates' },
+        body: JSON.stringify(corps)
+      })
+      if (!rInsert.ok) return { error: await rInsert.text() }
+      return { success: true }
+    }
+
+    // Soumission finale (abandonne=false) : toujours autorisée à écraser un
+    // éventuel abandon de la même tentative, jamais l'inverse (cf.
+    // ci-dessus) — merge-duplicates reste correct ici sans garde
+    // supplémentaire, une soumission finale gagne toujours.
     const res = await fetch(`${SUPABASE_URL}/rest/v1/examens_blancs?on_conflict=tentative_id`, {
       method: 'POST',
-      headers: {
-        'apikey': SERVICE_KEY,
-        'Authorization': `Bearer ${SERVICE_KEY}`,
-        'Content-Type': 'application/json',
-        // resolution=merge-duplicates sur tentative_id : une soumission
-        // finale doit pouvoir écraser un abandon déjà écrit pour la même
-        // tentative (cf. lireExamenParTentative pour l'interdiction inverse).
-        // abandonne est TOUJOURS envoyé explicitement (jamais omis) : sur un
-        // merge, PostgREST ne touche que les colonnes présentes dans le
-        // payload — l'omettre laisserait un abandonne:true antérieur
-        // inchangé alors que la tentative vient d'être terminée normalement.
-        'Prefer': 'return=minimal,resolution=merge-duplicates'
-      },
-      body: JSON.stringify({
-        user_id, email: email || '', prenom: prenom || '', email_parent: gate.email_parent,
-        score, total, temps_secondes,
-        scores_themes, questions_ratees, questions_posees,
-        client_key: client_key || null,
-        tentative_id: tentative_id || null,
-        abandonne: !!abandonne
-      })
+      headers: { ...headersEcriture, 'Prefer': 'return=minimal,resolution=merge-duplicates' },
+      body: JSON.stringify(corps)
     })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      return { error: errText }
-    }
+    if (!res.ok) return { error: await res.text() }
     return { success: true }
   } catch (e) {
     return { error: e.message }
