@@ -253,6 +253,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="focus-chrono"><span class="focus-dot"></span> <span id="focus-chrono-text">00:00</span></div>
 </div>
 <div id="quiz-area"></div>
+<div id="erreur-enregistrement" style="display:none"></div>
 </div>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -309,6 +310,14 @@ const SEUIL_PCT = 70
 let user=null, prenom='', emailParent=''
 let theme='Nombres et calculs', diff='facile', sousTheme='Équations'
 let questions=[], answers={}, submitted={}, saved=false
+// accessToken : tenu à jour via onAuthStateChange (pas juste initialisé à
+// init()) — même raison que examen.html : sert dans sauvegarderAbandonne()
+// (pagehide), où on ne peut pas attendre un getSession() async.
+let accessToken=null
+// Corps de la dernière tentative de sauvegarder() en échec transitoire —
+// permet à reessayerSauvegarde() de rejouer exactement le même envoi
+// (même client_key) sans redemander l'état du quiz.
+let dernierCorpsEchec=null
 let chronoInterval=null, chronoSecondes=0, sourceQuestions='ia'
 let quizEnCours=false
 let modeAffichage={}, charts={}
@@ -331,12 +340,74 @@ window.addEventListener('pagehide', function(e) {
   if(!e.persisted&&quizEnCours&&!saved){sauvegarderAbandonne()}
 })
 
+// Point d'entrée unique vers /api/quiz-resultat pour sauvegarder() : sur un
+// 401, tente sb.auth.refreshSession() puis rejoue l'appel une seule fois
+// avec le jeton renouvelé. Calqué sur appelExamenApi (examen.html) — même
+// modèle, même raisonnement. Volontairement PAS utilisé par
+// sauvegarderAbandonne() (pagehide, cf. plus bas) ni envoyerRecapJournalier()
+// (pas de refresh pour ne pas alourdir logout()/terminer() : le cron
+// rattrape le récap si besoin).
+async function appelQuizResultatApi(corps){
+  const faireAppel = function(){
+    return fetch('/api/quiz-resultat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify(corps)
+    })
+  }
+  let res = await faireAppel()
+  if (res.status === 401) {
+    try {
+      const { data, error } = await sb.auth.refreshSession()
+      if (!error && data && data.session && data.session.access_token) {
+        accessToken = data.session.access_token
+        res = await faireAppel()
+      }
+    } catch(e) { console.log('[auth] refreshSession a échoué :', e.message) }
+  }
+  return res
+}
+
+// 'definitif' : session invalide même après refresh (401) ou identité
+// incohérente (403, ne devrait jamais arriver en usage normal) — aucune
+// consigne de reconnexion ici : se reconnecter perdrait l'état du quiz en
+// mémoire, donc rien à proposer qui améliorerait réellement la situation.
+// 'transitoire' : panne réseau ou erreur serveur — bouton Réessayer, qui
+// rejoue le même corps (même client_key, donc pas de doublon possible).
+function afficherErreurEnregistrement(type){
+  const zone = document.getElementById('erreur-enregistrement')
+  if(!zone) return
+  if(type==='transitoire'){
+    zone.innerHTML = '<div style="background:var(--bordeaux-light);color:var(--bordeaux);border-radius:8px;padding:14px;margin:12px 0;font-size:14px">⚠️ Ton résultat n\'a pas pu être enregistré (connexion instable). <button class="btn btn-outline" style="margin-left:8px;display:inline-flex" onclick="reessayerSauvegarde()">Réessayer</button></div>'
+  } else {
+    zone.innerHTML = '<div style="background:var(--bordeaux-light);color:var(--bordeaux);border-radius:8px;padding:14px;margin:12px 0;font-size:14px">❌ Ton résultat n\'a pas pu être enregistré : ta session a expiré.</div>'
+  }
+  zone.style.display='block'
+}
+function masquerErreurEnregistrement(){
+  const zone = document.getElementById('erreur-enregistrement')
+  if(zone){ zone.style.display='none'; zone.innerHTML='' }
+}
+async function reessayerSauvegarde(){
+  if(!dernierCorpsEchec||saved)return
+  saved=true
+  try{
+    const res = await appelQuizResultatApi(dernierCorpsEchec)
+    if(res.status===401||res.status===403){saved=false;afficherErreurEnregistrement('definitif');return}
+    const data = await res.json()
+    if(data.error){console.log('Erreur sauvegarde (retry):',data.error);saved=false;afficherErreurEnregistrement('transitoire');return}
+    delete deblocageCache[cleDeblocage(theme,sousTheme)]
+    masquerErreurEnregistrement()
+    dernierCorpsEchec=null
+  }catch(e){console.log('Erreur sauvegarde (retry):',e.message);saved=false;afficherErreurEnregistrement('transitoire')}
+}
+
 async function sauvegarderAbandonne() {
   if(saved||!user||questions.length===0)return
   try{
     await fetch('/api/quiz-resultat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
       body: JSON.stringify({
         user_id: user.id, email: user.email, prenom,
         theme, sous_theme: sousTheme, difficulte: diff,
@@ -499,12 +570,17 @@ function setDiffCard(el, val) {
 // côté serveur dans api/email.js (type: 'recap-journalier-user'), pour
 // garantir une seule et même logique que le job de rattrapage du cron.
 // ═══════════════════════════════════════════════════
+// Pas de refresh/retry ici (contrairement à sauvegarder()) : le token
+// courant suffit dans l'immense majorité des cas (logout/terminer juste
+// après une session active), et le cron (cron-rappel.js) rattrape tout
+// récap manqué le lendemain — pas la peine d'alourdir logout()/terminer()
+// pour ce chemin non critique.
 async function envoyerRecapJournalier() {
   if (!user) return
   try {
     await fetch('/api/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
       body: JSON.stringify({ type: 'recap-journalier-user', user_id: user.id })
     })
   } catch(e) { console.log('Erreur envoi récap:', e.message) }
@@ -527,6 +603,8 @@ async function init() {
   const {data}=await sb.auth.getSession()
   if(!data.session){window.location.href='index.html';return}
   user=data.session.user
+  accessToken=data.session.access_token
+  sb.auth.onAuthStateChange(function(event,session){ if(session&&session.access_token) accessToken=session.access_token })
   prenom=user.user_metadata?.prenom||''
   emailParent=user.user_metadata?.email_parent||''
   const {data:profil,error:errProfil}=await sb.from('profils').select('prenom_affiche,email_parent').eq('user_id',user.id).limit(1)
@@ -969,23 +1047,25 @@ async function sauvegarder() {
   saved=true // verrou optimiste : posé avant le fetch pour bloquer tout appel concurrent ; relâché ci-dessous en cas d'échec
   const reponsesEnvoyees = {}
   Object.keys(submitted).forEach(i => { reponsesEnvoyees[i] = answers[i] })
+  const corps = {
+    user_id: user.id, email: user.email, prenom,
+    theme, sous_theme: sousTheme, difficulte: diff,
+    questions, reponses: reponsesEnvoyees,
+    temps_secondes: chronoSecondes,
+    source_questions: sourceQuestions,
+    client_key: crypto.randomUUID() // clé d'idempotence : ferme le TOCTOU via la contrainte unique côté base
+  }
   try{
-    const res = await fetch('/api/quiz-resultat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: user.id, email: user.email, prenom,
-        theme, sous_theme: sousTheme, difficulte: diff,
-        questions, reponses: reponsesEnvoyees,
-        temps_secondes: chronoSecondes,
-        source_questions: sourceQuestions,
-        client_key: crypto.randomUUID() // clé d'idempotence : ferme le TOCTOU via la contrainte unique côté base
-      })
-    })
+    const res = await appelQuizResultatApi(corps)
+    // 401 persistant après refresh, ou 403 (identité incohérente) : cas
+    // définitif, cf. afficherErreurEnregistrement — un élève ne doit jamais
+    // perdre un résultat de quiz terminé en silence.
+    if(res.status===401||res.status===403){saved=false;afficherErreurEnregistrement('definitif');return}
     const data = await res.json()
-    if(data.error){console.log('Erreur sauvegarde:',data.error);saved=false;return}
+    if(data.error){console.log('Erreur sauvegarde:',data.error);saved=false;dernierCorpsEchec=corps;afficherErreurEnregistrement('transitoire');return}
     delete deblocageCache[cleDeblocage(theme,sousTheme)]
-  }catch(e){console.log('Erreur sauvegarde:',e.message);saved=false}
+    masquerErreurEnregistrement()
+  }catch(e){console.log('Erreur sauvegarde:',e.message);saved=false;dernierCorpsEchec=corps;afficherErreurEnregistrement('transitoire')}
 }
 
 async function nouvelleRonde(){

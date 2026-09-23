@@ -1,6 +1,7 @@
 import { memoireQuestionsVues, contexteEleve, noterEchec, journaliserEchec } from '../lib/questions-vues.js'
 import { corrigerExamen } from '../lib/examen-score.js'
 import { verifierGateEleve } from '../lib/auth-eleve.js'
+import { verifierToken } from '../lib/auth-token.js'
 
 const ACTIONS_VALIDES = ['demarrer', 'progression', 'reprise', 'enregistrer']
 const DUREE_EXAMEN_MS = 40 * 60 * 1000
@@ -398,24 +399,9 @@ export default async function handler(req, res) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// AUTHENTIFICATION — vérifie le jeton auprès de Supabase Auth, même modèle
-// que api/stripe-checkout.js. Ne fait jamais confiance à un user_id lu dans
-// le corps de la requête.
-// ═══════════════════════════════════════════════════════════════
-async function verifierToken(access_token, SUPA_URL, SUPA_KEY) {
-  if (!access_token || typeof access_token !== 'string') return null
-  try {
-    const r = await fetch(`${SUPA_URL}/auth/v1/user`, {
-      headers: { 'Authorization': `Bearer ${access_token}`, 'apikey': SUPA_KEY }
-    })
-    if (!r.ok) return null
-    const data = await r.json()
-    return data && data.id ? data.id : null
-  } catch (e) {
-    return null
-  }
-}
+// verifierToken est désormais partagé — cf. lib/auth-token.js (docs/TODO.md,
+// item 27 : même besoin apparu sur api/quiz-resultat.js et
+// api/email.js/recap-journalier-user).
 
 // Colonnes réelles de examen_questions (information_schema, vérifié le
 // 21/09/2026) : id, numero, theme, question, opts, answer, explication,
