@@ -1,4 +1,7 @@
 import { verifierGateEleve } from '../lib/auth-eleve.js'
+import { verifierToken } from '../lib/auth-token.js'
+
+const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -7,6 +10,8 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
   if (req.method !== 'POST') { res.status(405).json({ error: 'Méthode non autorisée' }); return }
 
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
+
   try {
     const { user_id, email, prenom, theme, sous_theme, difficulte, questions, reponses, temps_secondes, source_questions, abandonne, client_key } = req.body
 
@@ -14,10 +19,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Paramètres manquants' })
     }
 
+    // ── Identité — cf. docs/TODO.md, item 27. Le user_id du body n'est plus
+    // jamais utilisé comme identité : uniquement pour détecter une
+    // incohérence avec le jeton (403), jamais comme repli. Avant toute
+    // lecture en base (le premier accès DB est dans insererResultat, plus
+    // loin). Même modèle que api/examen.js (verifierToken partagé,
+    // lib/auth-token.js).
+    const authHeader = req.headers['authorization'] || ''
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+    const userIdToken = await verifierToken(token, SUPABASE_URL, SERVICE_KEY)
+    if (!userIdToken) return res.status(401).json({ error: 'Session invalide' })
+    if (user_id !== userIdToken) return res.status(403).json({ error: 'Identité incohérente' })
+
     // ── Cas abandon : score forcé à 0, pas de recalcul nécessaire ──
     if (abandonne) {
       const result = await insererResultat({
-        user_id, email, prenom, theme, sous_theme, difficulte,
+        user_id: userIdToken, email, prenom, theme, sous_theme, difficulte,
         score: 0, total: 5,
         questions_ratees: ['Quiz abandonné'],
         temps_secondes: temps_secondes || 0,
@@ -52,7 +69,7 @@ export default async function handler(req, res) {
     })
 
     const result = await insererResultat({
-      user_id, email, prenom, theme, sous_theme, difficulte,
+      user_id: userIdToken, email, prenom, theme, sous_theme, difficulte,
       score: nbOk, total: questions.length,
       questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
       temps_secondes: temps_secondes || 0,
@@ -74,10 +91,8 @@ export default async function handler(req, res) {
 }
 
 async function insererResultat({ user_id, email, prenom, theme, sous_theme, difficulte, score, total, questions_ratees, temps_secondes, aucune_idee, source_questions, client_key, abandonne }) {
+  const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
   try {
-    const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
-    const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
-
     // ── Idempotence : ignore une écriture au fingerprint identique déjà
     // enregistrée il y a moins de FENETRE_DOUBLON_MS (double-tap / retry réseau).
     // Fail-open : toute panne de ce contrôle laisse l'insertion se faire normalement.

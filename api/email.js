@@ -1,6 +1,7 @@
 // /api/email.js
 
 const { peutRecevoirEmailDetaille, enPeriodeGratuite } = require('../lib/gating')
+const { verifierToken } = require('../lib/auth-token')
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -725,10 +726,13 @@ export default async function handler(req, res) {
 
   // ═══════════════════════════════════════════
   // RÉCAP JOURNALIER — recalculé côté serveur (source de vérité unique)
-  // Modifié le 16/08/2026 : seul déclencheur restant, le cron quotidien
-  // (cron-rappel.js) — le déclenchement client (logout/terminer dans
-  // quiz.html) a été retiré pour garantir exactement un email consolidé
-  // par élève et par jour, plutôt qu'un email à chaque déconnexion.
+  // Modifié le 21/08/2026 : le déclenchement côté client (logout/terminer
+  // dans quiz.html), retiré le 16/08/2026, a été rétabli verbatim — le cron
+  // (cron-rappel.js, 0 19 * * * UTC) ne s'était pas déclenché depuis,
+  // laissant les élèves sans récap (cf. quiz.html:490-501). Le cron n'est
+  // donc plus le seul déclencheur : il redevient un filet de rattrapage,
+  // chaque envoi ici marquant les lignes concernées à alerte_envoyee=true
+  // pour que le cron ne retrouve plus rien à couvrir après un envoi réussi.
   // Paramètre `date` (YYYY-MM-DD, fuseau Paris) optionnel : permet au cron
   // de traiter un jour antérieur au jour courant (rattrapage d'une session
   // tombée après son unique passage quotidien). Sans ce paramètre,
@@ -740,6 +744,26 @@ export default async function handler(req, res) {
 
     const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
     const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY
+
+    // ── Identité — cf. docs/TODO.md, item 27. Deux appelants légitimes :
+    // le cron (secret partagé, cf. api/cron-rappel.js) ou le client
+    // quiz.html avec un jeton dont l'identité correspond au user_id demandé.
+    // Sans l'un des deux : 401 AVANT toute lecture de profils, pour ne pas
+    // laisser filtrer si l'élève a une session non couverte aujourd'hui
+    // (oracle "profil introuvable"/"déjà envoyé"/"aucune session").
+    // !!process.env.CRON_SECRET évite qu'un appel sans header ('Bearer
+    // undefined' côté comparaison) ne passe si la variable n'est pas posée
+    // sur cet environnement.
+    const authHeader = req.headers['authorization'] || ''
+    const estCron = !!process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`
+    let identiteOk = estCron
+    if (!identiteOk) {
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+      const userIdToken = await verifierToken(token, SUPA_URL, SUPA_KEY)
+      identiteOk = userIdToken !== null && userIdToken === user_id
+    }
+    if (!identiteOk) return res.status(401).json({ error: 'Non autorisé' })
+
     const supaHeaders = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${SUPA_KEY}`,

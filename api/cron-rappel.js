@@ -92,7 +92,7 @@ export default async function handler(req, res) {
       try {
         const resultRes = await fetch(`https://${req.headers.host}/api/email`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
           body: JSON.stringify({ type: 'recap-journalier-user', user_id, date })
         })
         const resultData = await resultRes.json()
