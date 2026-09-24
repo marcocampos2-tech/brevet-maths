@@ -104,6 +104,99 @@ function toggleMenu() {
   document.getElementById('mobileMenu').classList.toggle('open')
 }
 
+// Classification d'une erreur Supabase Auth — cf. docs/TODO.md, item 29.
+// Un refus d'authentification (4xx SAUF 429, jamais une
+// AuthRetryableFetchError) déclenche une tentative de refresh puis, si elle
+// échoue selon cette même règle, une purge locale. Toute panne technique
+// (status 0, 5xx, 429, AuthRetryableFetchError, ou pas de status du tout)
+// laisse le formulaire s'afficher sans rien purger — jamais de purge sur un
+// doute : un throttling ou une panne momentanée du serveur ne doit pas être
+// traité comme un jeton mort.
+function estRefusAuthentification(error) {
+  if (!error || error.name === 'AuthRetryableFetchError') return false
+  const status = error.status
+  return typeof status === 'number' && status >= 400 && status <= 499 && status !== 429
+}
+
+// Purge locale — même méthode que examen.html (seReconnecter) et quiz.html,
+// dupliquée ici (cf. docs/TODO.md : 3ᵉ copie, candidate à un futur helper
+// partagé). Pas de redirection à la fin : on est déjà sur connexion.html, le
+// formulaire (#login-view) est visible par défaut dès que init() s'arrête
+// sans rediriger ailleurs.
+async function purgerSessionLocale() {
+  try {
+    const { error } = await sb.auth.signOut({ scope: 'local' })
+    if (error) throw error
+  } catch(e) {
+    console.log('[connexion] signOut a échoué, nettoyage manuel du localStorage :', e.message)
+    try {
+      Object.keys(localStorage)
+        .filter(function(k){ return k.startsWith('sb-') && k.endsWith('-auth-token') })
+        .forEach(function(k){ localStorage.removeItem(k) })
+    } catch(e2) { console.log('[connexion] nettoyage manuel a aussi échoué :', e2.message) }
+  }
+}
+
+// Valide le jeton auprès du serveur (getUser()), avec une tentative de
+// refresh en cas de refus d'authentification. Renvoie l'utilisateur validé
+// serveur, ou null si le formulaire doit être affiché — que ce soit parce
+// que le jeton est mort (purge déjà faite) ou parce qu'une panne technique
+// empêche de conclure (pas de purge dans ce cas). Ne lève jamais.
+async function validerSessionServeur() {
+  let userData, errUser
+  try {
+    ;({ data: userData, error: errUser } = await sb.auth.getUser())
+  } catch(e) {
+    console.log('[connexion] getUser() a échoué techniquement, formulaire affiché sans purge :', e.message)
+    return null
+  }
+  if (!errUser) return userData.user
+
+  if (!estRefusAuthentification(errUser)) {
+    console.log('[connexion] getUser() a échoué techniquement, formulaire affiché sans purge :', errUser.message)
+    return null
+  }
+
+  let refreshData, errRefresh
+  try {
+    ;({ data: refreshData, error: errRefresh } = await sb.auth.refreshSession())
+  } catch(e) {
+    console.log('[connexion] refreshSession() a échoué techniquement, formulaire affiché sans purge :', e.message)
+    return null
+  }
+  if (errRefresh) {
+    if (!estRefusAuthentification(errRefresh)) {
+      console.log('[connexion] refreshSession() a échoué techniquement, formulaire affiché sans purge :', errRefresh.message)
+      return null
+    }
+    await purgerSessionLocale()
+    return null
+  }
+  if (!refreshData?.session) {
+    console.log('[connexion] refreshSession() sans erreur mais sans session, formulaire affiché sans purge')
+    return null
+  }
+
+  // Rejoue getUser() une seule fois avec le jeton renouvelé — l'élève n'est
+  // PAS déconnecté si son refresh token était encore valide.
+  let retryData, errRetry
+  try {
+    ;({ data: retryData, error: errRetry } = await sb.auth.getUser())
+  } catch(e) {
+    console.log('[connexion] getUser() (après refresh) a échoué techniquement, formulaire affiché sans purge :', e.message)
+    return null
+  }
+  if (errRetry) {
+    if (!estRefusAuthentification(errRetry)) {
+      console.log('[connexion] getUser() (après refresh) a échoué techniquement, formulaire affiché sans purge :', errRetry.message)
+      return null
+    }
+    await purgerSessionLocale()
+    return null
+  }
+  return retryData.user
+}
+
 async function init() {
   // La détection du hash de recovery reste en tout premier, avant tout
   // appel async, et sort avec un return : le parcours de réinitialisation
@@ -114,22 +207,36 @@ async function init() {
 
   const { data } = await sb.auth.getSession()
   if (!data.session) return
-  const user = data.session.user
+
+  // Validation serveur du jeton — cf. docs/TODO.md, item 29. getSession() ne
+  // renvoie que ce qui est stocké localement, sans vérifier qu'il est encore
+  // valide côté serveur : un jeton corrompu/révoqué était quand même renvoyé
+  // comme "présent", ce qui déclenchait le fail-open ci-dessous (redirection
+  // vers quiz.html sans jamais purger ni afficher le formulaire — boucle
+  // "Session expirée" constatée le 22/09/2026).
+  const user = await validerSessionServeur()
+  if (!user) return
 
   // Correctif comptes orphelins (14-15/09/2026, cf. docs/TODO.md) : avant,
   // toute session valide redirigeait vers quiz.html sans vérifier le type
   // de compte — un parent connecté atterrissait sur le quiz de son enfant,
   // avec son propre compte. Discriminant : présence d'une ligne profils,
   // jamais user_metadata (modifiable par l'utilisateur). Exemption prof via
-  // app_metadata, seul champ du token non modifiable côté client — même
-  // principe que prof.html.
+  // app_metadata — lu ici depuis l'utilisateur renvoyé par getUser() (vérifié
+  // serveur), plus depuis le JWT local — même principe que prof.html.
   if (user.app_metadata?.role === 'prof') { window.location.href = 'quiz.html'; return }
 
   const { data: profil, error: errProfil } = await sb.from('profils').select('user_id').eq('user_id', user.id).limit(1)
   if (errProfil) {
-    // Fail-open : comportement d'avant ce correctif, jamais silencieux.
-    console.log('[gate profils] lecture échouée, aiguillage non appliqué :', errProfil.message)
-    window.location.href = 'quiz.html'; return
+    // Après une session validée serveur, ceci n'est plus jamais causé par un
+    // jeton mort — seulement une panne technique indépendante de
+    // l'authentification (réseau, PostgREST). Ne plus rediriger à l'aveugle
+    // vers quiz.html (cf. docs/TODO.md, item 29) : on ne sait pas si ce
+    // compte est élève ou parent, et deviner reproduirait le bug qu'un
+    // correctif antérieur avait corrigé (parent redirigé vers le quiz de son
+    // enfant).
+    console.log('[gate profils] lecture échouée après session validée, formulaire affiché sans redirection :', errProfil.message)
+    return
   }
   if (profil && profil.length > 0) { window.location.href = 'quiz.html'; return }
 

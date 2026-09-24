@@ -253,7 +253,6 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="focus-chrono"><span class="focus-dot"></span> <span id="focus-chrono-text">00:00</span></div>
 </div>
 <div id="quiz-area"></div>
-<div id="erreur-enregistrement" style="display:none"></div>
 </div>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -314,9 +313,13 @@ let questions=[], answers={}, submitted={}, saved=false
 // init()) — même raison que examen.html : sert dans sauvegarderAbandonne()
 // (pagehide), où on ne peut pas attendre un getSession() async.
 let accessToken=null
-// Corps de la dernière tentative de sauvegarder() en échec transitoire —
-// permet à reessayerSauvegarde() de rejouer exactement le même envoi
-// (même client_key) sans redemander l'état du quiz.
+// Corps de la dernière tentative de sauvegarde en échec (transitoire ou
+// définitif) — permet à reessayerSauvegarde() de rejouer exactement le même
+// envoi (même client_key, donc pas de doublon possible) sans redemander
+// l'état du quiz. Le STATUT ('ok'/'transitoire'/'definitif'), lui, n'est
+// jamais stocké dans une variable partagée : il est renvoyé directement par
+// tenterSauvegarde()/sauvegarder() à qui les appelle (cf. docs/TODO.md,
+// item 29).
 let dernierCorpsEchec=null
 let chronoInterval=null, chronoSecondes=0, sourceQuestions='ia'
 let quizEnCours=false
@@ -340,13 +343,31 @@ window.addEventListener('pagehide', function(e) {
   if(!e.persisted&&quizEnCours&&!saved){sauvegarderAbandonne()}
 })
 
+// Classification d'une erreur Supabase Auth — même règle que connexion.html
+// (estRefusAuthentification), dupliquée ici (cf. docs/TODO.md : même choix
+// que purgerSessionLocale, 3ᵉ copie plutôt qu'un helper partagé). Un refus
+// d'authentification confirmé (4xx sauf 429, jamais une
+// AuthRetryableFetchError) est seul à valoir 'definitif' dans
+// tenterSauvegarde() — une panne technique du refresh (réseau, 5xx, 429,
+// AuthRetryableFetchError, ou pas de status) ne doit jamais faire perdre un
+// résultat de quiz en silence : elle reste 'transitoire', avec bouton
+// Réessayer.
+function estRefusAuthentification(error) {
+  if (!error || error.name === 'AuthRetryableFetchError') return false
+  const status = error.status
+  return typeof status === 'number' && status >= 400 && status <= 499 && status !== 429
+}
+
 // Point d'entrée unique vers /api/quiz-resultat pour sauvegarder() : sur un
 // 401, tente sb.auth.refreshSession() puis rejoue l'appel une seule fois
 // avec le jeton renouvelé. Calqué sur appelExamenApi (examen.html) — même
-// modèle, même raisonnement. Volontairement PAS utilisé par
-// sauvegarderAbandonne() (pagehide, cf. plus bas) ni envoyerRecapJournalier()
-// (pas de refresh pour ne pas alourdir logout()/terminer() : le cron
-// rattrape le récap si besoin).
+// modèle. Renvoie aussi refusConfirme : true seulement si l'échec du refresh
+// est un refus d'authentification confirmé — false ou null sinon (panne
+// technique, refresh non nécessaire, ou refresh réussi) — pour que
+// tenterSauvegarde() ne traite jamais un doute comme 'definitif'.
+// Volontairement PAS utilisé par sauvegarderAbandonne() (pagehide, cf. plus
+// bas) ni envoyerRecapJournalier() (pas de refresh pour ne pas alourdir
+// logout()/terminer() : le cron rattrape le récap si besoin).
 async function appelQuizResultatApi(corps){
   const faireAppel = function(){
     return fetch('/api/quiz-resultat', {
@@ -356,50 +377,85 @@ async function appelQuizResultatApi(corps){
     })
   }
   let res = await faireAppel()
-  if (res.status === 401) {
-    try {
-      const { data, error } = await sb.auth.refreshSession()
-      if (!error && data && data.session && data.session.access_token) {
-        accessToken = data.session.access_token
-        res = await faireAppel()
-      }
-    } catch(e) { console.log('[auth] refreshSession a échoué :', e.message) }
+  if (res.status !== 401) return { res, refusConfirme: null }
+
+  let refreshData, errRefresh
+  try {
+    ;({ data: refreshData, error: errRefresh } = await sb.auth.refreshSession())
+  } catch(e) {
+    console.log('[auth] refreshSession a échoué techniquement :', e.message)
+    return { res, refusConfirme: false }
   }
-  return res
+  if (errRefresh) {
+    const refuse = estRefusAuthentification(errRefresh)
+    console.log('[auth] refreshSession a échoué (' + (refuse ? 'refus confirmé' : 'panne technique') + ') :', errRefresh.message)
+    return { res, refusConfirme: refuse }
+  }
+  if (!refreshData?.session?.access_token) {
+    console.log('[auth] refreshSession sans erreur mais sans session, traité comme une panne technique')
+    return { res, refusConfirme: false }
+  }
+  accessToken = refreshData.session.access_token
+  res = await faireAppel()
+  return { res, refusConfirme: null }
 }
 
-// 'definitif' : session invalide même après refresh (401) ou identité
-// incohérente (403, ne devrait jamais arriver en usage normal) — aucune
-// consigne de reconnexion ici : se reconnecter perdrait l'état du quiz en
-// mémoire, donc rien à proposer qui améliorerait réellement la situation.
-// 'transitoire' : panne réseau ou erreur serveur — bouton Réessayer, qui
-// rejoue le même corps (même client_key, donc pas de doublon possible).
-function afficherErreurEnregistrement(type){
-  const zone = document.getElementById('erreur-enregistrement')
-  if(!zone) return
-  if(type==='transitoire'){
-    zone.innerHTML = '<div style="background:var(--bordeaux-light);color:var(--bordeaux);border-radius:8px;padding:14px;margin:12px 0;font-size:14px">⚠️ Ton résultat n\'a pas pu être enregistré (connexion instable). <button class="btn btn-outline" style="margin-left:8px;display:inline-flex" onclick="reessayerSauvegarde()">Réessayer</button></div>'
-  } else {
-    zone.innerHTML = '<div style="background:var(--bordeaux-light);color:var(--bordeaux);border-radius:8px;padding:14px;margin:12px 0;font-size:14px">❌ Ton résultat n\'a pas pu être enregistré : ta session a expiré.</div>'
+// Statut affiché dans le bandeau de score de renderResultats() — cf.
+// docs/TODO.md, item 29. 'definitif' : session invalide même après refresh
+// (401) ou identité incohérente (403, ne devrait jamais arriver en usage
+// normal) — bouton "Me reconnecter" (purge + redirection), pas de promesse
+// de récupérer le résultat perdu. 'transitoire' : panne réseau ou erreur
+// serveur — bouton "Réessayer", qui rejoue le même corps (même client_key,
+// donc pas de doublon possible).
+function rendreStatutEnregistrement(statut){
+  if(statut==='transitoire'){
+    return '<div class="results-saved" style="color:var(--bordeaux);font-size:12px">⚠️ Résultat pas encore enregistré<br><button class="btn" style="margin-top:4px" onclick="reessayerSauvegarde()">Réessayer</button></div>'
   }
-  zone.style.display='block'
+  if(statut==='definitif'){
+    return '<div class="results-saved" style="color:var(--bordeaux);font-size:12px">❌ Résultat non enregistré : ta session a expiré<br><button class="btn" style="margin-top:4px" onclick="meReconnecterDepuisQuiz()">Me reconnecter</button></div>'
+  }
+  return '<div class="results-saved">✅ Résultats enregistrés</div>'
 }
-function masquerErreurEnregistrement(){
-  const zone = document.getElementById('erreur-enregistrement')
-  if(zone){ zone.style.display='none'; zone.innerHTML='' }
+
+// Met à jour en place le statut affiché (après un retry) sans reconstruire
+// tout #quiz-area — évite de perturber le scroll sur le récapitulatif déjà
+// affiché plus bas. Bascule aussi la visibilité de "Nouvelle ronde" : une
+// escalade transitoire→définitif au retry doit la masquer comme au premier
+// rendu.
+function mettreAJourStatutEnregistrement(statut){
+  const zone = document.getElementById('statut-enregistrement')
+  if(zone) zone.innerHTML = rendreStatutEnregistrement(statut)
+  const btnRonde = document.getElementById('btn-nouvelle-ronde')
+  if(btnRonde) btnRonde.style.display = statut==='definitif' ? 'none' : ''
 }
+
 async function reessayerSauvegarde(){
   if(!dernierCorpsEchec||saved)return
   saved=true
-  try{
-    const res = await appelQuizResultatApi(dernierCorpsEchec)
-    if(res.status===401||res.status===403){saved=false;afficherErreurEnregistrement('definitif');return}
-    const data = await res.json()
-    if(data.error){console.log('Erreur sauvegarde (retry):',data.error);saved=false;afficherErreurEnregistrement('transitoire');return}
-    delete deblocageCache[cleDeblocage(theme,sousTheme)]
-    masquerErreurEnregistrement()
-    dernierCorpsEchec=null
-  }catch(e){console.log('Erreur sauvegarde (retry):',e.message);saved=false;afficherErreurEnregistrement('transitoire')}
+  const statut = await tenterSauvegarde(dernierCorpsEchec)
+  mettreAJourStatutEnregistrement(statut)
+}
+
+// Purge locale — même méthode que examen.html (seReconnecter) et
+// connexion.html, dupliquée ici (cf. docs/TODO.md : 3ᵉ copie, candidate à un
+// futur helper partagé). Contrairement à connexion.html, une redirection
+// suit toujours : on n'est pas déjà sur le formulaire de connexion.
+async function purgerSessionLocale(){
+  try {
+    const { error } = await sb.auth.signOut({ scope: 'local' })
+    if (error) throw error
+  } catch(e) {
+    console.log('[reconnexion] signOut a échoué, nettoyage manuel du localStorage :', e.message)
+    try {
+      Object.keys(localStorage)
+        .filter(function(k){ return k.startsWith('sb-') && k.endsWith('-auth-token') })
+        .forEach(function(k){ localStorage.removeItem(k) })
+    } catch(e2) { console.log('[reconnexion] nettoyage manuel a aussi échoué :', e2.message) }
+  }
+}
+async function meReconnecterDepuisQuiz(){
+  await purgerSessionLocale()
+  window.location.href='connexion.html'
 }
 
 async function sauvegarderAbandonne() {
@@ -948,7 +1004,7 @@ async function renderResultats() {
   else if(pct >= 60){ mention = '👍 Bien !'; couleur = 'var(--marine)' }
   else if(pct >= 40){ mention = '💪 Continue !'; couleur = '#8a6416' }
   else { mention = '📚 À retravailler'; couleur = 'var(--bordeaux)' }
-  await sauvegarder()
+  const statutSauvegarde = await sauvegarder()
   delete deblocageCache[cleDeblocage(theme,sousTheme)]
   const d = await verifierDeblocage(theme, sousTheme)
   let progMsg = ''
@@ -1000,7 +1056,7 @@ async function renderResultats() {
       <div class="results-detail">
         <div class="results-mention-sm">${mention}</div>
         <div class="results-meta-sm">${themeCourt} · ${diff} · ${formatTemps(chronoSecondes)}</div>
-        <div class="results-saved">✅ Résultats enregistrés</div>
+        <div id="statut-enregistrement">${rendreStatutEnregistrement(statutSauvegarde)}</div>
       </div>
     </div>
     <div class="prog-bloc">
@@ -1016,7 +1072,7 @@ async function renderResultats() {
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
-      <button class="btn btn-green btn-full" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
+      <button class="btn btn-green btn-full" id="btn-nouvelle-ronde" onclick="nouvelleRonde()" ${statutSauvegarde==='definitif'?'style="display:none"':''}>🔄 Nouvelle ronde</button>
       <button class="btn btn-outline btn-full" onclick="terminer()">🚪 Terminer et se déconnecter</button>
     </div>
     <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--ardoise);padding:0 4px">📋 Récapitulatif</div>`
@@ -1042,9 +1098,33 @@ async function renderResultats() {
   setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
 }
 
+// Coeur partagé par sauvegarder() et reessayerSauvegarde() — renvoie le
+// statut directement à l'appelant (jamais de variable partagée pour le
+// statut lui-même, cf. docs/TODO.md, item 29). Un élève ne doit jamais
+// perdre un résultat de quiz terminé en silence : 'definitif' seulement sur
+// un refus d'authentification confirmé (403 identité incohérente, ou 401
+// avec refusConfirme===true — cf. appelQuizResultatApi) ; toute panne
+// technique du refresh (refusConfirme===false ou null) reste 'transitoire',
+// jamais 'definitif' sur un simple doute.
+async function tenterSauvegarde(corps){
+  try{
+    const { res, refusConfirme } = await appelQuizResultatApi(corps)
+    if(res.status===403){saved=false;dernierCorpsEchec=corps;return 'definitif'}
+    if(res.status===401){
+      saved=false;dernierCorpsEchec=corps
+      return refusConfirme===true ? 'definitif' : 'transitoire'
+    }
+    const data = await res.json()
+    if(data.error){console.log('Erreur sauvegarde:',data.error);saved=false;dernierCorpsEchec=corps;return 'transitoire'}
+    delete deblocageCache[cleDeblocage(theme,sousTheme)]
+    dernierCorpsEchec=null
+    return 'ok'
+  }catch(e){console.log('Erreur sauvegarde:',e.message);saved=false;dernierCorpsEchec=corps;return 'transitoire'}
+}
+
 async function sauvegarder() {
-  if(saved||!user||questions.length===0)return
-  saved=true // verrou optimiste : posé avant le fetch pour bloquer tout appel concurrent ; relâché ci-dessous en cas d'échec
+  if(saved||!user||questions.length===0)return 'ok'
+  saved=true // verrou optimiste : posé avant le fetch pour bloquer tout appel concurrent ; relâché dans tenterSauvegarde() en cas d'échec
   const reponsesEnvoyees = {}
   Object.keys(submitted).forEach(i => { reponsesEnvoyees[i] = answers[i] })
   const corps = {
@@ -1055,17 +1135,7 @@ async function sauvegarder() {
     source_questions: sourceQuestions,
     client_key: crypto.randomUUID() // clé d'idempotence : ferme le TOCTOU via la contrainte unique côté base
   }
-  try{
-    const res = await appelQuizResultatApi(corps)
-    // 401 persistant après refresh, ou 403 (identité incohérente) : cas
-    // définitif, cf. afficherErreurEnregistrement — un élève ne doit jamais
-    // perdre un résultat de quiz terminé en silence.
-    if(res.status===401||res.status===403){saved=false;afficherErreurEnregistrement('definitif');return}
-    const data = await res.json()
-    if(data.error){console.log('Erreur sauvegarde:',data.error);saved=false;dernierCorpsEchec=corps;afficherErreurEnregistrement('transitoire');return}
-    delete deblocageCache[cleDeblocage(theme,sousTheme)]
-    masquerErreurEnregistrement()
-  }catch(e){console.log('Erreur sauvegarde:',e.message);saved=false;dernierCorpsEchec=corps;afficherErreurEnregistrement('transitoire')}
+  return await tenterSauvegarde(corps)
 }
 
 async function nouvelleRonde(){
