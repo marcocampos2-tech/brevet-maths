@@ -165,7 +165,7 @@ function renderStages() {
     const nonCliquable = s.complet || s.termine
     const heurePlaces = s.termine ? '' : ' · <span class="agenda-sub-heure">' + s.heure + ' — ' + (s.complet ? 'Complet' : s.places_restantes + ' place' + (s.places_restantes > 1 ? 's' : '') + ' dispo') + '</span>'
     const sousThemes = SOUS_THEMES_PAR_DOMAINE[s.domaine]
-    const sousThemesHTML = sousThemes ? `<div class="agenda-sub" style="color:#6B7280;margin-top:2px">Sous-thèmes abordés (selon les besoins du groupe) : ${sousThemes.join(' · ')}</div>` : ''
+    const sousThemesHTML = sousThemes ? `<div class="agenda-sub" style="color:#6B7280;margin-top:8px">Sous-thèmes abordés (selon les besoins du groupe) : ${sousThemes.join(' · ')}</div>` : ''
     return `<div class="agenda-item ${estRevision ? 'revision' : ''} ${nonCliquable ? '' : 'agenda-clickable'}"
       style="cursor:${nonCliquable ? 'not-allowed' : 'pointer'};opacity:${s.complet && !s.termine ? '0.55' : '1'}"
       ${nonCliquable ? '' : `onclick="choisirStage('${s.id}')"`} id="stage-${s.id}">
