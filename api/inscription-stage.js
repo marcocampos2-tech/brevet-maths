@@ -2,6 +2,12 @@ const ORIGINES_AUTORISEES = ['https://academika.fr', 'https://www.academika.fr']
 
 const MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre']
 
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 function formatDateFr(dateISO) {
   const d = new Date(dateISO + 'T00:00:00')
   return d.getDate() + ' ' + MOIS_FR[d.getMonth()]
@@ -125,10 +131,10 @@ export default async function handler(req, res) {
         subject: `📝 Nouvelle inscription stage — ${prenom} ${nom}`,
         html: `
           <h2>Nouvelle inscription au stage</h2>
-          <p><strong>Élève :</strong> ${prenom} ${nom}</p>
-          <p><strong>Email parents :</strong> ${email_parent}</p>
-          <p><strong>Téléphone :</strong> ${telephone || 'Non renseigné'}</p>
-          <p><strong>Stage :</strong> ${session.periode} — ${session.domaine}</p>
+          <p><strong>Élève :</strong> ${esc(prenom)} ${esc(nom)}</p>
+          <p><strong>Email parents :</strong> ${esc(email_parent)}</p>
+          <p><strong>Téléphone :</strong> ${esc(telephone) || 'Non renseigné'}</p>
+          <p><strong>Stage :</strong> ${esc(session.periode)} — ${esc(session.domaine)}</p>
           <p><strong>Dates :</strong> Du ${dateDebutFormatee} au ${dateFinFormatee} · ${session.heure}</p>
           <p><strong>Places restantes :</strong> ${placesRestantes}</p>
           <p>→ <a href="https://academika.fr/prof.html">Gérer les inscriptions</a></p>
@@ -147,8 +153,8 @@ export default async function handler(req, res) {
           <h2>📋 Inscription reçue</h2>
           <p>Bonjour,</p>
           <p>Votre inscription est bien reçue. Vous serez contacté par email pour confirmation.</p>
-          <p><strong>Élève :</strong> ${prenom} ${nom}</p>
-          <p><strong>Stage :</strong> ${session.periode} — ${session.domaine}</p>
+          <p><strong>Élève :</strong> ${esc(prenom)} ${esc(nom)}</p>
+          <p><strong>Stage :</strong> ${esc(session.periode)} — ${esc(session.domaine)}</p>
           <p><strong>Dates :</strong> Du ${dateDebutFormatee} au ${dateFinFormatee} · ${session.heure}</p>
           <p><strong>Contact :</strong> 06 26 53 90 13</p>
           <br>
