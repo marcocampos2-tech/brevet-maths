@@ -133,6 +133,13 @@ function toggleMenu() {
 let stagesSessions = []
 let stageChoisi = null
 
+const SOUS_THEMES_PAR_DOMAINE = {
+  'Nombres et calculs': ['Équations', 'Calcul littéral', 'Fractions', 'Puissances', 'Arithmétique'],
+  'Organisation et gestion de données': ['Fonctions', 'Statistiques', 'Probabilités', 'Proportionnalité', 'Pourcentages'],
+  'Espace et géométrie': ['Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie', 'Transformations', 'Triangles semblables'],
+  'Grandeurs, mesures et algorithmique': ['Aires et volumes', 'Conversions', 'Agrandissement', 'Algorithmique']
+}
+
 async function chargerStages() {
   try {
     const res = await fetch('/api/inscription-stage?action=sessions')
@@ -157,6 +164,8 @@ function renderStages() {
   function carteHTML(s, estRevision) {
     const nonCliquable = s.complet || s.termine
     const heurePlaces = s.termine ? '' : ' · <span class="agenda-sub-heure">' + s.heure + ' — ' + (s.complet ? 'Complet' : s.places_restantes + ' place' + (s.places_restantes > 1 ? 's' : '') + ' dispo') + '</span>'
+    const sousThemes = SOUS_THEMES_PAR_DOMAINE[s.domaine]
+    const sousThemesHTML = sousThemes ? `<div class="agenda-sub" style="color:#6B7280;margin-top:8px">Sous-thèmes abordés (selon les besoins du groupe) : ${sousThemes.join(' · ')}</div>` : ''
     return `<div class="agenda-item ${estRevision ? 'revision' : ''} ${nonCliquable ? '' : 'agenda-clickable'}"
       style="cursor:${nonCliquable ? 'not-allowed' : 'pointer'};opacity:${s.complet && !s.termine ? '0.55' : '1'}"
       ${nonCliquable ? '' : `onclick="choisirStage('${s.id}')"`} id="stage-${s.id}">
@@ -166,6 +175,7 @@ function renderStages() {
       <div class="agenda-item-content">
         <div class="agenda-domain">${s.domaine}</div>
         <div class="agenda-sub" style="color:#6B7280">Du ${s.date_debut_formatee} au ${s.date_fin_formatee}${heurePlaces}</div>
+        ${sousThemesHTML}
       </div>
     </div>`
   }
