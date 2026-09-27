@@ -652,47 +652,67 @@ async function chargerStages() {
     const dateFinAff = new Date(s.date_fin + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
 
     html += '<div class="card" style="margin-bottom:1rem">'
-    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
-    html += '<div>'
-    html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">🎒 '+s.periode+' — '+s.domaine+'</div>'
-    html += '<div style="font-size:12px;color:var(--muted);margin-top:2px">Du '+dateDebutAff+' au '+dateFinAff+' · '+s.heure+'</div>'
-    html += '<div class="places-bar-wrap" style="margin-top:8px;width:180px"><div class="places-bar-fill '+fillClass+'" style="width:'+Math.min(pctPlaces,100)+'%"></div></div>'
-    html += '<div style="font-size:12px;color:var(--muted);margin-top:4px">'+nb+' / '+s.max_places+' places — '+(s.max_places-nb)+' disponibles</div>'
-    html += '</div>'
-    html += '<button class="btn btn-sm btn-red" onclick="annulerSessionStage(\''+esc(s.id)+'\',\''+esc(s.periode)+' — '+esc(s.domaine)+'\','+nb+')">🗑 Annuler le stage</button>'
-    html += '</div>'
 
-    if (!inscrits.length) {
-      html += '<div class="empty">Aucun inscrit sur ce stage.</div>'
+    if (sessionEnEdition === s.id) {
+      html += '<div class="card-title" style="margin-bottom:12px">✏️ Modifier le stage</div>'
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">'
+      html += '<div class="field" style="margin-bottom:0"><label>Période</label><select id="edit-stage-periode-'+s.id+'">'
+      html += Object.keys(DOMAINES_PAR_PERIODE).map(p => '<option value="'+p+'"'+(p===s.periode?' selected':'')+'>'+p+'</option>').join('')
+      html += '</select></div>'
+      html += '<div class="field" style="margin-bottom:0"><label>Domaine</label><input type="text" id="edit-stage-domaine-'+s.id+'" value="'+esc(s.domaine).replace(/"/g,'&quot;')+'"></div>'
+      html += '</div>'
+      html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:10px">'
+      html += '<div class="field" style="margin-bottom:0"><label>Date début</label><input type="date" id="edit-stage-date-debut-'+s.id+'" value="'+esc(s.date_debut).replace(/"/g,'&quot;')+'"></div>'
+      html += '<div class="field" style="margin-bottom:0"><label>Date fin</label><input type="date" id="edit-stage-date-fin-'+s.id+'" value="'+esc(s.date_fin).replace(/"/g,'&quot;')+'"></div>'
+      html += '<div class="field" style="margin-bottom:0"><label>Heure</label><input type="text" id="edit-stage-heure-'+s.id+'" value="'+esc(s.heure).replace(/"/g,'&quot;')+'"></div>'
+      html += '</div>'
+      html += '<button class="btn btn-green" onclick="enregistrerModificationStage(\''+esc(s.id)+'\')">Enregistrer</button> '
+      html += '<button class="btn" onclick="annulerEditionStage()">Annuler</button>'
+      html += '<div id="stage-edition-msg-'+s.id+'" style="margin-top:10px;font-size:13px"></div>'
     } else {
-      inscrits.forEach(i => {
-        const isConfirme = i.confirme
-        const cardClass = isConfirme ? 'confirme' : 'attente'
-        const dateInscription = dateStr(i.created_at)
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
+      html += '<div>'
+      html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">🎒 '+s.periode+' — '+s.domaine+'</div>'
+      html += '<div style="font-size:12px;color:var(--muted);margin-top:2px">Du '+dateDebutAff+' au '+dateFinAff+' · '+s.heure+'</div>'
+      html += '<div class="places-bar-wrap" style="margin-top:8px;width:180px"><div class="places-bar-fill '+fillClass+'" style="width:'+Math.min(pctPlaces,100)+'%"></div></div>'
+      html += '<div style="font-size:12px;color:var(--muted);margin-top:4px">'+nb+' / '+s.max_places+' places — '+(s.max_places-nb)+' disponibles</div>'
+      html += '</div>'
+      html += nb === 0 ? '<button class="btn btn-sm" onclick="modifierSessionStage(\''+esc(s.id)+'\')" style="margin-right:6px">✏️ Modifier</button>' : ''
+      html += '<button class="btn btn-sm btn-red" onclick="annulerSessionStage(\''+esc(s.id)+'\',\''+esc(s.periode)+' — '+esc(s.domaine)+'\','+nb+')">🗑 Annuler le stage</button>'
+      html += '</div>'
 
-        html += '<div class="inscrit-card '+cardClass+'">'
-        html += '<div class="inscrit-header">'
-        html += '<div>'
-        html += '<div class="inscrit-name">'+i.prenom+' '+i.nom+'</div>'
-        html += '<div class="inscrit-info">📧 '+i.email_parent+(i.telephone?' · 📞 '+i.telephone:'')+'</div>'
-        html += '<div class="inscrit-info">Inscrit le '+dateInscription+'</div>'
-        html += '</div>'
-        html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
-        if (isConfirme) html += '<span class="badge badge-tb">✅ Confirmé</span>'
-        else html += '<span class="badge badge-ab">⏳ En attente</span>'
-        html += '</div>'
-        html += '</div>'
+      if (!inscrits.length) {
+        html += '<div class="empty">Aucun inscrit sur ce stage.</div>'
+      } else {
+        inscrits.forEach(i => {
+          const isConfirme = i.confirme
+          const cardClass = isConfirme ? 'confirme' : 'attente'
+          const dateInscription = dateStr(i.created_at)
 
-        html += '<div class="inscrit-actions">'
-        if (!isConfirme) {
-          html += '<button class="btn btn-sm btn-green" onclick="confirmerInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">✅ Confirmer</button>'
-          html += '<button class="btn btn-sm btn-red" onclick="refuserInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">❌ Refuser</button>'
-        } else {
-          html += '<button class="btn btn-sm btn-red" onclick="annulerInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">❌ Annuler l\'inscription</button>'
-        }
-        html += '</div>'
-        html += '</div>'
-      })
+          html += '<div class="inscrit-card '+cardClass+'">'
+          html += '<div class="inscrit-header">'
+          html += '<div>'
+          html += '<div class="inscrit-name">'+i.prenom+' '+i.nom+'</div>'
+          html += '<div class="inscrit-info">📧 '+i.email_parent+(i.telephone?' · 📞 '+i.telephone:'')+'</div>'
+          html += '<div class="inscrit-info">Inscrit le '+dateInscription+'</div>'
+          html += '</div>'
+          html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
+          if (isConfirme) html += '<span class="badge badge-tb">✅ Confirmé</span>'
+          else html += '<span class="badge badge-ab">⏳ En attente</span>'
+          html += '</div>'
+          html += '</div>'
+
+          html += '<div class="inscrit-actions">'
+          if (!isConfirme) {
+            html += '<button class="btn btn-sm btn-green" onclick="confirmerInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">✅ Confirmer</button>'
+            html += '<button class="btn btn-sm btn-red" onclick="refuserInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">❌ Refuser</button>'
+          } else {
+            html += '<button class="btn btn-sm btn-red" onclick="annulerInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">❌ Annuler l\'inscription</button>'
+          }
+          html += '</div>'
+          html += '</div>'
+        })
+      }
     }
     html += '</div>'
   })
@@ -723,6 +743,18 @@ async function chargerStages() {
   el.innerHTML = html
 }
 
+let sessionEnEdition = null
+
+function modifierSessionStage(sessionId) {
+  sessionEnEdition = sessionId
+  chargerStages()
+}
+
+function annulerEditionStage() {
+  sessionEnEdition = null
+  chargerStages()
+}
+
 let historiqueStagesOuvert = false
 function toggleHistoriqueStages() {
   historiqueStagesOuvert = !historiqueStagesOuvert
@@ -748,6 +780,36 @@ async function creerSessionStage() {
   const { error } = await sb.from('sessions_stages').insert({ periode, domaine, date_debut: dateDebut, date_fin: dateFin, heure })
   if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; if(btn) btn.disabled = false; return }
   msg.innerHTML = '<span style="color:#2F9E5C">✅ Stage créé !</span>'
+  setTimeout(() => chargerStages(), 800)
+}
+
+async function enregistrerModificationStage(sessionId) {
+  const btn = event?.target
+  if (btn && btn.disabled) return
+  if (btn) btn.disabled = true
+  const msg = document.getElementById('stage-edition-msg-'+sessionId)
+  const periode = document.getElementById('edit-stage-periode-'+sessionId).value
+  const domaine = document.getElementById('edit-stage-domaine-'+sessionId).value.trim()
+  const dateDebut = document.getElementById('edit-stage-date-debut-'+sessionId).value
+  const dateFin = document.getElementById('edit-stage-date-fin-'+sessionId).value
+  const heure = document.getElementById('edit-stage-heure-'+sessionId).value.trim() || '14h00'
+  if (!dateDebut || !dateFin) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Sélectionne les dates de début et fin.</span>'; if(btn) btn.disabled = false; return }
+  if (!domaine) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Le domaine est requis.</span>'; if(btn) btn.disabled = false; return }
+
+  msg.innerHTML = '<span style="color:#888">Vérification…</span>'
+  const { data: inscritsActuels, error: errCheck } = await sb.from('inscriptions_stages').select('id').eq('session_id', sessionId)
+  if (errCheck) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+errCheck.message+'</span>'; if(btn) btn.disabled = false; return }
+  if (inscritsActuels && inscritsActuels.length > 0) {
+    msg.innerHTML = '<span style="color:#9E2B25">⚠ Ce stage a désormais '+inscritsActuels.length+' inscrit'+(inscritsActuels.length>1?'s':'')+', modification impossible.</span>'
+    if (btn) btn.disabled = false
+    return
+  }
+
+  msg.innerHTML = '<span style="color:#888">Enregistrement…</span>'
+  const { error } = await sb.from('sessions_stages').update({ periode, domaine, date_debut: dateDebut, date_fin: dateFin, heure }).eq('id', sessionId)
+  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; if(btn) btn.disabled = false; return }
+  msg.innerHTML = '<span style="color:#2F9E5C">✅ Stage modifié !</span>'
+  sessionEnEdition = null
   setTimeout(() => chargerStages(), 800)
 }
 
