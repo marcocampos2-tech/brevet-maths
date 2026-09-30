@@ -115,7 +115,9 @@ $$;
 
 À traiter avant le passage Stripe live :
 
-* **`profils` INSERT — ⚠️ CORRECTION FACTUELLE (03/09/2026)** : ce chantier reposait sur une description erronée de la policy. Ce qui était écrit ici (`with_check: auth.uid()=user_id`, policy ne contrôlant pas `email_parent`) **est faux**. Le dump réel de `pg_policies` donne :
+* ✅ **CLOS (faux positif, vérifié en prod le 14/09/2026) — cf. statut du 30/09/2026 ci-dessus. Le texte qui suit est conservé comme historique de l'erreur du 03/09.**
+
+  **`profils` INSERT — ⚠️ CORRECTION FACTUELLE (03/09/2026)** : ce chantier reposait sur une description erronée de la policy. Ce qui était écrit ici (`with_check: auth.uid()=user_id`, policy ne contrôlant pas `email_parent`) **est faux**. Le dump réel de `pg_policies` donne :
 
   ```
   "Insertion profils" INSERT {public} with_check: (email_parent = (auth.jwt() ->> 'email'))
@@ -155,7 +157,7 @@ Basé sur la lecture du document CGV (fourni en pièce jointe dans une conversat
 
 * ✅ Le portail client Stripe s'affichait en **espagnol** — corrigé : locale forcée à `fr` (`api/stripe-checkout.js:262-265`, action `portal`).
 * Le nom de l'entreprise n'est pas configuré dans Stripe — affiche « XXXXX » sur le portail et les factures.
-* Email de confirmation de résiliation sur support durable (pas juste un message à l'écran) : probablement requis par la loi, pas encore en place — à déclencher depuis le webhook `customer.subscription.deleted` (`api/stripe-webhook.js`).
+* Email de confirmation de résiliation sur support durable (pas juste un message à l'écran ; probablement requis par la loi) : code présent (`api/email.js:1070`, type `resiliation-confirmee`, déclenché depuis `api/stripe-webhook.js`) ; validation en conditions réelles non consignée.
 
 **CGV non finalisées (rédactionnel, pas du code) :**
 
