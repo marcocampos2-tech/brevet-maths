@@ -16,7 +16,8 @@ Fichiers non encore audités, à lire en priorité si pertinent : `resultats.htm
 
 ## Décisions commerciales verrouillées (ne pas remettre en question)
 
-* Grille tarifaire définitive (validée 22/07/2026) : Autonomie 0€ · Suivi 7,90€/mois · Cours visio 30€/h · Cours présentiel 40€/h · Stages vacances 200€/semaine
+* Grille tarifaire définitive (validée 22/07/2026) : Autonomie 0€ · Suivi 7,90€/mois · Cours visio 30€/h · Cours présentiel 40€/h · Stages vacances 20€/h (soit 200€ pour 10h/semaine)
+  * ⚠️ **TEST, pas une décision verrouillée** : le format actuellement affiché pour le stage Toussaint 2026 est 120€ pour 6h, lundi/mercredi/vendredi, 2h/jour (`stages-vacances.html`, PR #90). Il remplace l'offre affichée, il ne coexiste pas avec elle. Si le test est insuffisant, retour à 200€/10h pour les stages suivants.
 * Pas de gratuit croisé sur Suivi
 * Cours présentiel individuel retiré de l'offre publique (conflit avec activité salariée)
 * CM ne travaille jamais le samedi ; présentiel bassin Melun = dimanches uniquement
@@ -110,16 +111,20 @@ $$;
 
 ### Reste ouvert — chantier différé « intégrité des comptes »
 
+**Statut (30/09/2026)** : le volet `profils` INSERT est clos — faux positif, contrôle déjà en place, vérifié en prod le 14/09/2026 par une insertion réelle rejetée (403, `42501`) ; cf. `docs/TODO.md`. Seul `shouldCreateUser: true` reste ouvert. Le premier bullet ci-dessous est conservé comme historique de l'erreur du 03/09.
+
 À traiter avant le passage Stripe live :
 
-* **`profils` INSERT — ⚠️ CORRECTION FACTUELLE (03/09/2026)** : ce chantier reposait sur une description erronée de la policy. Ce qui était écrit ici (`with_check: auth.uid()=user_id`, policy ne contrôlant pas `email_parent`) **est faux**. Le dump réel de `pg_policies` donne :
+* ✅ **CLOS (faux positif, vérifié en prod le 14/09/2026) — cf. statut du 30/09/2026 ci-dessus. Le texte qui suit est conservé comme historique de l'erreur du 03/09.**
+
+  **`profils` INSERT — ⚠️ CORRECTION FACTUELLE (03/09/2026)** : ce chantier reposait sur une description erronée de la policy. Ce qui était écrit ici (`with_check: auth.uid()=user_id`, policy ne contrôlant pas `email_parent`) **est faux**. Le dump réel de `pg_policies` donne :
 
   ```
   "Insertion profils" INSERT {public} with_check: (email_parent = (auth.jwt() ->> 'email'))
   ```
 
   Soit exactement ce que dit le commentaire de `suivi-parent.html` l.905-906 — la policy contrôle bien `email_parent` contre l'email du JWT de la session qui fait l'INSERT, elle ne se contente pas de `auth.uid()=user_id`. **Les conclusions de ce chantier (diagnostic de faille et solution proposée) sont donc à rejouer entièrement** à partir de la policy réelle avant toute action : reste à déterminer si `email_parent = auth.jwt()->>'email'` suffit à couvrir le scénario redouté (session enfant + email arbitraire) ou si un trou subsiste sous une autre forme.
-* **`shouldCreateUser: true`** : dans `espace-parent.html`, l'appel `sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })` (seule occurrence dans le dépôt) permet à n'importe qui de créer un compte Auth sur une adresse email arbitraire. C'est le vecteur d'entrée qui rend exploitable la faille `profils` INSERT ci-dessus — d'où leur regroupement dans ce même chantier.
+* **`shouldCreateUser: true`** : dans `espace-parent.html`, l'appel `sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })` (seule occurrence dans le dépôt) permet à n'importe qui de créer un compte Auth sur une adresse email arbitraire. Était présenté comme le vecteur d'entrée rendant exploitable la faille `profils` INSERT ci-dessus — faille inexistante (cf. statut du 30/09/2026) ; reste un point ouvert en soi (création de comptes Auth sur adresse arbitraire).
 
 ### Reste ouvert — chantier Stripe (idempotency)
 
@@ -134,7 +139,7 @@ $$;
 
 ### Reste hors du périmètre Claude Code (à traiter dans les échanges avec Claude sur claude.ai)
 
-* SIRET toujours en attente (dossier déposé 21/07/2026) — bloque le passage Stripe live, la déclaration SAP, la facturation
+* SIRET obtenu (10786402700019, 24/08/2026) ; la déclaration SAP attend l'ajout de l'activité 85.59B à l'INPI (formalité J00274516137). Statut Stripe live : à confirmer par CM
 * Gating produit (frontière Autonomie/Suivi sur `suivi-parent.html`) — décision produit prise, non codée, dépend de l'étape 3 terminée pour avoir un sens (étape 3 terminée — à coder)
 * Mise à jour rédactionnelle des CGV et relecture juridique avant passage Stripe live (cf. chantier « Conformité CGV et résiliation » ci-dessous)
 * Décisions stratégiques générales, priorisation, calendrier
@@ -150,16 +155,16 @@ Basé sur la lecture du document CGV (fourni en pièce jointe dans une conversat
 
 **Conformité du parcours de résiliation — obligation légale (article L215-1-1 du Code de la consommation, "résiliation en 3 clics") :**
 
-* Le portail client Stripe fonctionne mais s'affiche en **espagnol** — la locale n'est pas forcée dans `billingPortal.sessions.create` (`api/stripe-checkout.js`, action `portal`).
+* ✅ Le portail client Stripe s'affichait en **espagnol** — corrigé : locale forcée à `fr` (`api/stripe-checkout.js:262-265`, action `portal`).
 * Le nom de l'entreprise n'est pas configuré dans Stripe — affiche « XXXXX » sur le portail et les factures.
-* Email de confirmation de résiliation sur support durable (pas juste un message à l'écran) : probablement requis par la loi, pas encore en place — à déclencher depuis le webhook `customer.subscription.deleted` (`api/stripe-webhook.js`).
+* Email de confirmation de résiliation sur support durable (pas juste un message à l'écran ; probablement requis par la loi) : code présent (`api/email.js:1070`, type `resiliation-confirmee`, déclenché depuis `api/stripe-webhook.js`) ; validation en conditions réelles non consignée.
 
 **CGV non finalisées (rédactionnel, pas du code) :**
 
 * Art. C1 contredit l'offre actuelle : dit « présentiel non proposé » alors que les stages vacances et les examens blancs présentiels existent.
 * Art. B2 mentionne une périodicité mensuelle/annuelle alors que l'offre verrouillée (cf. Décisions commerciales verrouillées) est mensuelle uniquement.
 * Tarifs encore en placeholder alors que la grille est verrouillée depuis le 22/07/2026.
-* SIRET et médiateur de la consommation en attente.
+* SIRET obtenu (10786402700019, 24/08/2026) ; la déclaration SAP attend l'ajout de l'activité 85.59B à l'INPI. Médiateur de la consommation toujours en attente.
 
 **Relecture juridique professionnelle requise avant le passage en live** — le document CGV le demande lui-même en préambule.
 
@@ -168,7 +173,7 @@ Basé sur la lecture du document CGV (fourni en pièce jointe dans une conversat
 1. Cases à cocher A1/B4 manquantes (risque financier de remboursement) — cf. chantier CGV ci-dessus.
 2. Conformité du parcours de résiliation (obligation légale) — cf. chantier CGV ci-dessus.
 3. Idempotency Stripe checkout et webhook DB, et lacune `invoice.payment_failed` (C1, C2, C3) — cf. chantier Stripe ci-dessus.
-4. Chantier différé « intégrité des comptes » (`profils` INSERT + `shouldCreateUser`) — cf. section dédiée ci-dessus.
+4. Chantier différé « intégrité des comptes » : volet `profils` INSERT **clos** (faux positif, vérifié en prod le 14/09/2026 — cf. `docs/TODO.md`) ; reste ouvert uniquement `shouldCreateUser: true` (`docs/TODO.md`, section technique n°1) — cf. section dédiée ci-dessus.
 5. Mise à jour rédactionnelle des CGV.
 6. Relecture juridique avant passage Stripe live.
 
