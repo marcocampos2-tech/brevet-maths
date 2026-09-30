@@ -1,4 +1,4 @@
-# TODO consolidé — 09/09/2026
+# TODO consolidé — 30/09/2026
 
 ---
 
@@ -14,7 +14,7 @@ Les parents peuvent désormais voir les résultats de leur enfant (PR #41 mergé
 ## ✅ Refonte `suivi-parent.html` — livrée (PR #43, 07/09/2026)
 
 Indicateur central = niveau atteint par sous-thème (remplace le score brut). Écarts assumés par rapport au plan initial :
-- Dénominateur = liste `SOUS_THEMES` codée en dur (pas de `COUNT` dynamique, lecture publique de `questions_banque` retirée par l'audit sécurité)
+- Dénominateur = liste `SOUS_THEMES` codée en dur (pas de `COUNT` dynamique, lecture publique de `questions_banque` retirée par l'audit sécurité) — ⚠️ contradiction à arbitrer par CM avec « Banque de questions » n°9 (cf. ci-dessous)
 - Pas de module partagé `lib/progression.js` — algorithme de déblocage dupliqué entre `quiz.html` et `suivi-parent.html`
 
 **⚠️ RISQUE ACTIF — duplication `quiz.html`/`suivi-parent.html`** : à contrôler à chaque future modification touchant l'un des deux fichiers (ajout/retrait sous-thème, changement de seuils, logique de déblocage). Aucune erreur, aucun log en cas de divergence — juste un état affiché faux. Ne retirer ce point que si `lib/progression.js` est créé (vérifier d'abord que Vercel sert `/lib/*.js`).
@@ -125,6 +125,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 7. Bloc C dette sur Statistiques — non-répétition inter-niveaux non vérifiée
 8. Mention "figure pas en vraie grandeur" — rétroactivité sous-thèmes basculés avant 27/08, décision ouverte
 9. Dénominateur sous-thèmes possiblement codé en dur — à généraliser en COUNT dynamique
+    ⚠️ **Contradiction à arbitrer par CM (constatée le 30/09/2026, non tranchée)** : ce point traite le `SOUS_THEMES` codé en dur comme une dette à généraliser, alors que l'en-tête « Refonte `suivi-parent.html` » (début du fichier) le présente comme un écart assumé. Écart assumé ou dette ?
 10. `api/generer.js` — "Triangles semblables" absent de `chapitres['Espace et géométrie']`
 11. Refonte `examen_questions` (chantier 2) — jamais entamée, 180 questions non auditées, pas de dédoublonnage par énoncé
 12. Stratification par difficulté inopérante dans `api/examen.js` — tri après `sort(() => Math.random()-0.5)`, tirage aléatoire pur en pratique
@@ -138,17 +139,25 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 ## 🟠 Plateforme Academika — technique
 
+> **Note de numérotation (30/09/2026)** : les numéros 2, 20 et 21 sont absents de cette liste et ne sont volontairement pas réattribués (renvois croisés). Le n°25 renvoie à un « item 20 » (message d'erreur de `sauvegarder()` de `examen.html`) qui n'existe plus dans ce fichier — son contenu exact n'est pas retrouvable ici. Les nouveaux points sont ajoutés à la suite (n°33…).
+
 1. Cybersécurité avant Stripe live : `shouldCreateUser: true` exploitable, idempotency Stripe absente, `invoice.payment_failed` jamais écouté, `alerte_envoyee` sans NOT NULL, UTC vs Europe/Paris sur bilan périodique
 
    `/api/email` : l'endpoint `reset-password` n'a aucune vérification d'authentification, de CSRF ni d'origine, avec CORS ouvert à `*` (constaté 15/09/2026). Le rate-limiting limite les dégâts (3 min par enfant via `derniere_demande_reset`, 10/h par adresse via `email_rate_limit`) et l'anti-énumération est correctement implémenté (réponse uniforme même en cas d'erreur). Risque = nuisance (déclenchement d'emails vers des adresses de parents inscrits), pas compromission. À arbitrer avec le reste de l'audit.
-3. Email récap parent ne distingue pas abandon vs quiz terminé à 0% — colonne `abandonne` absente de `resultats`
+3. ✅ **Fermé pour le récap journalier (30/09/2026)** — « récap parent ne distingue pas abandon vs quiz à 0% — colonne `abandonne` absente de `resultats` » : périmé. La colonne existe (écrite par `api/quiz-resultat.js:44` et `:149`, introduite le 16/09, commit `c022160`). `api/email.js:791` la sélectionne ; `api/email.js:838-841` exclut les abandons de la moyenne, des badges par sous-thème et du nombre de sessions annoncé, et court-circuite l'envoi s'il ne reste aucune session réelle (l'abandon n'est donc plus un 0/5 mais est ignoré, pas affiché distinctement).
+
+    **Reliquat** : voir le point ouvert distinct n°34 ci-dessous.
 4. Double email inscription brevet blanc présentiel — jamais vérifié résolu depuis 08/06
 5. Erreurs SVG `NaN` dans l'examen blanc — cosmétique
 6. Déconnexion lente — piste : `logout()` attend fin d'appels réseau
 7. Chevauchement contenu email récap si plusieurs sessions le même jour — mineur
 8. Fuseaux horaires — recensé le 17/09/2026, aucun bug actif, deux points de fragilité. (a) Les conversions serveur vers la date Paris sont correctes (`api/cron-rappel.js:86`, `api/email.js:764` et `774`, `api/stripe-webhook.js:247` utilisent toutes `timeZone: 'Europe/Paris'`), mais elles reposent implicitement sur le fait que Vercel tourne en UTC : `new Date()` sur un timestamp naïf de `resultats` l'interprète comme heure locale du serveur. Juste aujourd'hui, silencieusement faux si le fuseau du runtime changeait — hypothèse à documenter, pas à corriger. (b) `suivi-parent.html` (lignes 728, 866, 973) regroupe les sessions par jour selon le fuseau du NAVIGATEUR du parent (`dateLocaleISO`), pas selon Paris : identique pour un parent en France, découpage des journées différent de l'email reçu pour un parent à l'étranger. Cas limite jamais rencontré, correction non prioritaire.
 9. Warning console — meta tag `apple-mobile-web-app-capable` déprécié
-10. Stages "Réserver une place" — formulaire réel et fonctionnel (`stages-vacances.html` + `api/inscription-stage.js` : gestion des sessions/places, anti-doublon, emails de confirmation/refus/annulation), pas un mailto. RLS durcie le 26/09/2026 sur `sessions_stages`/`inscriptions_stages` — plus aucun point ouvert sur ce chantier côté sécurité.
+10. Stages "Réserver une place" — formulaire réel et fonctionnel (`stages-vacances.html` + `api/inscription-stage.js` : gestion des sessions/places, anti-doublon, emails de confirmation/refus/annulation), pas un mailto. RLS durcie le 26/09/2026 sur `sessions_stages`/`inscriptions_stages` — aucun point de sécurité connu ouvert sur ce chantier, sous réserve de la vérification ci-dessous.
+
+    **Mises à jour 27/09/2026** : PR #89 (`stages-vacances.html` : sous-thèmes abordés, par domaine, sous chaque carte de session) ; PR #90 (`stages-vacances.html` : nouveau tarif et rythme, 120 € pour 6 h, lundi/mercredi/vendredi — format de TEST, cf. `CLAUDE.md`, décisions commerciales) ; PR #91 (`prof.html` : édition d'une session de stage sans inscrit).
+
+    **⚠️ À vérifier (30/09/2026)** : le durcissement RLS du 26/09 n'est pas reflété dans `db/policies.sql` — aucune policy sur `sessions_stages` ni `inscriptions_stages` n'y figure. Reste à vérifier par dump `pg_policies`, puis à versionner dans `db/policies.sql`.
 11. Distinction gratuit/abonnement — gating email fait, dashboard/PDF/examen blanc à construire
 12. Espace parent persistant (option B) — en attente depuis 24/07, sans date
 13. `is_prof()` sans `search_path` figé — exposition faible, à aligner au passage
@@ -184,7 +193,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
     À ne pas refaire en reprenant ce point : le diagnostic a déjà établi que le code source sur `main` est correct et que le diff des deux PR (#78, deux commits) est conforme à ce qui était voulu. Le problème est côté déploiement/cache, pas côté code.
 25. **Aucun échec de `sauvegarder()` (`examen.html`) n'est remonté côté serveur** — constaté le 20/09/2026 en corrigeant le message d'erreur affiché à l'élève (item 20). Le `console.error` en cas d'échec meurt dans le navigateur de l'élève ; tant qu'il n'y a pas de trafic, personne ne le voit. Le jour où il y aura du trafic, un échec sera découvert par un parent mécontent, pas par le prof. À cadrer séparément (remontée serveur, alerte prof, ou autre mécanisme).
-26. **Libellés de domaines tronqués dans `renderResultats()` (`examen.html:522`)** — `theme.split(' ')[0]` coupe au premier espace, laissant une virgule parasite sur les domaines multi-mots (« Organisation, », « Grandeurs, »). Antérieur aux PR #81/#82, découvert en cours de chantier reprise de session (21/09/2026), non traité ici. Idée à valider : libellé court explicite par domaine, ou retrait de la ponctuation finale.
+26. **Libellés de domaines tronqués dans `renderResultats()` (`examen.html:686`)** — `theme.split(' ')[0]` coupe au premier espace, laissant une virgule parasite sur les domaines multi-mots (« Organisation, », « Grandeurs, »). Antérieur aux PR #81/#82, découvert en cours de chantier reprise de session (21/09/2026), non traité ici. Idée à valider : libellé court explicite par domaine, ou retrait de la ponctuation finale.
 27. ✅ **Fermé (23/09/2026, lot « endpoints sans identité vérifiée »)** : confirmé — `api/quiz-resultat.js` faisait bien confiance au `user_id` du body, sans aucune vérification de jeton, même angle mort que `enregistrer` de `api/examen.js` avant son propre correctif. Corrigé : `verifierToken` (Supabase `/auth/v1/user`) extrait en commun dans `lib/auth-token.js` (utilisé par `api/examen.js`, qui avait sa propre copie locale, par `api/quiz-resultat.js` et par `api/email.js`) — `user_id` du body ignoré au profit de celui du jeton, 403 si divergence, 401 si jeton absent/invalide, avant toute lecture en base. Le même audit a révélé un oracle équivalent sur `api/email.js` (`recap-journalier-user`, appelé sans authentification depuis `quiz.html` — `logout()`/`terminer()`) : fermé dans le même lot (double accès accepté — secret `CRON_SECRET` ou jeton utilisateur dont l'identité correspond au `user_id` demandé — 401 sinon, avant toute lecture de `profils`, ce qui ferme aussi l'oracle "profil introuvable"/"déjà envoyé"/"aucune session").
 
     **Reporté** : l'intégrité du **score** reste falsifiable — le "recalcul serveur" de `api/quiz-resultat.js` compare `reponses` à `questions[i].answer`, tous deux fournis par le client dans la même requête, donc pas une vérité serveur indépendante. Non traité dans ce lot : une vérité serveur par `id` de question n'est possible aujourd'hui que pour `source_questions==='banque'` — impossible pour `source_questions==='ia'` (questions générées à la volée, jamais persistées). À reprendre une fois le chemin IA supprimé en fin de refonte de la banque de questions (socle 540 puis 1080).
@@ -204,15 +213,19 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     4. **Le message « ✅ Session réussie ! » (`prog-msg`, ligne ~1020/1026/1028) s'affiche même quand le résultat n'est pas enregistré** (cas `'definitif'`) — puisque `progMsg` est construit indépendamment du statut de `sauvegarder()`, sur le seul score local (`pct >= SEUIL_PCT`). À rendre neutre (ou conditionner à un enregistrement réussi) dans ce cas, pour ne pas contredire le bandeau `❌ Résultat non enregistré` juste au-dessus.
     5. **Titre trompeur `Progression — ${themeCourt}` (ligne ~1063)** : le thème entier est affiché en titre, alors que les compteurs de la section (`ligneMoyen`/`ligneDifficile`, sessions `SEUIL_SESSIONS`) sont en réalité comptés **par sous-thème**, pas par thème — un élève ayant progressé sur un sous-thème du thème peut lire un titre qui laisse croire à une progression sur le thème entier.
 
+33. **Définition de `is_prof()` non versionnée dans `db/policies.sql`** — constaté le 30/09/2026 : le fichier n'appelle la fonction que dans les policies (`is_prof()`), sans jamais la définir. La version en base (celle d'`app_metadata.role`, cf. `CLAUDE.md`) n'est donc pas reproductible depuis le dépôt. À relever par dump de la définition réelle, puis à versionner (à traiter avec le n°13, `search_path` figé).
+
+34. **Bilan périodique 21 jours : les abandons de quiz sont comptés comme des sessions à 0/5** — constaté le 30/09/2026 en fermant le n°3. `api/cron-rappel.js:295-297` lit `resultats` avec `select=score,total,sous_theme,difficulte,created_at` sans `abandonne` : aucun filtre, contrairement au récap journalier (`api/email.js:838-841`). Fausse à la baisse la moyenne et les compteurs de sessions du bilan. À traiter avec le chantier « aligner `cron-rappel.js` sur la logique niveau » (section 🟠 de tête), qui en héberge déjà la conception.
+
 ---
 
 ## 🟡 Plateforme Academika — légal
 
 1. CGV — case à cocher Art. A1/B4 manquantes ; contenu à corriger (Art. C1, B2, placeholders tarifs)
-2. Conformité résiliation "3 clics" — statut contradictoire entre CLAUDE.md et historique du 12/08, à vérifier
+2. Conformité résiliation "3 clics" — ✅ bug du portail en espagnol corrigé (locale forcée à `fr`, `api/stripe-checkout.js:262-265`, constaté le 30/09/2026). **Reste ouvert** : (a) nom d'entreprise non configuré dans Stripe (« XXXXX » sur le portail et les factures) ; (b) email de résiliation sur support durable — le code existe (`api/email.js:1070`, type `resiliation-confirmee`, déclenché depuis `api/stripe-webhook.js`), mais sa validation en conditions réelles n'est pas consignée ici.
 3. Politique de confidentialité — page inexistante
 4. Consultation juridique — jamais initiée, bloque CGV et flyers
-5. SIRET/SAP — SIRET obtenu, dossier INPI déposé, en attente INSEE/URSSAF
+5. SIRET/SAP — SIRET obtenu (10786402700019) depuis le 24/08/2026. Seul le dossier INPI d'ajout de l'activité 85.59B (formalité J00274516137) reste en attente de l'INSEE/URSSAF.
 6. Bandeau cookies — pas nécessaire aujourd'hui, deviendra obligatoire si Meta Ads activé
 7. RGPD rétention comptes élèves — politique définie, à vérifier documentation mentions légales
 
@@ -224,7 +237,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 2. SEO Phase 7bis — pages statiques indexables par sous-thème, analysé non implémenté
 3. Design system unifié — plan validé, jamais exécuté
 4. Refonte design de `suivi-parent.html` — envisagée le 15/09/2026, pas encore cadrée. Contrainte à respecter : le bloc "Examens blancs" (ajouté le 16/09/2026, `chargerExamensBlancs()` + `#zone-examens`) doit être conservé — il expose une donnée qui n'est visible nulle part ailleurs pour le parent. Sa présentation peut évoluer, son existence non. Autre point déjà identifié : le bouton "+ Ajouter un enfant" est une action de contenu placée dans la barre de navigation, à déplacer probablement dans la page ; noter qu'un compte parent sans aucun enfant masque déjà ce bouton et affiche une action dédiée dans l'état vide.
-4. Extension site dédié 4ème/2nde — non tranchée
+4 bis. Extension site dédié 4ème/2nde — non tranchée
 5. URL trackée dédiée flyer (`/flyer`) — à faire, complémentaire au champ source déclaratif
 6. Constat concret pendant le chantier captures produit (09-13/09) : `index.html`/`tarifs.html` partagent `style.css`, `espace-parent.html` a son propre `<style>` local avec des noms de variables différents pour les mêmes couleurs (`--navy`/`--bordeaux` vs `--marine`/`--bordeaux`, etc.) — a nécessité une duplication de `.produit-shot`/`.section-label` avant qu'on ne retire finalement tout ce contenu d'`espace-parent.html`. Illustration concrète du point 3 ci-dessus.
 7. **Pondération non expliquée du "Tableau comparatif — tous les élèves" (`prof.html`)** — le pourcentage global est pondéré par le nombre de questions (`sum(score)/sum(total)` sur `resultats`), pas une moyenne des colonnes de thèmes. Vérifié le 17/09/2026 : 50/275 = 18,2 %, chiffre exact, alors que les colonnes affichent 11/16/40/47 % — l'écart vient d'un thème pesant 175 des 275 questions. Rien à corriger côté calcul. Mais rien n'explique cette pondération dans l'interface : un élève travaillant intensément un thème faible verra son global baisser pendant que ses colonnes progressent, et un parent lira l'écart comme une incohérence. Une légende d'une ligne suffirait — décision produit, pas technique, non tranchée.
