@@ -323,13 +323,31 @@ const emoji    = p => p >= 70 ? '🟢' : p >= 50 ? '🟡' : '🔴'
 const fmt      = (m, s) => m+'min '+s+'s'
 const fmtTemps = s => { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60); return h ? h+'h '+m+'min' : m+' min' }
 const dateStr  = d => new Date(d).toLocaleDateString('fr-FR')
+const dateSessionAff = s => new Date(s.date_session + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
 const initiales = (prenom, nom) => ((prenom||'?')[0] + (nom||'')[0]).toUpperCase()
 const origineLabel = s => ({ flyer: 'Flyer / affiche', ami: 'Bouche à oreille', internet: 'Recherche internet', reseaux: 'Réseaux sociaux', autre: 'Autre' })[s] || '—'
 
 // Échappe une chaîne pour une insertion sûre à l'intérieur d'un attribut onclick="...('...')"
 // (protège contre les apostrophes dans les prénoms/noms composés : D'Angelo, N'Diaye...)
+// ⚠️ Échappement JS uniquement : ne protège PAS le HTML. Pour une valeur insérée
+// dans le HTML, utiliser escHtml(). Pour un argument de onclick, escAttrJs().
 function esc(s) {
   return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+// Échappement HTML : à appliquer à toute valeur issue de la base avant insertion dans
+// innerHTML, une chaîne HTML concaténée ou un attribut (corps, value="…", src="…").
+function escHtml(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
+// Identifiant (UUID) passé en argument d'un onclick="f('…')" : échappement JS puis HTML
+// (le navigateur décode l'attribut avant d'évaluer le JS). Jamais de texte libre ici :
+// les fonctions appelées retrouvent l'objet dans les données déjà chargées.
+function escAttrJs(v) {
+  return escHtml(esc(v))
 }
 
 function getStatut(p) {
@@ -402,8 +420,8 @@ async function chargerInscriptions() {
     sb.from('sessions_examen_blanc').select('*').order('date_session', { ascending: true }),
     sb.from('inscriptions_brevet').select('*').order('created_at', { ascending: true })
   ])
-  if (rSessions.error) { el.innerHTML = '<div class="empty">Erreur : '+rSessions.error.message+'</div>'; return }
-  if (rInscriptions.error) { el.innerHTML = '<div class="empty">Erreur : '+rInscriptions.error.message+'</div>'; return }
+  if (rSessions.error) { el.innerHTML = '<div class="empty">Erreur : '+escHtml(rSessions.error.message)+'</div>'; return }
+  if (rInscriptions.error) { el.innerHTML = '<div class="empty">Erreur : '+escHtml(rInscriptions.error.message)+'</div>'; return }
 
   SESSIONS = rSessions.data || []
   INSCRIPTIONS = rInscriptions.data || []
@@ -452,11 +470,11 @@ async function chargerInscriptions() {
     html += '<div class="card" style="margin-bottom:1rem">'
     html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
     html += '<div>'
-    html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">📅 '+dateAffichee+' · '+s.heure+'</div>'
+    html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">📅 '+dateAffichee+' · '+escHtml(s.heure)+'</div>'
     html += '<div class="places-bar-wrap" style="margin-top:8px;width:180px"><div class="places-bar-fill '+fillClass+'" style="width:'+Math.min(pctPlaces,100)+'%"></div></div>'
-    html += '<div style="font-size:12px;color:var(--muted);margin-top:4px">'+nb+' / '+s.max_places+' places — '+(s.max_places-nb)+' disponibles</div>'
+    html += '<div style="font-size:12px;color:var(--muted);margin-top:4px">'+nb+' / '+escHtml(s.max_places)+' places — '+(s.max_places-nb)+' disponibles</div>'
     html += '</div>'
-    html += '<button class="btn btn-sm btn-red" onclick="annulerSession(\''+esc(s.id)+'\',\''+esc(dateAffichee)+'\','+nb+')">🗑 Annuler la session</button>'
+    html += '<button class="btn btn-sm btn-red" onclick="annulerSession(\''+escAttrJs(s.id)+'\')">🗑 Annuler la session</button>'
     html += '</div>'
 
     if (!inscrits.length) {
@@ -471,31 +489,31 @@ async function chargerInscriptions() {
         html += '<div class="inscrit-card '+cardClass+'">'
         html += '<div class="inscrit-header">'
         html += '<div>'
-        html += '<div class="inscrit-name">'+i.prenom+' '+i.nom+'</div>'
-        html += '<div class="inscrit-info">📧 '+i.email_parent+(i.telephone?' · 📞 '+i.telephone:'')+'</div>'
+        html += '<div class="inscrit-name">'+escHtml(i.prenom)+' '+escHtml(i.nom)+'</div>'
+        html += '<div class="inscrit-info">📧 '+escHtml(i.email_parent)+(i.telephone?' · 📞 '+escHtml(i.telephone):'')+'</div>'
         html += '<div class="inscrit-info">Inscrit le '+dateInscription+'</div>'
         html += '</div>'
         html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
         if (isConfirme) html += '<span class="badge badge-tb">✅ Confirmé</span>'
         else html += '<span class="badge badge-ab">⏳ En attente</span>'
-        if (hasNote) html += '<span class="badge badge-blue">📝 Note : '+i.note+'/20</span>'
+        if (hasNote) html += '<span class="badge badge-blue">📝 Note : '+escHtml(i.note)+'/20</span>'
         if (i.resultats_envoyes) html += '<span class="badge badge-tb">📤 Résultats envoyés</span>'
         html += '</div>'
         html += '</div>'
 
         html += '<div class="inscrit-actions">'
         if (!isConfirme) {
-          html += '<button class="btn btn-sm btn-green" onclick="confirmerEtEnvoyerAdresse(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\',\''+esc(s.heure)+'\')">✅ Confirmer + adresse</button>'
-          html += '<button class="btn btn-sm btn-red" onclick="refuserInscription(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">❌ Refuser</button>'
+          html += '<button class="btn btn-sm btn-green" onclick="confirmerEtEnvoyerAdresse(\''+escAttrJs(i.id)+'\')">✅ Confirmer + adresse</button>'
+          html += '<button class="btn btn-sm btn-red" onclick="refuserInscription(\''+escAttrJs(i.id)+'\')">❌ Refuser</button>'
         }
         if (isConfirme && !hasNote) {
-          html += '<button class="btn btn-sm btn-amber" onclick="ouvrirNote(\''+esc(i.id)+'\',\''+esc(i.prenom+' '+i.nom)+'\')">📝 Saisir note</button>'
+          html += '<button class="btn btn-sm btn-amber" onclick="ouvrirNote(\''+escAttrJs(i.id)+'\')">📝 Saisir note</button>'
         }
         if (isConfirme && hasNote && !i.resultats_envoyes) {
-          html += '<button class="btn btn-sm btn-green" onclick="envoyerResultats(\''+esc(i.id)+'\')">📤 Envoyer résultats</button>'
+          html += '<button class="btn btn-sm btn-green" onclick="envoyerResultats(\''+escAttrJs(i.id)+'\')">📤 Envoyer résultats</button>'
         }
         if (isConfirme && !i.resultats_envoyes) {
-          html += '<button class="btn btn-sm btn-red" onclick="supprimerAvecEmail(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\',\''+esc(dateAffichee)+'\')">❌ Annuler</button>'
+          html += '<button class="btn btn-sm btn-red" onclick="supprimerAvecEmail(\''+escAttrJs(i.id)+'\')">❌ Annuler</button>'
         }
         html += '</div>'
         html += '</div>'
@@ -520,7 +538,7 @@ async function chargerInscriptions() {
         const dateAffichee = new Date(s.date_session + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
         const statutLabel = s.annulee ? '<span class="badge badge-insuf">Annulée</span>' : '<span class="badge badge-admis">Terminée</span>'
         html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #F3F1EA;font-size:13px">'
-        html += '<span>📅 '+dateAffichee+' · '+s.heure+' — '+inscrits.length+' inscrit'+(inscrits.length>1?'s':'')+'</span>'
+        html += '<span>📅 '+dateAffichee+' · '+escHtml(s.heure)+' — '+inscrits.length+' inscrit'+(inscrits.length>1?'s':'')+'</span>'
         html += statutLabel
         html += '</div>'
       })
@@ -547,12 +565,17 @@ async function creerSession() {
   if (!date) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Sélectionne une date.</span>'; return }
   msg.innerHTML = '<span style="color:#888">Création…</span>'
   const { error } = await sb.from('sessions_examen_blanc').insert({ date_session: date, heure })
-  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; return }
+  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+escHtml(error.message)+'</span>'; return }
   msg.innerHTML = '<span style="color:#2F9E5C">✅ Session créée !</span>'
   setTimeout(() => chargerInscriptions(), 800)
 }
 
-async function annulerSession(sessionId, dateAffichee, nbInscrits) {
+async function annulerSession(sessionId) {
+  // Date et nombre d'inscrits relus dans les données chargées (plus d'argument texte).
+  const session = SESSIONS.find(s => String(s.id) === String(sessionId))
+  if (!session) { alert('Session introuvable — recharge la page.'); return }
+  const dateAffichee = dateSessionAff(session)
+  const nbInscrits = INSCRIPTIONS.filter(i => i.session_id === session.id).length
   if (nbInscrits > 0) {
     if (!confirm('Il y a '+nbInscrits+' inscrit'+(nbInscrits>1?'s':'')+' sur la session du '+dateAffichee+'. Annuler quand même ? Un email sera envoyé à chaque inscrit.')) return
   } else {
@@ -603,8 +626,8 @@ async function chargerStages() {
     sb.from('sessions_stages').select('*').order('date_debut', { ascending: true }),
     sb.from('inscriptions_stages').select('*').order('created_at', { ascending: true })
   ])
-  if (rSessions.error) { el.innerHTML = '<div class="empty">Erreur : '+rSessions.error.message+'</div>'; return }
-  if (rInscriptions.error) { el.innerHTML = '<div class="empty">Erreur : '+rInscriptions.error.message+'</div>'; return }
+  if (rSessions.error) { el.innerHTML = '<div class="empty">Erreur : '+escHtml(rSessions.error.message)+'</div>'; return }
+  if (rInscriptions.error) { el.innerHTML = '<div class="empty">Erreur : '+escHtml(rInscriptions.error.message)+'</div>'; return }
 
   SESSIONS_STAGES = rSessions.data || []
   INSCRIPTIONS_STAGES = rInscriptions.data || []
@@ -656,29 +679,29 @@ async function chargerStages() {
     if (sessionEnEdition === s.id) {
       html += '<div class="card-title" style="margin-bottom:12px">✏️ Modifier le stage</div>'
       html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">'
-      html += '<div class="field" style="margin-bottom:0"><label>Période</label><select id="edit-stage-periode-'+s.id+'">'
+      html += '<div class="field" style="margin-bottom:0"><label>Période</label><select id="edit-stage-periode-'+escHtml(s.id)+'">'
       html += Object.keys(DOMAINES_PAR_PERIODE).map(p => '<option value="'+p+'"'+(p===s.periode?' selected':'')+'>'+p+'</option>').join('')
       html += '</select></div>'
-      html += '<div class="field" style="margin-bottom:0"><label>Domaine</label><input type="text" id="edit-stage-domaine-'+s.id+'" value="'+esc(s.domaine).replace(/"/g,'&quot;')+'"></div>'
+      html += '<div class="field" style="margin-bottom:0"><label>Domaine</label><input type="text" id="edit-stage-domaine-'+escHtml(s.id)+'" value="'+escHtml(s.domaine)+'"></div>'
       html += '</div>'
       html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:10px">'
-      html += '<div class="field" style="margin-bottom:0"><label>Date début</label><input type="date" id="edit-stage-date-debut-'+s.id+'" value="'+esc(s.date_debut).replace(/"/g,'&quot;')+'"></div>'
-      html += '<div class="field" style="margin-bottom:0"><label>Date fin</label><input type="date" id="edit-stage-date-fin-'+s.id+'" value="'+esc(s.date_fin).replace(/"/g,'&quot;')+'"></div>'
-      html += '<div class="field" style="margin-bottom:0"><label>Heure</label><input type="text" id="edit-stage-heure-'+s.id+'" value="'+esc(s.heure).replace(/"/g,'&quot;')+'"></div>'
+      html += '<div class="field" style="margin-bottom:0"><label>Date début</label><input type="date" id="edit-stage-date-debut-'+escHtml(s.id)+'" value="'+escHtml(s.date_debut)+'"></div>'
+      html += '<div class="field" style="margin-bottom:0"><label>Date fin</label><input type="date" id="edit-stage-date-fin-'+escHtml(s.id)+'" value="'+escHtml(s.date_fin)+'"></div>'
+      html += '<div class="field" style="margin-bottom:0"><label>Heure</label><input type="text" id="edit-stage-heure-'+escHtml(s.id)+'" value="'+escHtml(s.heure)+'"></div>'
       html += '</div>'
-      html += '<button class="btn btn-green" onclick="enregistrerModificationStage(\''+esc(s.id)+'\')">Enregistrer</button> '
+      html += '<button class="btn btn-green" onclick="enregistrerModificationStage(\''+escAttrJs(s.id)+'\')">Enregistrer</button> '
       html += '<button class="btn" onclick="annulerEditionStage()">Annuler</button>'
-      html += '<div id="stage-edition-msg-'+s.id+'" style="margin-top:10px;font-size:13px"></div>'
+      html += '<div id="stage-edition-msg-'+escHtml(s.id)+'" style="margin-top:10px;font-size:13px"></div>'
     } else {
       html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
       html += '<div>'
-      html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">🎒 '+s.periode+' — '+s.domaine+'</div>'
-      html += '<div style="font-size:12px;color:var(--muted);margin-top:2px">Du '+dateDebutAff+' au '+dateFinAff+' · '+s.heure+'</div>'
+      html += '<div style="font-size:14px;font-weight:700;color:var(--blue)">🎒 '+escHtml(s.periode)+' — '+escHtml(s.domaine)+'</div>'
+      html += '<div style="font-size:12px;color:var(--muted);margin-top:2px">Du '+dateDebutAff+' au '+dateFinAff+' · '+escHtml(s.heure)+'</div>'
       html += '<div class="places-bar-wrap" style="margin-top:8px;width:180px"><div class="places-bar-fill '+fillClass+'" style="width:'+Math.min(pctPlaces,100)+'%"></div></div>'
-      html += '<div style="font-size:12px;color:var(--muted);margin-top:4px">'+nb+' / '+s.max_places+' places — '+(s.max_places-nb)+' disponibles</div>'
+      html += '<div style="font-size:12px;color:var(--muted);margin-top:4px">'+nb+' / '+escHtml(s.max_places)+' places — '+(s.max_places-nb)+' disponibles</div>'
       html += '</div>'
-      html += nb === 0 ? '<button class="btn btn-sm" onclick="modifierSessionStage(\''+esc(s.id)+'\')" style="margin-right:6px">✏️ Modifier</button>' : ''
-      html += '<button class="btn btn-sm btn-red" onclick="annulerSessionStage(\''+esc(s.id)+'\',\''+esc(s.periode)+' — '+esc(s.domaine)+'\','+nb+')">🗑 Annuler le stage</button>'
+      html += nb === 0 ? '<button class="btn btn-sm" onclick="modifierSessionStage(\''+escAttrJs(s.id)+'\')" style="margin-right:6px">✏️ Modifier</button>' : ''
+      html += '<button class="btn btn-sm btn-red" onclick="annulerSessionStage(\''+escAttrJs(s.id)+'\')">🗑 Annuler le stage</button>'
       html += '</div>'
 
       if (!inscrits.length) {
@@ -692,8 +715,8 @@ async function chargerStages() {
           html += '<div class="inscrit-card '+cardClass+'">'
           html += '<div class="inscrit-header">'
           html += '<div>'
-          html += '<div class="inscrit-name">'+i.prenom+' '+i.nom+'</div>'
-          html += '<div class="inscrit-info">📧 '+i.email_parent+(i.telephone?' · 📞 '+i.telephone:'')+'</div>'
+          html += '<div class="inscrit-name">'+escHtml(i.prenom)+' '+escHtml(i.nom)+'</div>'
+          html += '<div class="inscrit-info">📧 '+escHtml(i.email_parent)+(i.telephone?' · 📞 '+escHtml(i.telephone):'')+'</div>'
           html += '<div class="inscrit-info">Inscrit le '+dateInscription+'</div>'
           html += '</div>'
           html += '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">'
@@ -704,10 +727,10 @@ async function chargerStages() {
 
           html += '<div class="inscrit-actions">'
           if (!isConfirme) {
-            html += '<button class="btn btn-sm btn-green" onclick="confirmerInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">✅ Confirmer</button>'
-            html += '<button class="btn btn-sm btn-red" onclick="refuserInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">❌ Refuser</button>'
+            html += '<button class="btn btn-sm btn-green" onclick="confirmerInscriptionStage(\''+escAttrJs(i.id)+'\')">✅ Confirmer</button>'
+            html += '<button class="btn btn-sm btn-red" onclick="refuserInscriptionStage(\''+escAttrJs(i.id)+'\')">❌ Refuser</button>'
           } else {
-            html += '<button class="btn btn-sm btn-red" onclick="annulerInscriptionStage(\''+esc(i.id)+'\',\''+esc(i.prenom)+'\',\''+esc(i.nom)+'\',\''+esc(i.email_parent)+'\')">❌ Annuler l\'inscription</button>'
+            html += '<button class="btn btn-sm btn-red" onclick="annulerInscriptionStage(\''+escAttrJs(i.id)+'\')">❌ Annuler l\'inscription</button>'
           }
           html += '</div>'
           html += '</div>'
@@ -732,7 +755,7 @@ async function chargerStages() {
         const dateDebutAff = new Date(s.date_debut + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
         const statutLabel = s.annulee ? '<span class="badge badge-insuf">Annulé</span>' : '<span class="badge badge-admis">Terminé</span>'
         html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #F3F1EA;font-size:13px">'
-        html += '<span>🎒 '+s.periode+' — '+s.domaine+' · '+dateDebutAff+' — '+inscrits.length+' inscrit'+(inscrits.length>1?'s':'')+'</span>'
+        html += '<span>🎒 '+escHtml(s.periode)+' — '+escHtml(s.domaine)+' · '+dateDebutAff+' — '+inscrits.length+' inscrit'+(inscrits.length>1?'s':'')+'</span>'
         html += statutLabel
         html += '</div>'
       })
@@ -778,7 +801,7 @@ async function creerSessionStage() {
   if (!domaine) { msg.innerHTML = '<span style="color:#9E2B25">⚠ Le domaine est requis.</span>'; if(btn) btn.disabled = false; return }
   msg.innerHTML = '<span style="color:#888">Création…</span>'
   const { error } = await sb.from('sessions_stages').insert({ periode, domaine, date_debut: dateDebut, date_fin: dateFin, heure })
-  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; if(btn) btn.disabled = false; return }
+  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+escHtml(error.message)+'</span>'; if(btn) btn.disabled = false; return }
   msg.innerHTML = '<span style="color:#2F9E5C">✅ Stage créé !</span>'
   setTimeout(() => chargerStages(), 800)
 }
@@ -798,7 +821,7 @@ async function enregistrerModificationStage(sessionId) {
 
   msg.innerHTML = '<span style="color:#888">Vérification…</span>'
   const { data: inscritsActuels, error: errCheck } = await sb.from('inscriptions_stages').select('id').eq('session_id', sessionId)
-  if (errCheck) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+errCheck.message+'</span>'; if(btn) btn.disabled = false; return }
+  if (errCheck) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+escHtml(errCheck.message)+'</span>'; if(btn) btn.disabled = false; return }
   if (inscritsActuels && inscritsActuels.length > 0) {
     msg.innerHTML = '<span style="color:#9E2B25">⚠ Ce stage a désormais '+inscritsActuels.length+' inscrit'+(inscritsActuels.length>1?'s':'')+', modification impossible.</span>'
     if (btn) btn.disabled = false
@@ -807,15 +830,17 @@ async function enregistrerModificationStage(sessionId) {
 
   msg.innerHTML = '<span style="color:#888">Enregistrement…</span>'
   const { error } = await sb.from('sessions_stages').update({ periode, domaine, date_debut: dateDebut, date_fin: dateFin, heure }).eq('id', sessionId)
-  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; if(btn) btn.disabled = false; return }
+  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+escHtml(error.message)+'</span>'; if(btn) btn.disabled = false; return }
   msg.innerHTML = '<span style="color:#2F9E5C">✅ Stage modifié !</span>'
   sessionEnEdition = null
   setTimeout(() => chargerStages(), 800)
 }
 
-async function confirmerInscriptionStage(id, prenom, nom, emailParent) {
+async function confirmerInscriptionStage(id) {
+  const inscrit = INSCRIPTIONS_STAGES.find(i => String(i.id) === String(id))
+  if (!inscrit) { alert('Inscription introuvable — recharge la page.'); return }
+  const { prenom, nom, email_parent: emailParent } = inscrit
   if (!confirm('Confirmer l\'inscription de '+prenom+' au stage ?')) return
-  const inscrit = INSCRIPTIONS_STAGES.find(i => i.id === id)
   const session = SESSIONS_STAGES.find(s => s.id === inscrit?.session_id)
   const libelle = session ? (session.periode+' — '+session.domaine) : 'stage'
   const { error } = await sb.from('inscriptions_stages').update({ confirme: true }).eq('id', id)
@@ -826,9 +851,11 @@ async function confirmerInscriptionStage(id, prenom, nom, emailParent) {
   chargerStages()
 }
 
-async function refuserInscriptionStage(id, prenom, nom, emailParent) {
+async function refuserInscriptionStage(id) {
+  const inscrit = INSCRIPTIONS_STAGES.find(i => String(i.id) === String(id))
+  if (!inscrit) { alert('Inscription introuvable — recharge la page.'); return }
+  const { prenom, nom, email_parent: emailParent } = inscrit
   if (!confirm('Refuser l\'inscription de '+prenom+' ?')) return
-  const inscrit = INSCRIPTIONS_STAGES.find(i => i.id === id)
   const session = SESSIONS_STAGES.find(s => s.id === inscrit?.session_id)
   const libelle = session ? (session.periode+' — '+session.domaine) : 'stage'
   try {
@@ -839,9 +866,11 @@ async function refuserInscriptionStage(id, prenom, nom, emailParent) {
   chargerStages()
 }
 
-async function annulerInscriptionStage(id, prenom, nom, emailParent) {
+async function annulerInscriptionStage(id) {
+  const inscrit = INSCRIPTIONS_STAGES.find(i => String(i.id) === String(id))
+  if (!inscrit) { alert('Inscription introuvable — recharge la page.'); return }
+  const { prenom, nom, email_parent: emailParent } = inscrit
   if (!confirm('Annuler l\'inscription confirmée de '+prenom+' ?')) return
-  const inscrit = INSCRIPTIONS_STAGES.find(i => i.id === id)
   const session = SESSIONS_STAGES.find(s => s.id === inscrit?.session_id)
   const libelle = session ? (session.periode+' — '+session.domaine) : 'stage'
   try {
@@ -852,7 +881,12 @@ async function annulerInscriptionStage(id, prenom, nom, emailParent) {
   chargerStages()
 }
 
-async function annulerSessionStage(sessionId, libelle, nbInscrits) {
+async function annulerSessionStage(sessionId) {
+  // Libellé et nombre d'inscrits relus dans les données chargées (plus d'argument texte).
+  const sessionStage = SESSIONS_STAGES.find(s => String(s.id) === String(sessionId))
+  if (!sessionStage) { alert('Stage introuvable — recharge la page.'); return }
+  const libelle = sessionStage.periode+' — '+sessionStage.domaine
+  const nbInscrits = INSCRIPTIONS_STAGES.filter(i => i.session_id === sessionStage.id).length
   if (nbInscrits > 0) {
     if (!confirm('Il y a '+nbInscrits+' inscrit'+(nbInscrits>1?'s':'')+' sur '+libelle+'. Annuler quand même ? Un email sera envoyé à chaque inscrit.')) return
   } else {
@@ -870,7 +904,14 @@ async function annulerSessionStage(sessionId, libelle, nbInscrits) {
 }
 
 
-async function confirmerEtEnvoyerAdresse(id, prenom, nom, emailParent, date, heure) {
+async function confirmerEtEnvoyerAdresse(id) {
+  // Inscription et session relues dans les données chargées (plus d'argument texte).
+  const inscrit = INSCRIPTIONS.find(i => String(i.id) === String(id))
+  const session = SESSIONS.find(s => s.id === inscrit?.session_id)
+  if (!inscrit || !session) { alert('Inscription introuvable — recharge la page.'); return }
+  const { prenom, nom, email_parent: emailParent } = inscrit
+  const date = dateSessionAff(session)
+  const heure = session.heure
   const adresse = document.getElementById('adresse-lieu')?.value?.trim()
   if (!adresse) { alert('⚠️ Saisis l\'adresse du lieu avant de confirmer.'); return }
   if (!confirm('Confirmer l\'inscription de '+prenom+' et envoyer l\'adresse à '+emailParent+' ?')) return
@@ -889,7 +930,12 @@ async function confirmerEtEnvoyerAdresse(id, prenom, nom, emailParent, date, heu
   chargerInscriptions()
 }
 
-async function refuserInscription(id, prenom, nom, emailParent, date) {
+async function refuserInscription(id) {
+  const inscrit = INSCRIPTIONS.find(i => String(i.id) === String(id))
+  const session = SESSIONS.find(s => s.id === inscrit?.session_id)
+  if (!inscrit || !session) { alert('Inscription introuvable — recharge la page.'); return }
+  const { prenom, nom, email_parent: emailParent } = inscrit
+  const date = dateSessionAff(session)
   if (!confirm('Refuser l\'inscription de '+prenom+' et envoyer un email à '+emailParent+' ?')) return
 
   try {
@@ -906,7 +952,12 @@ async function refuserInscription(id, prenom, nom, emailParent, date) {
   chargerInscriptions()
 }
 
-async function supprimerAvecEmail(id, prenom, nom, emailParent, date) {
+async function supprimerAvecEmail(id) {
+  const inscrit = INSCRIPTIONS.find(i => String(i.id) === String(id))
+  const session = SESSIONS.find(s => s.id === inscrit?.session_id)
+  if (!inscrit || !session) { alert('Inscription introuvable — recharge la page.'); return }
+  const { prenom, nom, email_parent: emailParent } = inscrit
+  const date = dateSessionAff(session)
   if (!confirm('Annuler l\'inscription confirmée de '+prenom+' et envoyer un email à '+emailParent+' ?')) return
 
   try {
@@ -982,13 +1033,15 @@ async function envoyerAdresse() {
       setTimeout(() => { closeAdresse(); chargerInscriptions() }, 1500)
     } else throw new Error(data.error)
   } catch(e) {
-    msgEl.innerHTML = '<span style="color:#9E2B25">Erreur : '+e.message+'</span>'
+    msgEl.innerHTML = '<span style="color:#9E2B25">Erreur : '+escHtml(e.message)+'</span>'
   }
 }
 
-function ouvrirNote(id, nom) {
+function ouvrirNote(id) {
+  const inscrit = INSCRIPTIONS.find(i => String(i.id) === String(id))
+  if (!inscrit) { alert('Inscription introuvable — recharge la page.'); return }
   noteCurrentId = id
-  document.getElementById('note-titre').textContent = '📝 Note — '+nom
+  document.getElementById('note-titre').textContent = '📝 Note — '+inscrit.prenom+' '+inscrit.nom
   let html = ''
   html += '<div class="field"><label>Note /20</label><input type="number" id="note-val" min="0" max="20" placeholder="Ex: 14"></div>'
   html += '<div class="field"><label>Commentaire</label><textarea id="note-commentaire" placeholder="Bon travail en algèbre, à retravailler la géométrie…" style="min-height:80px"></textarea></div>'
@@ -1010,7 +1063,7 @@ async function sauvegarderNote() {
   if (isNaN(note) || note < 0 || note > 20) { msgEl.innerHTML = '<span style="color:#9E2B25">⚠ Note entre 0 et 20.</span>'; return }
   msgEl.innerHTML = '<span style="color:#888">Sauvegarde…</span>'
   const { error } = await sb.from('inscriptions_brevet').update({ note, commentaire }).eq('id', noteCurrentId)
-  if (error) { msgEl.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>'; return }
+  if (error) { msgEl.innerHTML = '<span style="color:#9E2B25">Erreur : '+escHtml(error.message)+'</span>'; return }
   msgEl.innerHTML = '<span style="color:#2F9E5C">✅ Note sauvegardée !</span>'
   setTimeout(() => { closeNote(); chargerInscriptions() }, 1000)
 }
@@ -1266,7 +1319,7 @@ async function chargerBanque() {
   if (banqueFiltre.sousTheme) query = query.eq('sous_theme', banqueFiltre.sousTheme)
   if (banqueFiltre.diff)  query = query.eq('difficulte', banqueFiltre.diff)
   const { data, error } = await query
-  if (error) { el.innerHTML='<div class="empty">Erreur : '+error.message+'</div>'; return }
+  if (error) { el.innerHTML='<div class="empty">Erreur : '+escHtml(error.message)+'</div>'; return }
   let filtered = data || []
   if (banqueFiltre.search) {
     const s = banqueFiltre.search.toLowerCase()
@@ -1298,9 +1351,9 @@ async function chargerBanque() {
     html += '<div class="q-card" id="qcard-'+q.id+'"'+(estArchive?' style="opacity:0.55"':'')+'>'
     html += '<div class="q-card-header"><div>'
     html += '<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">'
-    html += '<span class="badge badge-blue">'+q.theme+'</span>'
-    if (q.sous_theme) html += '<span class="badge" style="background:#f0f0f5;color:#555">'+q.sous_theme+'</span>'
-    html += '<span class="badge '+(q.difficulte==='facile'?'badge-tb':q.difficulte==='moyen'?'badge-ab':'badge-insuf')+'">'+q.difficulte+'</span>'
+    html += '<span class="badge badge-blue">'+escHtml(q.theme)+'</span>'
+    if (q.sous_theme) html += '<span class="badge" style="background:#f0f0f5;color:#555">'+escHtml(q.sous_theme)+'</span>'
+    html += '<span class="badge '+(q.difficulte==='facile'?'badge-tb':q.difficulte==='moyen'?'badge-ab':'badge-insuf')+'">'+escHtml(q.difficulte)+'</span>'
     if (estArchive) html += '<span class="badge" style="background:#f0f0f0;color:#888">📦 Archivée</span>'
     if (hasFigSVG) html += '<span class="badge" style="background:#f0f0ff;color:#3730a3">🔷 Figure SVG</span>'
     if (hasFigURL) html += '<span class="badge" style="background:#fff0f0;color:#9E2B25">🖼 Image</span>'
@@ -1316,7 +1369,7 @@ async function chargerBanque() {
     if (hasFigSVG || hasFigURL) html += '<button class="btn btn-sm btn-red" onclick="supprimerFigure('+q.id+',\'questions_banque\')">🗑 Figure</button>'
     html += '</div></div></div>'
     if (hasFigSVG) { const svg = renderFigureSVG(q.figure); if (svg) html += '<div class="q-figure">'+svg+'</div>' }
-    if (hasFigURL) html += '<div class="q-figure"><img src="'+q.figure_url+'" alt="figure"></div>'
+    if (hasFigURL) html += '<div class="q-figure"><img src="'+escHtml(q.figure_url)+'" alt="figure"></div>'
     if (hasTab)    html += typeGraph ? renderGraphiqueProf(q.tableau, q.id) : renderTableauHTML(q.tableau)
     html += '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px">'
     opts.forEach((opt, i) => {
@@ -1409,13 +1462,13 @@ async function ouvrirEdit(id, table) {
   const opts = typeof data.opts === 'string' ? JSON.parse(data.opts) : (data.opts || ['','','',''])
   const letters = ['A','B','C','D']
   let html = ''
-  html += '<div class="field"><label>Question</label><textarea id="edit-question" style="min-height:80px">'+data.question+'</textarea></div>'
+  html += '<div class="field"><label>Question</label><textarea id="edit-question" style="min-height:80px">'+escHtml(data.question)+'</textarea></div>'
   html += '<div style="margin-bottom:12px">'
   letters.forEach((l,i) => {
-    html += '<div class="opt-row"><label>'+l+'</label><input type="text" id="edit-opt'+l+'" value="'+esc(opts[i]||'').replace(/"/g,'&quot;')+'"><label class="radio-label"><input type="radio" name="edit-bonne" value="'+i+'" '+(data.answer===i?'checked':'')+'>  Bonne</label></div>'
+    html += '<div class="opt-row"><label>'+l+'</label><input type="text" id="edit-opt'+l+'" value="'+escHtml(opts[i]||'')+'"><label class="radio-label"><input type="radio" name="edit-bonne" value="'+i+'" '+(data.answer===i?'checked':'')+'>  Bonne</label></div>'
   })
   html += '</div>'
-  html += '<div class="field"><label>Explication</label><textarea id="edit-explication" style="min-height:80px">'+data.explication+'</textarea></div>'
+  html += '<div class="field"><label>Explication</label><textarea id="edit-explication" style="min-height:80px">'+escHtml(data.explication)+'</textarea></div>'
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
   html += '<button class="btn btn-green" onclick="sauvegarderEdit()">💾 Sauvegarder</button>'
   html += '<button class="btn btn-red" onclick="supprimerQuestion()">🗑 Supprimer la question</button>'
@@ -1440,7 +1493,7 @@ async function sauvegarderEdit() {
   }
   msg.innerHTML = '<span style="color:#888">Sauvegarde…</span>'
   const { error } = await sb.from(editCurrentTable).update({ question, opts: JSON.stringify(opts), answer: parseInt(bonneVal), explication }).eq('id', editCurrentId)
-  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+error.message+'</span>' }
+  if (error) { msg.innerHTML = '<span style="color:#9E2B25">Erreur : '+escHtml(error.message)+'</span>' }
   else { msg.innerHTML = '<span style="color:#2F9E5C">✓ Sauvegardé !</span>'; setTimeout(() => { closeEdit(); chargerBanque() }, 1000) }
 }
 
@@ -1504,7 +1557,7 @@ function openFiche(userId) {
     const ep = pct(exam.score, exam.total)
     body += '<div style="background:var(--blue-bg);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">'
     body += '<div style="font-size:13px;font-weight:700;color:var(--blue)">📝 Dernier examen en ligne</div>'
-    body += '<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+color(ep)+'">'+exam.score+'/20</div>'
+    body += '<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+color(ep)+'">'+escHtml(exam.score)+'/20</div>'
     body += '<div style="font-size:11px;color:'+color(ep)+';font-weight:600">'+mentionLabel(ep)+'</div></div></div>'
   }
   THEMES.forEach(t => {
@@ -1529,7 +1582,7 @@ function openFiche(userId) {
       sousThemesData.forEach(([nomSousTheme, st]) => {
         const stp = pct(st.ok, st.tot), sts = getStatut(stp)
         body += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px">'
-        body += '<span style="color:#555">'+nomSousTheme+'</span>'
+        body += '<span style="color:#555">'+escHtml(nomSousTheme)+'</span>'
         body += '<span style="color:'+sts.color+';font-weight:600">'+sts.emoji+' '+stp+'%</span></div>'
       })
       body += '</div>'
@@ -1539,13 +1592,13 @@ function openFiche(userId) {
       const topChaps = Object.entries(chaps).sort((a,b) => b[1]-a[1]).slice(0,3)
       body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e8e8e4">'
       body += '<div style="font-size:11px;color:#9E2B25;font-weight:600;margin-bottom:4px">Questions ratées :</div>'
-      topChaps.forEach(([chap, nb]) => { body += '<div style="font-size:11px;color:#666;padding:2px 0">• '+chap.replace(t+' — ','')+' <span style="color:#9E2B25;font-weight:600">('+nb+'×)</span></div>' })
+      topChaps.forEach(([chap, nb]) => { body += '<div style="font-size:11px;color:#666;padding:2px 0">• '+escHtml(chap.replace(t+' — ',''))+' <span style="color:#9E2B25;font-weight:600">('+nb+'×)</span></div>' })
       body += '</div>'
     }
     body += '</div>'
   })
   body += '<div style="margin-top:1.5rem;display:flex;gap:8px;flex-wrap:wrap">'
-  body += '<button class="btn btn-green" id="btn-bilan" onclick="envoyerBilan(\''+userId+'\')">Envoyer bilan parents</button>'
+  body += '<button class="btn btn-green" id="btn-bilan" onclick="envoyerBilan(\''+escAttrJs(userId)+'\')">Envoyer bilan parents</button>'
   body += '<button class="btn" onclick="closeFiche()">Fermer</button>'
   body += '</div>'
   document.getElementById('fiche-body').innerHTML = body
@@ -1621,7 +1674,7 @@ async function ajouterQuestion() {
   // corrigé — une question ajoutée sans sous_theme est invisible dans
   // quiz.html (qui filtre systématiquement sur sous_theme=eq.).
   const { error } = await sb.from('questions_banque').insert({ theme, sous_theme, difficulte, question, opts: JSON.stringify(opts), answer, explication, tableau: null, figure: null, statut: 'actif' })
-  if (error) { msg.innerHTML='<span style="color:#9E2B25">Erreur : '+error.message+'</span>' }
+  if (error) { msg.innerHTML='<span style="color:#9E2B25">Erreur : '+escHtml(error.message)+'</span>' }
   else {
     msg.innerHTML='<span style="color:#2F9E5C">✓ Question ajoutée !</span>'
     ;['question','optA','optB','optC','optD','explication'].forEach(id => { document.getElementById('bq-'+id).value='' })
@@ -1690,8 +1743,8 @@ function render() {
   h+='<th>Examen en ligne</th></tr></thead><tbody>'
   ELEVES.forEach(e => {
     const rows=ROWS.filter(r=>r.user_id===e.user_id).filter(r=>!r.abandonne), exam=examMap[e.user_id]
-    const nomCell = '<div class="eleve-cell"><div class="avatar">'+initiales(e.prenom,e.nom)+'</div><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">'+e.prenom+'</button></div>'
-    const examCell=!exam?'<td style="color:#999;font-size:11px">—</td>':(()=>{ const ep=pct(exam.score,exam.total); return '<td><span style="color:'+color(ep)+';font-weight:700">'+exam.score+'/20</span><br><span style="font-size:10px;color:'+color(ep)+'">'+mentionLabel(ep)+'</span></td>' })()
+    const nomCell = '<div class="eleve-cell"><div class="avatar">'+escHtml(initiales(e.prenom,e.nom))+'</div><button class="btn btn-sm btn-blue" onclick="openFiche(\''+escAttrJs(e.user_id)+'\')">'+escHtml(e.prenom)+'</button></div>'
+    const examCell=!exam?'<td style="color:#999;font-size:11px">—</td>':(()=>{ const ep=pct(exam.score,exam.total); return '<td><span style="color:'+color(ep)+';font-weight:700">'+escHtml(exam.score)+'/20</span><br><span style="font-size:10px;color:'+color(ep)+'">'+mentionLabel(ep)+'</span></td>' })()
     if (!rows.length) { h+='<tr><td>'+nomCell+'</td><td style="color:#999">—</td>'; THEMES.forEach(()=>{h+='<td style="color:#999">—</td>'}); h+=examCell+'</tr>'; return }
     const gS=rows.reduce((a,r)=>a+r.score,0),gT=rows.reduce((a,r)=>a+r.total,0),gP=pct(gS,gT)
     h+='<tr><td>'+nomCell+'</td>'
@@ -1715,9 +1768,9 @@ function render() {
   ELEVES.forEach(e=>{
     const p=e.totalQ>0?pct(e.totalScore,e.totalQ):0, exam=examMap[e.user_id]
     const moyCell=e.totalQ>0?'<strong style="color:'+color(p)+'">'+p+'%</strong>':'<span style="color:#999">—</span>'
-    const examCell=exam?mentionBadge(pct(exam.score,exam.total))+' <span style="font-size:12px">'+exam.score+'/20</span>':'<span style="color:#999;font-size:12px">—</span>'
-    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+initiales(e.prenom,e.nom)+'</div><strong>'+e.prenom+' '+e.nom+'</strong></div></td><td style="color:var(--blue);font-size:12px">'+e.email_parent+'</td><td>'+e.sessions+'</td><td>'+moyCell+'</td><td>'+examCell+'</td><td style="font-size:12px">'+origineLabel(e.source)+'</td>'
-    h+='<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+e.user_id+'\')">Fiche</button></td></tr>'
+    const examCell=exam?mentionBadge(pct(exam.score,exam.total))+' <span style="font-size:12px">'+escHtml(exam.score)+'/20</span>':'<span style="color:#999;font-size:12px">—</span>'
+    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+escHtml(initiales(e.prenom,e.nom))+'</div><strong>'+escHtml(e.prenom)+' '+escHtml(e.nom)+'</strong></div></td><td style="color:var(--blue);font-size:12px">'+escHtml(e.email_parent)+'</td><td>'+e.sessions+'</td><td>'+moyCell+'</td><td>'+examCell+'</td><td style="font-size:12px">'+origineLabel(e.source)+'</td>'
+    h+='<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+escAttrJs(e.user_id)+'\')">Fiche</button></td></tr>'
   })
   h+='</tbody></table></div></div>'
 
@@ -1733,12 +1786,12 @@ function render() {
       const p=pct(e.score,e.total),th=e.scores_themes||{},sc=scoresExamen(th)
       const mins=Math.floor(e.temps_secondes/60),secs=e.temps_secondes%60
       const profil=PROFILS[e.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:(e.user_id===userIdCourant?'Prof':(e.prenom||'—'))
-      const scoreCell=e.abandonne?'<span style="color:#999">Abandonné</span>':'<strong>'+e.score+'/20</strong> <span style="font-size:11px;color:'+(p>=50?'#2F9E5C':'#9E2B25')+'">'+p+'%</span>'
+      const scoreCell=e.abandonne?'<span style="color:#999">Abandonné</span>':'<strong>'+escHtml(e.score)+'/20</strong> <span style="font-size:11px;color:'+(p>=50?'#2F9E5C':'#9E2B25')+'">'+p+'%</span>'
       const mentionCell=e.abandonne?'':mentionBadge(p)
-      h+='<tr><td style="font-size:12px;color:#999">'+dateStr(e.created_at)+'</td><td><strong>'+nom+'</strong></td>'
+      h+='<tr><td style="font-size:12px;color:#999">'+dateStr(e.created_at)+'</td><td><strong>'+escHtml(nom)+'</strong></td>'
       h+='<td>'+scoreCell+'</td><td>'+mentionCell+'</td><td style="font-size:12px">'+fmt(mins,secs)+'</td>'
-      h+='<td style="text-align:center;font-size:12px">'+sc.nombres+'</td><td style="text-align:center;font-size:12px">'+sc.stats+'</td>'
-      h+='<td style="text-align:center;font-size:12px">'+sc.geo+'</td><td style="text-align:center;font-size:12px">'+sc.grandeurs+'</td></tr>'
+      h+='<td style="text-align:center;font-size:12px">'+escHtml(sc.nombres)+'</td><td style="text-align:center;font-size:12px">'+escHtml(sc.stats)+'</td>'
+      h+='<td style="text-align:center;font-size:12px">'+escHtml(sc.geo)+'</td><td style="text-align:center;font-size:12px">'+escHtml(sc.grandeurs)+'</td></tr>'
     })
     h+='</tbody></table></div>'
   }
@@ -1757,7 +1810,7 @@ function render() {
   // THÈMES
   h+='<div class="section" id="sec-themes"><div class="card"><div class="card-title">Résultats par domaine</div>'
   h+='<table class="tbl"><thead><tr><th>Domaine</th><th>Sessions</th><th>Moyenne</th></tr></thead><tbody>'
-  Object.entries(themeStats).forEach(([t,s])=>{ const p=pct(s.ok,s.tot); h+='<tr><td>'+t+'</td><td>'+s.n+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td></tr>' })
+  Object.entries(themeStats).forEach(([t,s])=>{ const p=pct(s.ok,s.tot); h+='<tr><td>'+escHtml(t)+'</td><td>'+s.n+'</td><td><strong style="color:'+color(p)+'">'+p+'%</strong></td></tr>' })
   h+='</tbody></table></div></div>'
 
   // SESSIONS
@@ -1767,15 +1820,15 @@ function render() {
   toutesActivites.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,30).forEach(r=>{
     const profil=PROFILS[r.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:'—',p=pct(r.score,r.total)
     const typeBadge=r.type==='examen'?'<span class="badge badge-blue">📝 Examen en ligne</span>':'<span class="badge badge-banque">🎲 Quiz</span>'
-    const scoreCell=r.abandonne?'<span style="color:#999">Abandonné</span>':'<strong style="color:'+color(p)+'">'+r.score+'/'+r.total+'</strong>'
-    h+='<tr><td><strong>'+nom+'</strong></td><td>'+typeBadge+'</td><td style="font-size:12px;color:#555">'+r.detail+'</td>'
+    const scoreCell=r.abandonne?'<span style="color:#999">Abandonné</span>':'<strong style="color:'+color(p)+'">'+escHtml(r.score)+'/'+escHtml(r.total)+'</strong>'
+    h+='<tr><td><strong>'+escHtml(nom)+'</strong></td><td>'+typeBadge+'</td><td style="font-size:12px;color:#555">'+escHtml(r.detail)+'</td>'
     h+='<td>'+scoreCell+'</td><td style="font-size:12px;color:#999">'+dateStr(r.created_at)+'</td></tr>'
   })
   h+='</tbody></table></div></div>'
 
   // QUESTIONS RATÉES
   h+='<div class="section" id="sec-ratees"><div class="card"><div class="card-title">Questions les plus ratées</div>'
-  if (topRatees.length) { topRatees.forEach(([q,n])=>{ h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="color:#444">'+q+'</span><span style="color:#9E2B25;font-weight:600;margin-left:12px;white-space:nowrap">'+n+'× raté</span></div>' }) }
+  if (topRatees.length) { topRatees.forEach(([q,n])=>{ h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="color:#444">'+escHtml(q)+'</span><span style="color:#9E2B25;font-weight:600;margin-left:12px;white-space:nowrap">'+n+'× raté</span></div>' }) }
   else { h+='<p class="empty">Pas encore de données.</p>' }
   h+='</div></div>'
 
