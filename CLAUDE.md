@@ -64,7 +64,7 @@ $$;
 **Étape 3 — les 6 policies à `qual = true`** (SQL exécuté directement par CM sur Supabase, hors Claude Code — confirmé terminé et testé)
 
 1. `resultats` — `"Le prof voit tout"` (qual=true) remplacée par `is_prof()`. Policy élève (`auth.uid()=user_id`) conservée.
-2. `inscriptions_stages` — lecture publique retirée, INSERT public conservé. Vérifié avant correction : `api/inscription-stage.js` ne fait aucun `select()` après l'`insert()` (confirmation client basée sur `{success:true}`, pas sur une lecture Supabase) — la lecture publique retirée ne casse donc rien.
+2. `inscriptions_stages` — lecture publique retirée, INSERT public conservé *(état d'alors : la policy d'INSERT public a été supprimée le 04/10/2026, devenue inutile — `api/inscription-stage.js` écrit avec la clé service ; cf. `db/policies.sql`, section « Lot 3 »)*. Vérifié avant correction : `api/inscription-stage.js` ne fait aucun `select()` après l'`insert()` (confirmation client basée sur `{success:true}`, pas sur une lecture Supabase) — la lecture publique retirée ne casse donc rien.
 3. `questions_banque` — lecture publique retirée. Point additionnel découvert et corrigé en amont (PR #1) : `api/generer.js` lisait cette table avec un fallback codé en dur sur la clé anon (`SUPABASE_KEY`) — basculé sur `SUPABASE_SERVICE_KEY` avant la correction RLS, pour ne pas casser le repli "banque" du générateur de questions.
 4. `brevets_blancs` / `resultats_brevet_blanc` — n'apparaissaient dans aucun fichier du dépôt (recherche exhaustive sur tout l'historique Git, aucune occurrence). Vérifié directement en base : `brevets_blancs` contenait 2 lignes de test datées du 24/05/2026 (« Brevet blanc test 1 », « Brevet blanc 2 »), avec des `user_id` inexistants dans `profils` ; `resultats_brevet_blanc` était vide. Un prototype antérieur au système actuel (`sessions_examen_blanc`/`inscriptions_brevet`), jamais branché au produit. Les deux tables ont été supprimées (`DROP TABLE`) — n'existent plus.
 5. `examens_blancs` — confirmé lu ET écrit directement côté client (clé anon) dans `examen.html` (INSERT à l'abandon et à la fin d'examen, SELECT pour l'historique). Policy prof (`is_prof()`) et policy élève (`auth.uid()=user_id`) toutes les deux nécessaires et conservées.
@@ -111,11 +111,11 @@ $$;
 
 ### Reste ouvert — chantier différé « intégrité des comptes »
 
-**Statut (30/09/2026)** : le volet `profils` INSERT est clos — faux positif, contrôle déjà en place, vérifié en prod le 14/09/2026 par une insertion réelle rejetée (403, `42501`) ; cf. `docs/TODO.md`. Seul `shouldCreateUser: true` reste ouvert. Le premier bullet ci-dessous est conservé comme historique de l'erreur du 03/09.
+**Statut (30/09/2026, corrigé le 04/10/2026)** : le volet `profils` INSERT est clos, mais en deux temps à ne pas confondre. Le 14/09/2026, une insertion réelle rejetée (403, `42501`) a établi un faux positif **pour le seul volet `email_parent`** (le contrôle `email_parent_valide()` existait déjà) ; cf. `docs/TODO.md`. Les volets `user_id` (greffe d'un compte sur un élève existant) et `plan_actif` (profil créé avec un abonnement actif) étaient, eux, réels et ont été fermés le 04/10/2026 : contrainte `UNIQUE(user_id)` sur `profils` et clause `coalesce(plan_actif, false) = false` dans la policy « Insertion profils » (cf. `db/policies.sql`, section « Lot 3 »). Seul `shouldCreateUser: true` reste ouvert. Le premier bullet ci-dessous est conservé comme historique de l'erreur du 03/09.
 
 À traiter avant le passage Stripe live :
 
-* ✅ **CLOS (faux positif, vérifié en prod le 14/09/2026) — cf. statut du 30/09/2026 ci-dessus. Le texte qui suit est conservé comme historique de l'erreur du 03/09.**
+* ✅ **CLOS — volet `email_parent` : faux positif (vérifié en prod le 14/09/2026) ; volets `user_id` et `plan_actif` : fermés le 04/10/2026 — cf. statut ci-dessus. Le texte qui suit est conservé comme historique de l'erreur du 03/09.**
 
   **`profils` INSERT — ⚠️ CORRECTION FACTUELLE (03/09/2026)** : ce chantier reposait sur une description erronée de la policy. Ce qui était écrit ici (`with_check: auth.uid()=user_id`, policy ne contrôlant pas `email_parent`) **est faux**. Le dump réel de `pg_policies` donne :
 
@@ -124,7 +124,7 @@ $$;
   ```
 
   Soit exactement ce que dit le commentaire de `suivi-parent.html` l.905-906 — la policy contrôle bien `email_parent` contre l'email du JWT de la session qui fait l'INSERT, elle ne se contente pas de `auth.uid()=user_id`. **Les conclusions de ce chantier (diagnostic de faille et solution proposée) sont donc à rejouer entièrement** à partir de la policy réelle avant toute action : reste à déterminer si `email_parent = auth.jwt()->>'email'` suffit à couvrir le scénario redouté (session enfant + email arbitraire) ou si un trou subsiste sous une autre forme.
-* **`shouldCreateUser: true`** : dans `espace-parent.html`, l'appel `sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })` (seule occurrence dans le dépôt) permet à n'importe qui de créer un compte Auth sur une adresse email arbitraire. Était présenté comme le vecteur d'entrée rendant exploitable la faille `profils` INSERT ci-dessus — faille inexistante (cf. statut du 30/09/2026) ; reste un point ouvert en soi (création de comptes Auth sur adresse arbitraire).
+* **`shouldCreateUser: true`** : dans `espace-parent.html`, l'appel `sb.auth.signInWithOtp({ email, options: { shouldCreateUser: true } })` (seule occurrence dans le dépôt) permet à n'importe qui de créer un compte Auth sur une adresse email arbitraire. Était présenté comme le vecteur d'entrée rendant exploitable la faille `profils` INSERT ci-dessus — faille inexistante pour le volet `email_parent` (cf. statut ci-dessus), les volets `user_id` et `plan_actif`, eux réels, ayant été fermés le 04/10/2026 ; reste un point ouvert en soi (création de comptes Auth sur adresse arbitraire).
 
 ### Reste ouvert — chantier Stripe (idempotency)
 
@@ -173,7 +173,7 @@ Basé sur la lecture du document CGV (fourni en pièce jointe dans une conversat
 1. Cases à cocher A1/B4 manquantes (risque financier de remboursement) — cf. chantier CGV ci-dessus.
 2. Conformité du parcours de résiliation (obligation légale) — cf. chantier CGV ci-dessus.
 3. Idempotency Stripe checkout et webhook DB, et lacune `invoice.payment_failed` (C1, C2, C3) — cf. chantier Stripe ci-dessus.
-4. Chantier différé « intégrité des comptes » : volet `profils` INSERT **clos** (faux positif, vérifié en prod le 14/09/2026 — cf. `docs/TODO.md`) ; reste ouvert uniquement `shouldCreateUser: true` (`docs/TODO.md`, section technique n°1) — cf. section dédiée ci-dessus.
+4. Chantier différé « intégrité des comptes » : volet `profils` INSERT **clos** (14/09/2026 : volet `email_parent`, faux positif ; 04/10/2026 : volets `user_id` et `plan_actif` fermés — cf. `docs/TODO.md`) ; reste ouvert uniquement `shouldCreateUser: true` (`docs/TODO.md`, section technique n°1) — cf. section dédiée ci-dessus.
 5. Mise à jour rédactionnelle des CGV.
 6. Relecture juridique avant passage Stripe live.
 
