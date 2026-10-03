@@ -248,7 +248,9 @@ export default async function handler(req, res) {
 
       const emailRes = await fetch(`https://${req.headers.host}/api/email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // Appel interne : api/email.js exige CRON_SECRET pour ce type (sinon
+        // n'importe qui pourrait envoyer ce gabarit à une adresse arbitraire).
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
         body: JSON.stringify({ type: 'resiliation-confirmee', emailParent, prenom, dateFin })
       })
 
