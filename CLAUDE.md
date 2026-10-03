@@ -238,7 +238,7 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 
 `NEXT_PUBLIC_SUPABASE_ANON_KEY` doit être posée sur les **trois scopes Vercel** (Production, Preview, Development). Il n'y a plus de repli en dur : son absence donne `raison: 'config_absente'` et un log explicite, plutôt qu'un fonctionnement apparent masquant une mauvaise configuration.
 
-`lib/` ne compte pas dans la limite de 12 fonctions serverless du plan Hobby — Vercel ne compte que les fichiers sous `api/`, qui sont exactement 12.
+`lib/` ne compte pas dans la limite de 12 fonctions serverless du plan Hobby — Vercel ne compte que les fichiers sous `api/`, qui sont exactement 11 (12 avant la suppression d'`api/contact-cours.js`, le 04/10/2026 — `docs/TODO.md`, technique n°38).
 
 ### Tests
 
