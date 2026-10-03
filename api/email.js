@@ -1,7 +1,7 @@
 // /api/email.js
 
 const { peutRecevoirEmailDetaille, enPeriodeGratuite } = require('../lib/gating')
-const { verifierToken } = require('../lib/auth-token')
+const { verifierToken, verifierProf } = require('../lib/auth-token')
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -78,6 +78,32 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'POST')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') { res.status(200).end(); return }
+
+  // ═══════════════════════════════════════════
+  // CONTRÔLE D'IDENTITÉ — avant toute lecture, tout envoi et toute limite
+  // de fréquence (verifierRateLimit écrit dans email_rate_limit : un appelant
+  // non authentifié ne doit pas pouvoir épuiser le quota d'une adresse).
+  //  - types déclenchés par les boutons de prof.html : jeton Supabase valide
+  //    dont le rôle serveur est 'prof' (401 sinon invalide, 403 si autre rôle) ;
+  //  - resiliation-confirmee (appel interne depuis stripe-webhook.js) :
+  //    CRON_SECRET, comparaison exacte. !!process.env.CRON_SECRET évite qu'un
+  //    'Bearer undefined' ne passe si la variable n'est pas posée.
+  // Les autres types ne sont pas concernés ici (reset-password, contact-cours :
+  // publics ; recap-journalier-user : contrôle propre ; brevet-blanc,
+  // inscription : traités à part).
+  // ═══════════════════════════════════════════
+  const TYPES_PROF = ['adresse-brevet', 'stage', 'bilan', 'resultats-brevet']
+  const typeRequete = req.body?.type
+  const authHeaderEntrant = req.headers['authorization'] || ''
+  if (TYPES_PROF.includes(typeRequete)) {
+    const jeton = authHeaderEntrant.startsWith('Bearer ') ? authHeaderEntrant.slice(7) : null
+    const statut = await verifierProf(jeton, 'https://vkkgadwqumqqwpaayjac.supabase.co', process.env.SUPABASE_SERVICE_KEY)
+    if (statut === 'non-authentifie') return res.status(401).json({ error: 'Non autorisé' })
+    if (statut !== 'ok') return res.status(403).json({ error: 'Accès réservé' })
+  } else if (typeRequete === 'resiliation-confirmee') {
+    const estInterne = !!process.env.CRON_SECRET && authHeaderEntrant === `Bearer ${process.env.CRON_SECRET}`
+    if (!estInterne) return res.status(401).json({ error: 'Non autorisé' })
+  }
 
   // ═══════════════════════════════════════════
   // RESET MOT DE PASSE — isolé, retour immédiat

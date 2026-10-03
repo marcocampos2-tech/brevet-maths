@@ -327,6 +327,32 @@ const dateSessionAff = s => new Date(s.date_session + 'T00:00:00').toLocaleDateS
 const initiales = (prenom, nom) => ((prenom||'?')[0] + (nom||'')[0]).toUpperCase()
 const origineLabel = s => ({ flyer: 'Flyer / affiche', ami: 'Bouche à oreille', internet: 'Recherche internet', reseaux: 'Réseaux sociaux', autre: 'Autre' })[s] || '—'
 
+// Appel unique vers /api/email pour tous les boutons du prof. Le jeton est relu
+// au moment de l'envoi (sb.auth.getSession() rafraîchit un jeton expiré) :
+// api/email.js exige un jeton valide dont le rôle serveur est 'prof'.
+// Par défaut : renvoie true si l'envoi a réussi, sinon alerte courte et false
+// (n'interrompt jamais le flux appelant). Avec { brut: true } : renvoie la
+// Response, sans alerte, pour les appels qui lisent eux-mêmes data.success /
+// data.error (envoyerAdresse, envoyerResultats, envoyerBilan) ; une erreur
+// réseau y est propagée comme avant.
+async function appelerEmail(payload, { brut = false } = {}) {
+  let res
+  try {
+    const { data: { session } } = await sb.auth.getSession()
+    const headers = { 'Content-Type': 'application/json' }
+    if (session?.access_token) headers['Authorization'] = 'Bearer ' + session.access_token
+    res = await fetch('/api/email', { method: 'POST', headers, body: JSON.stringify(payload) })
+  } catch (e) {
+    console.log('Erreur appel /api/email:', e.message)
+    if (brut) throw e
+    alert('Email non envoyé : recharge la page')
+    return false
+  }
+  if (brut) return res
+  if (!res.ok) { alert('Email non envoyé : recharge la page'); return false }
+  return true
+}
+
 // Échappe une chaîne pour une insertion sûre à l'intérieur d'un attribut onclick="...('...')"
 // (protège contre les apostrophes dans les prénoms/noms composés : D'Angelo, N'Diaye...)
 // ⚠️ Échappement JS uniquement : ne protège PAS le HTML. Pour une valeur insérée
@@ -585,11 +611,7 @@ async function annulerSession(sessionId) {
   const inscritsSession = INSCRIPTIONS.filter(i => i.session_id === sessionId)
   for (const i of inscritsSession) {
     try {
-      await fetch('/api/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'adresse-brevet', sousType: 'annulation', emailParent: i.email_parent, prenom: i.prenom, nom: i.nom, date: dateAffichee })
-      })
+      await appelerEmail({ type: 'adresse-brevet', sousType: 'annulation', emailParent: i.email_parent, prenom: i.prenom, nom: i.nom, date: dateAffichee })
     } catch(e) { console.log('Erreur email annulation session:', e.message) }
   }
 
@@ -846,7 +868,7 @@ async function confirmerInscriptionStage(id) {
   const { error } = await sb.from('inscriptions_stages').update({ confirme: true }).eq('id', id)
   if (error) { alert('Erreur : '+error.message); return }
   try {
-    await fetch('/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'stage', emailParent, prenom, nom, libelle }) })
+    await appelerEmail({ type: 'stage', emailParent, prenom, nom, libelle })
   } catch(e) { console.log('Erreur email confirmation stage:', e.message) }
   chargerStages()
 }
@@ -859,7 +881,7 @@ async function refuserInscriptionStage(id) {
   const session = SESSIONS_STAGES.find(s => s.id === inscrit?.session_id)
   const libelle = session ? (session.periode+' — '+session.domaine) : 'stage'
   try {
-    await fetch('/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'stage', sousType: 'refus', emailParent, prenom, nom, libelle }) })
+    await appelerEmail({ type: 'stage', sousType: 'refus', emailParent, prenom, nom, libelle })
   } catch(e) { console.log('Erreur email refus stage:', e.message) }
   const { error } = await sb.from('inscriptions_stages').delete().eq('id', id)
   if (error) { alert('Erreur : '+error.message); return }
@@ -874,7 +896,7 @@ async function annulerInscriptionStage(id) {
   const session = SESSIONS_STAGES.find(s => s.id === inscrit?.session_id)
   const libelle = session ? (session.periode+' — '+session.domaine) : 'stage'
   try {
-    await fetch('/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'stage', sousType: 'annulation', emailParent, prenom, nom, libelle }) })
+    await appelerEmail({ type: 'stage', sousType: 'annulation', emailParent, prenom, nom, libelle })
   } catch(e) { console.log('Erreur email annulation stage:', e.message) }
   const { error } = await sb.from('inscriptions_stages').delete().eq('id', id)
   if (error) { alert('Erreur : '+error.message); return }
@@ -895,7 +917,7 @@ async function annulerSessionStage(sessionId) {
   const inscritsStage = INSCRIPTIONS_STAGES.filter(i => i.session_id === sessionId)
   for (const i of inscritsStage) {
     try {
-      await fetch('/api/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'stage', sousType: 'annulation', emailParent: i.email_parent, prenom: i.prenom, nom: i.nom, libelle }) })
+      await appelerEmail({ type: 'stage', sousType: 'annulation', emailParent: i.email_parent, prenom: i.prenom, nom: i.nom, libelle })
     } catch(e) { console.log('Erreur email annulation session stage:', e.message) }
   }
   const { error } = await sb.from('sessions_stages').update({ annulee: true }).eq('id', sessionId)
@@ -920,11 +942,7 @@ async function confirmerEtEnvoyerAdresse(id) {
   if (error) { alert('Erreur : '+error.message); return }
 
   try {
-    await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'adresse-brevet', emailParent, prenom, nom, date, heure, adresse })
-    })
+    await appelerEmail({ type: 'adresse-brevet', emailParent, prenom, nom, date, heure, adresse })
   } catch(e) { console.log('Erreur email confirmation:', e.message) }
 
   chargerInscriptions()
@@ -939,11 +957,7 @@ async function refuserInscription(id) {
   if (!confirm('Refuser l\'inscription de '+prenom+' et envoyer un email à '+emailParent+' ?')) return
 
   try {
-    await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'adresse-brevet', sousType: 'refus', emailParent, prenom, nom, date })
-    })
+    await appelerEmail({ type: 'adresse-brevet', sousType: 'refus', emailParent, prenom, nom, date })
   } catch(e) { console.log('Erreur email refus:', e.message) }
 
   const { error } = await sb.from('inscriptions_brevet').delete().eq('id', id)
@@ -961,11 +975,7 @@ async function supprimerAvecEmail(id) {
   if (!confirm('Annuler l\'inscription confirmée de '+prenom+' et envoyer un email à '+emailParent+' ?')) return
 
   try {
-    await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'adresse-brevet', sousType: 'annulation', emailParent, prenom, nom, date })
-    })
+    await appelerEmail({ type: 'adresse-brevet', sousType: 'annulation', emailParent, prenom, nom, date })
   } catch(e) { console.log('Erreur email annulation:', e.message) }
 
   const { error } = await sb.from('inscriptions_brevet').delete().eq('id', id)
@@ -1013,10 +1023,7 @@ async function envoyerAdresse() {
 
   try {
     const inscrit = INSCRIPTIONS.find(i => i.id === adresseCurrentId)
-    const res = await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const res = await appelerEmail({
         type: 'adresse-brevet',
         emailParent: inscrit.email_parent,
         prenom: inscrit.prenom,
@@ -1024,8 +1031,7 @@ async function envoyerAdresse() {
         date: inscrit.date_choisie,
         adresse,
         messageCompl: msg
-      })
-    })
+      }, { brut: true })
     const data = await res.json()
     if (data.success) {
       await sb.from('inscriptions_brevet').update({ lieu_envoye: true }).eq('id', adresseCurrentId)
@@ -1074,10 +1080,7 @@ async function envoyerResultats(id) {
   if (!confirm('Envoyer les résultats à '+inscrit.email_parent+' ?')) return
 
   try {
-    const res = await fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    const res = await appelerEmail({
         type: 'resultats-brevet',
         emailParent: inscrit.email_parent,
         prenom: inscrit.prenom,
@@ -1085,8 +1088,7 @@ async function envoyerResultats(id) {
         date: inscrit.date_choisie,
         note: inscrit.note,
         commentaire: inscrit.commentaire || ''
-      })
-    })
+      }, { brut: true })
     const data = await res.json()
     if (data.success) {
       await sb.from('inscriptions_brevet').update({ resultats_envoyes: true }).eq('id', id)
@@ -1641,7 +1643,7 @@ async function envoyerBilan(userId) {
   })
 
   try {
-    const res = await fetch('/api/email', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type: 'bilan', emailParent:e.email_parent, prenom:e.prenom, nom:e.nom, moyGlobale, totalSessions:rows.length, tempsTotal:rows.reduce((a,r)=>a+(r.temps_secondes||0),0), sousThemes }) })
+    const res = await appelerEmail({ type: 'bilan', emailParent:e.email_parent, prenom:e.prenom, nom:e.nom, moyGlobale, totalSessions:rows.length, tempsTotal:rows.reduce((a,r)=>a+(r.temps_secondes||0),0), sousThemes }, { brut: true })
     const data = await res.json()
     if (data.success) { btn.textContent='Envoyé ✓'; setTimeout(()=>{ btn.disabled=false; btn.textContent='Envoyer bilan parents' },3000) }
     else throw new Error(data.error)
