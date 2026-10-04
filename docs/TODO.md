@@ -80,7 +80,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 ## 🟠 Plateforme Academika — technique
 
-> **Note de numérotation (30/09/2026)** : les numéros 2, 3, 10, 13, 20, 21, 33, 35, 38 et 49 sont absents de cette liste et ne sont volontairement pas réattribués (renvois croisés ; les points terminés sont supprimés). Le n°25 renvoie à un « item 20 » (message d'erreur de `sauvegarder()` de `examen.html`) qui n'existe plus dans ce fichier — son contenu exact n'est pas retrouvable ici. Les nouveaux points sont ajoutés à la suite du dernier numéro.
+> **Note de numérotation (04/10/2026)** : les numéros 2, 3, 10, 13, 20, 21, 33, 35, 38 et 49 sont absents de cette liste et ne sont volontairement pas réattribués (renvois croisés ; les points terminés sont supprimés). Le n°25 renvoie à un « item 20 » (message d'erreur de `sauvegarder()` de `examen.html`) qui n'existe plus dans ce fichier — son contenu exact n'est pas retrouvable ici. Les nouveaux points sont ajoutés à la suite du dernier numéro.
 
 1. Cybersécurité avant Stripe live : `shouldCreateUser: true` exploitable, idempotency Stripe absente, `invoice.payment_failed` jamais écouté, `alerte_envoyee` sans NOT NULL, UTC vs Europe/Paris sur bilan périodique
 
@@ -198,6 +198,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 4 bis. Extension site dédié 4ème/2nde — non tranchée
 5. URL trackée dédiée flyer (`/flyer`) — à faire, complémentaire au champ source déclaratif
 6. Constat concret pendant le chantier captures produit (09-13/09) : `index.html`/`tarifs.html` partagent `style.css`, `espace-parent.html` a son propre `<style>` local avec des noms de variables différents pour les mêmes couleurs (`--navy`/`--bordeaux` vs `--marine`/`--bordeaux`, etc.) — a nécessité une duplication de `.produit-shot`/`.section-label` avant qu'on ne retire finalement tout ce contenu d'`espace-parent.html`. Illustration concrète du point 3 ci-dessus.
+8. Évaluer le stage Toussaint 2026 selon le critère du 04/10/2026 (`CLAUDE.md`, décisions commerciales) : nombre d'inscrits et origine de chacun (Instagram, Facebook, proches), effort fourni par canal, trafic de `stages-vacances.html` et de `/insta` dans Vercel Analytics.
 
 ---
 
