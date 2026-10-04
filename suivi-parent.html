@@ -1227,7 +1227,7 @@ async function creerEnfant() {
 
   if (!prenomE) { afficherMsgAjout('erreur', 'Entrez le prénom.'); return }
   if (!nomE) { afficherMsgAjout('erreur', 'Entrez le nom.'); return }
-  if (!passwordE || passwordE.length < 6) { afficherMsgAjout('erreur', 'Mot de passe trop court (6 caractères min).'); return }
+  if (!passwordE || passwordE.length < 8) { afficherMsgAjout('erreur', 'Mot de passe trop court (8 caractères min).'); return }
 
   btn.disabled = true
   btn.textContent = 'Création en cours…'
