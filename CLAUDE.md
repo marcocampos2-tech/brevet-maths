@@ -74,7 +74,7 @@ $$;
 **`api/email.js` — échappement HTML + rate-limit** (PR #2, mergée)
 
 * Fonction `esc()` appliquée à tous les champs interpolés dans les templates HTML des 8 branches d'emails (`prenom`, `nom`, `date`, `heure`, `adresse`, `messageCompl`, `libelle`, `commentaire`, `emailParent`, `prenom_affiche`, noms de thèmes/sous-thèmes, entrées de `questions_ratees`/`topRatees`) — corrige l'injection HTML confirmée sur ces champs.
-* `verifierRateLimit(destinataire)` : 10 emails/heure/destinataire, table `email_rate_limit` (`destinataire` text PK, `compteur` int, `fenetre_debut` timestamptz), fail-open si la vérification échoue techniquement. Appliqué avant l'envoi dans les 8 branches ; pour `inscription` (2 emails), seul l'email vers le parent est compté.
+* `verifierRateLimit(destinataire)` : 10 emails/heure/destinataire, table `email_rate_limit` (`destinataire` text PK, `compteur` int, `fenetre_debut` timestamptz), fail-open si la vérification échoue techniquement. Appliqué avant l'envoi dans les 8 branches. Clé = adresse du destinataire, sauf pour `brevet-blanc` (clé `brevet-blanc:<user_id>`) et `inscription` (clé `inscription:<id du compte>`, un seul contrôle couvrant l'email au parent ET celui vers `contact@academika.fr`) depuis le Lot 2 bis (PR #97) ; ces deux types exigent désormais un jeton Supabase et déduisent le destinataire côté serveur.
 * Table `email_rate_limit` créée côté Supabase, comportement confirmé en production.
 
 **`vercel.json` — headers de sécurité HTTP** (PR #3, mergée)
@@ -238,7 +238,7 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 
 `NEXT_PUBLIC_SUPABASE_ANON_KEY` doit être posée sur les **trois scopes Vercel** (Production, Preview, Development). Il n'y a plus de repli en dur : son absence donne `raison: 'config_absente'` et un log explicite, plutôt qu'un fonctionnement apparent masquant une mauvaise configuration.
 
-`lib/` ne compte pas dans la limite de 12 fonctions serverless du plan Hobby — Vercel ne compte que les fichiers sous `api/`, qui sont exactement 11 (12 avant la suppression d'`api/contact-cours.js`, le 04/10/2026 — `docs/TODO.md`, technique n°38).
+`lib/` ne compte pas dans la limite de 12 fonctions serverless du plan Hobby — Vercel ne compte que les fichiers sous `api/`, qui sont exactement 11 (12 avant la suppression d'`api/contact-cours.js`, le 04/10/2026, PR #96).
 
 ### Tests
 
@@ -278,7 +278,9 @@ Cette règle s'applique aussi quand Claude est certain que le changement est tri
 
 ## Rappel — tenue de docs/TODO.md
 
-Chaque fois qu'un travail effectué dans une session résout, clôt, ou rend obsolète un point présent dans docs/TODO.md, coche la case correspondante (- [x]) ou supprime la ligne si elle ne demande plus de suivi — dans le même commit que le travail effectué, sans qu'on ait besoin de le redemander. Si un sujet nouveau et non trivial apparaît en cours de session et n'est pas traité immédiatement, l'ajouter à docs/TODO.md dans la section la plus pertinente, sous forme de case à cocher non cochée. Ne pas reformuler ni réorganiser les lignes existantes à cette occasion — seulement cocher, supprimer, ou ajouter.
+**La TODO ne contient que ce qui reste à faire.** À chaque clôture, supprimer le point terminé (ne pas cocher, ne pas marquer « traité ») ; ne garder, réécrit en action, que le reliquat éventuellement ouvert. L'historique est dans Git et les PR.
+
+Chaque fois qu'un travail effectué dans une session résout, clôt, ou rend obsolète un point présent dans docs/TODO.md, appliquer cette règle dans le même commit que le travail effectué, sans qu'on ait besoin de le redemander. Si un sujet nouveau et non trivial apparaît en cours de session et n'est pas traité immédiatement, l'ajouter à docs/TODO.md dans la section la plus pertinente, sous forme de case à cocher non cochée. Ne pas reformuler ni réorganiser les lignes existantes à cette occasion — seulement supprimer, réécrire en action le reliquat, ou ajouter.
 
 ## Modification de docs/TODO.md
 
@@ -289,6 +291,10 @@ Avant de fermer ou modifier un point dans docs/TODO.md :
 2. Montrer le diff complet avant de committer.
 3. Ne jamais laisser un titre de section à jour au-dessus d'un texte
    resté périmé, ni l'inverse.
+
+## Rappel — jeu de démo (`scripts/demo-lucas.sql`)
+
+**Ne jamais coller le fichier entier dans l'éditeur SQL** (le bloc 4 supprime ce que les blocs précédents créent) ; exécuter bloc par bloc.
 
 ## Rappel méthodologique
 
