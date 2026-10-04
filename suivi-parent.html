@@ -1286,10 +1286,18 @@ async function creerEnfant() {
     // (ci-dessus) bloque toute tentative avec un couple déjà présent dans
     // profils AVANT d'arriver ici, donc rappeler creerEnfant() pour le
     // même enfant ne peut pas redéclencher cet envoi.
-    fetch('/api/email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'inscription', prenom: prenomE, nom: nomE, emailParent: user.email })
+    // Authentifié par le jeton du parent (session sb, même motif que
+    // /api/stripe-checkout plus bas) : le destinataire est déduit côté serveur
+    // du compte vérifié, il n'est plus envoyé.
+    sb.auth.getSession().then(({ data: sessionEmail }) => {
+      const jetonEmail = sessionEmail && sessionEmail.session ? sessionEmail.session.access_token : null
+      if (!jetonEmail) { console.warn('Email de bienvenue non envoyé : session parent introuvable'); return }
+      return fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jetonEmail}` },
+        body: JSON.stringify({ type: 'inscription', prenom: prenomE, nom: nomE }),
+        keepalive: true
+      }).then(r => { if (!r.ok) console.warn('Email de bienvenue non envoyé, statut', r.status) })
     }).catch(e => console.log('Erreur email de bienvenue:', e.message))
 
     if (offreSelectionnee === 'suivi') {

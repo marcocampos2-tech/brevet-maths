@@ -1,7 +1,7 @@
 // /api/email.js
 
 const { peutRecevoirEmailDetaille, enPeriodeGratuite } = require('../lib/gating')
-const { verifierToken, verifierProf } = require('../lib/auth-token')
+const { verifierToken, verifierUtilisateur, verifierProf } = require('../lib/auth-token')
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -16,6 +16,58 @@ function esc(s) {
 // point d'appel dans le handler reset-password.
 function escapeIlike(s) {
   return String(s).replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
+// ═══════════════════════════════════════════
+// VALEURS VENANT DU CLIENT — brevet-blanc et inscription
+// Ces valeurs ne sont jamais fiables : elles sont bornées ou nettoyées avant
+// d'atteindre le sujet ou le HTML d'un email. Une valeur hors bornes est
+// ramenée dans les bornes (pas rejetée) ; seul un type absurde donne un 400.
+// ═══════════════════════════════════════════
+const SCORE_MAX_EXAMEN = 20      // examen en ligne noté sur 20 (cf. api/examen.js : total: 20)
+const TEMPS_MAX_EXAMEN_S = 3600  // 60 min : l'examen dure 40 min, marge pour l'écart d'horloge
+const THEMES_MAX = 20            // nombre de thèmes retenus dans l'email
+const THEME_NOM_MAX = 80         // longueur max d'un nom de thème
+const NOM_ELEVE_MAX = 60         // longueur max de prenom / nom
+
+// Entier borné dans [min, max], ou null si la valeur n'est pas numérique
+// (nombre fini, ou chaîne purement numérique).
+function entierBorne(v, min, max) {
+  const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v
+  if (typeof n !== 'number' || !Number.isFinite(n)) return null
+  return Math.min(max, Math.max(min, Math.trunc(n)))
+}
+
+// Chaîne sans caractères de contrôle (retours à la ligne compris), espaces
+// réduits, longueur limitée. Sert au sujet comme au HTML (où esc() reste
+// appliqué ensuite).
+function nettoyerTexte(s, max) {
+  return String(s == null ? '' : s)
+    .replace(/[\u0000-\u001f\u007f\u2028\u2029]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max)
+}
+
+// scoresThemes envoyé par examen.html : { "<thème>": { ok, total }, … }
+// (objet issu de lib/examen-score.js). Chaque thème est borné ; ok <= total ;
+// un thème dont la forme est inutilisable est ignoré plutôt que de rejeter
+// tout l'email.
+function themesBornes(scoresThemes) {
+  const themes = []
+  for (const [nom, s] of Object.entries(scoresThemes)) {
+    if (themes.length >= THEMES_MAX) break
+    if (!s || typeof s !== 'object') continue
+    const total = entierBorne(s.total, 0, SCORE_MAX_EXAMEN)
+    const ok = entierBorne(s.ok, 0, SCORE_MAX_EXAMEN)
+    if (total === null || ok === null || total === 0) continue
+    themes.push({ nom: nettoyerTexte(nom, THEME_NOM_MAX), ok: Math.min(ok, total), total })
+  }
+  return themes
+}
+
+function jetonBearer(enteteAuthorization) {
+  return enteteAuthorization.startsWith('Bearer ') ? enteteAuthorization.slice(7) : null
 }
 
 // ═══════════════════════════════════════════
@@ -85,12 +137,14 @@ export default async function handler(req, res) {
   // non authentifié ne doit pas pouvoir épuiser le quota d'une adresse).
   //  - types déclenchés par les boutons de prof.html : jeton Supabase valide
   //    dont le rôle serveur est 'prof' (401 sinon invalide, 403 si autre rôle) ;
+  //  - brevet-blanc et inscription : jeton Supabase d'un utilisateur, vérifié
+  //    dans le bloc de chaque type (le destinataire en est déduit, jamais lu
+  //    dans le corps) ;
   //  - resiliation-confirmee (appel interne depuis stripe-webhook.js) :
   //    CRON_SECRET, comparaison exacte. !!process.env.CRON_SECRET évite qu'un
   //    'Bearer undefined' ne passe si la variable n'est pas posée.
   // Les autres types ne sont pas concernés ici (reset-password, contact-cours :
-  // publics ; recap-journalier-user : contrôle propre ; brevet-blanc,
-  // inscription : traités à part).
+  // publics ; recap-journalier-user : contrôle propre).
   // ═══════════════════════════════════════════
   const TYPES_PROF = ['adresse-brevet', 'stage', 'bilan', 'resultats-brevet']
   const typeRequete = req.body?.type
@@ -506,7 +560,46 @@ export default async function handler(req, res) {
   // ═══════════════════════════════════════════
   if (req.body?.type === 'brevet-blanc') {
     try {
-      const { emailParent, prenom, nom, score, total, pct, scoresThemes, tempsSecondes } = req.body
+      const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+      const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY
+
+      // ── Identité : jeton obligatoire. user_id vient du jeton, jamais du
+      // corps ; le destinataire est relu dans profils (emailParent, total et
+      // pct éventuellement présents dans le corps sont ignorés).
+      const userId = await verifierToken(jetonBearer(authHeaderEntrant), SUPA_URL, SUPA_KEY)
+      if (!userId) return res.status(401).json({ error: 'Non autorisé' })
+
+      // ── Valeurs du client : bornées, pas rejetées. 400 seulement si le type
+      // est absurde.
+      const { prenom: prenomBrut, nom: nomBrut, score: scoreBrut, scoresThemes, tempsSecondes: tempsBrut } = req.body
+      const score = entierBorne(scoreBrut, 0, SCORE_MAX_EXAMEN)
+      if (score === null) return res.status(400).json({ error: 'score invalide' })
+      const pct = Math.round((score / SCORE_MAX_EXAMEN) * 100)
+      if (scoresThemes != null && typeof scoresThemes !== 'object') return res.status(400).json({ error: 'scoresThemes invalide' })
+      // tempsSecondes absent : la ligne de durée est simplement omise
+      const tempsSecondes = tempsBrut == null ? null : entierBorne(tempsBrut, 0, TEMPS_MAX_EXAMEN_S)
+      if (tempsBrut != null && tempsSecondes === null) return res.status(400).json({ error: 'tempsSecondes invalide' })
+      if ((prenomBrut != null && typeof prenomBrut !== 'string') || (nomBrut != null && typeof nomBrut !== 'string')) {
+        return res.status(400).json({ error: 'prenom/nom invalides' })
+      }
+      const prenom = nettoyerTexte(prenomBrut, NOM_ELEVE_MAX)
+      const nom = nettoyerTexte(nomBrut, NOM_ELEVE_MAX)
+      const themes = scoresThemes ? themesBornes(scoresThemes) : []
+
+      // ── Destinataire : profils.email_parent de l'élève authentifié
+      const profilRes = await fetch(
+        `${SUPA_URL}/rest/v1/profils?user_id=eq.${encodeURIComponent(userId)}&select=email_parent&limit=1`,
+        { headers: { 'Authorization': `Bearer ${SUPA_KEY}`, 'apikey': SUPA_KEY } }
+      )
+      if (!profilRes.ok) {
+        console.log('Erreur brevet-blanc: lecture profils refusée, statut', profilRes.status)
+        return res.status(500).json({ error: 'Lecture du profil impossible' })
+      }
+      const profils = await profilRes.json()
+      const emailParent = Array.isArray(profils) && profils[0] && typeof profils[0].email_parent === 'string'
+        ? profils[0].email_parent.trim()
+        : ''
+      if (!emailParent) return res.status(200).json({ success: false, raison: 'pas-de-destinataire' })
 
       const couleurScore = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
       const mention = pct >= 80 ? '🌟 Excellent' : pct >= 70 ? '👍 Très bon' : pct >= 60 ? '✅ Bon' : pct >= 50 ? '📋 Correct' : '📚 À retravailler'
@@ -514,18 +607,16 @@ export default async function handler(req, res) {
         ? `Bonne nouvelle : <strong>${esc(prenom)}</strong> a réussi son examen en ligne ! Encouragez-le à continuer sur les thèmes à améliorer.`
         : `<strong>${esc(prenom)}</strong> n'a pas encore le niveau requis. C'est normal — c'est un entraînement ! Encouragez-le à continuer à réviser régulièrement.`
 
-      const m = Math.floor(tempsSecondes / 60)
-      const s = tempsSecondes % 60
-      const tempsFormat = `${m} min ${s} sec`
+      const tempsFormat = tempsSecondes === null ? '' : `${Math.floor(tempsSecondes / 60)} min ${tempsSecondes % 60} sec`
 
-      const themesHTML = scoresThemes ? Object.entries(scoresThemes).map(([theme, s]) => {
-        const tp = Math.round((s.ok / s.total) * 100)
+      const themesHTML = themes.map(t => {
+        const tp = Math.round((t.ok / t.total) * 100)
         const tc = tp >= 60 ? '#16a34a' : tp >= 40 ? '#f59e0b' : '#dc2626'
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0ec">
-          <span style="font-size:13px;color:#444">${esc(theme)}</span>
-          <span style="font-weight:700;color:${tc}">${s.ok}/${s.total} (${tp}%)</span>
+          <span style="font-size:13px;color:#444">${esc(t.nom)}</span>
+          <span style="font-weight:700;color:${tc}">${t.ok}/${t.total} (${tp}%)</span>
         </div>`
-      }).join('') : ''
+      }).join('')
 
       const html = `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
@@ -538,10 +629,10 @@ export default async function handler(req, res) {
             Votre enfant <strong>${esc(prenom)}${nom ? ' ' + esc(nom) : ''}</strong> vient de passer l'Examen en ligne Brevet Maths sur ACADEMIKA.
           </p>
           <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
-            <div style="font-size:56px;font-weight:700;color:${couleurScore}">${score}/20</div>
+            <div style="font-size:56px;font-weight:700;color:${couleurScore}">${score}/${SCORE_MAX_EXAMEN}</div>
             <div style="font-size:24px;font-weight:600;color:${couleurScore};margin-top:4px">${pct}%</div>
             <div style="font-size:18px;margin-top:8px">${mention}</div>
-            <div style="font-size:13px;color:#666;margin-top:8px">⏱️ ${tempsFormat}</div>
+            ${tempsFormat ? `<div style="font-size:13px;color:#666;margin-top:8px">⏱️ ${tempsFormat}</div>` : ''}
           </div>
           <p style="color:#444;margin-bottom:16px;">${messageMotivation}</p>
           ${themesHTML ? `<div style="margin-top:20px"><p style="color:#1a1a1a;font-weight:600;margin-bottom:8px">📊 RÉSULTATS PAR THÈME :</p>${themesHTML}</div>` : ''}
@@ -557,13 +648,16 @@ export default async function handler(req, res) {
           </p>
         </div>`
 
-      const rateOk = await verifierRateLimit(emailParent)
+      // Clé par compte authentifié (pas par adresse) : l'adresse n'est plus
+      // choisie par l'appelant, et ce compteur ne se mélange pas à ceux des
+      // autres types d'emails du même parent.
+      const rateOk = await verifierRateLimit('brevet-blanc:' + userId)
       if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
 
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
-        body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `📝 ${prenom} a obtenu ${score}/20 à l'Examen en ligne — ACADEMIKA`, html })
+        body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `📝 ${prenom} a obtenu ${score}/${SCORE_MAX_EXAMEN} à l'Examen en ligne — ACADEMIKA`, html })
       })
 
       const responseData = await response.json()
@@ -580,8 +674,40 @@ export default async function handler(req, res) {
   // ═══════════════════════════════════════════
   if (req.body?.type === 'inscription') {
     try {
-      const { prenom, nom, emailParent } = req.body
+      const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+      const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY
       const PROF_EMAIL = 'contact@academika.fr'
+
+      // ── Identité : jeton du parent obligatoire, compte à email confirmé.
+      // Le destinataire est l'email de ce compte ; emailParent éventuellement
+      // présent dans le corps est ignoré.
+      const utilisateur = await verifierUtilisateur(jetonBearer(authHeaderEntrant), SUPA_URL, SUPA_KEY)
+      if (!utilisateur) return res.status(401).json({ error: 'Non autorisé' })
+      if (!utilisateur.emailConfirme || !utilisateur.email) return res.status(403).json({ error: 'Accès réservé' })
+      const emailParent = utilisateur.email.trim()
+
+      // ── Ce compte est-il bien un parent ? Au moins une ligne profils portant
+      // son email (insensible à la casse, comme le filtre du reset-password ;
+      // creerEnfant() vient d'en créer une avec user.email).
+      const parentRes = await fetch(
+        `${SUPA_URL}/rest/v1/profils?email_parent=ilike.${encodeURIComponent(escapeIlike(emailParent.toLowerCase()))}&select=user_id&limit=1`,
+        { headers: { 'Authorization': `Bearer ${SUPA_KEY}`, 'apikey': SUPA_KEY } }
+      )
+      if (!parentRes.ok) {
+        console.log('Erreur inscription: lecture profils refusée, statut', parentRes.status)
+        return res.status(500).json({ error: 'Vérification du compte impossible' })
+      }
+      const lignesParent = await parentRes.json()
+      if (!Array.isArray(lignesParent) || lignesParent.length === 0) return res.status(403).json({ error: 'Accès réservé' })
+
+      // ── Texte du client nettoyé avant le sujet comme avant le HTML.
+      const { prenom: prenomBrut, nom: nomBrut } = req.body
+      if ((prenomBrut != null && typeof prenomBrut !== 'string') || (nomBrut != null && typeof nomBrut !== 'string')) {
+        return res.status(400).json({ error: 'prenom/nom invalides' })
+      }
+      const prenom = nettoyerTexte(prenomBrut, NOM_ELEVE_MAX)
+      const nom = nettoyerTexte(nomBrut, NOM_ELEVE_MAX)
+      if (!prenom) return res.status(400).json({ error: 'prenom requis' })
 
       const htmlProf = `
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
@@ -665,12 +791,12 @@ export default async function handler(req, res) {
           </p>
         </div>`
 
-      // Le rate-limit ne compte que l'email envoyé au parent — l'email interne
-      // vers PROF_EMAIL n'est pas une adresse externe soumise à abus.
-      const rateOk = await verifierRateLimit(emailParent)
+      // Un seul contrôle, par compte authentifié, couvre l'email vers le parent
+      // ET celui vers PROF_EMAIL (qui n'était pas limité jusqu'ici).
+      const rateOk = await verifierRateLimit('inscription:' + utilisateur.id)
       if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
 
-      await Promise.all([
+      const reponsesResend = await Promise.all([
         fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
@@ -682,6 +808,14 @@ export default async function handler(req, res) {
           body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `🎓 Bienvenue sur ACADEMIKA — ${prenom}`, html: htmlParents })
         })
       ])
+
+      // Les deux réponses Resend sont examinées : seul le statut est journalisé
+      // (le corps peut contenir des adresses).
+      const echecs = reponsesResend.filter(r => !r.ok)
+      if (echecs.length > 0) {
+        console.log('Erreur inscription: envoi Resend refusé, statuts', echecs.map(r => r.status).join(','))
+        return res.status(502).json({ success: false, error: 'Envoi email échoué' })
+      }
 
       return res.status(200).json({ success: true })
     } catch(e) {

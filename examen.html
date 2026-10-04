@@ -662,7 +662,24 @@ async function sauvegarder(){
     resultatServeur = { nbOk: data.score, themes: data.themes, questionsRatees: data.questionsRatees, tempsSecondes: data.temps_secondes!==undefined?data.temps_secondes:tempsSecondes }
     saved=true;console.log('✅ Examen enregistré')
 
-    if(emailParent){try{await fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'brevet-blanc',emailParent:emailParent,prenom:prenom||'',nom:nom||'',score:data.score,total:20,pct:Math.round((data.score/20)*100),scoresThemes:data.themes,tempsSecondes:tempsSecondes})});console.log('✅ Email envoyé')}catch(emailErr){console.error('Erreur email:',emailErr.message)}}
+    // emailParent ne sert plus qu'à décider s'il faut tenter l'envoi : le
+    // destinataire réel est relu côté serveur (profils.email_parent) à partir
+    // du jeton, la valeur n'est donc pas envoyée. Le jeton est relu juste
+    // avant l'appel (getSession() rafraîchit un jeton expiré) plutôt que de
+    // réutiliser accessToken, tenu à jour pour pagehide mais potentiellement
+    // ancien après un examen long.
+    if(emailParent){
+      try{
+        const {data:sessionEmail}=await sb.auth.getSession()
+        const jetonEmail=sessionEmail&&sessionEmail.session?sessionEmail.session.access_token:null
+        if(!jetonEmail){console.warn('Email résultat non envoyé : session introuvable')}
+        else{
+          const resEmail=await fetch('/api/email',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+jetonEmail},body:JSON.stringify({type:'brevet-blanc',prenom:prenom||'',nom:nom||'',score:data.score,total:20,scoresThemes:data.themes,tempsSecondes:tempsSecondes})})
+          if(resEmail.ok){console.log('✅ Email envoyé')}
+          else{console.warn('Email résultat non envoyé, statut',resEmail.status);showToast('L\'email au parent n\'a pas pu être envoyé.','orange')}
+        }
+      }catch(emailErr){console.error('Erreur email:',emailErr.message)}
+    }
   } catch(e){console.log('Erreur:',e.message)}
 }
 
