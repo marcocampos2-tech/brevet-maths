@@ -16,8 +16,9 @@ Fichiers non encore audités, à lire en priorité si pertinent : `resultats.htm
 
 ## Décisions commerciales verrouillées (ne pas remettre en question)
 
-* Grille tarifaire définitive (validée 22/07/2026) : Autonomie 0€ · Suivi 7,90€/mois · Cours visio 30€/h · Cours présentiel 40€/h · Stages vacances 20€/h (soit 200€ pour 10h/semaine)
-  * ⚠️ **TEST, pas une décision verrouillée** : le format actuellement affiché pour le stage Toussaint 2026 est 120€ pour 6h, lundi/mercredi/vendredi, 2h/jour (`stages-vacances.html`, PR #90). Il remplace l'offre affichée, il ne coexiste pas avec elle. Si le test est insuffisant, retour à 200€/10h pour les stages suivants.
+* Grille tarifaire définitive (validée 22/07/2026) : Autonomie 0€ · Suivi 7,90€/mois · Cours visio 30€/h · Cours présentiel 40€/h · Stages vacances 20€/h
+  * **Format de stage actuel (choix du 04/10/2026) : 3 jours, 120€ pour 6h** (lundi/mercredi/vendredi, 2h/jour ; `stages-vacances.html`, PR #90) ; à réévaluer après les tests Toussaint et Noël 2026. Le format 5 jours / 200€ (10h/semaine) est écarté pour l'instant ; plus de règle de repli automatique.
+  * **Stage Toussaint 2026 = test des canaux (Instagram, Facebook, proches) et de la demande**, pas un test du format. Critère fixé le 04/10/2026 : demande confirmée si au moins 3 inscrits dont au moins 1 hors proches ; 1-2 inscrits = signal faible, test reconduit à Noël avant toute conclusion ; 0 inscrit = analyser le trafic avant de conclure. Pas de minimum d'inscrits pour maintenir une session.
 * Pas de gratuit croisé sur Suivi
 * Cours présentiel individuel retiré de l'offre publique (conflit avec activité salariée)
 * CM ne travaille jamais le samedi ; présentiel bassin Melun = dimanches uniquement
