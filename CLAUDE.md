@@ -107,8 +107,16 @@ $$;
 * Retiré : l'onglet "Créer un compte", tous les champs du bloc d'inscription (prénom/nom élève, email parent, mot de passe, source du trafic), et la branche `signUp` + `insert` dans `profils` de `soumettre()`.
 * Raison (sécurité, pas que cosmétique) : `email_parent` y était saisi **librement par l'élève**, sans aucune vérification — n'importe qui pouvait créer un compte élève et router le suivi scolaire d'un mineur vers une adresse email arbitraire.
 * Décision produit confirmée : seul le parent crée les comptes, depuis `espace-parent.html` puis `suivi-parent.html` (`creerEnfant()`), où `email_parent` provient de la session authentifiée du parent, pas d'un champ libre. **Ne pas réintroduire** de parcours d'inscription autonome dans `connexion.html`.
-* `connexion.html` ne sert plus qu'à connecter un élève dont le compte existe déjà (`verifier_login` + `signInWithPassword`) et au reset de mot de passe.
+* `connexion.html` ne sert plus qu'à connecter un élève dont le compte existe déjà (par `api/connexion-eleve.js`, cf. section suivante) et au reset de mot de passe.
 * Effet de bord à traiter dans un chantier suivant (déjà validé) : la collecte d'origine du trafic (champ radio "comment avez-vous connu Academika ?", colonne `source` de `profils`) a disparu avec ce bloc. Elle doit être réimplantée dans `suivi-parent.html` (`creerEnfant()`) plutôt que restaurée ici.
+
+**Connexion élève par le serveur — `api/connexion-eleve.js`** (TODO n°43 ; en attente de validation en production)
+
+* `connexion.html` n'appelle plus `verifier_login` ni `signInWithPassword` : `soumettre()` poste `{ prenom, nom, password }` à `/api/connexion-eleve`, qui cherche l'élève avec la clé service, tente la connexion auprès de Supabase Auth (`/auth/v1/token?grant_type=password`) et renvoie `{ access_token, refresh_token }` ; le navigateur installe la session avec `sb.auth.setSession()`. Le faux email ne transite plus par le navigateur. Réponses : 401 identifiants (réponse unique : élève inconnu, doublon ou mot de passe faux — seul le 400 de Supabase Auth compte comme échec d'identifiants ; un 401 de Supabase, apikey invalide, donne un 503 technique sans compter d'échec), 429 bloqué, 503 saturé/technique, 400 saisie. Durée minimale de réponse de 1 s pour toutes les réponses.
+* Blocage : clés `eleve:<prenom>|<nom>` (5 échecs / fenêtre 900 s / blocage 900 s) et `ip:<ip>` (20 échecs / 900 s / 900 s), via les RPC `login_est_bloque`, `login_enregistrer_echec` et `login_reinitialiser` (table `login_tentatives` — RLS active sans policy, droits retirés à `anon` et `authenticated` — et fonctions `login_est_bloque(p_cles text[]) → boolean`, `login_enregistrer_echec(p_cle text, p_seuil integer, p_fenetre_s integer, p_blocage_s integer) → void` et `login_reinitialiser(p_cle text) → void`, `EXECUTE` réservé à `service_role` : **créées et testées en base le 04/10/2026, à versionner dans `db/policies.sql`**). Les RPC sont **fail-open** : une panne du mécanisme n'empêche jamais un élève de se connecter (statut journalisé, jamais le contenu). IP lue dans `x-real-ip`, sinon premier élément de `x-forwarded-for` ; sans IP valide, pas de clé IP.
+* **`SUPABASE_SECRET_KEY`** (facultative) : si elle est définie, elle sert d'`apikey` et l'IP du client est transmise à Supabase (en-tête `Sb-Forwarded-For`) pour que ses limites portent sur l'élève et non sur le serveur Vercel. Sinon : clé anon (`NEXT_PUBLIC_SUPABASE_ANON_KEY`), sans transfert d'IP, avec un log d'avertissement.
+* **`verifier_login` reste ouverte à `anon` jusqu'à validation en production** (fermeture et versionnement : TODO n°43).
+* Mots de passe : minimum 8 caractères à la création d'un enfant (`suivi-parent.html`) et à la réinitialisation (`connexion.html`). La connexion n'impose aucun minimum : les mots de passe existants de 6 ou 7 caractères restent valides.
 
 ### Reste ouvert — chantier différé « intégrité des comptes »
 
@@ -239,7 +247,7 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 
 `NEXT_PUBLIC_SUPABASE_ANON_KEY` doit être posée sur les **trois scopes Vercel** (Production, Preview, Development). Il n'y a plus de repli en dur : son absence donne `raison: 'config_absente'` et un log explicite, plutôt qu'un fonctionnement apparent masquant une mauvaise configuration.
 
-`lib/` ne compte pas dans la limite de 12 fonctions serverless du plan Hobby — Vercel ne compte que les fichiers sous `api/`, qui sont exactement 11 (12 avant la suppression d'`api/contact-cours.js`, le 04/10/2026, PR #96).
+`lib/` ne compte pas dans la limite de 12 fonctions serverless du plan Hobby — Vercel ne compte que les fichiers sous `api/`, qui sont exactement **12 sur 12 depuis l'ajout d'`api/connexion-eleve.js` : plus aucune marge**, toute nouvelle fonction suppose d'en fusionner une autre (11 après la suppression d'`api/contact-cours.js`, le 04/10/2026, PR #96).
 
 ### Tests
 

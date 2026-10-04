@@ -157,7 +157,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 42. **Contenu de la banque de questions non échappé dans `prof.html`** (énoncés, options, tableaux, figures SVG) — hors périmètre du lot 1 (PR #93). Une sonde SQL est à lancer avant toute décision, pour mesurer ce que la base contient réellement (balises, guillemets, SVG légitimes) : échapper un contenu volontairement riche (tableaux, SVG) casserait l'affichage.
 
-43. **Chantier distinct « connexion élève » — `verifier_login` appelable sans session** — constaté le 04/10/2026 (droits EXECUTE relevés : PUBLIC, anon, authenticated). La fonction, nécessaire à `connexion.html` avant toute authentification, renvoie le `faux_email` d'un élève à partir de son seul (prénom, nom) : énumération possible des comptes élèves, suivie d'une tentative de mot de passe. À cadrer comme chantier à part (mécanisme de connexion élève), pas comme un simple `REVOKE`.
+43. **Connexion élève : fermer `verifier_login` à `anon` après validation en production** de `api/connexion-eleve.js`, puis versionner dans `db/policies.sql` la fermeture, la table de compteurs et les fonctions `login_est_bloque`, `login_enregistrer_echec` et `login_reinitialiser`.
 
 44. **`stages-vacances.html` : les stages passés restent affichés** — constaté le 04/10/2026. La page affiche toujours les sessions dont la date de début est passée, marquées « Terminé » (filigrane) et non cliquables (`s.termine`, `stages-vacances.html:165-172`) : aucun filtre ne les retire de la liste.
 
@@ -174,6 +174,20 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 51. **Dette : `purgerSessionLocale()` existe en 3 copies (`examen.html`, `connexion.html`, `quiz.html`) et `estRefusAuthentification()` en 2 copies (`connexion.html`, `quiz.html`)** — factoriser dans un helper client partagé.
 
 52. **Commentaires de code renvoyant à des entrées TODO supprimées** (`db/policies.sql:98`, `:334-335`, `:538`) — remplacer par le numéro de PR correspondant.
+
+53. **Fonctions Vercel : 12 sur 12, plus aucune marge** (`api/connexion-eleve.js` est la 12ᵉ) — consolider (fusionner des endpoints) avant toute nouvelle fonction.
+
+54. **`index.js` (racine) : code mort** d'une ancienne version (page Next.js qui importe `../lib/supabase`, absent) — supprimer, après avoir vérifié que Vercel ne le sert pas publiquement.
+
+55. **CAPTCHA Supabase Auth à étudier** — attention : il s'applique à toutes les connexions et inscriptions, pas seulement à celle des élèves.
+
+56. **Réglages Supabase « Secure password change » et « Require current password » désactivés** — à étudier.
+
+57. **`verifier_disponibilite` reste appelable par tout compte connecté** (donc par quiconque crée un compte parent, cf. `shouldCreateUser`) : permet de savoir si un couple (prénom, nom) existe — à traiter avec le n°1.
+
+58. **Compteurs de connexion (`login_tentatives`) : prévoir une purge des lignes expirées** (une ligne par prénom+nom ou IP ayant échoué, y compris des noms inventés).
+
+59. **Connexion élève : une IP partagée (établissement scolaire) peut être bloquée pour tous après 20 échecs en 15 min** — à surveiller avec du trafic réel.
 
 ---
 

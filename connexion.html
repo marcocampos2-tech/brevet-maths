@@ -254,15 +254,44 @@ async function soumettre() {
     afficherMsg('Remplis tous les champs.', 'error')
     btn.disabled = false; btn.textContent = 'Se connecter'; return
   }
-  const { data: fauxEmailTrouve, error: errProfil } = await sb
-    .rpc('verifier_login', { p_prenom: prenom.toLowerCase(), p_nom: nom.toLowerCase() })
-  if (errProfil || !fauxEmailTrouve) {
-    afficherMsg("Prénom ou nom introuvable. Vérifie l'orthographe.", 'error')
+  // Connexion par le serveur : /api/connexion-eleve cherche l'élève, tente la
+  // connexion et compte les échecs. Le faux email ne transite plus jamais par
+  // le navigateur. Sur 200, la session renvoyée est installée ici.
+  const MSG_TECHNIQUE = 'Problème technique, réessaie dans quelques instants.'
+  let res
+  try {
+    res = await fetch('/api/connexion-eleve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prenom, nom, password })
+    })
+  } catch (e) {
+    afficherMsg(MSG_TECHNIQUE, 'error')
     btn.disabled = false; btn.textContent = 'Se connecter'; return
   }
-  const { error } = await sb.auth.signInWithPassword({ email: fauxEmailTrouve, password })
-  if (error) afficherMsg('Mot de passe incorrect. Réessaie.', 'error')
-  else window.location.href = 'quiz.html'
+  if (res.status === 200) {
+    let jetons = null
+    try { jetons = await res.json() } catch (e) { jetons = null }
+    if (!jetons || !jetons.access_token || !jetons.refresh_token) {
+      afficherMsg(MSG_TECHNIQUE, 'error')
+    } else {
+      const { error } = await sb.auth.setSession({ access_token: jetons.access_token, refresh_token: jetons.refresh_token })
+      if (error) {
+        console.log('[connexion] setSession a échoué :', error.message)
+        afficherMsg(MSG_TECHNIQUE, 'error')
+      } else {
+        window.location.href = 'quiz.html'
+      }
+    }
+  } else if (res.status === 401) {
+    afficherMsg('Prénom, nom ou mot de passe incorrect.', 'error')
+  } else if (res.status === 429) {
+    afficherMsg('Trop de tentatives. Réessaie dans 15 minutes.', 'error')
+  } else if (res.status === 400) {
+    afficherMsg('Remplis tous les champs.', 'error')
+  } else {
+    afficherMsg(MSG_TECHNIQUE, 'error')
+  }
   btn.disabled = false
   btn.textContent = 'Se connecter'
 }
@@ -293,7 +322,7 @@ function afficherNouveauMdp() {
 async function sauvegarderNouveauMdp() {
   const password = document.getElementById('new-password').value
   const msg = document.getElementById('new-msg')
-  if (!password || password.length < 6) { msg.textContent = 'Le mot de passe doit faire au moins 6 caractères.'; msg.className = 'form-msg error'; return }
+  if (!password || password.length < 8) { msg.textContent = 'Le mot de passe doit faire au moins 8 caractères.'; msg.className = 'form-msg error'; return }
   const { error } = await sb.auth.updateUser({ password })
   if (error) { msg.textContent = 'Erreur : ' + error.message; msg.className = 'form-msg error' }
   else { msg.textContent = '✅ Mot de passe mis à jour ! Redirection...'; msg.className = 'form-msg success'; setTimeout(() => window.location.href = 'quiz.html', 2000) }
