@@ -1645,7 +1645,8 @@ async function envoyerBilan(userId) {
   try {
     const res = await appelerEmail({ type: 'bilan', emailParent:e.email_parent, prenom:e.prenom, nom:e.nom, moyGlobale, totalSessions:rows.length, tempsTotal:rows.reduce((a,r)=>a+(r.temps_secondes||0),0), sousThemes }, { brut: true })
     const data = await res.json()
-    if (data.success) { btn.textContent='Envoyé ✓'; setTimeout(()=>{ btn.disabled=false; btn.textContent='Envoyer bilan parents' },3000) }
+    if (data.raison === 'desabonne') { alert('Parent désabonné : bilan non envoyé.'); btn.disabled=false; btn.textContent='Envoyer bilan parents' }
+    else if (data.success) { btn.textContent='Envoyé ✓'; setTimeout(()=>{ btn.disabled=false; btn.textContent='Envoyer bilan parents' },3000) }
     else throw new Error(data.error)
   } catch(err) { alert('Erreur : '+err.message); btn.disabled=false; btn.textContent='Envoyer bilan parents' }
 }

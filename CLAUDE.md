@@ -259,9 +259,17 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 * **Pas de dédoublonnage par énoncé sur `examen_questions`**, contrairement à `questions_banque`. Si deux lignes portent le même texte sous des ids différents, marquer l'une ne protège pas de l'autre.
 * **`sort(() => Math.random() - 0.5)`** est un mélange biaisé, motif présent dans tout le dépôt.
 
-## Note — Gating du bilan manuel (`api/email.js`, type `bilan`)
+## Note — Bilan manuel (`api/email.js`, type `bilan`) et désabonnement
 
-**`bilan` (bouton manuel "Envoyer bilan parents", `prof.html`) — gating volontairement absent.** Contrairement à `recap-journalier-user`, ce flux n'applique pas `peutRecevoirEmailDetaille`. C'est un choix commercial assumé : ce bouton sert au prof à envoyer manuellement un échantillon détaillé (sous-thème, Acquis/À revoir, tout l'historique de l'élève) à un parent en offre Libre, dans une logique de conversion vers l'offre Accompagné. Ne pas "corriger" en ajoutant le gating lors d'un futur audit.
+**`bilan` (bouton manuel "Envoyer bilan parents", `prof.html`) — gating d'offre volontairement absent, désabonnement respecté.** Contrairement à `recap-journalier-user`, ce flux n'applique pas `peutRecevoirEmailDetaille`. C'est un choix commercial assumé : ce bouton sert au prof à envoyer manuellement un échantillon détaillé (sous-thème, Acquis/À revoir, tout l'historique de l'élève) à un parent en offre Libre, dans une logique de conversion vers l'offre Accompagné. Ne pas "corriger" en ajoutant le gating lors d'un futur audit. En revanche il **respecte `email_actif`** (depuis le 05/10/2026, TODO n°45 close) : le destinataire vient du corps de la requête, donc `parentDesabonne()` interroge `profils` (comparaison sans casse) ; si un profil portant cette adresse a `email_actif = false`, réponse `200 { success: false, raison: 'desabonne' }`, sans envoi, avant le quota ; `prof.html` affiche « Parent désabonné : bilan non envoyé. ». Une vérification impossible techniquement donne un 500 (le consentement prime, pas de fail-open).
+
+### Emails : suivi contre démarches
+
+* **Suivi — respectent `email_actif`, portent un lien « Se désabonner »** : `recap-journalier-user`, `brevet-blanc` (`raison: 'desabonne'` avant le quota), `bilan`, ainsi que les emails de `api/cron-rappel.js` (fin d'année, été, bilan périodique).
+* **Démarches — ignorent `email_actif`, sans lien de désabonnement** : `inscription` (bienvenue), `resiliation-confirmee`, `reset-password`, `adresse-brevet`, `stage`, `resultats-brevet`. Ce sont des réponses à une action du parent ou des confirmations de service (la résiliation est une confirmation sur support durable). `contact-cours` n'est pas concerné (destiné à `contact@academika.fr`).
+* **Page de désabonnement** (`desabonner.html`, `api/desabonner.js`) : promet la fin des « emails de suivi (récapitulatifs, bilans, résultats des examens en ligne) » et dit que les emails de démarches continuent. Le désabonnement porte sur **tout le foyer** (tous les profils de l'`email_parent`), comparaison sans casse (`ilike`, `*` refusé : joker PostgREST). Une adresse inconnue donne la même réponse qu'un succès (journal « 0 ligne », sans adresse). La colonne est versionnée dans `db/policies.sql` (`boolean NOT NULL DEFAULT true`).
+* **Risque accepté (05/10/2026) : lien de désabonnement non signé** (désabonnement possible par simple adresse ; réabonnement manuel via contact@academika.fr). À revoir si : trafic réel, plainte, ou volume d'emails imposant le désabonnement en un clic (List-Unsubscribe).
+* **Recherche `ilike` sur une saisie utilisateur : toujours via `escapeIlike()`** (échappe `\` `%` `_` et refuse `*`, joker PostgREST), avec refus explicite avant la requête. Faille constatée le 05/10/2026 : `*` dans `reset-password` visait tous les profils. `api/desabonner.js` applique sa propre validation équivalente.
 
 ## Rappel — Workflow Git
 

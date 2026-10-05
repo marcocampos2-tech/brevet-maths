@@ -662,3 +662,19 @@ AS $function$
 $function$;
 
 revoke execute on function public.verifier_email_parent(text) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- profils.email_actif — désabonnement des emails de suivi (relevé du 05/10/2026)
+-- ---------------------------------------------------------------------------
+-- Colonne DÉJÀ présente en base ; versionnée ici pour la revue de code.
+-- Type : boolean, NOT NULL, DEFAULT true — NULL est impossible, un profil est
+-- donc toujours « actif » ou « désabonné » sans troisième état. Le code teste
+-- néanmoins `email_actif === false` partout (api/email.js, api/cron-rappel.js).
+-- Seule écriture à false : api/desabonner.js (clé service), qui désactive tous
+-- les profils portant l'email_parent du lien, comparaison sans casse. Aucune
+-- écriture à true dans le code : le réabonnement est manuel, via
+-- contact@academika.fr.
+-- Idempotent : sans effet sur l'état actuel.
+alter table profils add column if not exists email_actif boolean not null default true;
+-- Contrainte NOT NULL appliquée en base le 05/10/2026.
+alter table profils alter column email_actif set not null;
