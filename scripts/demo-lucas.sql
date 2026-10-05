@@ -33,11 +33,14 @@
 --
 -- Trois barrières, aucune colonne nouvelle :
 --
---   1. email_actif = false — coupe les QUATRE chemins d'envoi :
+--   1. email_actif = false — coupe TOUS les envois vers le parent :
 --      bilan périodique, été et fin d'année (api/cron-rappel.js, garde
---      `if (!email_parent || email_actif === false) continue`) ainsi que
---      le récap journalier (api/email.js, branche 'recap-journalier-user',
---      même garde). C'est le mécanisme du désabonnement parent, déjà en
+--      `if (!email_parent || email_actif === false) continue`), récap
+--      journalier (api/email.js, branche 'recap-journalier-user', même
+--      garde), email de résultat d'examen en ligne (branche 'brevet-blanc',
+--      qui lit email_actif de la ligne profils de l'élève) et bilan manuel
+--      du prof (branche 'bilan', qui cherche tout profil désabonné portant
+--      cet email_parent). C'est le mécanisme du désabonnement parent, déjà en
 --      production — pas un flag inventé pour l'occasion.
 --
 --   2. alerte_envoyee = true sur chaque ligne insérée (bloc 2) — le bloc

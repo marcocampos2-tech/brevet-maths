@@ -39,8 +39,8 @@ function afficherSucces() {
   content.innerHTML =
     '<div class="icon">✅</div>' +
     '<div class="title">Désabonnement confirmé</div>' +
-    '<div class="subtitle">Vous ne recevrez plus d\'emails automatiques d\'ACADEMIKA.</div>' +
-    '<div class="note">Pour vous réabonner, contactez-nous :<br>' +
+    '<div class="subtitle">C\'est fait : vous ne recevrez plus nos emails de suivi. Les emails liés à vos démarches (inscription, mot de passe, résiliation, stages, examens présentiels) continueront de vous parvenir.</div>' +
+    '<div class="note">Pour vous réabonner, écrivez à :<br>' +
     '<a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a></div>'
 }
 
@@ -48,7 +48,7 @@ function afficherErreur() {
   content.innerHTML =
     '<div class="icon">❌</div>' +
     '<div class="title">Une erreur est survenue</div>' +
-    '<div class="subtitle">Impossible de traiter votre demande.</div>' +
+    '<div class="subtitle">Votre désabonnement n\'a pas pu être enregistré. Réessayez dans quelques instants ou écrivez-nous, nous le ferons pour vous.</div>' +
     '<div class="note">Contactez-nous directement :<br>' +
     '<a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a></div>'
 }
@@ -90,7 +90,7 @@ if (success) {
   content.innerHTML =
     '<div class="icon">📧</div>' +
     '<div class="title">Confirmer le désabonnement</div>' +
-    '<div class="subtitle">Souhaitez-vous vraiment ne plus recevoir les emails de suivi pour cette adresse ?</div>' +
+    '<div class="subtitle">Souhaitez-vous ne plus recevoir nos emails de suivi (récapitulatifs, bilans, résultats des examens en ligne) ?</div>' +
     '<div class="note" style="margin-bottom:1.5rem"><strong>' + escHtml(email) + '</strong></div>' +
     '<button id="btn-confirmer" class="btn">Confirmer le désabonnement</button>'
   document.getElementById('btn-confirmer').addEventListener('click', confirmerDesabonnement)

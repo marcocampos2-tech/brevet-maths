@@ -159,8 +159,6 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 44. **`stages-vacances.html` : les stages passés restent affichés** — constaté le 04/10/2026. La page affiche toujours les sessions dont la date de début est passée, marquées « Terminé » (filigrane) et non cliquables (`s.termine`, `stages-vacances.html:165-172`) : aucun filtre ne les retire de la liste.
 
-45. **`brevet-blanc` ignore `profils.email_actif`** — constaté le 04/10/2026 (PR #97). Un parent désabonné (`email_actif = false`) reçoit encore le bilan d'examen après chaque examen de son enfant ; `recap-journalier-user` en tient compte, pas `brevet-blanc`. Question de consentement, à traiter.
-
 46. **`api/email.js` : la branche d'erreur de `brevet-blanc` renvoie au client le corps de l'erreur Resend** — constaté le 04/10/2026 (PR #97). Réponse 500 du type `'Erreur envoi email : ' + JSON.stringify(responseData)`. Fuite d'information mineure.
 
 47. **Suppression de compte non prévue proprement** — constat SQL du 04/10/2026, complète le n°19 (chantier RGPD non cadré). `examens_blancs` et `questions_vues` n'ont aucune clé étrangère vers `auth.users` : supprimer un compte laisse des lignes orphelines. `resultats` et `rappels_envoyes` ont une clé étrangère sans cascade (`ON DELETE NO ACTION`) : elle bloque la suppression d'un compte qui a des lignes. `profils` et `examens_progression` sont en cascade. (`historique_bilans`, listé au n°19 sans clé étrangère, n'est pas repris dans ce constat.) À traiter avant toute demande de suppression RGPD réelle.
@@ -219,6 +217,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 5. URL trackée dédiée flyer (`/flyer`) — à faire, complémentaire au champ source déclaratif
 6. Constat concret pendant le chantier captures produit (09-13/09) : `index.html`/`tarifs.html` partagent `style.css`, `espace-parent.html` a son propre `<style>` local avec des noms de variables différents pour les mêmes couleurs (`--navy`/`--bordeaux` vs `--marine`/`--bordeaux`, etc.) — a nécessité une duplication de `.produit-shot`/`.section-label` avant qu'on ne retire finalement tout ce contenu d'`espace-parent.html`. Illustration concrète du point 3 ci-dessus.
 8. Évaluer le stage Toussaint 2026 selon le critère du 04/10/2026 (`CLAUDE.md`, décisions commerciales) : nombre d'inscrits et origine de chacun (Instagram, Facebook, proches), effort fourni par canal, trafic de `stages-vacances.html` et de `/insta` dans Vercel Analytics.
+9. Question produit : laisser le parent choisir par type d'email (récapitulatif quotidien, bilans) au lieu d'un désabonnement tout ou rien.
 
 ---
 

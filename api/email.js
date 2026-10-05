@@ -15,7 +15,44 @@ function esc(s) {
 // éventuel espace parasite stocké côté email_parent — cf. commentaire au
 // point d'appel dans le handler reset-password.
 function escapeIlike(s) {
+  if (contientJoker(s)) return null // défense en profondeur : les appelants refusent '*' en amont
   return String(s).replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
+// PostgREST traite '*' comme un joker dans ilike : « * » ou « a*@x.fr » ciblerait
+// plusieurs profils. Tout motif ilike construit à partir d'une saisie doit donc
+// refuser les valeurs contenant '*' AVANT la requête (contientJoker), avec la
+// réponse d'entrée invalide du type. escapeIlike() renvoie null dans ce cas, en
+// dernier recours.
+function contientJoker(s) {
+  return String(s).includes('*')
+}
+
+// Un parent est désabonné dès qu'UN profil portant son email_parent a
+// email_actif = false (api/desabonner.js désactive tout le foyer d'un coup).
+// Sert au type 'bilan', dont le destinataire vient du corps de la requête et
+// non d'une ligne profils. Renvoie true / false, ou null si la vérification
+// échoue techniquement (l'appelant refuse alors d'envoyer : le consentement
+// prime). Une adresse contenant '*' est refusée avant la requête (cf.
+// contientJoker) : même résultat qu'une vérification impossible.
+async function parentDesabonne(email, supaUrl, supaKey) {
+  const adresse = String(email || '').trim().toLowerCase()
+  if (!adresse || contientJoker(adresse)) return null
+  try {
+    const r = await fetch(
+      `${supaUrl}/rest/v1/profils?email_parent=ilike.${encodeURIComponent(escapeIlike(adresse))}&email_actif=eq.false&select=user_id&limit=1`,
+      { headers: { 'Authorization': `Bearer ${supaKey}`, 'apikey': supaKey } }
+    )
+    if (!r.ok) {
+      console.log('Erreur vérification désabonnement: statut', r.status)
+      return null
+    }
+    const lignes = await r.json()
+    return Array.isArray(lignes) && lignes.length > 0
+  } catch (e) {
+    console.log('Erreur vérification désabonnement:', e.message)
+    return null
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -199,6 +236,10 @@ export default async function handler(req, res) {
       // jamais saisi librement ailleurs, donc un espace parasite stocké est
       // hautement improbable en pratique.
       const emailNormalise = String(email_parent).trim().toLowerCase()
+
+      // '*' = joker ilike côté PostgREST (cf. contientJoker) : « * » ciblerait
+      // tous les profils. Réponse uniforme, sans requête ni envoi.
+      if (contientJoker(emailNormalise)) return res.status(200).json(reponseUniforme)
 
       const profilRes = await fetch(
         `${SUPA_URL}/rest/v1/profils?email_parent=ilike.${encodeURIComponent(escapeIlike(emailNormalise))}&select=user_id,faux_email,prenom_affiche,nom_affiche,derniere_demande_reset`,
@@ -470,6 +511,13 @@ export default async function handler(req, res) {
   if (req.body?.type === 'bilan') {
     try {
       const { emailParent, prenom, nom, moyGlobale, totalSessions, tempsTotal, sousThemes } = req.body
+
+      // Désabonnement respecté, avant tout calcul et avant le quota. Le prof
+      // lit raison: 'desabonne' dans prof.html (envoyerBilan).
+      const desabonne = await parentDesabonne(emailParent, 'https://vkkgadwqumqqwpaayjac.supabase.co', process.env.SUPABASE_SERVICE_KEY)
+      if (desabonne === null) return res.status(500).json({ error: 'Vérification du désabonnement impossible' })
+      if (desabonne) return res.status(200).json({ success: false, raison: 'desabonne' })
+
       const moyNote20 = (moyGlobale / 100 * 20).toFixed(1).replace('.0', '')
 
       const couleur = moyGlobale >= 80 ? '#16a34a' : moyGlobale >= 60 ? '#3730a3' : moyGlobale >= 40 ? '#f59e0b' : '#dc2626'
@@ -588,7 +636,7 @@ export default async function handler(req, res) {
 
       // ── Destinataire : profils.email_parent de l'élève authentifié
       const profilRes = await fetch(
-        `${SUPA_URL}/rest/v1/profils?user_id=eq.${encodeURIComponent(userId)}&select=email_parent&limit=1`,
+        `${SUPA_URL}/rest/v1/profils?user_id=eq.${encodeURIComponent(userId)}&select=email_parent,email_actif&limit=1`,
         { headers: { 'Authorization': `Bearer ${SUPA_KEY}`, 'apikey': SUPA_KEY } }
       )
       if (!profilRes.ok) {
@@ -600,6 +648,9 @@ export default async function handler(req, res) {
         ? profils[0].email_parent.trim()
         : ''
       if (!emailParent) return res.status(200).json({ success: false, raison: 'pas-de-destinataire' })
+      // Parent désabonné : pas d'envoi, avant le quota (le résultat de
+      // l'examen est enregistré côté client, indépendamment de cet email).
+      if (profils[0].email_actif === false) return res.status(200).json({ success: false, raison: 'desabonne' })
 
       const couleurScore = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
       const mention = pct >= 80 ? '🌟 Excellent' : pct >= 70 ? '👍 Très bon' : pct >= 60 ? '✅ Bon' : pct >= 50 ? '📋 Correct' : '📚 À retravailler'
@@ -685,6 +736,9 @@ export default async function handler(req, res) {
       if (!utilisateur) return res.status(401).json({ error: 'Non autorisé' })
       if (!utilisateur.emailConfirme || !utilisateur.email) return res.status(403).json({ error: 'Accès réservé' })
       const emailParent = utilisateur.email.trim()
+      // '*' = joker ilike côté PostgREST (cf. contientJoker) : refus avant la
+      // requête, même réponse que « ce compte n'est pas un parent ».
+      if (contientJoker(emailParent)) return res.status(403).json({ error: 'Accès réservé' })
 
       // ── Ce compte est-il bien un parent ? Au moins une ligne profils portant
       // son email (insensible à la casse, comme le filtre du reset-password ;
@@ -786,9 +840,6 @@ export default async function handler(req, res) {
             </p>
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
-          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-            <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
-          </p>
         </div>`
 
       // Un seul contrôle, par compte authentifié, couvre l'email vers le parent
@@ -864,9 +915,6 @@ export default async function handler(req, res) {
           </p>
           <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
         </div>
-        <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-          <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
-        </p>
       </div>`
 
     const rateOk = await verifierRateLimit(emailParent)
@@ -1261,9 +1309,6 @@ export default async function handler(req, res) {
             </p>
             <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
           </div>
-          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-            <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
-          </p>
         </div>`
 
       const rateOk = await verifierRateLimit(emailParent)
