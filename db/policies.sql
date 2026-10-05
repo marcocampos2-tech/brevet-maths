@@ -362,10 +362,12 @@ as $$
 $$;
 
 -- verifier_login(text, text) — renvoie le faux_email du compte élève portant
--- ce (prénom, nom), ou null. Appelée par connexion.html (rpc) AVANT toute
--- session : EXECUTE reste ouvert à anon, c'est nécessaire à la connexion
--- élève. Conséquence connue : la fonction répond sans session — cf.
--- docs/TODO.md, chantier « connexion élève » (énumération prénom/nom).
+-- ce (prénom, nom), ou null. Ancienne porte de la connexion élève (appelée par
+-- connexion.html en rpc, AVANT toute session, donc ouverte à anon : elle
+-- permettait d'énumérer les élèves). Plus appelée par aucun code depuis la
+-- PR #100 (connexion par api/connexion-eleve.js) ; EXECUTE retiré à PUBLIC, anon
+-- et authenticated — cf. section « Connexion élève par le serveur » en fin de
+-- fichier. Définition inchangée.
 create or replace function verifier_login(p_prenom text, p_nom text)
 returns text
 language sql
@@ -423,7 +425,7 @@ $$;
 --   email_parent_valide        PUBLIC, anon, authenticated
 --   est_parent_de              PUBLIC, anon, authenticated
 --   is_prof                    PUBLIC, anon, authenticated
---   verifier_login             PUBLIC, anon, authenticated
+--   verifier_login             PUBLIC, anon, authenticated  (état de ce relevé ; fermée ensuite — service_role seul, cf. section « Connexion élève par le serveur »)
 --   verifier_disponibilite     authenticated uniquement
 --   inscription_stage_valide   aucun (absente de la liste EXECUTE)
 --
@@ -544,3 +546,119 @@ alter table historique_bilans enable row level security;
 -- Droits de table appliqués le 04/10/2026 (plus aucun droit pour anon ni
 -- authenticated — ceinture en plus de la RLS) :
 revoke all on historique_bilans from anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Connexion élève par le serveur (relevé de la base du 04/10/2026)
+-- ---------------------------------------------------------------------------
+--
+-- Ce fichier est un relevé documentaire de la base, pas un script de
+-- migration : ne pas le rejouer en bloc sur la production (certains CREATE OR
+-- REPLACE rouvriraient temporairement des fonctions avant leur REVOKE).
+--
+-- Consommé par api/connexion-eleve.js (PR #100), qui appelle les trois
+-- fonctions login_* avec la clé service (RPC PostgREST) : blocage des
+-- tentatives par clé 'eleve:<prenom>|<nom>' et 'ip:<ip>'. Le code est FAIL-OPEN
+-- (une panne de ces RPC ne bloque jamais une connexion) ; les seuils (5 échecs
+-- / 900 s / blocage 900 s pour un élève, 20 / 900 s / 900 s pour une IP) sont
+-- des constantes d'api/connexion-eleve.js, passées en paramètres.
+--
+-- Validé en production le 04/10/2026 (connexion, réinitialisation, refus 42501 de verifier_login depuis le site, et connexion de l'élève toujours fonctionnelle).
+--
+-- Cette section reprend le relevé réel de la base. Aucune des trois fonctions
+-- n'est SECURITY DEFINER (elles s'exécutent avec les droits de l'appelant,
+-- service_role) et toutes ont un search_path vide : tous les objets sont
+-- qualifiés (public.login_tentatives).
+
+-- Table des compteurs : une ligne par clé ayant échoué (y compris pour des
+-- noms inventés — purge des lignes expirées : docs/TODO.md).
+-- Nom de la contrainte de clé primaire : INCONNU (le relevé dit seulement
+-- « clé primaire »). `primary key` en ligne crée par défaut la contrainte
+-- login_tentatives_pkey ; à confirmer par une requête sur pg_constraint.
+create table if not exists public.login_tentatives (
+  cle           text        not null primary key,
+  echecs        integer     not null default 0,
+  fenetre_debut timestamptz not null default now(),
+  bloque_jusqua timestamptz
+);
+
+-- RLS active SANS AUCUNE POLICY — par conception (même motif que
+-- historique_bilans) : seul service_role y accède, via les fonctions ci-dessous.
+-- Ne pas « corriger » en ajoutant une policy.
+alter table public.login_tentatives enable row level security;
+revoke all on public.login_tentatives from anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.login_est_bloque(p_cles text[])
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE
+ SET search_path TO ''
+AS $function$
+  select exists (
+    select 1 from public.login_tentatives
+    where cle = any(p_cles) and bloque_jusqua > now()
+  );
+$function$;
+
+CREATE OR REPLACE FUNCTION public.login_reinitialiser(p_cle text)
+ RETURNS void
+ LANGUAGE sql
+ SET search_path TO ''
+AS $function$
+  delete from public.login_tentatives where cle = p_cle;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.login_enregistrer_echec(p_cle text, p_seuil integer, p_fenetre_s integer, p_blocage_s integer)
+ RETURNS void
+ LANGUAGE sql
+ SET search_path TO ''
+AS $function$
+  insert into public.login_tentatives as t (cle, echecs, fenetre_debut, bloque_jusqua)
+  values (
+    p_cle, 1, now(),
+    case when 1 >= p_seuil then now() + make_interval(secs => p_blocage_s) end
+  )
+  on conflict (cle) do update set
+    echecs = case
+      when t.fenetre_debut < now() - make_interval(secs => p_fenetre_s) then 1
+      else t.echecs + 1 end,
+    fenetre_debut = case
+      when t.fenetre_debut < now() - make_interval(secs => p_fenetre_s) then now()
+      else t.fenetre_debut end,
+    bloque_jusqua = case
+      when (case when t.fenetre_debut < now() - make_interval(secs => p_fenetre_s) then 1
+                 else t.echecs + 1 end) >= p_seuil
+        then now() + make_interval(secs => p_blocage_s)
+      else t.bloque_jusqua end;
+$function$;
+
+-- Droits EXECUTE (relevé : anon = false, authenticated = false, service_role =
+-- true pour les trois fonctions).
+revoke execute on function public.login_est_bloque(text[]) from public, anon, authenticated;
+revoke execute on function public.login_reinitialiser(text) from public, anon, authenticated;
+revoke execute on function public.login_enregistrer_echec(text, integer, integer, integer) from public, anon, authenticated;
+grant execute on function public.login_est_bloque(text[]) to service_role;
+grant execute on function public.login_reinitialiser(text) to service_role;
+grant execute on function public.login_enregistrer_echec(text, integer, integer, integer) to service_role;
+
+-- verifier_login (définition plus haut, inchangée) : EXECUTE retiré à PUBLIC,
+-- anon et authenticated. service_role GARDE l'accès (comportement par défaut) :
+-- ne pas le révoquer.
+revoke execute on function verifier_login(text, text) from public, anon, authenticated;
+
+-- verifier_email_parent(text) — fonction existante en base, aucun appelant dans
+-- le dépôt. Renvoie le faux_email du premier profil portant cet email_parent
+-- (comparaison exacte). SECURITY DEFINER, search_path = public. EXECUTE retiré à
+-- PUBLIC, anon et authenticated (relevé) ; service_role garde l'accès
+-- (comportement par défaut) : ne pas le révoquer.
+CREATE OR REPLACE FUNCTION public.verifier_email_parent(p_email text)
+ RETURNS text
+ LANGUAGE sql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+  select faux_email from profils
+  where email_parent = p_email
+  limit 1;
+$function$;
+
+revoke execute on function public.verifier_email_parent(text) from public, anon, authenticated;
