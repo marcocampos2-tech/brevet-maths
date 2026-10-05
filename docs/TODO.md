@@ -187,11 +187,11 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 59. **Connexion élève : une IP partagée (établissement scolaire) peut être bloquée pour tous après 20 échecs en 15 min** — à surveiller avec du trafic réel.
 
-60. **`suivi-parent.html` : aucun message du formulaire d'ajout d'un enfant n'est visible.** L'élément `#fa-msg` garde un style en ligne `display:none` que `afficherMsgAjout()` ne retire jamais (constaté le 04/10/2026 sur la Preview de la PR #100 ; le texte du message est bien écrit, le contrôle des 8 caractères s'exécute). Défaut antérieur à la PR #100 (cf. commentaire l.1317-1320). À corriger dans une PR séparée après inventaire en lecture seule : origine du style en ligne, tous les appels à `afficherMsgAjout()`, commit d'origine.
-
 61. **Connexion élève : uniformité de durée au démarrage à froid** — la réponse de `api/connexion-eleve.js` attend 1 s au minimum, mais un démarrage à froid de la fonction peut allonger la durée d'une réponse et la distinguer des autres ; à mesurer.
 
 62. **Réglage Supabase « leaked passwords » (mots de passe compromis)** — disponible avec l'offre Pro ; à étudier.
+
+63. **Formulaire d'ajout d'un enfant : le message d'erreur de paiement (offre Suivi, ~l.1315) sera suivi d'un rechargement de la page 2,5 s plus tard** ; à revérifier avant le 01/12/2026, quand l'offre Suivi redeviendra payante.
 
 ---
 

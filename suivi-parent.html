@@ -1131,7 +1131,6 @@ function afficherFormulaireAjout() {
   document.getElementById('zone-vide').style.display = 'none'
   document.getElementById('zone-form-ajout').style.display = 'block'
   document.getElementById('fa-msg').className = 'form-ajout-msg'
-  document.getElementById('fa-msg').style.display = 'none'
 
   // Pendant l'offre de lancement : pas de choix d'offre à afficher, donc
   // pas de chemin possible vers /api/stripe-checkout depuis ce formulaire
@@ -1231,7 +1230,7 @@ async function creerEnfant() {
 
   btn.disabled = true
   btn.textContent = 'Création en cours…'
-  document.getElementById('fa-msg').style.display = 'none'
+  document.getElementById('fa-msg').className = 'form-ajout-msg'
 
   try {
     const { data: existe } = await sb.rpc('verifier_disponibilite', { p_prenom: prenomE.toLowerCase(), p_nom: nomE.toLowerCase() })
@@ -1254,7 +1253,8 @@ async function creerEnfant() {
       options: { data: { prenom: prenomE, nom: nomE, email_parent: user.email } }
     })
     if (signUpError) {
-      afficherMsgAjout('erreur', 'Erreur : ' + signUpError.message)
+      console.log('Erreur signUp enfant:', signUpError.message)
+      afficherMsgAjout('erreur', 'La création du compte a échoué. Vérifie les informations saisies et réessaie.')
       btn.disabled = false; btn.textContent = 'Créer le compte de l\'enfant'
       return
     }
