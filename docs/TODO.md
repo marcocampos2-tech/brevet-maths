@@ -80,7 +80,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 ## 🟠 Plateforme Academika — technique
 
-> **Note de numérotation (04/10/2026)** : les numéros 2, 3, 10, 13, 20, 21, 33, 35, 38 et 49 sont absents de cette liste et ne sont volontairement pas réattribués (renvois croisés ; les points terminés sont supprimés). Le n°25 renvoie à un « item 20 » (message d'erreur de `sauvegarder()` de `examen.html`) qui n'existe plus dans ce fichier — son contenu exact n'est pas retrouvable ici. Les nouveaux points sont ajoutés à la suite du dernier numéro.
+> **Note de numérotation (04/10/2026)** : les numéros 2, 3, 10, 13, 20, 21, 33, 35, 38, 43 et 49 sont absents de cette liste et ne sont volontairement pas réattribués (renvois croisés ; les points terminés sont supprimés). Le n°25 renvoie à un « item 20 » (message d'erreur de `sauvegarder()` de `examen.html`) qui n'existe plus dans ce fichier — son contenu exact n'est pas retrouvable ici. Les nouveaux points sont ajoutés à la suite du dernier numéro.
 
 1. Cybersécurité avant Stripe live : `shouldCreateUser: true` exploitable, idempotency Stripe absente, `invoice.payment_failed` jamais écouté, `alerte_envoyee` sans NOT NULL, UTC vs Europe/Paris sur bilan périodique
 
@@ -157,8 +157,6 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 42. **Contenu de la banque de questions non échappé dans `prof.html`** (énoncés, options, tableaux, figures SVG) — hors périmètre du lot 1 (PR #93). Une sonde SQL est à lancer avant toute décision, pour mesurer ce que la base contient réellement (balises, guillemets, SVG légitimes) : échapper un contenu volontairement riche (tableaux, SVG) casserait l'affichage.
 
-43. **Connexion élève : fermer `verifier_login` à `anon` après validation en production** de `api/connexion-eleve.js`, puis versionner dans `db/policies.sql` la fermeture, la table de compteurs et les fonctions `login_est_bloque`, `login_enregistrer_echec` et `login_reinitialiser`.
-
 44. **`stages-vacances.html` : les stages passés restent affichés** — constaté le 04/10/2026. La page affiche toujours les sessions dont la date de début est passée, marquées « Terminé » (filigrane) et non cliquables (`s.termine`, `stages-vacances.html:165-172`) : aucun filtre ne les retire de la liste.
 
 45. **`brevet-blanc` ignore `profils.email_actif`** — constaté le 04/10/2026 (PR #97). Un parent désabonné (`email_actif = false`) reçoit encore le bilan d'examen après chaque examen de son enfant ; `recap-journalier-user` en tient compte, pas `brevet-blanc`. Question de consentement, à traiter.
@@ -188,6 +186,12 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 58. **Compteurs de connexion (`login_tentatives`) : prévoir une purge des lignes expirées** (une ligne par prénom+nom ou IP ayant échoué, y compris des noms inventés).
 
 59. **Connexion élève : une IP partagée (établissement scolaire) peut être bloquée pour tous après 20 échecs en 15 min** — à surveiller avec du trafic réel.
+
+60. **`suivi-parent.html` : aucun message du formulaire d'ajout d'un enfant n'est visible.** L'élément `#fa-msg` garde un style en ligne `display:none` que `afficherMsgAjout()` ne retire jamais (constaté le 04/10/2026 sur la Preview de la PR #100 ; le texte du message est bien écrit, le contrôle des 8 caractères s'exécute). Défaut antérieur à la PR #100 (cf. commentaire l.1317-1320). À corriger dans une PR séparée après inventaire en lecture seule : origine du style en ligne, tous les appels à `afficherMsgAjout()`, commit d'origine.
+
+61. **Connexion élève : uniformité de durée au démarrage à froid** — la réponse de `api/connexion-eleve.js` attend 1 s au minimum, mais un démarrage à froid de la fonction peut allonger la durée d'une réponse et la distinguer des autres ; à mesurer.
+
+62. **Réglage Supabase « leaked passwords » (mots de passe compromis)** — disponible avec l'offre Pro ; à étudier.
 
 ---
 
