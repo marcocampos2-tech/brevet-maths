@@ -193,6 +193,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 63. **Formulaire d'ajout d'un enfant : le message d'erreur de paiement (offre Suivi, ~l.1315) sera suivi d'un rechargement de la page 2,5 s plus tard** ; à revérifier avant le 01/12/2026, quand l'offre Suivi redeviendra payante.
 
+64. **Délivrabilité des emails d'Academika (constaté le 05/10/2026)** : un email du formulaire de contact (noreply@academika.fr, envoyé par Resend vers contact@academika.fr) est tombé en spam. contact@academika.fr est hébergé chez Hostinger et redirigé vers un Gmail lu uniquement sur mobile. À faire : (1) côté CM, depuis le mobile : ajouter noreply@academika.fr aux contacts du compte Google et marquer l'email en « non-spam » ; filtre Gmail « ne jamais envoyer dans le spam » possible via le navigateur en mode ordinateur ; (2) vérifier dans Resend (Domains, academika.fr) que le domaine est « Verified » avec SPF et DKIM ; (3) vérifier DMARC et la cohabitation des SPF de Hostinger et de Resend (un seul enregistrement SPF par domaine) ; (4) à l'occasion, lire SPF/DKIM/DMARC dans « Afficher l'original » d'un email reçu. Les emails envoyés aux parents arrivent directement de Resend : seule l'authentification du domaine les protège.
+
 ---
 
 ## 🟡 Plateforme Academika — légal
