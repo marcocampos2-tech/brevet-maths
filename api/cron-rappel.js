@@ -40,11 +40,41 @@
 //     ce jour explicite (nouveau paramètre `date` sur l'endpoint). Toute
 //     session dans la fenêtre de 48h est donc rattrapée sous son propre
 //     jour, quel que soit le nombre de passages du cron écoulés depuis.
+//
+// Modifié le 07/10/2026 — Rattrapage observable et appelé via le domaine prod
+//   - Constat : le cron du 07/10 (21:32, 200 OK) a fait 4 POST vers
+//     /api/email sans qu'aucun email parte ni qu'aucune session soit marquée.
+//     Le cron appelait https://${req.headers.host}/api/email (URL propre au
+//     déploiement, *.vercel.app), sans en-tête de contournement de la
+//     Deployment Protection. Hypothèse, non prouvée : l'appel était bloqué
+//     avant d'atteindre api/email.js. Le statut HTTP n'était jamais lu et les
+//     skip / erreurs à corps JSON n'étaient pas journalisés.
+//   - L'appel passe désormais par BASE_URL_PROD (https://www.academika.fr).
+//   - Une ligne de log par POST (statut, type de réponse, skip / erreur /
+//     « envoyé »), plus une synthèse de fin de rattrapage. Aucune adresse
+//     email dans les logs. Logique de comptage, fenêtre de 48h et
+//     regroupement (user_id, date Paris) inchangés.
 // ═══════════════════════════════════════════════════════════
 
 const ORDRE_DIFFICULTE = { facile: 1, moyen: 2, difficile: 3 }
 const NIVEAU_LABEL = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
 const CADENCE_JOURS = 21
+
+// Domaine de production (canonique : academika.fr redirige vers www, cf.
+// docs/TODO.md n°48 — une redirection ferait perdre l'en-tête Authorization).
+// Les appels internes vers /api/email passent par lui et non par l'URL propre
+// au déploiement (req.headers.host, en *.vercel.app), soumise à la Deployment
+// Protection Vercel qui peut les bloquer avant d'atteindre api/email.js.
+const BASE_URL_PROD = 'https://www.academika.fr'
+
+// Texte renvoyé par /api/email avant d'être journalisé : jamais d'adresse
+// email dans les logs (un message d'erreur Resend peut en citer une), et
+// longueur bornée.
+function pourLog(texte) {
+  return String(texte ?? '')
+    .replace(/[^\s"'<>(),;:]+@[^\s"'<>(),;:]+/g, '[email]')
+    .slice(0, 200)
+}
 
 export default async function handler(req, res) {
 
@@ -89,21 +119,45 @@ export default async function handler(req, res) {
     }
 
     for (const { user_id, date } of paires.values()) {
+      // Une ligne de log par POST : user_id tronqué, date, statut HTTP, type
+      // de réponse, puis motif du skip / erreur / « envoyé ». Jamais d'email.
+      const etiquette = `user=${String(user_id ?? '').slice(0, 8)} date=${date}`
+      let statutHttp = null
+      let typeReponse = 'aucune'
       try {
-        const resultRes = await fetch(`https://${req.headers.host}/api/email`, {
+        const resultRes = await fetch(`${BASE_URL_PROD}/api/email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.CRON_SECRET}` },
           body: JSON.stringify({ type: 'recap-journalier-user', user_id, date })
         })
+        statutHttp = resultRes.status
+        typeReponse = 'non-JSON'
         const resultData = await resultRes.json()
-        if (resultData.skip) rattrapageResume.ignores++
-        else if (resultData.success) rattrapageResume.traites++
-        else rattrapageResume.erreurs++
+        typeReponse = 'JSON'
+        if (resultData.skip) {
+          console.log(`[cron-rappel][rattrapage] ${etiquette} statut=${statutHttp} type=${typeReponse} skip="${pourLog(resultData.skip)}"`)
+          rattrapageResume.ignores++
+        } else if (resultData.success) {
+          console.log(`[cron-rappel][rattrapage] ${etiquette} statut=${statutHttp} type=${typeReponse} envoyé`)
+          rattrapageResume.traites++
+        } else {
+          console.log(`[cron-rappel][rattrapage] ${etiquette} statut=${statutHttp} type=${typeReponse} erreur="${pourLog(resultData.error ?? 'réponse inattendue')}"`)
+          rattrapageResume.erreurs++
+        }
       } catch (e) {
-        console.log('Erreur rattrapage user', user_id, 'date', date, ':', e.message)
+        // Réseau coupé / timeout (aucun statut) ou corps non JSON (page HTML
+        // d'une protection, 502...) : pour le second cas on n'imprime pas le
+        // message du parseur, qui cite le début du corps reçu.
+        const detail = typeReponse === 'non-JSON' ? 'corps non JSON' : pourLog(e.message)
+        console.log(`[cron-rappel][rattrapage] ${etiquette} statut=${statutHttp ?? 'aucun'} type=${typeReponse} erreur="${detail}"`)
         rattrapageResume.erreurs++
       }
     }
+
+    console.log(
+      `[cron-rappel][rattrapage] synthèse : couples=${paires.size} traites=${rattrapageResume.traites} ` +
+      `ignores=${rattrapageResume.ignores} erreurs=${rattrapageResume.erreurs}`
+    )
   } catch (e) {
     console.log('Erreur bloc rattrapage récap journalier:', e.message)
   }
