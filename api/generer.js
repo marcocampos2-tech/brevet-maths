@@ -29,6 +29,11 @@ export default async function handler(req, res) {
 
       'Nombres et calculs': `
 Exemples de BONNES questions pour ce domaine :
+Sous-thème Nombres relatifs (addition, soustraction, multiplication, division, règle des signes, priorités) :
+- "Calcule : −7 + 12 − 9"
+- "Calcule : 6 − (−4) + (−9)"
+- "Calcule : (−1,5) × 4 × (−2)"
+- "Un sous-marin est à −120 m. Il descend de 45 m puis remonte de 80 m. À quelle altitude est-il ?"
 Sous-thème Fractions :
 - "Calcule : 3/4 + 2/3"
 - "Calcule en respectant les priorités : 3 + 2 × (5 - 1)"
@@ -118,7 +123,7 @@ INTERDITS ABSOLUS : Python, boucles Python, variables Python — ce domaine util
 
     const chapitres = {
       'Nombres et calculs': [
-        'Fractions', 'Priorités opératoires', 'Puissances', 'Écriture scientifique',
+        'Nombres relatifs', 'Règle des signes', 'Fractions', 'Priorités opératoires', 'Puissances', 'Écriture scientifique',
         'Nombres premiers', 'Divisibilité', 'PGCD',
         'Calcul littéral', 'Développement', 'Factorisation',
         'Identités remarquables', 'Équations du 1er degré', 'Équations-produit'
