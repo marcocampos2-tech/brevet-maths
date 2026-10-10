@@ -76,12 +76,40 @@ function pourLog(texte) {
     .slice(0, 200)
 }
 
+// Surveillance Healthchecks.io (heartbeat) — cf. CLAUDE.md. L'URL vient de
+// HEALTHCHECK_URL_CRON_RAPPEL (Production uniquement) ; elle contient un
+// identifiant secret : jamais en dur, jamais dans un log (on ne journalise ni
+// l'URL ni le message d'erreur de fetch, qui peut la citer). Le suffixe vaut
+// '/start', '' (succès) ou '/fail'. N'échoue jamais et ne lève jamais : un
+// ping raté ne doit ni changer le code de retour ni interrompre le cron.
+async function pingHealthcheck(suffixe, corps) {
+  const url = process.env.HEALTHCHECK_URL_CRON_RAPPEL
+  if (!url) {
+    console.log('[cron-rappel][healthcheck] variable absente, ping ignoré')
+    return
+  }
+  const controleur = new AbortController()
+  const minuteur = setTimeout(() => controleur.abort(), 5000)
+  try {
+    const opts = { method: 'POST', signal: controleur.signal }
+    if (corps) opts.body = String(corps).slice(0, 500)
+    const r = await fetch(`${url}${suffixe}`, opts)
+    if (!r.ok) console.log(`[cron-rappel][healthcheck] ping${suffixe || ''} statut=${r.status}`)
+  } catch (e) {
+    console.log(`[cron-rappel][healthcheck] ping${suffixe || ''} échec (${e?.name || 'erreur'})`)
+  } finally {
+    clearTimeout(minuteur)
+  }
+}
+
 export default async function handler(req, res) {
 
   const authHeader = req.headers['authorization']
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Non autorisé' })
   }
+
+  await pingHealthcheck('/start')
 
   const SUPA_URL = process.env.SUPABASE_URL || 'https://vkkgadwqumqqwpaayjac.supabase.co'
   const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY
@@ -98,6 +126,8 @@ export default async function handler(req, res) {
   // du cron (bilan périodique, fin d'année, été) de s'exécuter.
   // ═══════════════════════════════════════════════════════════
   let rattrapageResume = { traites: 0, ignores: 0, erreurs: 0 }
+  let nbCouples = 0 // pour la synthèse du ping Healthchecks uniquement
+  let lectureSessionsEchec = false // idem : une lecture en échec ne doit jamais donner un ping de succès
   try {
     const maintenantRattrapage = new Date()
 
@@ -108,15 +138,23 @@ export default async function handler(req, res) {
       { headers }
     )
     const sessionsCandidates = await depuisRes.json()
+    const lectureOk = depuisRes.ok && Array.isArray(sessionsCandidates)
+    if (!lectureOk) {
+      lectureSessionsEchec = true
+      rattrapageResume.erreurs++
+      console.log(`[cron-rappel][rattrapage] lecture des sessions en échec statut=${depuisRes.status}`)
+    }
 
     // Regroupement par (user_id, date Paris DE LA SESSION) — voir
     // commentaire en tête de fichier (16/08/2026).
     const paires = new Map() // clé "user_id|date" → { user_id, date }
-    for (const s of (sessionsCandidates || [])) {
+    for (const s of (lectureOk ? sessionsCandidates : [])) {
       const dateSessionParis = new Date(s.created_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
       const cle = `${s.user_id}|${dateSessionParis}`
       if (!paires.has(cle)) paires.set(cle, { user_id: s.user_id, date: dateSessionParis })
     }
+
+    nbCouples = paires.size
 
     for (const { user_id, date } of paires.values()) {
       // Une ligne de log par POST : user_id tronqué, date, statut HTTP, type
@@ -160,7 +198,26 @@ export default async function handler(req, res) {
     )
   } catch (e) {
     console.log('Erreur bloc rattrapage récap journalier:', e.message)
+    if (!lectureSessionsEchec) {
+      lectureSessionsEchec = true
+      rattrapageResume.erreurs++
+    }
   }
+
+  // Échecs d'envoi de la branche saisonnière (fin d'année, été, bilan).
+  let erreursSaison = 0
+
+  // Ping de fin : succès seulement si le rattrapage (lecture des sessions
+  // comprise) et la branche saisonnière n'ont eu aucune erreur, sinon /fail.
+  // Corps = compteurs uniquement (aucun user_id, prénom ni email).
+  const pingFin = (extra) => pingHealthcheck(
+    (rattrapageResume.erreurs === 0 && erreursSaison === 0) ? '' : '/fail',
+    `couples=${nbCouples} traites=${rattrapageResume.traites} ` +
+    `ignores=${rattrapageResume.ignores} erreurs=${rattrapageResume.erreurs}` +
+    (lectureSessionsEchec ? ' lecture_sessions=echec' : '') +
+    (extra ? ` ${extra}` : '') +
+    ` erreurs_saison=${erreursSaison}`
+  )
 
   try {
     const maintenant = new Date()
@@ -174,6 +231,7 @@ export default async function handler(req, res) {
     )
     const profils = await profilsRes.json()
     if (!profils || profils.length === 0) {
+      await pingFin('saison=aucun_profil')
       return res.status(200).json({ message: 'Aucun profil', rattrapage: rattrapageResume })
     }
 
@@ -230,8 +288,11 @@ export default async function handler(req, res) {
             body: JSON.stringify({ user_id, email_parent, type: 'fin_annee', jours_inactif: 0 })
           })
           envoyes++
+        } else {
+          erreursSaison++
         }
       }
+      await pingFin(`saison=fin_annee emails=${envoyes}`)
       return res.status(200).json({ success: true, type: 'fin_annee', envoyes, rattrapage: rattrapageResume })
     }
 
@@ -292,14 +353,18 @@ export default async function handler(req, res) {
             body: JSON.stringify({ user_id, email_parent, type: 'ete', jours_inactif: 0 })
           })
           envoyes++
+        } else {
+          erreursSaison++
         }
       }
+      await pingFin(`saison=ete emails=${envoyes}`)
       return res.status(200).json({ success: true, type: 'ete', envoyes, rattrapage: rattrapageResume })
     }
 
     // ── PÉRIODE AOÛT — silence total pour les autres emails
     // (le bloc de rattrapage récap journalier ci-dessus reste actif) ──
     if (mois === 8) {
+      await pingFin('saison=aout')
       return res.status(200).json({ message: 'Août — pas de rappels ni de bilans', rattrapage: rattrapageResume })
     }
 
@@ -519,9 +584,11 @@ export default async function handler(req, res) {
         bilansEnvoyes++
       } else {
         bilansIgnores++
+        erreursSaison++
       }
     }
 
+    await pingFin(`saison=bilan emails=${bilansEnvoyes}`)
     return res.status(200).json({
       success: true,
       bilans_envoyes: bilansEnvoyes,
@@ -533,6 +600,7 @@ export default async function handler(req, res) {
 
   } catch(e) {
     console.error('Erreur cron:', e.message)
+    await pingHealthcheck('/fail', `exception=${e?.name || 'Error'}`)
     return res.status(500).json({ error: e.message, rattrapage: rattrapageResume })
   }
 }
