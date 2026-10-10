@@ -516,16 +516,30 @@ function debloquerConfig(){
 
 function cleDeblocage(t, st){ return t + '||' + st }
 
+// La règle de déblocage (réussite >= 70 %, 5 réussites par niveau, Difficile
+// ouvert si Facile ET Moyen acquis, abandons exclus) n'est plus calculée ici :
+// elle est définie dans la vue niveaux_sous_theme (db/vue-niveaux.sql), que
+// cette fonction se contente de lire. SEUIL_SESSIONS / SEUIL_PCT ne servent
+// plus qu'aux textes et aux barres de progression.
 async function verifierDeblocage(t, st) {
   const cle = cleDeblocage(t, st)
   if(deblocageCache[cle]) return deblocageCache[cle]
   try {
-    const { data } = await sb.from('resultats').select('difficulte, score, total').eq('user_id', user.id).eq('theme', t).eq('sous_theme', st)
-    if (!data) { deblocageCache[cle] = { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }; return deblocageCache[cle] }
-    const sessionsFacile = data.filter(r => r.difficulte === 'facile' && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
-    const sessionsMoyen  = data.filter(r => r.difficulte === 'moyen'  && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
-    const sessionsDifficile = data.filter(r => r.difficulte === 'difficile' && Math.round((r.score/r.total)*100) >= SEUIL_PCT).length
-    deblocageCache[cle] = { moyen: sessionsFacile >= SEUIL_SESSIONS, difficile: sessionsMoyen >= SEUIL_SESSIONS, sessionsFacile, sessionsMoyen, sessionsDifficile }
+    const { data, error } = await sb.from('niveaux_sous_theme')
+      .select('f_reussites, m_reussites, d_reussites, m_etat, d_etat')
+      .eq('user_id', user.id).eq('theme', t).eq('sous_theme', st)
+      .maybeSingle()
+    if (error) {
+      console.error('[deblocage] lecture de niveaux_sous_theme impossible, tout verrouillé sauf Facile :', error.message)
+    }
+    if (error || !data) { deblocageCache[cle] = { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }; return deblocageCache[cle] }
+    deblocageCache[cle] = {
+      moyen: data.m_etat !== 'verrouille',
+      difficile: data.d_etat !== 'verrouille',
+      sessionsFacile: Number(data.f_reussites),
+      sessionsMoyen: Number(data.m_reussites),
+      sessionsDifficile: Number(data.d_reussites)
+    }
     return deblocageCache[cle]
   } catch(e) {
     return { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }

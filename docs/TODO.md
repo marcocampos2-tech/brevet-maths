@@ -197,6 +197,10 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 66. **`api/stripe-webhook.js:249` construit encore `https://${req.headers.host}/api/email`** (email `resiliation-confirmee`) — même motif que le correctif de `api/cron-rappel.js` du 07/10/2026, laissé volontairement hors périmètre. Le webhook Stripe frappe sans doute le domaine de production (pas l'URL `*.vercel.app`), donc probablement non bloqué, mais l'hypothèse n'est pas vérifiée. À traiter avec le n°36 (test de bout en bout de la résiliation) : si l'email de confirmation échoue, passer par le domaine de production.
 
+67. **`scripts/demo-lucas.sql` n'écrit pas la colonne `abandonne`** : l'INSERT du bloc 2 ne la renseigne pas, les 2 abandons de Lucas Démo ne sont reconnaissables qu'à `questions_ratees = ["Quiz abandonné"]`. Si le script est rejoué, ces 2 lignes repartent à `abandonne = false` et sont comptées comme essais par `niveaux_sous_theme` et `suivi-parent.html` (Thalès passerait de 5 à 6 essais, donc `a_surveiller`). À faire : ajouter `abandonne` à l'INSERT (`true` sur les 2 abandons) et à la vérification du bloc 3.
+
+68. **Policies SELECT élève et prof de `resultats` : rôle `{public}` à restreindre à `{authenticated}`, et non relevées dans `db/policies.sql`** (seule « Parent voit resultats de son enfant » y figure). À faire : dumper `pg_policies` pour `resultats`, versionner les policies réelles dans `db/policies.sql`, puis restreindre les deux au rôle `authenticated` (cf. point 14).
+
 ---
 
 ## 🟡 Plateforme Academika — légal
