@@ -195,6 +195,17 @@ Trois points masquent volontairement tout ce qui suppose un accès payant pendan
 * **Détail complet du récap journalier** (`api/email.js`, `recap-journalier-user`) — constat 16/08/2026 (test réel) : un compte `plan_actif=false` recevait la version générique de l'email ("le détail est disponible avec l'offre Accompagné") pendant la gratuité, alors que rien ne doit suggérer une offre payante à ce stade. Fix : `detailComplet = peutRecevoirEmailDetaille({ plan_actif }) || enPeriodeGratuite()` — tout le monde reçoit l'email détaillé pendant le lancement, `peutRecevoirEmailDetaille()` elle-même reste inchangée (pas de risque de régression une fois la gratuité terminée).
 * **`enPeriodeGratuite()`** — fonction partagée par les trois fixes ci-dessus, exportée depuis `lib/gating.js` avec `FIN_OFFRE_LANCEMENT`. **Auto-réactivation des trois éléments le 01/12/2026 sans déploiement** — vérifier à cette date que Stripe est réellement opérationnel (SIRET obtenu) avant que les trois ne réapparaissent/se re-restreignent. Décision actée le 16/08/2026 : date seule, pas de flag manuel supplémentaire (un rappel agenda mi-novembre existe déjà pour la session de bascule ; un second mécanisme à ne pas oublier augmenterait le risque plutôt que de le réduire).
 
+## Règle de déblocage des niveaux
+
+**Source unique : la vue `public.niveaux_sous_theme`** (`db/vue-niveaux.sql`, créée en production le 10/10/2026 ; tests dans `db/vue-niveaux.test.sql`, retour arrière dans `db/vue-niveaux.rollback.sql`). `security_invoker = true` : la RLS de `resultats` s'applique à celui qui lit. Une ligne par élève et par sous-thème commencé (au moins une session non abandonnée).
+
+* Réussite = `round(score/total*100) >= 70`. Niveau acquis = 5 réussites à ce niveau.
+* Moyen ouvert si Facile acquis ; **Difficile ouvert si Facile ET Moyen acquis** (version stricte).
+* Abandons (`resultats.abandonne = true`) exclus de tous les comptes.
+* À surveiller = 6 essais ou plus au niveau en cours sans l'acquérir.
+* `quiz.html` (`verifierDeblocage()`) lit la vue et ne recalcule plus rien. `SEUIL_SESSIONS` / `SEUIL_PCT` y restent pour les textes et les barres, **sans valeur de règle** : toute modification de la règle se fait dans la vue.
+* **`suivi-parent.html` garde sa copie locale** (`calculerEtatSousTheme()`) jusqu'à la PR 3 : d'ici là, la vue fait foi en cas de divergence.
+
 ## CHANTIER — Mémoire des questions vues (terminé)
 
 Quiz normal PR #24, durcissement du diagnostic PR #25, examen blanc PR #26, extraction du socle commun dans la PR qui a ajouté cette section.
