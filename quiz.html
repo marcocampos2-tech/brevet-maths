@@ -530,9 +530,11 @@ async function verifierDeblocage(t, st) {
       .eq('user_id', user.id).eq('theme', t).eq('sous_theme', st)
       .maybeSingle()
     if (error) {
+      // Pas de mise en cache : une erreur passagère doit être relue au prochain appel.
       console.error('[deblocage] lecture de niveaux_sous_theme impossible, tout verrouillé sauf Facile :', error.message)
+      return { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }
     }
-    if (error || !data) { deblocageCache[cle] = { moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }; return deblocageCache[cle] }
+    if (!data) { deblocageCache[cle] ={ moyen: false, difficile: false, sessionsFacile: 0, sessionsMoyen: 0, sessionsDifficile: 0 }; return deblocageCache[cle] }
     deblocageCache[cle] = {
       moyen: data.m_etat !== 'verrouille',
       difficile: data.d_etat !== 'verrouille',
