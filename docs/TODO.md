@@ -7,9 +7,11 @@
 - Écrire `db/policies.test.sql` (jamais fait ; seul `db/policies.sql` existe)
 - Normaliser l'email dans le formulaire d'inscription (au lieu de dépendre du rattrapage `lower(trim(...))` en lecture)
 
-## 🟠 Ouvert — duplication du déblocage `quiz.html` / `suivi-parent.html`
+## 🟠 Ouvert — copie locale de la règle de déblocage dans `suivi-parent.html`
 
-L'algorithme de déblocage est dupliqué entre les deux fichiers (pas de module partagé `lib/progression.js`). À contrôler à chaque modification touchant l'un des deux (ajout/retrait de sous-thème, changement de seuils, logique de déblocage) : aucune erreur ni log en cas de divergence, juste un état affiché faux. Action de fond : créer `lib/progression.js` (vérifier d'abord que Vercel sert `/lib/*.js`).
+La règle de déblocage est définie une seule fois, dans la vue `niveaux_sous_theme` (`db/vue-niveaux.sql`, cf. CLAUDE.md) ; `quiz.html` la lit depuis la PR #110. Seul `suivi-parent.html` garde sa copie locale (`calculerEtatSousTheme`, `classerSousThemes`, `SEUIL_SESSIONS`, `SEUIL_PCT`), à supprimer dans la PR 3. D'ici là, la vue fait foi : aucune erreur ni log en cas de divergence, juste un état affiché faux au parent. Plus de module partagé `lib/progression.js` à créer : la vue le remplace.
+
+**Mise à jour (11/10/2026)** : `quiz.html` (PR #110) et `resultats.html` (PR #111) lisent désormais la vue `niveaux_sous_theme` ; il ne reste de copie locale de la règle que dans `suivi-parent.html`. **À faire — PR 3 du chantier « bilan en tableau », vue parent (`suivi-parent.html`)** : remplacer la carte « Niveau atteint par sous-thème » par la synthèse (Acquis / En progression / À surveiller) + le détail repliable, lus dans la vue ; supprimer la copie locale de la règle (`calculerEtatSousTheme`, `classerSousThemes`, `SEUIL_SESSIONS`, `SEUIL_PCT`). **Deux décisions ouvertes avant conception** : (1) couleur de « À surveiller » (rouge ou orange soutenu) ; (2) phrase « Une aide ponctuelle peut l'aider à débloquer » : la garder, la retirer ou la remplacer par un lien vers les cours.
 
 ## 🟠 Ouvert — aligner `cron-rappel.js` sur la logique niveau
 
@@ -90,7 +92,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 6. Déconnexion lente — piste : `logout()` attend fin d'appels réseau
 7. Chevauchement contenu email récap si plusieurs sessions le même jour — mineur
 8. Fuseaux horaires — recensé le 17/09/2026, aucun bug actif, deux points de fragilité. (a) Les conversions serveur vers la date Paris sont correctes (`api/cron-rappel.js:86`, `api/email.js:764` et `774`, `api/stripe-webhook.js:247` utilisent toutes `timeZone: 'Europe/Paris'`), mais elles reposent implicitement sur le fait que Vercel tourne en UTC : `new Date()` sur un timestamp naïf de `resultats` l'interprète comme heure locale du serveur. Juste aujourd'hui, silencieusement faux si le fuseau du runtime changeait — hypothèse à documenter, pas à corriger. (b) `suivi-parent.html` (lignes 728, 866, 973) regroupe les sessions par jour selon le fuseau du NAVIGATEUR du parent (`dateLocaleISO`), pas selon Paris : identique pour un parent en France, découpage des journées différent de l'email reçu pour un parent à l'étranger. Cas limite jamais rencontré, correction non prioritaire.
-9. Warning console — meta tag `apple-mobile-web-app-capable` déprécié (ajouter `mobile-web-app-capable`) ; `favicon.ico` en 404 en production (constaté le 04/10/2026)
+9. Warning console — meta tag `apple-mobile-web-app-capable` déprécié (ajouter `mobile-web-app-capable`) ; `favicon.ico` en 404 en production (constaté le 04/10/2026). Pour `quiz.html`, à glisser dans la prochaine modification du fichier (cosmétique) : ajouter `<meta name="mobile-web-app-capable" content="yes">` (avertissement Chrome) et corriger l'espace manquante `deblocageCache[cle] ={` dans `verifierDeblocage()`
 11. Distinction gratuit/abonnement — gating email fait, dashboard/PDF/examen blanc à construire
 12. Espace parent persistant (option B) — en attente depuis 24/07, sans date
 14. Policies ciblant `{public}` au lieu de `{authenticated}` — pas exploitable aujourd'hui, fragile
@@ -200,6 +202,14 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 67. **`scripts/demo-lucas.sql` n'écrit pas la colonne `abandonne`** : l'INSERT du bloc 2 ne la renseigne pas, les 2 abandons de Lucas Démo ne sont reconnaissables qu'à `questions_ratees = ["Quiz abandonné"]`. Si le script est rejoué, ces 2 lignes repartent à `abandonne = false` et sont comptées comme essais par `niveaux_sous_theme` et `suivi-parent.html` (Thalès passerait de 5 à 6 essais, donc `a_surveiller`). À faire : ajouter `abandonne` à l'INSERT (`true` sur les 2 abandons) et à la vérification du bloc 3.
 
 68. **Policies SELECT élève et prof de `resultats` : rôle `{public}` à restreindre à `{authenticated}`, et non relevées dans `db/policies.sql`** (seule « Parent voit resultats de son enfant » y figure). À faire : dumper `pg_policies` pour `resultats`, versionner les policies réelles dans `db/policies.sql`, puis restreindre les deux au rôle `authenticated` (cf. point 14).
+
+69. **Migration de la liste des sous-thèmes vers `js/catalogue.js`** — seul `resultats.html` la charge aujourd'hui (PR #111). `quiz.html`, `prof.html` et `suivi-parent.html` gardent leur copie de `SOUS_THEMES` (celle de `suivi-parent.html` disparaît avec la PR 3, cf. section « copie locale de la règle de déblocage dans `suivi-parent.html` ») ; `api/generer.js` garde sa propre liste côté serveur. À faire, page par page : supprimer la copie locale et charger `/js/catalogue.js?v=N`. À rapprocher du n°9 de la section « Banque de questions » (arbitrage écart assumé / dette sur le `SOUS_THEMES` codé en dur).
+
+70. **`resultats.html`, onglet Historique — correction d'affichage** (simple, `resultats.html` seul) : titre de carte = sous-thème au lieu du thème ; retirer le préfixe « thème — » répété devant chaque question ratée ; ne plus afficher un énoncé coupé en plein mot (couper à la fin d'un mot + « … »). Cause : `api/quiz-resultat.js:63` et `:67` stockent « thème — chapitre » (chemin IA) ou « thème — 40 premiers caractères de l'énoncé » (banque, sans chapitre) — donc tous les élèves auront le libellé coupé une fois le chemin IA supprimé.
+
+71. **`questions_ratees` : correction de fond, après la suppression du chemin IA (fin de la refonte de la banque)** — enregistrer les identifiants des questions ratées (`questions_banque.id`) au lieu d'un texte tronqué, pour pouvoir afficher l'énoncé complet et la correction dans l'Historique. Impacts à inventorier avant conception : `api/quiz-resultat.js`, colonne de `resultats`, récap email (`api/email.js`, `topRatees`), `api/cron-rappel.js`, `prof.html` et `suivi-parent.html` s'ils lisent `questions_ratees`. À rapprocher du volet « intégrité du score » déjà reporté au même moment (n°27) ; le n°70 est le palliatif d'affichage en attendant.
+
+72. **`scripts/demo-lucas.sql` désynchronisé de la base** — les dates de Lucas Démo ont été décalées de +5 jours en production (dernière session le 08/09/2026 en base, 03/09/2026 dans le script). Si le script est rejoué, les dates reviennent en arrière. À traiter avec le n°67 (même script, même rejeu).
 
 ---
 
