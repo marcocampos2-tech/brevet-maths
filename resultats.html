@@ -32,30 +32,37 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .tabs { display: flex; gap: 4px; margin-bottom: 1.5rem; background: white; border-radius: 11px; padding: 4px; border: 1px solid var(--border); }
 .tab { flex: 1; padding: 9px; border-radius: 8px; border: none; background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--muted); transition: all 0.15s; font-family:'Inter',sans-serif; }
 .tab.active { background: var(--marine); color: white; }
-.hero { background: white; border-radius: 16px; border: 1px solid var(--border); padding: 2rem 1.5rem; margin-bottom: 1rem; text-align: center; }
-.hero-label { font-family:'IBM Plex Mono',monospace; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
-.hero-score { font-family:'Newsreader',serif; font-size: 52px; font-weight: 600; line-height: 1; color: var(--marine); }
-.hero-statut { font-size: 13px; color: var(--muted); margin-top: 8px; }
-.hero-stats { display: flex; justify-content: center; gap: 28px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
-.hero-stat { text-align: center; }
-.hero-stat-val { font-size: 19px; font-weight: 600; color: var(--ardoise); }
-.hero-stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; }
-.insights { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; justify-content: center; }
-.insight { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 6px 12px; border-radius: 20px; font-weight: 500; }
-.insight-fort { background: var(--vert-light); color: #1f7a45; }
-.insight-faible { background: var(--dore-light); color: #8a6416; }
 .section-label { font-family:'IBM Plex Mono',monospace; font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin: 1.75rem 0 10px; }
-.theme-card { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 8px; }
-.theme-header { display: flex; align-items: center; gap: 10px; }
-.theme-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--marine-light); color: var(--marine); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.theme-icon svg { width: 16px; height: 16px; }
-.theme-nom { font-size: 13.5px; font-weight: 600; color: var(--ardoise); flex: 1; }
-.theme-score { font-size: 14px; font-weight: 600; }
-.theme-score.bon { color: var(--vert); }
-.theme-score.moyen { color: #8a6416; }
-.theme-score.faible { color: var(--bordeaux); }
-.theme-bar-wrap { height: 5px; background: var(--border); border-radius: 3px; margin-top: 10px; overflow: hidden; }
-.theme-bar { height: 100%; border-radius: 3px; }
+.dernier { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 14px 16px; margin-bottom: 1.5rem; }
+.dernier-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.dernier-tete .section-label { margin: 0; }
+.dernier-date { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.dernier-titre { font-family:'Newsreader',serif; font-size: 20px; font-weight: 600; color: var(--marine); margin-top: 8px; overflow-wrap: anywhere; }
+.dernier-phrase { font-size: 13px; color: var(--ardoise); margin-top: 4px; line-height: 1.45; }
+.niv-wrap { background: white; border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+.niv-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.niv-table th { font-family:'IBM Plex Mono',monospace; font-size: 10.5px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; text-align: center; padding: 9px 4px; border-bottom: 1px solid var(--border); background: var(--creme); }
+.niv-table th.niv-col-nom { width: 34%; text-align: left; padding-left: 12px; }
+.niv-table td { padding: 8px 4px; border-bottom: 1px solid var(--border); vertical-align: middle; text-align: center; font-size: 11.5px; line-height: 1.3; }
+.niv-table tr:last-child td { border-bottom: none; }
+.niv-table td.niv-nom { text-align: left; padding-left: 12px; overflow-wrap: anywhere; }
+.niv-st { font-size: 13px; font-weight: 600; color: var(--ardoise); }
+.niv-theme { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.niv-cell { border-radius: 8px; padding: 6px 4px; margin: 0 3px; }
+.niv-acquis { background: var(--vert-light); color: #1f7a45; font-weight: 600; }
+.niv-encours { background: var(--dore-light); color: #8a6416; }
+.niv-jamais { background: var(--creme); color: var(--muted); }
+.niv-verrou { background: var(--creme); color: var(--muted); opacity: .8; }
+.niv-barre { height: 4px; background: rgba(0,0,0,.08); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+.niv-barre > span { display: block; height: 100%; background: var(--dore); border-radius: 2px; }
+.niv-resume { font-size: 13px; color: var(--ardoise); margin-bottom: 10px; }
+.niv-legende { font-size: 11.5px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+.niv-legende span { white-space: nowrap; margin-right: 10px; }
+.niv-erreur { background: white; border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem 1rem; text-align: center; color: var(--muted); font-size: 13px; }
+.niv-pas-commences { margin-top: 14px; background: white; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.niv-pas-commences summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ardoise); }
+.niv-pc-theme { font-size: 12px; font-weight: 600; color: var(--ardoise); margin-top: 10px; }
+.niv-pc-liste { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.5; }
 .footer-btns { margin-top: 1.75rem; }
 .btn-green { display: block; text-align: center; text-decoration: none; background: var(--bordeaux); color: white; font-size: 15px; font-weight: 600; padding: 15px; border-radius: 11px; }
 .jour-sep { display: flex; align-items: center; gap: 10px; margin: 1.5rem 0 10px; }
@@ -77,11 +84,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .hist-ratee { font-size: 12px; color: var(--muted); padding: 2px 0; }
 @media (max-width:480px){
   .container{padding:1rem 1rem 2rem}
-  .hero{padding:1.5rem 1.25rem}
-  .hero-score{font-size:42px}
-  .hero-stats{gap:18px}
-  .insights{gap:6px}
-  .insight{font-size:11.5px;padding:5px 10px}
+  .niv-table td{font-size:11px}
+  .niv-st{font-size:12.5px}
 }
 </style>
 </head>
@@ -98,6 +102,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   <div id="tab-dashboard"><div class="loader">Chargement...</div></div>
   <div id="tab-historique" style="display:none"><div class="loader">Chargement...</div></div>
 </div>
+<script src="/js/catalogue.js?v=1"></script>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
@@ -128,11 +133,12 @@ function getStatut(pct) {
   return { label: 'À retravailler', emoji: '🔴', color: 'var(--bordeaux)', classe: 'faible' }
 }
 
-function formatTemps(s) {
-  var h = Math.floor(s / 3600)
-  var m = Math.floor((s % 3600) / 60)
-  if (h > 0) return h + 'h ' + (m > 0 ? m + 'min' : '')
-  return m + ' min'
+// Échappement HTML de toute valeur issue de la base injectée dans innerHTML
+// (TODO n°41). Même contrat que esc() de api/email.js.
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
 
 function dayLabel(dateStr) {
@@ -178,83 +184,118 @@ async function init() {
     document.getElementById('tab-historique').innerHTML = '<div class="empty">Pas encore de résultats.<br>Lance ton premier quiz !</div>'
     return
   }
-  renderDashboard(rows)
+  // Niveaux par sous-thème : règle de déblocage unique, définie dans la vue
+  // niveaux_sous_theme (db/vue-niveaux.sql). Une erreur ne bloque que le
+  // tableau : le reste de la page s'affiche normalement.
+  var niv = await sb.from('niveaux_sous_theme')
+    .select('theme, sous_theme, f_reussites, m_reussites, d_reussites, f_etat, m_etat, d_etat, niveau_courant, derniere_session')
+    .eq('user_id', user.id)
+  if (niv.error) console.error('[niveaux] lecture de niveaux_sous_theme impossible :', niv.error.message)
+  renderDashboard(niv.error ? null : (niv.data || []))
   renderHistorique(rows)
 }
 
-function renderDashboard(rows) {
-  // Un abandon (score forcé à 0, cf. api/quiz-resultat.js) ne mesure pas une
-  // compétence : exclu du score global, des scores par domaine, du
-  // compteur de sessions et du temps total — même principe que prof.html
-  // (openFiche(), rowsValides = rows.filter(r => !r.abandonne)).
-  var rowsValides = rows.filter(function(r) { return !r.abandonne })
-  var totalSessions = rowsValides.length
-  var totalSecondes = rowsValides.reduce(function(s, r) { return s + (r.temps_secondes || 0) }, 0)
-  var totalScore = rowsValides.reduce(function(s, r) { return s + (r.score || 0) }, 0)
-  var totalTotal = rowsValides.reduce(function(s, r) { return s + (r.total || 5) }, 0)
-  // Aucune session valide (que des abandons, ou pas encore de résultat) :
-  // "—" plutôt qu'un 0/20 ou un statut "À retravailler" trompeurs — même
-  // convention que prof.html (moyCell : e.totalQ>0 ? ... : "—").
-  var aucuneSessionValide = totalTotal === 0
-  var globalPct = totalTotal > 0 ? Math.round((totalScore / totalTotal) * 100) : 0
-  var globalNote20 = totalTotal > 0 ? (totalScore / totalTotal * 20).toFixed(1).replace('.0', '') : '—'
-  var globalStatut = getStatut(globalPct)
+// Libellé court du thème (THEMES), thème brut si inconnu (ancien libellé).
+function libelleTheme(valeur) {
+  var t = THEMES.find(function(x) { return x.value === valeur })
+  return t ? t.label : valeur
+}
 
-  var statsByTheme = {}
-  THEMES.forEach(function(t) { statsByTheme[t.value] = { score: 0, total: 0 } })
-  rowsValides.forEach(function(r) {
-    if (statsByTheme[r.theme] !== undefined) {
-      statsByTheme[r.theme].score += r.score || 0
-      statsByTheme[r.theme].total += r.total || 5
-    }
-  })
+function reussites(n) {
+  n = Math.min(Number(n) || 0, 5)
+  return n + ' réussite' + (n > 1 ? 's' : '') + ' sur 5'
+}
 
-  var fortTheme = '', faibleTheme = '', fortPct = -1, faiblePct = 101
-  THEMES.forEach(function(t) {
-    if (statsByTheme[t.value].total === 0) return
-    var pct = Math.round((statsByTheme[t.value].score / statsByTheme[t.value].total) * 100)
-    if (pct >= 70 && pct > fortPct) { fortPct = pct; fortTheme = t.label }
-    if (pct < faiblePct) { faiblePct = pct; faibleTheme = t.label }
-  })
-
-  var html = ''
-  html += '<div class="hero">'
-  html += '<div class="hero-label">Score global</div>'
-  html += '<div class="hero-score">' + globalNote20 + (aucuneSessionValide ? '' : '<span style="font-size:22px;color:var(--muted)">/20</span>') + '</div>'
-  html += aucuneSessionValide
-    ? '<div class="hero-statut">Aucune session valide pour l\'instant</div>'
-    : '<div class="hero-statut">' + globalStatut.emoji + ' ' + globalStatut.label + ' — ' + globalPct + '%</div>'
-  html += '<div class="hero-stats">'
-  html += '<div class="hero-stat"><div class="hero-stat-val">' + totalSessions + '</div><div class="hero-stat-label">sessions</div></div>'
-  html += '<div class="hero-stat"><div class="hero-stat-val">' + formatTemps(totalSecondes) + '</div><div class="hero-stat-label">temps total</div></div>'
-  html += '</div>'
-  if (fortTheme || faibleTheme) {
-    html += '<div class="insights">'
-    if (fortTheme) html += '<span class="insight insight-fort">💪 Fort en ' + fortTheme + '</span>'
-    if (faibleTheme) html += '<span class="insight insight-faible">🎯 À travailler : ' + faibleTheme + '</span>'
-    html += '</div>'
+// Une case du tableau selon l'état du niveau (calculé par la vue).
+function celluleNiveau(etat, nbReussites) {
+  if (etat === 'acquis') return '<div class="niv-cell niv-acquis">✓ Acquis</div>'
+  if (etat === 'en_cours') {
+    var n = Math.min(Number(nbReussites) || 0, 5)
+    return '<div class="niv-cell niv-encours">' + reussites(n) +
+      '<div class="niv-barre"><span style="width:' + (n * 20) + '%"></span></div></div>'
   }
-  html += '</div>'
+  if (etat === 'jamais_joue') return '<div class="niv-cell niv-jamais">' + reussites(0) + '</div>'
+  return '<div class="niv-cell niv-verrou">🔒 Verrouillé</div>'
+}
 
-  html += '<div class="section-label">Par domaine</div>'
-  THEMES.forEach(function(t) {
-    var s = statsByTheme[t.value]
-    if (s.total === 0) return
-    var pct = Math.round((s.score / s.total) * 100)
-    var note20 = (s.score / s.total * 20).toFixed(1).replace('.0', '')
-    var statut = getStatut(pct)
-    html += '<div class="theme-card">'
-    html += '<div class="theme-header">'
-    html += '<div class="theme-icon">' + THEME_ICONS[t.icon] + '</div>'
-    html += '<div class="theme-nom">' + t.label + '</div>'
-    html += '<div class="theme-score ' + statut.classe + '">' + note20 + '/20</div>'
-    html += '</div>'
-    html += '<div class="theme-bar-wrap"><div class="theme-bar" style="width:' + pct + '%;background:' + statut.color + '"></div></div>'
-    html += '</div>'
+const NOM_NIVEAU = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
+
+// Bloc « Dernier sous-thème travaillé » : ligne de la vue la plus récente.
+function renderDernierSousTheme(l) {
+  var acquis = l.d_etat === 'acquis'
+  var niveau = NOM_NIVEAU[l.niveau_courant] || ''
+  var nb = { facile: l.f_reussites, moyen: l.m_reussites, difficile: l.d_reussites }[l.niveau_courant]
+  var n = Math.min(Number(nb) || 0, 5)
+  var r = 5 - n
+  var phrase
+  if (acquis) phrase = 'Les 3 niveaux sont acquis. Bravo !'
+  else if (l.niveau_courant === 'facile') phrase = reussites(n) + '. Encore ' + r + ' pour débloquer le niveau Moyen.'
+  else if (l.niveau_courant === 'moyen') phrase = reussites(n) + '. Encore ' + r + ' pour débloquer le niveau Difficile.'
+  else phrase = reussites(n) + '. Encore ' + r + ' pour acquérir le niveau Difficile.'
+
+  var html = '<div class="dernier">'
+  html += '<div class="dernier-tete"><div class="section-label">Dernier sous-thème travaillé</div>' +
+    '<div class="dernier-date">' + esc(dayLabel(l.derniere_session)) + '</div></div>'
+  html += '<div class="dernier-titre">' + esc(l.sous_theme) + (acquis || !niveau ? '' : ' · ' + esc(niveau)) + '</div>'
+  html += '<div class="dernier-phrase">' + phrase + '</div>'
+  if (!acquis) html += '<div class="niv-barre" style="height:6px;margin-top:10px"><span style="width:' + (n * 20) + '%"></span></div>'
+  return html + '</div>'
+}
+
+function renderNiveaux(niveaux) {
+  var html = '<div class="section-label">Mes niveaux par sous-thème</div>'
+  if (niveaux === null) {
+    return html + '<div class="niv-erreur">Impossible d\'afficher tes niveaux pour le moment.</div>'
+  }
+
+  var total = Object.keys(SOUS_THEMES).reduce(function(s, t) { return s + SOUS_THEMES[t].length }, 0)
+  var lignes = niveaux.slice().sort(function(a, b) {
+    return new Date(b.derniere_session || 0) - new Date(a.derniere_session || 0)
   })
+  if (lignes.length > 0) html = renderDernierSousTheme(lignes[0]) + html
+  var commences = {}
+  lignes.forEach(function(l) { commences[l.theme + '||' + l.sous_theme] = true })
 
+  html += '<div class="niv-resume">' + lignes.length + ' sous-thème' + (lignes.length > 1 ? 's' : '') +
+    ' commencé' + (lignes.length > 1 ? 's' : '') + ' sur ' + total + '</div>'
+
+  if (lignes.length > 0) {
+    html += '<div class="niv-wrap"><table class="niv-table"><thead><tr>' +
+      '<th class="niv-col-nom" scope="col">Sous-thème</th>' +
+      '<th scope="col">Facile</th><th scope="col">Moyen</th><th scope="col">Difficile</th></tr></thead><tbody>'
+    lignes.forEach(function(l) {
+      html += '<tr><td class="niv-nom"><div class="niv-st">' + esc(l.sous_theme) + '</div>' +
+        '<div class="niv-theme">' + esc(libelleTheme(l.theme)) + '</div></td>' +
+        '<td>' + celluleNiveau(l.f_etat, l.f_reussites) + '</td>' +
+        '<td>' + celluleNiveau(l.m_etat, l.m_reussites) + '</td>' +
+        '<td>' + celluleNiveau(l.d_etat, l.d_reussites) + '</td></tr>'
+    })
+    html += '</tbody></table></div>'
+    html += '<div class="niv-legende">' +
+      '<span>✓ Acquis = 5 réussites</span><span>En cours</span><span>🔒 Verrouillé</span><br>' +
+      'Réussite : au moins 4 bonnes réponses sur 5</div>'
+  }
+
+  var pasCommences = []
+  Object.keys(SOUS_THEMES).forEach(function(t) {
+    var absents = SOUS_THEMES[t].filter(function(st) { return !commences[t + '||' + st] })
+    if (absents.length) pasCommences.push({ theme: t, sousThemes: absents })
+  })
+  var k = pasCommences.reduce(function(s, g) { return s + g.sousThemes.length }, 0)
+  if (k > 0) {
+    html += '<details class="niv-pas-commences"><summary>Pas encore commencés — ' + k + ' sous-thème' + (k > 1 ? 's' : '') + '</summary>'
+    pasCommences.forEach(function(g) {
+      html += '<div class="niv-pc-theme">' + esc(libelleTheme(g.theme)) + '</div>' +
+        '<div class="niv-pc-liste">' + g.sousThemes.map(esc).join(' · ') + '</div>'
+    })
+    html += '</details>'
+  }
+  return html
+}
+
+function renderDashboard(niveaux) {
+  var html = renderNiveaux(niveaux)
   html += '<div class="footer-btns"><a href="quiz.html" class="btn-green">💪 Continuer à réviser</a></div>'
-
   document.getElementById('tab-dashboard').innerHTML = html
 }
 
@@ -264,11 +305,11 @@ function renderHistorique(rows) {
   rows.forEach(function(r) {
     var jour = dayLabel(r.created_at)
     if (jour !== dernierJour) {
-      html += '<div class="jour-sep"><span class="jour-sep-label">' + jour + '</span><span class="jour-sep-line"></span></div>'
+      html += '<div class="jour-sep"><span class="jour-sep-label">' + esc(jour) + '</span><span class="jour-sep-line"></span></div>'
       dernierJour = jour
     }
     var heure = new Date(r.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    var themeLabel = (THEMES.find(function(t){ return t.value === r.theme }) || {}).label || r.theme
+    var themeLabel = esc((THEMES.find(function(t){ return t.value === r.theme }) || {}).label || r.theme)
     var ratees = '', scoreHtml
     if (r.abandonne) {
       // Score forcé à 0 côté serveur sur un abandon (cf. api/quiz-resultat.js) :
@@ -278,14 +319,14 @@ function renderHistorique(rows) {
     } else {
       var pct = Math.round((r.score / r.total) * 100)
       var statut = getStatut(pct)
-      scoreHtml = '<div class="hist-score ' + statut.classe + '">' + r.score + '/' + r.total + '</div>'
+      scoreHtml = '<div class="hist-score ' + statut.classe + '">' + esc(r.score) + '/' + esc(r.total) + '</div>'
       if (r.questions_ratees && r.questions_ratees.length) {
-        ratees = '<div class="hist-ratees"><div class="hist-ratees-label">Question' + (r.questions_ratees.length > 1 ? 's ratées' : ' ratée') + '</div>' + r.questions_ratees.map(function(q) { return '<div class="hist-ratee">• ' + q + '</div>' }).join('') + '</div>'
+        ratees = '<div class="hist-ratees"><div class="hist-ratees-label">Question' + (r.questions_ratees.length > 1 ? 's ratées' : ' ratée') + '</div>' + r.questions_ratees.map(function(q) { return '<div class="hist-ratee">• ' + esc(q) + '</div>' }).join('') + '</div>'
       }
     }
     html += '<div class="hist-card">' +
       '<div class="hist-top">' +
-      '<div><span class="hist-theme">' + themeLabel + '</span><span class="hist-badge">' + r.difficulte + '</span><div class="hist-date">' + heure + '</div></div>' +
+      '<div><span class="hist-theme">' + themeLabel + '</span><span class="hist-badge">' + esc(r.difficulte) + '</span><div class="hist-date">' + heure + '</div></div>' +
       scoreHtml +
       '</div>' + ratees + '</div>'
   })

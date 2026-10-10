@@ -203,6 +203,7 @@ Trois points masquent volontairement tout ce qui suppose un accès payant pendan
 * Moyen ouvert si Facile acquis ; **Difficile ouvert si Facile ET Moyen acquis** (version stricte).
 * Abandons (`resultats.abandonne = true`) exclus de tous les comptes.
 * À surveiller = 6 essais ou plus au niveau en cours sans l'acquérir.
+* `resultats.html` (onglet « Tableau de bord ») lit aussi la vue pour son bloc « Dernier sous-thème travaillé » (ligne la plus récente, avec `niveau_courant`) et son tableau sous-thèmes × niveaux. Il charge **`js/catalogue.js`** (`SOUS_THEMES`, source destinée à devenir unique pour la liste des sous-thèmes) pour calculer les sous-thèmes « pas encore commencés » ; `quiz.html`, `prof.html` et `suivi-parent.html` gardent leur copie de la liste (migration progressive), `api/generer.js` aussi (serveur).
 * `quiz.html` (`verifierDeblocage()`) lit la vue et ne recalcule plus rien. `SEUIL_SESSIONS` / `SEUIL_PCT` y restent pour les textes et les barres, **sans valeur de règle** : toute modification de la règle se fait dans la vue.
 * **`suivi-parent.html` garde sa copie locale** (`calculerEtatSousTheme()`) jusqu'à la PR 3 : d'ici là, la vue fait foi en cas de divergence.
 

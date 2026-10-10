@@ -153,7 +153,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 40. **Lot 4 — validation des API d'entrée** — non traité, constaté le 04/10/2026 : `api/inscription-stage.js`, `api/inscription-brevet.js` et `api/quiz-resultat.js` n'ont pas de validation systématique de leurs entrées (types, longueurs, formats). À noter en particulier : `api/inscription-brevet.js` n'échappe aucune des valeurs insérées dans ses emails (`prenom`, `nom`, `email_parent`, `telephone`), contrairement à `api/inscription-stage.js` (`esc()`).
 
-41. **Lot 5 — échappement HTML des pages parent et publiques, avant le 01/12/2026** — non traité : `suivi-parent.html`, `resultats.html` et les pages publiques `stages-vacances.html` / `brevet-blanc.html`. Même motif que le lot 1 (PR #93, qui n'a traité que `prof.html`) : valeurs issues de la base insérées dans `innerHTML` sans échappement.
+41. **Lot 5 — échappement HTML des pages parent et publiques, avant le 01/12/2026** — non traité : `suivi-parent.html` et les pages publiques `stages-vacances.html` / `brevet-blanc.html` (`resultats.html` traité : `esc()` appliqué au tableau des niveaux et à l'onglet Historique). Même motif que le lot 1 (PR #93, qui n'a traité que `prof.html`) : valeurs issues de la base insérées dans `innerHTML` sans échappement.
 
 42. **Contenu de la banque de questions non échappé dans `prof.html`** (énoncés, options, tableaux, figures SVG) — hors périmètre du lot 1 (PR #93). Une sonde SQL est à lancer avant toute décision, pour mesurer ce que la base contient réellement (balises, guillemets, SVG légitimes) : échapper un contenu volontairement riche (tableaux, SVG) casserait l'affichage.
 
