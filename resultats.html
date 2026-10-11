@@ -299,6 +299,25 @@ function renderDashboard(niveaux) {
   document.getElementById('tab-dashboard').innerHTML = html
 }
 
+// Libellé d'une question ratée : retire le préfixe « thème — » (cf. api/quiz-resultat.js)
+// et ne laisse pas un énoncé tronqué à 40 caractères s'arrêter en plein mot.
+// Toute entrée hors de ce format est rendue telle quelle.
+function libelleRatee(q, theme) {
+  q = String(q == null ? '' : q)
+  var marque = ''
+  if (q.indexOf('[Aucune idée] ') === 0) {
+    marque = '[Aucune idée] '
+    q = q.slice(marque.length)
+  }
+  var prefixe = theme ? theme + ' — ' : ''
+  if (prefixe && q.indexOf(prefixe) === 0) q = q.slice(prefixe.length)
+  if (q.length === 40) {
+    var i = q.lastIndexOf(' ')
+    q = (i > 0 ? q.slice(0, i) : q) + '…'
+  }
+  return marque + q
+}
+
 function renderHistorique(rows) {
   var html = ''
   var dernierJour = null
@@ -309,7 +328,10 @@ function renderHistorique(rows) {
       dernierJour = jour
     }
     var heure = new Date(r.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    var themeLabel = esc((THEMES.find(function(t){ return t.value === r.theme }) || {}).label || r.theme)
+    var themeCourt = libelleTheme(r.theme)
+    var sousTheme = r.sous_theme && String(r.sous_theme).trim()
+    var titre = esc(sousTheme ? r.sous_theme : themeCourt)
+    var sousTitre = (sousTheme ? esc(themeCourt) + ' · ' : '') + heure
     var ratees = '', scoreHtml
     if (r.abandonne) {
       // Score forcé à 0 côté serveur sur un abandon (cf. api/quiz-resultat.js) :
@@ -321,12 +343,12 @@ function renderHistorique(rows) {
       var statut = getStatut(pct)
       scoreHtml = '<div class="hist-score ' + statut.classe + '">' + esc(r.score) + '/' + esc(r.total) + '</div>'
       if (r.questions_ratees && r.questions_ratees.length) {
-        ratees = '<div class="hist-ratees"><div class="hist-ratees-label">Question' + (r.questions_ratees.length > 1 ? 's ratées' : ' ratée') + '</div>' + r.questions_ratees.map(function(q) { return '<div class="hist-ratee">• ' + esc(q) + '</div>' }).join('') + '</div>'
+        ratees = '<div class="hist-ratees"><div class="hist-ratees-label">Question' + (r.questions_ratees.length > 1 ? 's ratées' : ' ratée') + '</div>' + r.questions_ratees.map(function(q) { return '<div class="hist-ratee">• ' + esc(libelleRatee(q, r.theme)) + '</div>' }).join('') + '</div>'
       }
     }
     html += '<div class="hist-card">' +
       '<div class="hist-top">' +
-      '<div><span class="hist-theme">' + themeLabel + '</span><span class="hist-badge">' + esc(r.difficulte) + '</span><div class="hist-date">' + heure + '</div></div>' +
+      '<div><span class="hist-theme">' + titre + '</span><span class="hist-badge">' + esc(r.difficulte) + '</span><div class="hist-date">' + sousTitre + '</div></div>' +
       scoreHtml +
       '</div>' + ratees + '</div>'
   })
