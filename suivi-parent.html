@@ -343,6 +343,8 @@ const CHAMPS_NIVEAU = {
   difficile: { reussites: 'd_reussites', essais: 'd_essais', etat: 'd_etat' }
 }
 
+const SELECT_NIVEAUX = 'theme, sous_theme, f_reussites, f_essais, m_reussites, m_essais, d_reussites, d_essais, f_etat, m_etat, d_etat, niveau_courant, a_surveiller, derniere_session'
+
 function nbReussites(n) {
   n = Math.min(Number(n) || 0, 5)
   return n + ' réussite' + (n > 1 ? 's' : '')
@@ -369,13 +371,14 @@ function celluleNiveau(l, niveau) {
   return `<div class="niv-cell niv-c-verrou">Après le ${niveau === 'moyen' ? 'Facile' : 'Moyen'}</div>`
 }
 
-// Rendu pur (lignes de la vue → HTML) : aucune lecture réseau.
-function rendreCarteNiveaux(lignes) {
+// Classement pur (lignes de la vue → textes bruts, non échappés), partagé par
+// la carte HTML et le PDF de bilan. Ordre : récence décroissante.
+function classerNiveaux(lignes) {
   const tries = lignes.slice().sort(parRecence)
   const acquis = [], progression = [], surveiller = []
 
   tries.forEach(l => {
-    const nom = esc(l.sous_theme)
+    const nom = l.sous_theme
     if (l.d_etat === 'acquis') {
       acquis.push(`${nom} : les 3 niveaux validés.`)
     } else if (l.m_etat === 'acquis') {
@@ -394,8 +397,15 @@ function rendreCarteNiveaux(lignes) {
       progression.push(`${nom} : ${nbReussites(l[c.reussites])} sur 5 au niveau ${NOM_NIVEAU[niv]}.`)
     }
   })
+  return { acquis, progression, surveiller }
+}
 
-  const liste = items => '<ul>' + items.map(t => `<li>${t}</li>`).join('') + '</ul>'
+// Rendu pur (lignes de la vue → HTML) : aucune lecture réseau.
+function rendreCarteNiveaux(lignes) {
+  const tries = lignes.slice().sort(parRecence)
+  const { acquis, progression, surveiller } = classerNiveaux(lignes)
+
+  const liste = items => '<ul>' + items.map(t => `<li>${esc(t)}</li>`).join('') + '</ul>'
   const n = tries.length
   let html = `<div class="card"><div class="niv-tete"><div class="card-titre">Niveau atteint par sous-thème</div>` +
     `<div class="niv-resume">${n} commencé${n > 1 ? 's' : ''} sur ${totalCatalogue()}</div></div>`
@@ -433,7 +443,7 @@ async function chargerNiveaux(uid) {
   zone.innerHTML = '<div class="card"><div class="loader" style="padding:1.5rem">⏳ Chargement…</div></div>'
 
   const { data, error } = await sb.from('niveaux_sous_theme')
-    .select('theme, sous_theme, f_reussites, f_essais, m_reussites, m_essais, d_reussites, d_essais, f_etat, m_etat, d_etat, niveau_courant, a_surveiller, derniere_session')
+    .select(SELECT_NIVEAUX)
     .eq('user_id', uid)
 
   if (error) {
@@ -837,6 +847,146 @@ function estAbandon(s) {
   return Array.isArray(s.questions_ratees) && s.questions_ratees.some(q => typeof q === 'string' && q.includes('abandonné'))
 }
 
+// ── PDF de bilan : section « Niveau atteint » ──────────────────────────
+// Polices jsPDF standard (Helvetica, WinAnsi) : aucun caractère hors WinAnsi
+// (pas de coche, d'alerte, de ≥ ni de flèche). Accents, « — » et « · » : OK.
+const PDF_COUL = {
+  acquis:      { fond: [234, 246, 239], bord: [191, 227, 205], texte: [31, 122, 69] },
+  progression: { fond: [251, 244, 228], bord: [235, 217, 168], texte: [138, 100, 22] },
+  surveiller:  { fond: [255, 241, 227], bord: [232, 137, 43],  texte: [138, 63, 5] },
+  neutre:      { fond: [250, 249, 246], bord: [228, 225, 216], texte: [107, 110, 115] }
+}
+const PDF_MARGE_G = 48, PDF_MARGE_H = 48, PDF_MARGE_B = 40
+
+function pdfTitreSection(doc, y, gauche, droite) {
+  const pageW = doc.internal.pageSize.getWidth()
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(107, 110, 115)
+  doc.text(gauche, PDF_MARGE_G, y)
+  if (droite) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5)
+    doc.text(droite, pageW - PDF_MARGE_G, y, { align: 'right' })
+  }
+  return y + 16
+}
+
+// Texte et couleurs d'une case du tableau (états calculés par la vue).
+function pdfCelluleNiveau(l, niveau) {
+  const c = CHAMPS_NIVEAU[niveau]
+  const etat = l[c.etat]
+  if (etat === 'acquis') return { txt: 'Acquis', coul: PDF_COUL.acquis, gras: true }
+  if (etat === 'en_cours') {
+    const n = Math.min(Number(l[c.reussites]) || 0, 5)
+    if (l.a_surveiller && l.niveau_courant === niveau) return { txt: n + '/5', coul: PDF_COUL.surveiller, gras: true }
+    return { txt: n + '/5', coul: PDF_COUL.progression, gras: false }
+  }
+  if (etat === 'jamais_joue') return { txt: '0/5', coul: PDF_COUL.neutre, gras: false }
+  return { txt: 'après ' + (niveau === 'moyen' ? 'Facile' : 'Moyen'), coul: PDF_COUL.neutre, gras: false }
+}
+
+// Dessine la section à partir de y (page courante) et renvoie le y de fin,
+// éventuellement sur une page suivante. lignes === null : lecture en erreur.
+// Les blocs de synthèse ne sont jamais coupés ; le tableau continue sur la
+// page suivante (en-tête répété), les deux colonnes se remplissent page par page.
+function pdfSectionNiveaux(doc, y, lignes) {
+  const pageW = doc.internal.pageSize.getWidth()
+  const bas = doc.internal.pageSize.getHeight() - PDF_MARGE_B
+  const titre = 'NIVEAU ATTEINT PAR SOUS-THÈME'
+
+  if (lignes === null || lignes.length === 0) {
+    y = pdfTitreSection(doc, y, titre, null)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(107, 110, 115)
+    doc.text(lignes === null ? 'Niveau atteint indisponible pour le moment.' : 'Aucun sous-thème commencé pour le moment.', PDF_MARGE_G, y + 4)
+    return y + 20
+  }
+
+  const tries = lignes.slice().sort(parRecence)
+  const n = tries.length
+  const dateJ = new Date().toLocaleDateString('fr-FR')
+  y = pdfTitreSection(doc, y, titre, `au ${dateJ} · ${n} commencé${n > 1 ? 's' : ''} sur ${totalCatalogue()}`)
+
+  const largeur = pageW - 2 * PDF_MARGE_G
+  const colG = Math.round(largeur * 0.42), ecart = 20
+  const xD = PDF_MARGE_G + colG + ecart, colD = largeur - colG - ecart
+  const wNom = Math.round(colD * 0.34), wNiv = (colD - wNom) / 3
+
+  // Blocs (colonne gauche) : hauteur calculée avant dessin.
+  const { acquis, progression, surveiller } = classerNiveaux(lignes)
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
+  // Ordre propre au PDF : l'urgent d'abord (la carte HTML garde Acquis en premier).
+  const blocs = [['À surveiller', 'surveiller', surveiller], ['En progression', 'progression', progression], ['Acquis', 'acquis', acquis]]
+    .filter(b => b[2].length)
+    .map(([nom, cle, items]) => {
+      const textes = items.map(t => doc.splitTextToSize(t, colG - 24))
+      const nbL = textes.reduce((a, t) => a + t.length, 0)
+      return { nom, cle, textes, h: 10 + 14 + nbL * 11 + (items.length - 1) * 3 + 10 }
+    })
+
+  // Lignes (colonne droite).
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9)
+  const rows = tries.map(l => {
+    const nomL = doc.splitTextToSize(l.sous_theme, wNom - 10)
+    return { l, nomL, h: Math.max(22, nomL.length * 10.5 + 10) }
+  })
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
+  const legende = doc.splitTextToSize('N/5 = sessions réussies (au moins 4 bonnes réponses sur 5). Niveau acquis après 5 réussites.', colD)
+  const hLegende = legende.length * 10 + 8
+  const hEntete = 18
+
+  let iB = 0, iR = 0, haut = y
+  for (;;) {
+    let yL = haut, yR = haut, deja = 0
+
+    while (iB < blocs.length && (yL + blocs[iB].h <= bas || yL === haut)) {
+      const b = blocs[iB], c = PDF_COUL[b.cle]
+      doc.setFillColor(...c.fond); doc.setDrawColor(...c.bord); doc.setLineWidth(b.cle === 'surveiller' ? 1 : 0.6)
+      doc.roundedRect(PDF_MARGE_G, yL, colG, b.h, 5, 5, 'FD')
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...c.texte)
+      doc.text(b.nom, PDF_MARGE_G + 12, yL + 18)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(65, 69, 76)
+      let ty = yL + 32
+      b.textes.forEach(lg => { doc.text(lg, PDF_MARGE_G + 12, ty); ty += lg.length * 11 + 3 })
+      yL += b.h + 8
+      iB++
+    }
+
+    if (iR < rows.length) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(107, 110, 115)
+      doc.text('SOUS-THÈME', xD + 6, yR + 12)
+      ;['FACILE', 'MOYEN', 'DIFFICILE'].forEach((t, i) => doc.text(t, xD + wNom + i * wNiv + wNiv / 2, yR + 12, { align: 'center' }))
+      doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.6); doc.line(xD, yR + hEntete, xD + colD, yR + hEntete)
+      yR += hEntete
+    }
+    while (iR < rows.length) {
+      const r = rows[iR]
+      const dernier = iR === rows.length - 1
+      if (yR + r.h + (dernier ? hLegende : 0) > bas && deja > 0) break
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(65, 69, 76)
+      doc.text(r.nomL, xD + 6, yR + r.h / 2 - (r.nomL.length - 1) * 5.25 + 3)
+      ;['facile', 'moyen', 'difficile'].forEach((niv, i) => {
+        const cel = pdfCelluleNiveau(r.l, niv)
+        const cx = xD + wNom + i * wNiv
+        doc.setFillColor(...cel.coul.fond); doc.setDrawColor(...cel.coul.bord)
+        doc.setLineWidth(cel.coul === PDF_COUL.surveiller ? 1 : 0.4)
+        doc.roundedRect(cx + 3, yR + 3, wNiv - 6, r.h - 6, 4, 4, 'FD')
+        doc.setFont('helvetica', cel.gras ? 'bold' : 'normal'); doc.setFontSize(8.5); doc.setTextColor(...cel.coul.texte)
+        doc.text(cel.txt, cx + wNiv / 2, yR + r.h / 2 + 3, { align: 'center' })
+      })
+      yR += r.h
+      doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.4); doc.line(xD, yR, xD + colD, yR)
+      iR++; deja++
+    }
+    if (rows.length && iR >= rows.length) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(107, 110, 115)
+      doc.text(legende, xD, yR + 12)
+      yR += hLegende
+    }
+
+    if (iB >= blocs.length && iR >= rows.length) return Math.max(yL, yR)
+    doc.addPage()
+    haut = pdfTitreSection(doc, PDF_MARGE_H, titre + ' (suite)', null)
+  }
+}
+
 async function genererPDF(mode) {
   const btn = document.getElementById('pdf-' + mode)
   const texteOriginal = btn.innerHTML
@@ -847,7 +997,7 @@ async function genererPDF(mode) {
     const { debut, fin, granularite, libelle } = await getRangeEtGranularite(mode)
 
     const { data: sessionsBrutes, error } = await sb.from('resultats')
-      .select('created_at, score, total, temps_secondes, sous_theme, questions_ratees')
+      .select('created_at, score, total, temps_secondes, sous_theme, abandonne')
       .eq('user_id', eleveUserId)
       .gte('created_at', debut.toISOString())
       .lte('created_at', fin.toISOString())
@@ -861,13 +1011,24 @@ async function genererPDF(mode) {
       return
     }
 
-    const nbAbandons = sessionsBrutes.filter(estAbandon).length
-    const sessions = sessionsBrutes.filter(s => !estAbandon(s))
+    const nbAbandons = sessionsBrutes.filter(s => s.abandonne).length
+    const sessions = sessionsBrutes.filter(s => !s.abandonne)
 
     if (sessions.length === 0) {
       btn.innerHTML = '<span>Que des abandons sur cette période</span><span></span>'
       setTimeout(() => { btn.innerHTML = texteOriginal; btn.disabled = false }, 2500)
       return
+    }
+
+    // Niveau atteint : tout l'historique (pas la période). Un échec ne bloque
+    // pas le PDF : la section affiche « indisponible » (lignesNiveaux = null).
+    let lignesNiveaux = null
+    try {
+      const rn = await sb.from('niveaux_sous_theme').select(SELECT_NIVEAUX).eq('user_id', eleveUserId)
+      if (rn.error) console.error('[niveaux] lecture de niveaux_sous_theme impossible (PDF) :', rn.error.message)
+      else lignesNiveaux = rn.data || []
+    } catch (e) {
+      console.error('[niveaux] lecture de niveaux_sous_theme impossible (PDF) :', e && e.message)
     }
 
     const buckets = {}
@@ -900,7 +1061,6 @@ async function genererPDF(mode) {
     const tempsTot = sessions.reduce((a, s) => a + (s.temps_secondes || 0), 0)
     const dureeMin = Math.round(tempsTot / 60)
     const dureeAffiche = dureeMin >= 60 ? `${Math.floor(dureeMin / 60)} h ${dureeMin % 60} min` : `${dureeMin} min`
-    const sousThemesSet = new Set(sessions.map(s => s.sous_theme).filter(Boolean))
 
     const jourMs = 24 * 60 * 60 * 1000
     const nbJoursPeriode = Math.max(1, Math.round((fin - debut) / jourMs) + 1)
@@ -923,7 +1083,7 @@ async function genererPDF(mode) {
     }
 
     const canvas = document.getElementById('chart-pdf-offscreen')
-    canvas.width = 900; canvas.height = 380
+    canvas.width = 900; canvas.height = 228
     if (window._chartPdf) { window._chartPdf.destroy() }
     window._chartPdf = new Chart(canvas, {
       type: 'bar',
@@ -953,9 +1113,12 @@ async function genererPDF(mode) {
     const { jsPDF } = window.jspdf
     const doc = new jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape' })
     const pageW = doc.internal.pageSize.getWidth()
-    const margeG = 48
+    const pageH = doc.internal.pageSize.getHeight()
+    const margeG = PDF_MARGE_G
+    const bas = pageH - PDF_MARGE_B
     let y = 56
 
+    // a) En-tête
     doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(27, 42, 74)
     doc.text('Academika — Bilan de progression', margeG, y)
     y += 20
@@ -963,13 +1126,30 @@ async function genererPDF(mode) {
     doc.text(`${prenom || 'Élève'} · ${libelle} · du ${debut.toLocaleDateString('fr-FR')} au ${fin.toLocaleDateString('fr-FR')}`, margeG, y)
     y += 28
 
+    // b) Niveau atteint (tout l'historique, pas la période)
+    y = pdfSectionNiveaux(doc, y, lignesNiveaux)
+    y += 10
+
+    // c) Activité sur la période — section entière (titre, stats, graphique,
+    // légende) sur une même page : en bloc sur la page suivante si elle ne
+    // tient pas sous la section niveaux.
+    const imgW = pageW - 2 * margeG
+    const imgH = imgW * (canvas.height / canvas.width)
+    const hActivite = 18 + 22 + 46 + 22 + 14 + imgH + 18 + 4
+    if (y + hActivite > bas) { doc.addPage(); y = PDF_MARGE_H }
+    else {
+      doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.6)
+      doc.line(margeG, y, pageW - margeG, y)
+      y += 18
+    }
+    y = pdfTitreSection(doc, y, 'ACTIVITÉ SUR LA PÉRIODE', null) + 6
+
     const stats = [
       ['Sessions faites', String(totalSessions), `${totalExercices} exercices`],
-      ['Score moyen', scoreMoyen + '%', null],
-      ['Sous-thèmes travaillés', String(sousThemesSet.size), null],
       ['Durée totale', dureeAffiche, null],
       ['Jours actifs', `${joursActifsSet.size}/${nbJoursPeriode}`, null],
-      ['Quiz abandonnés', String(nbAbandons), null]
+      ['Quiz abandonnés', String(nbAbandons), null],
+      ['Taux de bonnes réponses', scoreMoyen + '%', null]
     ]
     const colW = (pageW - 2 * margeG) / stats.length
     stats.forEach((s, i) => {
@@ -985,7 +1165,8 @@ async function genererPDF(mode) {
     })
     y += 46
 
-    doc.setDrawColor(228, 225, 216)
+    // d) Graphique et sa légende (inchangés), dans le même bloc que les stats
+    doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.6)
     doc.line(margeG, y, pageW - margeG, y)
     y += 22
 
@@ -993,12 +1174,10 @@ async function genererPDF(mode) {
     doc.text(`Nombre de sessions par ${granularite === 'jour' ? 'jour' : granularite === 'semaine' ? 'semaine' : 'mois'} (une session = 5 exercices)`, pageW / 2, y, { align: 'center' })
     y += 14
 
-    const imgW = pageW - 2 * margeG
-    const imgH = imgW * (canvas.height / canvas.width)
     doc.addImage(imgData, 'PNG', margeG, y, imgW, imgH)
     y += imgH + 18
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(107, 110, 115)
-    doc.text('Couleur des barres : bleu = score du jour 70% ou plus, doré = moins de 70%', pageW / 2, y, { align: 'center' })
+    doc.text(`Couleur des barres : bleu = score ${granularite === 'jour' ? 'du jour' : granularite === 'semaine' ? 'de la semaine' : 'du mois'} 70% ou plus, doré = moins de 70%`, pageW / 2, y, { align: 'center' })
 
     doc.save(`academika-bilan-${mode}-${new Date().toISOString().split('T')[0]}.pdf`)
   } catch (e) {
