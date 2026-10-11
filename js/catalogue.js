@@ -1,9 +1,9 @@
 // js/catalogue.js — catalogue des sous-thèmes par thème (script classique).
 //
 // Source destinée à devenir UNIQUE pour la liste des sous-thèmes. Pour
-// l'instant, seul resultats.html la charge ; quiz.html, prof.html et
-// suivi-parent.html gardent leur propre copie (migration progressive, page
-// par page) et api/generer.js garde sa propre liste côté serveur. Toute
+// l'instant, resultats.html et suivi-parent.html la chargent ; quiz.html et
+// prof.html gardent leur propre copie (migration progressive, page par
+// page) et api/generer.js garde sa propre liste côté serveur. Toute
 // modification de la liste est donc à répercuter à la main dans ces copies
 // tant que la migration n'est pas terminée.
 //
