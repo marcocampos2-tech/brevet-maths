@@ -300,7 +300,8 @@ function renderDashboard(niveaux) {
 }
 
 // Libellé d'une question ratée : retire le préfixe « thème — » (cf. api/quiz-resultat.js)
-// et ne laisse pas un énoncé tronqué à 40 caractères s'arrêter en plein mot.
+// et ne laisse pas un énoncé tronqué à 40 caractères s'arrêter en plein mot
+// (un dernier morceau qui n'est pas un mot est conservé).
 // Toute entrée hors de ce format est rendue telle quelle.
 function libelleRatee(q, theme) {
   q = String(q == null ? '' : q)
@@ -312,8 +313,11 @@ function libelleRatee(q, theme) {
   var prefixe = theme ? theme + ' — ' : ''
   if (prefixe && q.indexOf(prefixe) === 0) q = q.slice(prefixe.length)
   if (q.length === 40) {
+    // Le dernier morceau n'est retiré que s'il est un mot (lettres seules) :
+    // un chiffre, un symbole ou une expression (« = 0 ») est gardé entier.
     var i = q.lastIndexOf(' ')
-    q = (i > 0 ? q.slice(0, i) : q) + '…'
+    if (i > 0 && /^[\p{L}'’-]+$/u.test(q.slice(i + 1))) q = q.slice(0, i)
+    q += '…'
   }
   return marque + q
 }
