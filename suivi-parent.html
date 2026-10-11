@@ -1177,7 +1177,7 @@ async function genererPDF(mode) {
     doc.addImage(imgData, 'PNG', margeG, y, imgW, imgH)
     y += imgH + 18
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(107, 110, 115)
-    doc.text('Couleur des barres : bleu = score du jour 70% ou plus, doré = moins de 70%', pageW / 2, y, { align: 'center' })
+    doc.text(`Couleur des barres : bleu = score ${granularite === 'jour' ? 'du jour' : granularite === 'semaine' ? 'de la semaine' : 'du mois'} 70% ou plus, doré = moins de 70%`, pageW / 2, y, { align: 'center' })
 
     doc.save(`academika-bilan-${mode}-${new Date().toISOString().split('T')[0]}.pdf`)
   } catch (e) {
