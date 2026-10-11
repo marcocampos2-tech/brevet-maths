@@ -912,7 +912,8 @@ function pdfSectionNiveaux(doc, y, lignes) {
   // Blocs (colonne gauche) : hauteur calculée avant dessin.
   const { acquis, progression, surveiller } = classerNiveaux(lignes)
   doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
-  const blocs = [['Acquis', 'acquis', acquis], ['En progression', 'progression', progression], ['À surveiller', 'surveiller', surveiller]]
+  // Ordre propre au PDF : l'urgent d'abord (la carte HTML garde Acquis en premier).
+  const blocs = [['À surveiller', 'surveiller', surveiller], ['En progression', 'progression', progression], ['Acquis', 'acquis', acquis]]
     .filter(b => b[2].length)
     .map(([nom, cle, items]) => {
       const textes = items.map(t => doc.splitTextToSize(t, colG - 24))
