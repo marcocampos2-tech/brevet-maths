@@ -17,6 +17,7 @@
   --creme:#FAF9F6; --ardoise:#41454C; --muted:#6B6E73;
   --vert:#2F9E5C; --dore:#D4A23C; --dore-light:#FBF4E4;
   --border:#E4E1D8;
+  --orange:#E8892B; --orange-fonce:#8A3F05;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--creme); min-height: 100vh; color: var(--ardoise); }
@@ -124,22 +125,41 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .encart-origine-acces-ligne { font-size: 12.5px; color: var(--ardoise); line-height: 1.55; }
 .encart-origine-acces-ligne + .encart-origine-acces-ligne { margin-top: 7px; }
 .encart-origine-acces-ligne strong { color: var(--marine); }
-.niveau-synthese { font-size: 13px; color: var(--ardoise); line-height: 1.5; margin-bottom: 1rem; }
-.niveau-groupe { margin-bottom: 14px; }
-.niveau-groupe:last-child { margin-bottom: 0; }
-.niveau-groupe-titre { font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-.niveau-ligne { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; border-left: 3px solid var(--border); background: var(--creme); margin-bottom: 6px; }
-.niveau-ligne:last-child { margin-bottom: 0; }
-.niveau-ligne-difficulte { border-left-color: var(--bordeaux); }
-.niveau-ligne-en_cours { border-left-color: var(--marine); }
-.niveau-ligne-decouverte { border-left-color: var(--border); background: white; }
-.niveau-ligne-acquis { border-left-color: var(--vert); }
-.niveau-ligne-nom { font-size: 12.5px; font-weight: 500; color: var(--ardoise); }
-.niveau-ligne-info { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
-.niveau-voir-plus { display: block; background: none; border: none; color: var(--marine); font-size: 12px; text-decoration: underline; cursor: pointer; font-family: 'Inter', sans-serif; padding: 4px 2px; margin-top: 2px; }
-.niveau-acquis-toggle { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid var(--marine); color: var(--marine); border-radius: 20px; padding: 9px 16px; font-size: 12.5px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; margin-top: 4px; }
-.niveau-acquis-detail { display: none; margin-top: 10px; }
-.niveau-acquis-detail.ouvert { display: block; }
+.niv-resume { font-size: 12px; color: var(--muted); font-weight: 500; text-transform: none; letter-spacing: 0; font-family: 'Inter', sans-serif; white-space: nowrap; }
+.niv-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 1rem; }
+.niv-tete .card-titre { margin-bottom: 0; }
+.niv-bloc { border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; border: 1px solid transparent; }
+.niv-bloc-titre { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; margin-bottom: 8px; }
+.niv-ico { font-size: 14px; line-height: 1; }
+.niv-bloc ul { list-style: none; }
+.niv-bloc li { font-size: 13px; line-height: 1.5; color: var(--ardoise); padding: 3px 0; overflow-wrap: anywhere; }
+.niv-bloc li strong { font-weight: 600; }
+.niv-bloc-acquis { background: #EAF6EF; border-color: #BFE3CD; }
+.niv-bloc-acquis .niv-bloc-titre { color: #1f7a45; }
+.niv-bloc-prog { background: var(--dore-light); border-color: #EBD9A8; }
+.niv-bloc-prog .niv-bloc-titre { color: #8a6416; }
+.niv-bloc-surv { background: #FFF1E3; border-color: var(--orange); }
+.niv-bloc-surv .niv-bloc-titre { color: var(--orange-fonce); }
+.niv-aide { font-size: 12.5px; color: var(--ardoise); line-height: 1.5; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(232,137,43,.35); }
+.niv-aide a { color: var(--marine); font-weight: 500; white-space: nowrap; }
+.niv-detail { margin-top: 14px; }
+.niv-detail summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--marine); padding: 4px 0; }
+.niv-wrap { margin-top: 10px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.niv-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.niv-table th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; text-align: center; padding: 8px 2px; border-bottom: 1px solid var(--border); }
+.niv-table th.niv-col-nom { width: 31%; text-align: left; padding-left: 10px; }
+.niv-table td { padding: 7px 2px; border-bottom: 1px solid var(--border); vertical-align: middle; text-align: center; font-size: 11px; line-height: 1.3; }
+.niv-table tr:last-child td { border-bottom: none; }
+.niv-table td.niv-nom { text-align: left; padding-left: 10px; font-size: 12.5px; font-weight: 600; color: var(--ardoise); overflow-wrap: anywhere; }
+.niv-cell { border-radius: 8px; padding: 6px 3px; margin: 0 2px; }
+.niv-c-acquis { background: #EAF6EF; color: #1f7a45; font-weight: 600; }
+.niv-c-encours { background: var(--dore-light); color: #8a6416; }
+.niv-c-surv { background: #FFF1E3; color: var(--orange-fonce); border: 1px solid var(--orange); font-weight: 600; }
+.niv-c-jamais, .niv-c-verrou { background: var(--creme); color: var(--muted); }
+.niv-barre { height: 4px; background: rgba(0,0,0,.08); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+.niv-barre > span { display: block; height: 100%; background: var(--dore); border-radius: 2px; }
+.niv-c-surv .niv-barre > span { background: var(--orange); }
+.niv-legende { font-size: 11.5px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
 .examen-ligne { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; border-left: 3px solid var(--marine); background: var(--creme); margin-bottom: 6px; }
 .examen-ligne:last-child { margin-bottom: 0; }
 .examen-ligne-abandon { border-left-color: var(--border); background: white; }
@@ -282,6 +302,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 
 </div>
 
+<script src="/js/catalogue.js?v=1"></script>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
@@ -300,204 +321,107 @@ let offreSelectionnee = 'autonomie'
 const FIN_OFFRE_LANCEMENT = new Date('2026-12-01T00:00:00+01:00')
 function enPeriodeGratuite() { return new Date() < FIN_OFFRE_LANCEMENT }
 
-// ═══════════════════════════════════════════════════════════
-// NIVEAU ATTEINT PAR SOUS-THÈME — recopié depuis quiz.html
-// (THEMES/SOUS_THEMES/SEUIL_SESSIONS/SEUIL_PCT, verifierDeblocage
-// lignes 265-307 et 377-390). Pas de module partagé entre les deux
-// fichiers HTML statiques : à resynchroniser manuellement si la liste
-// ou les seuils changent dans quiz.html. L'algorithme ci-dessous doit
-// rester rigoureusement identique à celui de quiz.html — c'est lui qui
-// détermine réellement, côté élève, quelle difficulté est jouable.
-// Toute divergence afficherait au parent un niveau différent de celui
-// que vit l'enfant.
-// Exception volontaire, pas une divergence à corriger : le filtre sur
-// resultats.abandonne dans calculerEtatSousTheme() (sessionsTotal,
-// tentativesNiveauActuel) n'a pas d'équivalent dans quiz.html, qui ne
-// connaît ni "découverte" ni "difficulté" — verifierDeblocage() n'a rien
-// à resynchroniser sur ce point (cf. docs/TODO.md, chantier abandons).
-// ═══════════════════════════════════════════════════════════
-const SOUS_THEMES = {
-  'Nombres et calculs': [
-    'Nombres relatifs', 'Équations', 'Calcul littéral', 'Fractions', 'Puissances', 'Arithmétique'
-  ],
-  'Organisation et gestion de données, fonctions': [
-    'Fonctions', 'Statistiques', 'Probabilités', 'Proportionnalité', 'Pourcentages'
-  ],
-  'Grandeurs et mesures': [
-    'Aires et volumes', 'Conversions', 'Agrandissement'
-  ],
-  'Espace et géométrie': [
-    'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie', 'Transformations', 'Triangles semblables'
-  ],
-  'Algorithmique et programmation': [
-    'Algorithmique'
-  ]
+// Échappement HTML — même contrat que resultats.html. Appliqué aux valeurs
+// venant de la base injectées dans la carte « Niveau atteint » ; le reste de
+// la page relève du lot 5 (docs/TODO.md n°41).
+function esc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 }
-const SEUIL_SESSIONS = 5
-const SEUIL_PCT = 70
 
-// Réplique verifierDeblocage() de quiz.html:377-390 : compteur cumulatif
-// de toutes les sessions ≥70% depuis toujours à chaque difficulté,
-// aucune notion de consécutivité (une session ratée entre deux réussites
-// ne réinitialise rien). "difficile débloqué" ⇒ état 'acquis'.
-//
-// Classification (cahier validé) :
-//  - decouverte : < 3 sessions sur ce sous-thème, tous niveaux confondus
-//  - difficulte : ≥ 6 tentatives (réussites + échecs) au niveau actuel
-//                 sans avoir débloqué le suivant
-//  - en_cours   : le reste (progression normale)
-//  - acquis     : Difficile débloqué
-function calculerEtatSousTheme(sessions) {
-  // Un abandon (resultats.abandonne=true) ne doit pas sortir un sous-thème
-  // de "découverte" trop tôt, ni gonfler tentativesNiveauActuel jusqu'à
-  // déclencher "difficulté" à tort — cf. docs/TODO.md. La boucle compte[...]
-  // ci-dessous continue d'itérer sur sessions brut, volontairement : un
-  // abandon (score 0/5) échoue déjà structurellement au seuil SEUIL_PCT,
-  // donc l'exclure ici n'aurait aucun effet — ne pas y toucher (cf. logique
-  // de déblocage, doit rester identique à quiz.html).
-  const sessionsReelles = sessions.filter(s => !s.abandonne)
-  const total = sessionsReelles.length
-  if (total < 3) {
-    return { etat: 'decouverte', niveau: null, progression: null, sessionsTotal: total, tentativesNiveauActuel: 0 }
+// ═══════════════════════════════════════════════════════════
+// NIVEAU ATTEINT PAR SOUS-THÈME — lu dans la vue public.niveaux_sous_theme
+// (db/vue-niveaux.sql), source unique de la règle de déblocage : aucun
+// calcul de niveau ici, uniquement de la mise en forme. Liste des
+// sous-thèmes : js/catalogue.js.
+// ═══════════════════════════════════════════════════════════
+const NOM_NIVEAU = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
+const CHAMPS_NIVEAU = {
+  facile:    { reussites: 'f_reussites', essais: 'f_essais', etat: 'f_etat' },
+  moyen:     { reussites: 'm_reussites', essais: 'm_essais', etat: 'm_etat' },
+  difficile: { reussites: 'd_reussites', essais: 'd_essais', etat: 'd_etat' }
+}
+
+function nbReussites(n) {
+  n = Math.min(Number(n) || 0, 5)
+  return n + ' réussite' + (n > 1 ? 's' : '')
+}
+
+function parRecence(a, b) {
+  return new Date(b.derniere_session || 0) - new Date(a.derniere_session || 0)
+}
+
+function totalCatalogue() {
+  return Object.keys(SOUS_THEMES).reduce((s, t) => s + SOUS_THEMES[t].length, 0)
+}
+
+function celluleNiveau(l, niveau) {
+  const c = CHAMPS_NIVEAU[niveau]
+  const etat = l[c.etat]
+  if (etat === 'acquis') return '<div class="niv-cell niv-c-acquis">✓ Acquis</div>'
+  if (etat === 'en_cours') {
+    const n = Math.min(Number(l[c.reussites]) || 0, 5)
+    const cls = (l.a_surveiller && l.niveau_courant === niveau) ? 'niv-c-surv' : 'niv-c-encours'
+    return `<div class="niv-cell ${cls}">${nbReussites(n)} sur 5<div class="niv-barre"><span style="width:${n * 20}%"></span></div></div>`
   }
+  if (etat === 'jamais_joue') return `<div class="niv-cell niv-c-jamais">${nbReussites(0)} sur 5</div>`
+  return `<div class="niv-cell niv-c-verrou">Après le ${niveau === 'moyen' ? 'Facile' : 'Moyen'}</div>`
+}
 
-  const compte = { facile: 0, moyen: 0, difficile: 0 }
-  sessions.forEach(s => {
-    if (!(s.difficulte in compte)) return
-    if (s.total > 0 && Math.round((s.score / s.total) * 100) >= SEUIL_PCT) compte[s.difficulte]++
+// Rendu pur (lignes de la vue → HTML) : aucune lecture réseau.
+function rendreCarteNiveaux(lignes) {
+  const tries = lignes.slice().sort(parRecence)
+  const acquis = [], progression = [], surveiller = []
+
+  tries.forEach(l => {
+    const nom = esc(l.sous_theme)
+    if (l.d_etat === 'acquis') {
+      acquis.push(`${nom} : les 3 niveaux validés.`)
+    } else if (l.m_etat === 'acquis') {
+      acquis.push(`${nom} : niveau Moyen validé.`)
+    } else if (l.f_etat === 'acquis') {
+      acquis.push(`${nom} : niveau Facile validé.`)
+    }
+
+    const niv = l.niveau_courant
+    const c = CHAMPS_NIVEAU[niv]
+    if (!c || l[c.etat] === 'acquis') return
+    const essais = Number(l[c.essais]) || 0
+    if (l.a_surveiller) {
+      surveiller.push(`${nom} : ${essais} essais au niveau ${NOM_NIVEAU[niv]}, ${nbReussites(l[c.reussites])}.`)
+    } else if (essais >= 1) {
+      progression.push(`${nom} : ${nbReussites(l[c.reussites])} sur 5 au niveau ${NOM_NIVEAU[niv]}.`)
+    }
   })
 
-  const moyenDebloque = compte.facile >= SEUIL_SESSIONS
-  const difficileDebloque = moyenDebloque && compte.moyen >= SEUIL_SESSIONS
+  const liste = items => '<ul>' + items.map(t => `<li>${t}</li>`).join('') + '</ul>'
+  const n = tries.length
+  let html = `<div class="card"><div class="niv-tete"><div class="card-titre">Niveau atteint par sous-thème</div>` +
+    `<div class="niv-resume">${n} commencé${n > 1 ? 's' : ''} sur ${totalCatalogue()}</div></div>`
 
-  let niveauActuel = 'facile'
-  if (moyenDebloque) niveauActuel = 'moyen'
-  if (difficileDebloque) niveauActuel = 'difficile'
-
-  if (difficileDebloque) {
-    return { etat: 'acquis', niveau: 'difficile', progression: null, sessionsTotal: total, tentativesNiveauActuel: 0 }
+  if (acquis.length) {
+    html += `<div class="niv-bloc niv-bloc-acquis"><div class="niv-bloc-titre"><span class="niv-ico" aria-hidden="true">✓</span>Acquis</div>${liste(acquis)}</div>`
+  }
+  if (progression.length) {
+    html += `<div class="niv-bloc niv-bloc-prog"><div class="niv-bloc-titre">En progression</div>${liste(progression)}</div>`
+  }
+  if (surveiller.length) {
+    html += `<div class="niv-bloc niv-bloc-surv"><div class="niv-bloc-titre"><span class="niv-ico" aria-hidden="true">⚠</span>À surveiller</div>${liste(surveiller)}` +
+      `<div class="niv-aide">Une aide ponctuelle peut l'aider à débloquer. <a href="cours-particuliers.html">Découvrir les cours particuliers</a></div></div>`
   }
 
-  // Sûr par construction : niveauActuel n'est promu à 'moyen'/'difficile'
-  // que lorsque le niveau précédent est déjà débloqué (5 réussites), donc
-  // compte[niveauActuel] reste toujours < SEUIL_SESSIONS ici — seul le
-  // compteur de tentatives totales (réussites + échecs) peut dépasser 6.
-  const tentativesNiveauActuel = sessionsReelles.filter(s => s.difficulte === niveauActuel).length
-  const progressionActuel = Math.min(compte[niveauActuel], SEUIL_SESSIONS)
-  const etat = tentativesNiveauActuel >= 6 ? 'difficulte' : 'en_cours'
-
-  return {
-    etat, niveau: niveauActuel,
-    progression: { actuel: progressionActuel, cible: SEUIL_SESSIONS },
-    sessionsTotal: total, tentativesNiveauActuel
-  }
-}
-
-function classerSousThemes(sessions) {
-  const items = []
-  for (const [theme, liste] of Object.entries(SOUS_THEMES)) {
-    for (const sousTheme of liste) {
-      const sessionsFiltrees = sessions.filter(s => s.theme === theme && s.sous_theme === sousTheme)
-      items.push({ theme, sousTheme, ...calculerEtatSousTheme(sessionsFiltrees) })
-    }
-  }
-  return items
-}
-
-const LIBELLE_NIVEAU = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
-const NIVEAU_SUIVANT = { facile: 'Moyen', moyen: 'Difficile' }
-
-// Génération par règles, aucune saisie manuelle. Mode dégradé validé :
-// pas de lecture de historique_bilans (RLS verrouillée, aucun accès
-// client — confirmé par dump pg_policies) ni de comparaison "depuis le
-// dernier bilan" — cette comparaison attend la PR d'alignement de
-// cron-rappel.js. Phrase purement descriptive de l'état actuel — jamais
-// une évaluation ni une garantie de préparation au Brevet.
-//
-// Jusqu'à trois lignes indépendantes, chacune avec sa propre définition
-// (cahier validé) :
-//  - ligne 1 : "abordé" = au moins 1 session, tous niveaux confondus.
-//    Seuil volontairement bas, différent de celui de la catégorie
-//    "À découvrir" (< 3 sessions, cf. calculerEtatSousTheme) — un
-//    sous-thème à 1 session est donc compté ici tout en apparaissant
-//    encore dans "À découvrir". Incohérence apparente ASSUMÉE : ne pas
-//    aligner les deux seuils, ce serait un chantier séparé (cf. TODO).
-//  - ligne 2 : "niveau Moyen atteint" = nMoyenPur, moyens STRICTS
-//    (etat !== 'acquis') — pas le calcul d'origine, qui comptait aussi
-//    les acquis (déjà passés en Difficile). Masquée à 0. Sans ce
-//    filtre, un élève entièrement acquis verrait deux lignes portant
-//    le même chiffre pour les mêmes sous-thèmes ("Moyen sur 3" et
-//    "Difficile sur 3") — redondant, et ça touche justement les élèves
-//    les plus avancés, dont l'écran doit être le plus valorisant.
-//  - ligne 3 : "niveau Difficile atteint" = nAcquis, masquée à 0. Ne
-//    s'exclut pas de la ligne 2 : un élève peut avoir des sous-thèmes
-//    en Moyen et d'autres déjà en Difficile en même temps — sous-vendre
-//    un acquis en Difficile en ne montrant que "Moyen" irait à
-//    l'encontre de l'objectif du chantier (descriptif, pas minimisant).
-//    Casse alignée sur LIBELLE_NIVEAU, la même que les badges de la liste.
-function genererPhraseSynthese(items, nomEleve) {
-  const nom = nomEleve || 'Votre enfant'
-  const M = items.length
-  const nAbordes = items.filter(it => it.sessionsTotal >= 1).length
-  const nMoyenPur = items.filter(it => it.niveau === 'moyen' && it.etat !== 'acquis').length
-  const nAcquis = items.filter(it => it.etat === 'acquis').length
-
-  let html = `<div>${nom} a abordé ${nAbordes} sous-thème${nAbordes > 1 ? 's' : ''} sur les ${M} du programme de 3e.</div>`
-  if (nMoyenPur > 0) {
-    html += `<div>Niveau ${LIBELLE_NIVEAU.moyen} atteint sur ${nMoyenPur} d'entre eux.</div>`
-  }
-  if (nAcquis > 0) {
-    html += `<div>Niveau ${LIBELLE_NIVEAU.difficile} atteint sur ${nAcquis} d'entre eux.</div>`
-  }
+  html += '<details class="niv-detail"><summary>Voir le détail par niveau</summary>' +
+    '<div class="niv-wrap"><table class="niv-table"><thead><tr><th class="niv-col-nom" scope="col">Sous-thème</th>' +
+    '<th scope="col">Facile</th><th scope="col">Moyen</th><th scope="col">Difficile</th></tr></thead><tbody>'
+  tries.forEach(l => {
+    html += `<tr><td class="niv-nom">${esc(l.sous_theme)}</td>` +
+      `<td>${celluleNiveau(l, 'facile')}</td><td>${celluleNiveau(l, 'moyen')}</td><td>${celluleNiveau(l, 'difficile')}</td></tr>`
+  })
+  html += '</tbody></table></div>' +
+    '<div class="niv-legende">Une réussite = au moins 4 bonnes réponses sur 5. Un niveau est acquis après 5 réussites, ce qui ouvre le niveau suivant.</div>' +
+    '</details></div>'
   return html
-}
-
-function rendreLigneSousTheme(item) {
-  let infoDroite
-  if (item.etat === 'decouverte') {
-    infoDroite = `${item.sessionsTotal} session${item.sessionsTotal > 1 ? 's' : ''}`
-  } else if (item.etat === 'acquis') {
-    infoDroite = 'Difficile débloqué'
-  } else {
-    const suivant = NIVEAU_SUIVANT[item.niveau]
-    infoDroite = `${LIBELLE_NIVEAU[item.niveau]} · ${item.progression.actuel}/${item.progression.cible} vers ${suivant}`
-  }
-  return `
-    <div class="niveau-ligne niveau-ligne-${item.etat}">
-      <span class="niveau-ligne-nom">${item.sousTheme}</span>
-      <span class="niveau-ligne-info">${infoDroite}</span>
-    </div>`
-}
-
-function rendreGroupe(titre, items, id, plafond) {
-  if (items.length === 0) return ''
-  const limite = plafond || items.length
-  const visibles = items.slice(0, limite)
-  const reste = items.slice(limite)
-  let html = `<div class="niveau-groupe"><div class="niveau-groupe-titre">${titre}</div>`
-  html += visibles.map(rendreLigneSousTheme).join('')
-  if (reste.length > 0) {
-    html += `<div id="niveau-reste-${id}" style="display:none">${reste.map(rendreLigneSousTheme).join('')}</div>`
-    html += `<button class="niveau-voir-plus" data-ferme="+ ${reste.length} autre${reste.length > 1 ? 's' : ''}" data-ouvert="Voir moins" onclick="toggleResteGroupe('${id}', this)">+ ${reste.length} autre${reste.length > 1 ? 's' : ''}</button>`
-  }
-  html += `</div>`
-  return html
-}
-
-function toggleResteGroupe(id, btn) {
-  const el = document.getElementById('niveau-reste-' + id)
-  if (!el) return
-  const ouvert = el.style.display !== 'none'
-  el.style.display = ouvert ? 'none' : 'block'
-  btn.textContent = ouvert ? btn.dataset.ferme : btn.dataset.ouvert
-}
-
-function toggleAcquis() {
-  const detail = document.getElementById('detail-acquis')
-  const chevron = document.getElementById('chevron-acquis')
-  if (!detail) return
-  const ouvert = detail.classList.toggle('ouvert')
-  chevron.textContent = ouvert ? '⌃' : '⌄'
 }
 
 // Historique complet, sans fenêtre de date — volontairement séparé de
@@ -508,37 +432,19 @@ async function chargerNiveaux(uid) {
   if (!zone) return
   zone.innerHTML = '<div class="card"><div class="loader" style="padding:1.5rem">⏳ Chargement…</div></div>'
 
-  const { data, error } = await sb.from('resultats')
-    .select('theme, sous_theme, difficulte, score, total, abandonne')
+  const { data, error } = await sb.from('niveaux_sous_theme')
+    .select('theme, sous_theme, f_reussites, f_essais, m_reussites, m_essais, d_reussites, d_essais, f_etat, m_etat, d_etat, niveau_courant, a_surveiller, derniere_session')
     .eq('user_id', uid)
 
   if (error) {
+    console.error('[niveaux] lecture de niveaux_sous_theme impossible :', error.message)
     zone.innerHTML = '<div class="card"><div class="vide">Impossible de charger le niveau atteint pour le moment.</div></div>'
     return
   }
 
-  const sessions = data || []
-  if (sessions.length === 0) { zone.innerHTML = ''; return }
-
-  const items = classerSousThemes(sessions)
-  const groupes = { difficulte: [], en_cours: [], decouverte: [], acquis: [] }
-  items.forEach(it => groupes[it.etat].push(it))
-
-  groupes.difficulte.sort((a, b) => b.tentativesNiveauActuel - a.tentativesNiveauActuel)
-  groupes.en_cours.sort((a, b) => b.progression.actuel - a.progression.actuel)
-
-  let html = '<div class="card"><div class="card-titre">Niveau atteint par sous-thème</div>'
-  html += `<div class="niveau-synthese">${genererPhraseSynthese(items, prenom)}</div>`
-  html += rendreGroupe('En difficulté', groupes.difficulte, 'difficulte')
-  html += rendreGroupe('En cours', groupes.en_cours, 'en_cours', 4)
-  html += rendreGroupe('À découvrir', groupes.decouverte, 'decouverte', 3)
-  if (groupes.acquis.length > 0) {
-    html += `
-      <button class="niveau-acquis-toggle" onclick="toggleAcquis()">Sous-thèmes acquis (${groupes.acquis.length}) <span id="chevron-acquis">⌄</span></button>
-      <div class="niveau-acquis-detail" id="detail-acquis">${groupes.acquis.map(rendreLigneSousTheme).join('')}</div>`
-  }
-  html += '</div>'
-  zone.innerHTML = html
+  const lignes = data || []
+  if (lignes.length === 0) { zone.innerHTML = ''; return }
+  zone.innerHTML = rendreCarteNiveaux(lignes)
 }
 
 async function init() {

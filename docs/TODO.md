@@ -7,15 +7,9 @@
 - Écrire `db/policies.test.sql` (jamais fait ; seul `db/policies.sql` existe)
 - Normaliser l'email dans le formulaire d'inscription (au lieu de dépendre du rattrapage `lower(trim(...))` en lecture)
 
-## 🟠 Ouvert — copie locale de la règle de déblocage dans `suivi-parent.html`
-
-La règle de déblocage est définie une seule fois, dans la vue `niveaux_sous_theme` (`db/vue-niveaux.sql`, cf. CLAUDE.md) ; `quiz.html` la lit depuis la PR #110. Seul `suivi-parent.html` garde sa copie locale (`calculerEtatSousTheme`, `classerSousThemes`, `SEUIL_SESSIONS`, `SEUIL_PCT`), à supprimer dans la PR 3. D'ici là, la vue fait foi : aucune erreur ni log en cas de divergence, juste un état affiché faux au parent. Plus de module partagé `lib/progression.js` à créer : la vue le remplace.
-
-**Mise à jour (11/10/2026)** : `quiz.html` (PR #110) et `resultats.html` (PR #111) lisent désormais la vue `niveaux_sous_theme` ; il ne reste de copie locale de la règle que dans `suivi-parent.html`. **À faire — PR 3 du chantier « bilan en tableau », vue parent (`suivi-parent.html`)** : remplacer la carte « Niveau atteint par sous-thème » par la synthèse (Acquis / En progression / À surveiller) + le détail repliable, lus dans la vue ; supprimer la copie locale de la règle (`calculerEtatSousTheme`, `classerSousThemes`, `SEUIL_SESSIONS`, `SEUIL_PCT`). **Deux décisions ouvertes avant conception** : (1) couleur de « À surveiller » (rouge ou orange soutenu) ; (2) phrase « Une aide ponctuelle peut l'aider à débloquer » : la garder, la retirer ou la remplacer par un lien vers les cours.
-
 ## 🟠 Ouvert — aligner `cron-rappel.js` sur la logique niveau
 
-Le mail récap journalier affiche encore le score brut de la session + seuil "Acquis ≥70%/À revoir <70%" plaqué sur une session isolée — trompeur (une session à 60% peut faire partie d'une progression normale). Tant que ce n'est pas fait, la phrase de synthèse de `suivi-parent.html` reste en mode dégradé (descriptive, sans comparaison temporelle).
+Le mail récap journalier affiche encore le score brut de la session + seuil "Acquis ≥70%/À revoir <70%" plaqué sur une session isolée — trompeur (une session à 60% peut faire partie d'une progression normale).
 
 **À faire** : réutiliser la logique niveau/progression de la refonte suivi-parent, étendre à `cron-rappel.js` (récap journalier) et au bilan périodique (21 jours, `sous_themes_snapshot`, qui mesure la difficulté tentée sur la fenêtre et non le niveau débloqué — source de régressions fantômes).
 
@@ -203,7 +197,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 68. **Policies SELECT élève et prof de `resultats` : rôle `{public}` à restreindre à `{authenticated}`, et non relevées dans `db/policies.sql`** (seule « Parent voit resultats de son enfant » y figure). À faire : dumper `pg_policies` pour `resultats`, versionner les policies réelles dans `db/policies.sql`, puis restreindre les deux au rôle `authenticated` (cf. point 14).
 
-69. **Migration de la liste des sous-thèmes vers `js/catalogue.js`** — seul `resultats.html` la charge aujourd'hui (PR #111). `quiz.html`, `prof.html` et `suivi-parent.html` gardent leur copie de `SOUS_THEMES` (celle de `suivi-parent.html` disparaît avec la PR 3, cf. section « copie locale de la règle de déblocage dans `suivi-parent.html` ») ; `api/generer.js` garde sa propre liste côté serveur. À faire, page par page : supprimer la copie locale et charger `/js/catalogue.js?v=N`. À rapprocher du n°9 de la section « Banque de questions » (arbitrage écart assumé / dette sur le `SOUS_THEMES` codé en dur).
+69. **Migration de la liste des sous-thèmes vers `js/catalogue.js`** — seuls `resultats.html` (PR #111) et `suivi-parent.html` la chargent aujourd'hui. `quiz.html` et `prof.html` gardent leur copie de `SOUS_THEMES` (`suivi-parent.html` charge le catalogue depuis le 11/10/2026) ; `api/generer.js` garde sa propre liste côté serveur. À faire, page par page : supprimer la copie locale et charger `/js/catalogue.js?v=N`. À rapprocher du n°9 de la section « Banque de questions » (arbitrage écart assumé / dette sur le `SOUS_THEMES` codé en dur).
 
 70. **`resultats.html`, onglet Historique — correction d'affichage** (simple, `resultats.html` seul) : titre de carte = sous-thème au lieu du thème ; retirer le préfixe « thème — » répété devant chaque question ratée ; ne plus afficher un énoncé coupé en plein mot (couper à la fin d'un mot + « … »). Cause : `api/quiz-resultat.js:63` et `:67` stockent « thème — chapitre » (chemin IA) ou « thème — 40 premiers caractères de l'énoncé » (banque, sans chapitre) — donc tous les élèves auront le libellé coupé une fois le chemin IA supprimé.
 
