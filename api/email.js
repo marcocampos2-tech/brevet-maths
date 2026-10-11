@@ -2,6 +2,7 @@
 
 const { peutRecevoirEmailDetaille, enPeriodeGratuite } = require('../lib/gating')
 const { verifierToken, verifierUtilisateur, verifierProf } = require('../lib/auth-token')
+const { dateParis, dateRecapValide, libelleJour, ligneActivite } = require('../lib/recap-journalier')
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -936,7 +937,7 @@ export default async function handler(req, res) {
   // RÉCAP JOURNALIER — recalculé côté serveur (source de vérité unique)
   // Modifié le 21/08/2026 : le déclenchement côté client (logout/terminer
   // dans quiz.html), retiré le 16/08/2026, a été rétabli verbatim — le cron
-  // (cron-rappel.js, 0 19 * * * UTC) ne s'était pas déclenché depuis,
+  // (cron-rappel.js, 0 21 * * * UTC) ne s'était pas déclenché depuis,
   // laissant les élèves sans récap (cf. quiz.html:490-501). Le cron n'est
   // donc plus le seul déclencheur : il redevient un filet de rattrapage,
   // chaque envoi ici marquant les lignes concernées à alerte_envoyee=true
@@ -944,7 +945,10 @@ export default async function handler(req, res) {
   // Paramètre `date` (YYYY-MM-DD, fuseau Paris) optionnel : permet au cron
   // de traiter un jour antérieur au jour courant (rattrapage d'une session
   // tombée après son unique passage quotidien). Sans ce paramètre,
-  // comportement inchangé : le jour Paris courant.
+  // comportement inchangé : le jour Paris courant. Présent, il doit être une
+  // date réelle AAAA-MM-JJ (400 sinon, sans email) : il alimente le libellé
+  // des phrases adressées au parent (« aujourd'hui » / « hier » / « le mardi
+  // 7 octobre »), calculé côté serveur à partir de la date validée.
   // ═══════════════════════════════════════════
   if (req.body?.type === 'recap-journalier-user') {
     const { user_id, date } = req.body
@@ -972,6 +976,13 @@ export default async function handler(req, res) {
     }
     if (!identiteOk) return res.status(401).json({ error: 'Non autorisé' })
 
+    // Absent (undefined / null) = jour Paris courant. Toute autre valeur doit
+    // être une date réelle AAAA-MM-JJ ; la valeur reçue n'est jamais renvoyée.
+    const dateVisee = (date === undefined || date === null) ? null : dateRecapValide(date)
+    if (date !== undefined && date !== null && dateVisee === null) {
+      return res.status(400).json({ error: 'date invalide (format AAAA-MM-JJ attendu)' })
+    }
+
     const supaHeaders = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${SUPA_KEY}`,
@@ -993,7 +1004,8 @@ export default async function handler(req, res) {
       }
 
       const maintenant = new Date()
-      const dateParisStr = date || maintenant.toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+      const dateParisStr = dateVisee || dateParis(maintenant)
+      const { libelle: quand, jour: ceJour } = libelleJour(dateParisStr, maintenant)
       const sessionsRes = await fetch(
         `${SUPA_URL}/rest/v1/resultats?user_id=eq.${user_id}` +
         `&select=id,theme,sous_theme,difficulte,score,total,temps_secondes,questions_ratees,created_at,alerte_envoyee,abandonne` +
@@ -1003,8 +1015,7 @@ export default async function handler(req, res) {
       const toutesSessions = await sessionsRes.json()
 
       const sessionsDuJour = (toutesSessions || []).filter(s => {
-        const dateSessionParis = new Date(s.created_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
-        return dateSessionParis === dateParisStr
+        return dateParis(s.created_at) === dateParisStr
       })
 
       if (sessionsDuJour.length === 0) {
@@ -1099,6 +1110,8 @@ export default async function handler(req, res) {
         return { nom: esc(nomSt), pct: p, ok: d.ok, total: d.total, acquis: p >= SEUIL_ACQUIS, niveau: d.niveau }
       })
 
+      const activite = ligneActivite(sessionsDuJour)
+
       let html = ''
       let sujet = ''
 
@@ -1106,8 +1119,8 @@ export default async function handler(req, res) {
         const nbAcquis = badgesData.filter(b => b.acquis).length
         const nbARevoir = badgesData.length - nbAcquis
         const messagePrincipal = badgesData.length === 0
-          ? `${esc(prenom)} a travaillé aujourd'hui`
-          : (nbAcquis >= badgesData.length / 2 ? `${esc(prenom)} a bien travaillé aujourd'hui` : `${esc(prenom)} a un peu buté aujourd'hui`)
+          ? `${esc(prenom)} a travaillé ${quand}`
+          : (nbAcquis >= badgesData.length / 2 ? `${esc(prenom)} a bien travaillé ${quand}` : `${esc(prenom)} a un peu buté ${quand}`)
 
         const badgesHTML = badgesData.map(b => {
           const bg = b.acquis ? '#EAF6EF' : '#FBF4E4'
@@ -1125,14 +1138,14 @@ export default async function handler(req, res) {
         const phraseSynthese = badgesData.length === 0
           ? `Continuez à l'encourager !`
           : nbARevoir === 0
-            ? `Bravo, tout est acquis aujourd'hui !`
+            ? `Bravo, tout est acquis !`
             : !detailComplet
               ? `Un point est à consolider — le détail est disponible avec l'offre Accompagné.`
               : nbAcquis === 0
                 ? `Un petit coup de pouce sur ${listeARevoir} serait utile.`
                 : `Bravo pour ${listeAcquis} ! Un petit coup de pouce sur ${listeARevoir} serait utile.`
 
-        sujet = `${prenom} a travaillé aujourd'hui — ACADEMIKA`
+        sujet = `${prenom} a travaillé ${quand} — ACADEMIKA`
 
         html = `
           <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
@@ -1142,8 +1155,9 @@ export default async function handler(req, res) {
             </div>
             <p style="margin-bottom:10px">Bonjour,</p>
             <p style="font-size:15px;font-weight:600;margin:0 0 4px">${messagePrincipal}.</p>
-            <p style="font-size:12px;color:#888;margin:0 0 20px">${totalSessions} session${totalSessions>1?'s':''} · ${tempsFormat} · moyenne ${moyGlobale}%</p>
-            ${detailComplet ? `<p style="color:#aaa;font-size:11px;margin:0 0 14px">Acquis : au moins 70% de bonnes réponses aujourd'hui sur ce sous-thème. À revoir : moins de 70%.</p>` : ''}
+            <p style="font-size:12px;color:#888;margin:0 0 ${activite ? '4px' : '20px'}">${totalSessions} session${totalSessions>1?'s':''} · ${tempsFormat} · moyenne ${moyGlobale}%</p>
+            ${activite ? `<p style="font-size:12px;color:#888;margin:0 0 20px">${activite}</p>` : ''}
+            ${detailComplet ? `<p style="color:#aaa;font-size:11px;margin:0 0 14px">Acquis : au moins 70% de bonnes réponses ${ceJour} sur ce sous-thème. À revoir : moins de 70%.</p>` : ''}
             ${detailComplet ? badgesHTML : ''}
             <p style="color:#444;line-height:1.6;margin-top:14px">${phraseSynthese}</p>
             <div style="text-align:center;margin:24px 0 4px">
@@ -1162,7 +1176,7 @@ export default async function handler(req, res) {
           </div>`
 
       } else {
-        sujet = `${prenom} a révisé aujourd'hui — ACADEMIKA`
+        sujet = `${prenom} a révisé ${quand} — ACADEMIKA`
 
         // Le meilleur sous-thème du jour, mis en avant seul s'il atteint le
         // seuil Acquis — pas une liste complète des sous-thèmes réussis :
@@ -1174,7 +1188,7 @@ export default async function handler(req, res) {
 
         const positifHTML = !detailComplet
           ? `<div style="margin-top:16px">
-              <p style="font-size:13px;font-weight:600;color:#1f7a45;margin:0">✅ ${esc(prenom)} a pris le temps de s'entraîner aujourd'hui.</p>
+              <p style="font-size:13px;font-weight:600;color:#1f7a45;margin:0">✅ ${esc(prenom)} a pris le temps de s'entraîner ${quand}.</p>
             </div>`
           : meilleur
             ? `<div style="margin-top:16px">
@@ -1185,7 +1199,7 @@ export default async function handler(req, res) {
                 </tr></table>
               </div>`
             : `<div style="margin-top:16px">
-                <p style="font-size:13px;color:#444">La régularité compte plus que le score du jour — <strong>${esc(prenom)}</strong> a quand même pris le temps de s'entraîner aujourd'hui.</p>
+                <p style="font-size:13px;color:#444">La régularité compte plus que le score de la journée — <strong>${esc(prenom)}</strong> a quand même pris le temps de s'entraîner ${quand}.</p>
               </div>`
 
         const aRevoirHTML = !detailComplet
@@ -1212,18 +1226,19 @@ export default async function handler(req, res) {
             </div>
             <p style="margin-bottom:16px">Bonjour Madame, Monsieur,</p>
             <p style="margin-bottom:20px;color:#444">
-              <strong>${esc(prenom)}</strong> a passé ${totalSessions} session${totalSessions>1?'s':''} de révision aujourd'hui.
+              <strong>${esc(prenom)}</strong> a passé ${totalSessions} session${totalSessions>1?'s':''} de révision ${quand}.
             </p>
             <div style="background:#f5f5f0;border-left:4px solid #3730a3;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0">
               <div style="font-size:24px;font-weight:700;color:#3730a3">
                 ${scoreTotal}/${totalTotal} — ${pct}%
               </div>
               <div style="font-size:12px;color:#888;margin-top:4px">⏱️ ${tempsFormat}</div>
+              ${activite ? `<div style="font-size:12px;color:#888;margin-top:2px">🕐 ${activite}</div>` : ''}
             </div>
             ${positifHTML}
             ${aRevoirHTML}
             <p style="color:#444;line-height:1.6;margin-top:20px">
-              Un encouragement ce soir peut faire toute la différence !
+              Un petit encouragement peut faire toute la différence !
               <strong>10 minutes par jour</strong> suffisent pour progresser.
             </p>
             <div style="text-align:center;margin:28px 0">
