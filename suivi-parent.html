@@ -1129,8 +1129,12 @@ async function genererPDF(mode) {
     y = pdfSectionNiveaux(doc, y, lignesNiveaux)
     y += 10
 
-    // c) Activité sur la période
-    const hActivite = 16 + 46
+    // c) Activité sur la période — section entière (titre, stats, graphique,
+    // légende) sur une même page : en bloc sur la page suivante si elle ne
+    // tient pas sous la section niveaux.
+    const imgW = pageW - 2 * margeG
+    const imgH = imgW * (canvas.height / canvas.width)
+    const hActivite = 18 + 22 + 46 + 22 + 14 + imgH + 18 + 4
     if (y + hActivite > bas) { doc.addPage(); y = PDF_MARGE_H }
     else {
       doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.6)
@@ -1160,15 +1164,10 @@ async function genererPDF(mode) {
     })
     y += 46
 
-    // d) Graphique et sa légende (inchangés) ; page suivante s'il ne tient pas
-    const imgW = pageW - 2 * margeG
-    const imgH = imgW * (canvas.height / canvas.width)
-    if (y + 22 + 14 + imgH + 18 + 4 > bas) { doc.addPage(); y = PDF_MARGE_H }
-    else {
-      doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.6)
-      doc.line(margeG, y, pageW - margeG, y)
-      y += 22
-    }
+    // d) Graphique et sa légende (inchangés), dans le même bloc que les stats
+    doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.6)
+    doc.line(margeG, y, pageW - margeG, y)
+    y += 22
 
     doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(65, 69, 76)
     doc.text(`Nombre de sessions par ${granularite === 'jour' ? 'jour' : granularite === 'semaine' ? 'semaine' : 'mois'} (une session = 5 exercices)`, pageW / 2, y, { align: 'center' })
