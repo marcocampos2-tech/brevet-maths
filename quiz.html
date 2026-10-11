@@ -633,7 +633,7 @@ function setDiffCard(el, val) {
 // RÉCAP JOURNALIER — Temps 1 (restauration, 21/08/2026) : le déclenchement
 // côté client sur logout()/terminer(), retiré le 16/08/2026 au profit du
 // cron seul, est rétabli verbatim tel qu'il tournait en production avant
-// cette date — le cron (cron-rappel.js, 0 19 * * * UTC) ne s'est pas
+// cette date — le cron (cron-rappel.js, 0 21 * * * UTC) ne s'est pas
 // déclenché depuis, laissant les élèves sans récap. Le cron redevient un
 // simple filet de rattrapage : chaque envoi déclenché ici marque les
 // lignes concernées à alerte_envoyee=true côté serveur, donc un passage

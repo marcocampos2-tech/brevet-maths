@@ -11,7 +11,7 @@
 // Modifié le 27/07/2026 — Rattrapage récap journalier
 //   - AJOUTÉ : bloc de rattrapage en tête de handler(), avant toutes les
 //     branches saisonnières. Tourne tous les jours de l'année (y compris
-//     août), à chaque exécution du cron (désormais 0 19 * * * UTC).
+//     août), à chaque exécution du cron (désormais 0 21 * * * UTC).
 //   - Détecte les élèves ayant eu au moins une session aujourd'hui dont
 //     le récap journalier n'a pas encore été envoyé (alerte_envoyee=false),
 //     et déclenche l'envoi via la même logique serveur que le flux normal
@@ -30,7 +30,7 @@
 //     mécanisme d'envoi.
 //   - CORRIGÉ : le rattrapage ne filtrait que sur "aujourd'hui" (jour Paris
 //     au moment où LE CRON tourne). Le cron ne passe qu'une fois/jour
-//     (19h UTC) : une session faite après son passage restait non couverte,
+//     (21h UTC) : une session faite après son passage restait non couverte,
 //     et le lendemain "aujourd'hui" avait changé — cette session ne
 //     matchait plus jamais le filtre et n'était jamais rattrapée
 //     (perdue silencieusement, alerte_envoyee restait false pour toujours).
@@ -54,7 +54,15 @@
 //     « envoyé »), plus une synthèse de fin de rattrapage. Aucune adresse
 //     email dans les logs. Logique de comptage, fenêtre de 48h et
 //     regroupement (user_id, date Paris) inchangés.
+//
+// Modifié le 11/10/2026 — Passage à 21h UTC, date toujours valide
+//   - Cron déplacé de 19h à 21h UTC (23h été / 22h hiver, heure de Paris) ;
+//     l'expression de la check Healthchecks doit rester identique.
+//   - La date postée à /api/email (désormais validée là-bas : 400 sinon) vient
+//     de lib/recap-journalier.js (dateParis), qui lit created_at comme UTC.
 // ═══════════════════════════════════════════════════════════
+
+import { dateParis } from '../lib/recap-journalier.js'
 
 const ORDRE_DIFFICULTE = { facile: 1, moyen: 2, difficile: 3 }
 const NIVEAU_LABEL = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
@@ -149,7 +157,13 @@ export default async function handler(req, res) {
     // commentaire en tête de fichier (16/08/2026).
     const paires = new Map() // clé "user_id|date" → { user_id, date }
     for (const s of (lectureOk ? sessionsCandidates : [])) {
-      const dateSessionParis = new Date(s.created_at).toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' })
+      // null si created_at est illisible : jamais d'appel avec une date que
+      // /api/email refuserait (400). La ligne reste non couverte, sans effet.
+      const dateSessionParis = dateParis(s.created_at)
+      if (!dateSessionParis) {
+        console.log(`[cron-rappel][rattrapage] session ignorée : created_at illisible (resultats.id=${s.id})`)
+        continue
+      }
       const cle = `${s.user_id}|${dateSessionParis}`
       if (!paires.has(cle)) paires.set(cle, { user_id: s.user_id, date: dateSessionParis })
     }

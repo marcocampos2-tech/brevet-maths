@@ -27,7 +27,7 @@
 -- ═══════════════════════════════════════════════════════════════════════
 -- BLOC 1 — ISOLEMENT
 --
--- À exécuter AVANT le bloc 2. Le cron passe une fois par jour à 19h UTC ;
+-- À exécuter AVANT le bloc 2. Le cron passe une fois par jour à 21h UTC ;
 -- tant que ce bloc n'est pas passé, une insertion de sessions ouvre une
 -- fenêtre pendant laquelle le compte est un profil ordinaire.
 --
