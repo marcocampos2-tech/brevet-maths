@@ -1082,7 +1082,7 @@ async function genererPDF(mode) {
     }
 
     const canvas = document.getElementById('chart-pdf-offscreen')
-    canvas.width = 900; canvas.height = 380
+    canvas.width = 900; canvas.height = 228
     if (window._chartPdf) { window._chartPdf.destroy() }
     window._chartPdf = new Chart(canvas, {
       type: 'bar',
