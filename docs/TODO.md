@@ -205,6 +205,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 72. **`scripts/demo-lucas.sql` désynchronisé de la base** — les dates de Lucas Démo ont été décalées de +5 jours en production (dernière session le 08/09/2026 en base, 03/09/2026 dans le script). Si le script est rejoué, les dates reviennent en arrière. À traiter avec le n°67 (même script, même rejeu).
 
+73. **`suivi-parent.html`, Régularité — message de fenêtre vide trompeur** : « Aucun quiz effectué pour l'instant. Dès que <prénom> aura terminé sa première session… » s'affiche aussi pour un élève qui a déjà joué mais rien sur la fenêtre 7/14/21 jours (`chargerDonnees()`). À remplacer dans ce cas par « Aucun quiz sur les N derniers jours. » (N = 7, 14 ou 21) ; le message actuel reste pour un élève qui n'a jamais joué.
+
 ---
 
 ## 🟡 Plateforme Academika — légal
