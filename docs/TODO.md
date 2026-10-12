@@ -1,4 +1,4 @@
-# TODO consolidé — 04/10/2026
+# TODO consolidé — 12/10/2026
 
 ---
 
@@ -15,7 +15,9 @@ Le mail récap journalier affiche encore le score brut de la session + seuil "Ac
 
 **Point de contenu à trancher à la conception** : garder une mention de la session du jour en plus du niveau global, ou basculer entièrement sur niveau/progression.
 
-**Confirmé et complété (14/09)** : le récap journalier (`api/email.js`, `recap-journalier-user`) ne mentionne effectivement jamais le niveau atteint ni la progression de déblocage — seulement "acquis/à revoir" sur la journée. Découverte additionnelle : un quiz abandonné compte comme 0/5 dans la moyenne du jour et peut à lui seul faire basculer le ton de l'email (encourageant → "score faible") — à traiter dans ce même chantier, un abandon ne devrait probablement pas peser comme un échec dans la moyenne.
+**Confirmé et complété (14/09)** : le récap journalier (`api/email.js`, `recap-journalier-user`) ne mentionne effectivement jamais le niveau atteint ni la progression de déblocage — seulement "acquis/à revoir" sur la journée.
+
+**Sens du mot « Acquis » à aligner (constat du 08/10/2026)** : « Acquis » n'a pas le même sens dans le récap email (≥ 70 % sur la journée) et dans le tableau de suivi (5 sessions réussies au niveau, vue `niveaux_sous_theme`). À aligner dans ce même chantier.
 
 ## 🟠 Ouvert — captures d'écran : état `maitrise`
 
@@ -76,7 +78,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 ## 🟠 Plateforme Academika — technique
 
-> **Note de numérotation (04/10/2026)** : les numéros 2, 3, 10, 13, 20, 21, 33, 35, 38, 43 et 49 sont absents de cette liste et ne sont volontairement pas réattribués (renvois croisés ; les points terminés sont supprimés). Le n°25 renvoie à un « item 20 » (message d'erreur de `sauvegarder()` de `examen.html`) qui n'existe plus dans ce fichier — son contenu exact n'est pas retrouvable ici. Les nouveaux points sont ajoutés à la suite du dernier numéro.
+> **Note de numérotation (04/10/2026)** : les numéros 2, 3, 7, 10, 13, 20, 21, 33, 35, 38, 43, 49 et 65 sont absents de cette liste et ne sont volontairement pas réattribués (renvois croisés ; les points terminés sont supprimés). Le n°25 renvoie à un « item 20 » (message d'erreur de `sauvegarder()` de `examen.html`) qui n'existe plus dans ce fichier — son contenu exact n'est pas retrouvable ici. Les nouveaux points sont ajoutés à la suite du dernier numéro.
 
 1. Cybersécurité avant Stripe live : `shouldCreateUser: true` exploitable, idempotency Stripe absente, `invoice.payment_failed` jamais écouté, `alerte_envoyee` sans NOT NULL, UTC vs Europe/Paris sur bilan périodique
 
@@ -84,8 +86,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 4. Double email inscription brevet blanc présentiel — jamais vérifié résolu depuis 08/06
 5. Erreurs SVG `NaN` dans l'examen blanc — cosmétique
 6. Déconnexion lente — piste : `logout()` attend fin d'appels réseau
-7. Chevauchement contenu email récap si plusieurs sessions le même jour — mineur
-8. Fuseaux horaires — recensé le 17/09/2026, aucun bug actif, deux points de fragilité. (a) Les conversions serveur vers la date Paris sont correctes (`api/cron-rappel.js:86`, `api/email.js:764` et `774`, `api/stripe-webhook.js:247` utilisent toutes `timeZone: 'Europe/Paris'`), mais elles reposent implicitement sur le fait que Vercel tourne en UTC : `new Date()` sur un timestamp naïf de `resultats` l'interprète comme heure locale du serveur. Juste aujourd'hui, silencieusement faux si le fuseau du runtime changeait — hypothèse à documenter, pas à corriger. (b) `suivi-parent.html` (lignes 728, 866, 973) regroupe les sessions par jour selon le fuseau du NAVIGATEUR du parent (`dateLocaleISO`), pas selon Paris : identique pour un parent en France, découpage des journées différent de l'email reçu pour un parent à l'étranger. Cas limite jamais rencontré, correction non prioritaire.
+8. Fuseaux horaires — recensé le 17/09/2026, aucun bug actif, deux points de fragilité. (a) Pour le récap journalier, la lecture de `created_at` est désormais explicitement UTC (`lib/recap-journalier.js`, `parseUTC()` et `dateParis()`, PR #113, 11/10/2026) ; `api/stripe-webhook.js:247` est correct (timestamp Stripe en secondes + `timeZone: 'Europe/Paris'`). Restent implicites, car dépendants du fuseau du runtime Vercel (UTC aujourd'hui, silencieusement faux s'il changeait) : `api/cron-rappel.js` — branche saisonnière, `maintenant.getMonth()` / `getDate()` (l. 238-239, mois et jour pris en heure serveur et non en heure de Paris) ; bilan périodique, `new Date(premiereSession[0].created_at)` (l. 412, timestamp naïf lu en heure locale du serveur, d'où `dateDebut` et `dateDebutISO`, l. 424), `new Date(s.created_at).toISOString().slice(0, 10)` pour `jours_actifs` (l. 444, jour UTC et non Paris : cf. n°1 « UTC vs Europe/Paris sur bilan périodique »), et `toLocaleDateString('fr-FR', …)` sans `timeZone` pour `dateDebutFr` / `dateFinFr` (l. 513-514) ; `api/inscription-brevet.js:41` et `api/inscription-stage.js:45`, `new Date().toISOString().split('T')[0]` pour « aujourd'hui » (jour UTC : entre minuit et 1 h-2 h à Paris, c'est encore la veille). Les lectures `new Date(dateISO + 'T00:00:00')` suivies de `getDate()` / `getMonth()` (`api/inscription-brevet.js:6`, `api/inscription-stage.js:12`) sont cohérentes quel que soit le fuseau et ne sont pas concernées. Hypothèse à documenter ou à corriger au fil des modifications de ces fichiers, pas d'urgence. (b) `suivi-parent.html` (lignes 728, 866, 973) regroupe les sessions par jour selon le fuseau du NAVIGATEUR du parent (`dateLocaleISO`), pas selon Paris : identique pour un parent en France, découpage des journées différent de l'email reçu pour un parent à l'étranger. Cas limite jamais rencontré, correction non prioritaire.
 9. Warning console — meta tag `apple-mobile-web-app-capable` déprécié (ajouter `mobile-web-app-capable`) ; `favicon.ico` en 404 en production (constaté le 04/10/2026). Pour `quiz.html`, à glisser dans la prochaine modification du fichier (cosmétique) : ajouter `<meta name="mobile-web-app-capable" content="yes">` (avertissement Chrome) et corriger l'espace manquante `deblocageCache[cle] ={` dans `verifierDeblocage()`
 11. Distinction gratuit/abonnement — gating email fait, dashboard/PDF/examen blanc à construire
 12. Espace parent persistant (option B) — en attente depuis 24/07, sans date
@@ -189,8 +190,6 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 64. **Délivrabilité des emails d'Academika (constaté le 05/10/2026)** : un email du formulaire de contact (noreply@academika.fr, envoyé par Resend vers contact@academika.fr) est tombé en spam. contact@academika.fr est hébergé chez Hostinger et redirigé vers un Gmail lu uniquement sur mobile. À faire : (1) côté CM, depuis le mobile : ajouter noreply@academika.fr aux contacts du compte Google et marquer l'email en « non-spam » ; filtre Gmail « ne jamais envoyer dans le spam » possible via le navigateur en mode ordinateur ; (2) vérifier dans Resend (Domains, academika.fr) que le domaine est « Verified » avec SPF et DKIM ; (3) vérifier DMARC et la cohabitation des SPF de Hostinger et de Resend (un seul enregistrement SPF par domaine) ; (4) à l'occasion, lire SPF/DKIM/DMARC dans « Afficher l'original » d'un email reçu. Les emails envoyés aux parents arrivent directement de Resend : seule l'authentification du domaine les protège.
 
-65. **Rattrapage du récap journalier : vérifier la cause réelle après le premier cron suivant le déploiement** — constaté le 07/10/2026 : le cron de 21:32 (200 OK) a fait 4 POST vers `/api/email` sans email envoyé ni session marquée `alerte_envoyee=true`. `api/cron-rappel.js` appelle désormais `https://www.academika.fr/api/email` et journalise une ligne par POST (`[cron-rappel][rattrapage]`) plus une synthèse. L'hypothèse (Deployment Protection sur l'URL `*.vercel.app`) n'est **pas prouvée** : lire les logs du premier passage (désormais 21h UTC, exécuté dans l’heure) ; si les POST aboutissent à un statut autre que 200 ou à un `skip` inattendu, la cause est ailleurs. Clore ce point une fois les logs lus et les sessions du 07/10 marquées.
-
 66. **`api/stripe-webhook.js:249` construit encore `https://${req.headers.host}/api/email`** (email `resiliation-confirmee`) — même motif que le correctif de `api/cron-rappel.js` du 07/10/2026, laissé volontairement hors périmètre. Le webhook Stripe frappe sans doute le domaine de production (pas l'URL `*.vercel.app`), donc probablement non bloqué, mais l'hypothèse n'est pas vérifiée. À traiter avec le n°36 (test de bout en bout de la résiliation) : si l'email de confirmation échoue, passer par le domaine de production.
 
 67. **`scripts/demo-lucas.sql` n'écrit pas la colonne `abandonne`** : l'INSERT du bloc 2 ne la renseigne pas, les 2 abandons de Lucas Démo ne sont reconnaissables qu'à `questions_ratees = ["Quiz abandonné"]`. Si le script est rejoué, ces 2 lignes repartent à `abandonne = false` et sont comptées comme essais par `niveaux_sous_theme` et `suivi-parent.html` (Thalès passerait de 5 à 6 essais, donc `a_surveiller`). À faire : ajouter `abandonne` à l'INSERT (`true` sur les 2 abandons) et à la vérification du bloc 3.
@@ -211,6 +210,21 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 72. **`scripts/demo-lucas.sql` désynchronisé de la base** — les dates de Lucas Démo ont été décalées de +5 jours en production (dernière session le 08/09/2026 en base, 03/09/2026 dans le script). Si le script est rejoué, les dates reviennent en arrière. À traiter avec le n°67 (même script, même rejeu).
 
 73. **`suivi-parent.html`, Régularité — message de fenêtre vide trompeur** : « Aucun quiz effectué pour l'instant. Dès que <prénom> aura terminé sa première session… » s'affiche aussi pour un élève qui a déjà joué mais rien sur la fenêtre 7/14/21 jours (`chargerDonnees()`). À remplacer dans ce cas par « Aucun quiz sur les N derniers jours. » (N = 7, 14 ou 21) ; le message actuel reste pour un élève qui n'a jamais joué.
+
+74. **Récap journalier — suite du chantier du 08-12/10/2026** (ordre à respecter)
+    - **a. Petite PR** : ne pas répéter « · N session(s) » sur la ligne d'activité quand il n'y a aucun abandon (déjà présent sur la ligne de résumé ; constaté le 12/10/2026 : « 1 session » affiché deux fois). Corriger aussi dans `CLAUDE.md` « depuis le 24/10/2026 » → « depuis le 11/10/2026 » (merge réel de la PR #113).
+    - **b. Bouton « Envoyer un récap de test »** dans `prof.html`, utilisable sur mobile : élève et date au choix, envoi TOUJOURS vers l'adresse du prof (jamais au parent), ne modifie jamais `alerte_envoyee`, contrôle prof côté serveur.
+    - **c. Canal unique** : retirer l'envoi du récap au clic (`logout()` / `terminer()` dans `quiz.html`), puis réserver le récap de `/api/email` au cron (`CRON_SECRET`). Préalables : bouton b en place + 3 soirs sans alerte Healthchecks. Motifs : double email cumulatif constaté (09/10/2026 et 12/10/2026 sur le compte de test) ; un élève peut aujourd'hui déclencher un email vers ses parents ; décision « cron seul déclencheur » déjà prise le 16/08/2026. Reprend l'ancien point « chevauchement du contenu du récap si plusieurs sessions le même jour ».
+    - **d. `Reply-To: contact@academika.fr`** sur les envois Resend (~17 appels, 4 fichiers : `api/email.js`, `api/cron-rappel.js`, `api/inscription-brevet.js`, `api/inscription-stage.js`), à faire avec c. Contexte : `noreply@academika.fr` n'existait pas chez Hostinger (réponses des parents rejetées « 550 User doesn't exist ») ; corrigé le 12/10/2026 par un alias Hostinger noreply@ → contact@, testé OK. Le `Reply-To` reste la solution propre.
+
+75. **Abandons de quiz : deux défauts d'intégrité (constat du 10/10/2026)**
+    - `quiz.html` (~l.477, `sauvegarderAbandonne`) : `saved = true` est posé même si le POST échoue (401/500) ; conséquence possible : le vrai résultat n'est jamais enregistré, seule une ligne 0/5 reste, et l'UI affiche « ok ».
+    - `temps_secondes` d'un abandon (compteur `setInterval`) sous-estime le temps réel après un passage en arrière-plan (surtout iOS) ; il sert au calcul du début de la ligne « Activité » du récap.
+    - À tester sur un vrai téléphone (iOS Safari, Chrome Android) : `pagehide` et `persisted` lors d'un changement d'app, mise en veille, retour.
+
+76. **Contrôles à faire** (supprimer ce point une fois les deux contrôles faits)
+    - Libellé « hier » : faire une session après le passage du cron sans se déconnecter, puis vérifier le récap du lendemain.
+    - 25/10/2026 vers 23 h (passage à l'heure d'hiver) : la check Healthchecks doit être verte, ping entre 22 h et 23 h Paris.
 
 ---
 
