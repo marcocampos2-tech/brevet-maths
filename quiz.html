@@ -877,6 +877,44 @@ function adapterEnonce(q,i){
 
 function renderVisuel(q,i){if(!q.tableau)return '';var mode=modeAffichage[i]||'tableau';if(mode==='graphique')return renderGraphique(q.tableau,i);return renderTableau(q.tableau)}
 
+// Figure du théorème de Pythagore : fond quadrillé, triangle aux proportions proches du réel
+// (rapport des côtés borné entre 1/2 et 2), côté inconnu déduit de l'hypoténuse pour le dessin.
+// Champ facultatif f.sommets = [angle droit, bas-droite, haut] (ex. ["A","B","C"]) : absent, aucune lettre.
+// Même logique dans quiz.html (figurePythagoreSVG) et prof.html : à garder identiques.
+function figurePythagoreSVG(f,pxW,pxH){
+  var esc=function(s){return String(s).replace(/[&<>"']/g,'')}
+  var u=esc(f.unite||'cm')
+  var num=function(v){if(v===undefined||v===null||v===''||v==='?')return null;var n=Number(String(v).replace(',','.'));return isNaN(n)||n<=0?null:n}
+  var a=num(f.a),b=num(f.b),c=num(f.c)
+  if(a===null&&b!==null&&c!==null&&c>b)a=Math.sqrt(c*c-b*b)
+  if(b===null&&a!==null&&c!==null&&c>a)b=Math.sqrt(c*c-a*a)
+  if(a===null&&b===null){a=3;b=4}else if(a===null){a=b}else if(b===null){b=a}
+  var ratio=Math.min(2,Math.max(0.5,b/a))
+  var maxW=146,maxH=120,H=maxH,W=ratio*maxH
+  if(W>maxW){W=maxW;H=maxW/ratio}
+  var ox=70+(maxW-W)/2,top=36+(maxH-H)/2,oy=top+H,bx=ox+W
+  var len=Math.sqrt(W*W+H*H),mx=(ox+bx)/2,my=(oy+top)/2,nx=H/len,ny=-W/len
+  var r=function(n){return Math.round(n*10)/10}
+  var lab=function(v,x,y,anchor){
+    var inconnu=(num(v)===null)
+    var t=inconnu?'?':esc(v)+' '+u
+    return '<text x="'+r(x)+'" y="'+r(y)+'" text-anchor="'+anchor+'" font-size="'+(inconnu?18:16)+'" font-weight="'+(inconnu?700:600)+'" fill="'+(inconnu?'#B45309':'#14304F')+'" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Inter,sans-serif">'+t+'</text>'
+  }
+  var s=Array.isArray(f.sommets)&&f.sommets.length===3?f.sommets.map(esc):null
+  var let_=function(t,x,y){return '<text x="'+r(x)+'" y="'+r(y)+'" text-anchor="middle" font-size="17" font-weight="700" fill="#14304F" font-family="Inter,sans-serif">'+t+'</text>'}
+  var alt='Triangle rectangle : côtés de l’angle droit '+esc(f.a)+' et '+esc(f.b)+', hypoténuse '+esc(f.c)+' ('+u+')'
+  return '<svg width="'+pxW+'" height="'+pxH+'" viewBox="0 0 250 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="'+alt+'">'
+    +'<defs><pattern id="fg-pyth" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#E3EAF5" stroke-width="1"/></pattern></defs>'
+    +'<rect width="250" height="210" rx="10" fill="#fff"/><rect width="250" height="210" rx="10" fill="url(#fg-pyth)"/>'
+    +'<polygon points="'+r(ox)+','+r(oy)+' '+r(bx)+','+r(oy)+' '+r(ox)+','+r(top)+'" fill="rgba(37,99,168,0.10)" stroke="#14304F" stroke-width="2.5" stroke-linejoin="round"/>'
+    +'<polygon points="'+r(ox)+','+r(oy-13)+' '+r(ox+13)+','+r(oy-13)+' '+r(ox+13)+','+r(oy)+' '+r(ox)+','+r(oy)+'" fill="none" stroke="#14304F" stroke-width="1.5"/>'
+    +(s?let_(s[0],ox-14,oy+16)+let_(s[1],bx+14,oy+16)+let_(s[2],ox-14,top-6):'')
+    +lab(f.a,ox-9,(oy+top)/2+5.5,'end')
+    +lab(f.b,mx,oy+26,'middle')
+    +lab(f.c,mx+nx*30,my+ny*30+5.5,'middle')
+    +'</svg>'
+}
+
 function renderFigure(fig){
   if(!fig||!fig.type)return ''
   var f=fig;if(typeof f==='string'){try{f=JSON.parse(f)}catch(e){return ''}}
@@ -898,16 +936,7 @@ function renderFigure(fig){
   if(f.type==='triangle'){const u=f.unite||'cm',sc=Math.min((S-2*P)/f.base,(S-2*P)/f.hauteur)*0.85;const W=f.base*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=S-P,ax=ox+W*0.38,ay=oy-H;return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+W)+','+oy+' '+ax+','+ay+'"/><line class="fig-dm" x1="'+ax+'" y1="'+ay+'" x2="'+ax+'" y2="'+oy+'"/><text class="fig-lb" x="'+(S/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+f.base+' '+u+'</text><text class="fig-lb" x="'+(ax+9)+'" y="'+((ay+oy)/2+4)+'" text-anchor="start">'+f.hauteur+' '+u+'</text></svg></div>'}
   if(f.type==='rectangle'){const u=f.unite||'cm',sc=Math.min((S-2*P)/f.largeur,(S-2*P)/f.hauteur)*0.85;const W=f.largeur*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=(S-H)/2;return '<div class="q-figure">'+open+'<rect class="fig-sh" x="'+ox+'" y="'+oy+'" width="'+W+'" height="'+H+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+H+17)+'" text-anchor="middle">'+f.largeur+' '+u+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy+H/2+4)+'" text-anchor="end">'+f.hauteur+' '+u+'</text></svg></div>'}
   if(f.type==='cercle'){const u=f.unite||'cm',R=(S-2*P)/2*0.82,cx=S/2,cy=S/2;return '<div class="q-figure">'+open+'<circle class="fig-sh" cx="'+cx+'" cy="'+cy+'" r="'+R+'"/><line class="fig-dm" x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R)+'" y2="'+cy+'"/><circle class="fig-dot" cx="'+cx+'" cy="'+cy+'" r="2.5"/><text class="fig-lb" x="'+(cx+R/2)+'" y="'+(cy-8)+'" text-anchor="middle">r = '+f.rayon+' '+u+'</text></svg></div>'}
-  if(f.type==='pythagore'){
-    const u=f.unite||'cm'
-    const aVal=(f.a&&f.a!=='?'&&f.a!==null)?Number(f.a):null
-    const bVal=(f.b&&f.b!=='?'&&f.b!==null)?Number(f.b):null
-    const refVal=aVal||bVal||4
-    const sc2=Math.min((S-2*P)/(refVal+4),(S-2*P)/(refVal+4))*0.72
-    const A=(aVal||refVal)*sc2,B=(bVal||refVal)*sc2,sq=10,ox=P+10,oy=S-P
-    const aLabel=aVal?aVal+' '+u:'?';const bLabel=bVal?bVal+' '+u:'?';const hypLabel=(f.c&&f.c!=='?'&&f.c!==null)?f.c+' '+u:'?'
-    return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+bLabel+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy-A/2+4)+'" text-anchor="end">'+aLabel+'</text><text class="fig-lb" x="'+(ox+B/2+14)+'" y="'+(oy-A/2-6)+'" text-anchor="start">'+hypLabel+'</text></svg></div>'
-  }
+  if(f.type==='pythagore')return '<div class="q-figure">'+figurePythagoreSVG(f,260,218)+'</div>'
   if(f.type==='thales'){
     // Deux configurations partagent les memes cles ab / am, avec la meme semantique :
     // ab = longueur AB, am = longueur AM, rapport = am/ab. Seule la position de M et N change —
