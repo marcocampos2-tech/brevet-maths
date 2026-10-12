@@ -49,7 +49,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 ## 🔴 Banque de questions — chantier en cours
 
 1. Angles — périmètre validé 02/09, calibrage facile/moyen/difficile à faire
-2. 9 sous-thèmes restants du tour des 20 : Algorithmique, Pythagore, Trigonométrie, Transformations, Triangles semblables, Représentation de l'espace, Agrandissement, Aires et volumes (Proportionnalité rédigeable)
+2. 8 sous-thèmes restants du tour des 20 : Algorithmique, Trigonométrie, Transformations, Triangles semblables, Représentation de l'espace, Agrandissement, Aires et volumes (Proportionnalité rédigeable)
+    - **Fait le 12/10/2026 : Pythagore et Thalès refaits à 30 / 30 / 30 (90 questions actives chacun).** Pythagore : 90 nouvelles questions, les 29 anciennes archivées. Thalès : 60 nouvelles, 10 questions actives corrigées en place (1865, 1866, 1869, 1870, 1881, 1883, 1886, 1887, 1888, 1890, indice de bonne réponse conservé), les 34 archivées inchangées. Procédure : insertion en `brouillon`, contrôle md5, activation atomique gardée, rollback sans suppression (jamais de `DELETE` : des résultats élèves peuvent référencer ces lignes). Rédaction et audit par script, rejoués sur PostgreSQL local avant exécution.
 3. Transformations/difficile — 2 questions actives seulement, sans garde-fou serveur
 4. Représentation de l'espace — 0 question, format QCM pas confirmé
 5. 6 sous-thèmes de prérequis validés, aucun construit : Proportionnalité, Fractions, Nombres relatifs, Opérations, Opérations combinées, Angles
@@ -66,6 +67,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     - `examen_questions` 181 (roue de loterie, 2/8 vs 1/4) — les deux options sont mathématiquement justes et l'explication le reconnaît elle-même ; à reformuler (ex. demander la forme irréductible), pas une simple substitution d'option
     - `examen_questions` 113 (126/180) — faux positif assumé : les 4 options valent 0,7, mais c'est le principe même de la question (identifier la seule écriture irréductible)
     - Doublons bénins entre deux mauvaises réponses uniquement, bonne réponse toujours unique, aucun élève pénalisé : `examen_questions` 106, 120, 122, 125 ; `questions_banque` 492, 772
+15. **Pythagore/difficile — aucune figure** (30 questions sans dessin, choix assumé du 12/10/2026). Si des figures y sont voulues un jour, il faut un nouveau type de figure (autre PR). Thalès/difficile : 15 questions sur 30 sans figure.
 
 ---
 
