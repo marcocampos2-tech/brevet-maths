@@ -2,7 +2,7 @@
 
 const { peutRecevoirEmailDetaille, enPeriodeGratuite } = require('../lib/gating')
 const { verifierToken, verifierUtilisateur, verifierProf } = require('../lib/auth-token')
-const { dateParis, dateRecapValide, libelleJour, ligneActivite } = require('../lib/recap-journalier')
+const { dateParis, dateRecapValide, libelleJour, ligneActivite, resumeJour, formatDuree } = require('../lib/recap-journalier')
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -1005,7 +1005,7 @@ export default async function handler(req, res) {
 
       const maintenant = new Date()
       const dateParisStr = dateVisee || dateParis(maintenant)
-      const { libelle: quand, jour: ceJour } = libelleJour(dateParisStr, maintenant)
+      const { libelle: quand } = libelleJour(dateParisStr, maintenant)
       const sessionsRes = await fetch(
         `${SUPA_URL}/rest/v1/resultats?user_id=eq.${user_id}` +
         `&select=id,theme,sous_theme,difficulte,score,total,temps_secondes,questions_ratees,created_at,alerte_envoyee,abandonne` +
@@ -1054,45 +1054,18 @@ export default async function handler(req, res) {
         })
       }
 
-      // Un abandon (resultats.abandonne=true) ne doit fausser ni la moyenne,
-      // ni les badges par sous-thème, ni le nombre de sessions annoncé au
-      // parent — cf. docs/TODO.md. Exclu de tous les calculs ci-dessous.
-      const sessionsReelles = sessionsDuJour.filter(s => !s.abandonne)
-      if (sessionsReelles.length === 0) {
+      // Constat factuel, sans verdict par sous-thème : le « acquis » d'un
+      // sous-thème relève de la vue niveaux_sous_theme (espace parent). Une
+      // session interrompue (abandonne=true, sans seuil de durée) n'entre ni
+      // dans le décompte, ni dans la durée, ni dans la liste des sous-thèmes.
+      const { terminees: totalSessions, interrompues, dureeSecondes, sousThemes } = resumeJour(sessionsDuJour)
+      if (totalSessions === 0) {
         await marquerCouvertes(sessionsNonCouvertes)
         return res.status(200).json({ success: true, skip: 'aucune session réelle aujourd\'hui' })
       }
 
-      const totalSessions = sessionsReelles.length
-      const scoreTotal = sessionsReelles.reduce((a, s) => a + (s.score || 0), 0)
-      const totalTotal = sessionsReelles.reduce((a, s) => a + (s.total || 0), 0)
-      const moyGlobale = totalTotal > 0 ? Math.round((scoreTotal / totalTotal) * 100) : 0
-      const tempsSecondes = sessionsReelles.reduce((a, s) => a + (s.temps_secondes || 0), 0)
-      const pct = moyGlobale
-
-      const ORDRE_NIVEAUX = { facile: 1, moyen: 2, difficile: 3 }
-      const sousThemesDetail = {}
-      sessionsReelles.forEach(s => {
-        if (!s.sous_theme) return
-        if (!sousThemesDetail[s.sous_theme]) {
-          sousThemesDetail[s.sous_theme] = { ok: 0, total: 0, niveau: s.difficulte }
-        }
-        sousThemesDetail[s.sous_theme].ok += (s.score || 0)
-        sousThemesDetail[s.sous_theme].total += (s.total || 0)
-        if (ORDRE_NIVEAUX[s.difficulte] > ORDRE_NIVEAUX[sousThemesDetail[s.sous_theme].niveau]) {
-          sousThemesDetail[s.sous_theme].niveau = s.difficulte
-        }
-      })
-
-      const questionsRatees = sessionsReelles
-        .flatMap(s => s.questions_ratees || [])
-        .filter(q => typeof q === 'string' && !q.includes('abandonné'))
-
       const prenom = prenom_affiche || ''
       const lienDesabonnement = `https://academika.fr/desabonner.html?email=${encodeURIComponent(email_parent)}`
-      const m = Math.floor(tempsSecondes / 60)
-      const s2 = tempsSecondes % 60
-      const tempsFormat = m === 0 ? `${s2} sec` : `${m} min ${s2} sec`
       // Pendant l'offre de lancement, tout le monde reçoit l'email détaillé,
       // indépendamment de plan_actif — Stripe n'est pas encore en service
       // réel (SIRET en attente, cf. CLAUDE.md § Bascule décembre 2026).
@@ -1100,68 +1073,31 @@ export default async function handler(req, res) {
       // api/stripe-checkout.js, source unique dans lib/gating.js).
       const detailComplet = peutRecevoirEmailDetaille({ plan_actif }) || enPeriodeGratuite()
 
-      // Partagé par les deux branches — seuil "Acquis" identique partout
-      // ailleurs dans le code (badges ci-dessous, bilan périodique
-      // cron-rappel.js, dashboard prof) : 70%, pas un autre chiffre.
-      const SEUIL_ACQUIS = 70
-      const NIVEAU_LABEL = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
-      const badgesData = Object.entries(sousThemesDetail).map(([nomSt, d]) => {
-        const p = d.total > 0 ? Math.round((d.ok / d.total) * 100) : 0
-        return { nom: esc(nomSt), pct: p, ok: d.ok, total: d.total, acquis: p >= SEUIL_ACQUIS, niveau: d.niveau }
-      })
-
       const activite = ligneActivite(sessionsDuJour)
+      const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`
+      const resume = `${esc(prenom)} a révisé ${quand} : ${pluriel(totalSessions, 'session')}, ${formatDuree(dureeSecondes)}` +
+        (interrompues > 0 ? ` (+ ${pluriel(interrompues, 'interrompue')})` : '')
 
-      let html = ''
-      let sujet = ''
+      const detailHTML = detailComplet
+        ? `<p style="font-size:13px;font-weight:600;margin:20px 0 8px">Sous-thèmes travaillés</p>
+            ${sousThemes.map(st => `<p style="font-size:13px;color:#444;margin:0 0 4px">· ${esc(st.nom)} (${pluriel(st.sessions, 'session')})</p>`).join('')}
+            <p style="color:#444;line-height:1.6;margin-top:14px">Son niveau par sous-thème est détaillé dans votre espace parent.</p>`
+        : `<p style="color:#444;line-height:1.6;margin-top:20px">Le détail par sous-thème est disponible avec l'offre Accompagné.</p>`
 
-      if (pct >= 40) {
-        const nbAcquis = badgesData.filter(b => b.acquis).length
-        const nbARevoir = badgesData.length - nbAcquis
-        const messagePrincipal = badgesData.length === 0
-          ? `${esc(prenom)} a travaillé ${quand}`
-          : (nbAcquis >= badgesData.length / 2 ? `${esc(prenom)} a bien travaillé ${quand}` : `${esc(prenom)} a un peu buté ${quand}`)
+      const sujet = `${prenom} a révisé ${quand} — ACADEMIKA`
 
-        const badgesHTML = badgesData.map(b => {
-          const bg = b.acquis ? '#EAF6EF' : '#FBF4E4'
-          const fg = b.acquis ? '#1f7a45' : '#8a6416'
-          const label = b.acquis ? 'Acquis' : 'À revoir'
-          const niveauLabel = NIVEAU_LABEL[b.niveau] || ''
-          return `<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr style="background:${bg};border-radius:8px">
-            <td style="padding:10px 12px;font-size:13px;color:${fg}">${b.nom}${niveauLabel ? ` <span style="font-size:11px;opacity:0.75">· ${niveauLabel}</span>` : ''}</td>
-            <td style="padding:10px 12px;font-size:12px;font-weight:600;color:${fg};text-align:right;white-space:nowrap">${label}</td>
-          </tr></table>`
-        }).join('')
-
-        const listeAcquis = badgesData.filter(b => b.acquis).map(b => b.nom).join(', ')
-        const listeARevoir = badgesData.filter(b => !b.acquis).map(b => b.nom).join(', ')
-        const phraseSynthese = badgesData.length === 0
-          ? `Continuez à l'encourager !`
-          : nbARevoir === 0
-            ? `Bravo, tout est acquis !`
-            : !detailComplet
-              ? `Un point est à consolider — le détail est disponible avec l'offre Accompagné.`
-              : nbAcquis === 0
-                ? `Un petit coup de pouce sur ${listeARevoir} serait utile.`
-                : `Bravo pour ${listeAcquis} ! Un petit coup de pouce sur ${listeARevoir} serait utile.`
-
-        sujet = `${prenom} a travaillé ${quand} — ACADEMIKA`
-
-        html = `
+      const html = `
           <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
             <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
               <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
               <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Suivi de révision</div>
             </div>
             <p style="margin-bottom:10px">Bonjour,</p>
-            <p style="font-size:15px;font-weight:600;margin:0 0 4px">${messagePrincipal}.</p>
-            <p style="font-size:12px;color:#888;margin:0 0 ${activite ? '4px' : '20px'}">${totalSessions} session${totalSessions>1?'s':''} · ${tempsFormat} · moyenne ${moyGlobale}%</p>
-            ${activite ? `<p style="font-size:12px;color:#888;margin:0 0 20px">${activite}</p>` : ''}
-            ${detailComplet ? `<p style="color:#aaa;font-size:11px;margin:0 0 14px">Acquis : au moins 70% de bonnes réponses ${ceJour} sur ce sous-thème. À revoir : moins de 70%.</p>` : ''}
-            ${detailComplet ? badgesHTML : ''}
-            <p style="color:#444;line-height:1.6;margin-top:14px">${phraseSynthese}</p>
+            <p style="font-size:15px;font-weight:600;margin:0 0 4px">${resume}</p>
+            ${activite ? `<p style="font-size:12px;color:#888;margin:0">${activite}</p>` : ''}
+            ${detailHTML}
             <div style="text-align:center;margin:24px 0 4px">
-              <a href="https://www.academika.fr/espace-parent.html" style="color:#3730a3;text-decoration:none;font-weight:600;font-size:13px">👪 Consulter le suivi complet dans l'espace parent →</a>
+              <a href="https://www.academika.fr/espace-parent.html" style="color:#3730a3;text-decoration:none;font-weight:600;font-size:13px">${detailComplet ? 'Voir son niveau par sous-thème →' : 'Voir son espace parent →'}</a>
             </div>
             <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
               <p style="color:#444;font-size:13px;margin-bottom:16px;">
@@ -1174,86 +1110,6 @@ export default async function handler(req, res) {
               <a href="${lienDesabonnement}" style="color:#bbb">Se désabonner des emails automatiques</a>
             </p>
           </div>`
-
-      } else {
-        sujet = `${prenom} a révisé ${quand} — ACADEMIKA`
-
-        // Le meilleur sous-thème du jour, mis en avant seul s'il atteint le
-        // seuil Acquis — pas une liste complète des sous-thèmes réussis :
-        // un seul highlight positif, volontairement compact.
-        const meilleur = badgesData.filter(b => b.acquis).sort((a, b) => b.pct - a.pct)[0] || null
-        // Tous les sous-thèmes sous le seuil — même logique que la liste
-        // "À revoir" de la branche pct≥40 (sousThemesDetail/badgesData).
-        const aRevoir = badgesData.filter(b => !b.acquis)
-
-        const positifHTML = !detailComplet
-          ? `<div style="margin-top:16px">
-              <p style="font-size:13px;font-weight:600;color:#1f7a45;margin:0">✅ ${esc(prenom)} a pris le temps de s'entraîner ${quand}.</p>
-            </div>`
-          : meilleur
-            ? `<div style="margin-top:16px">
-                <p style="font-size:13px;font-weight:600;color:#1f7a45;margin-bottom:8px">✅ Ce qui a bien fonctionné</p>
-                <table style="width:100%;border-collapse:collapse"><tr style="background:#EAF6EF;border-radius:8px">
-                  <td style="padding:10px 12px;font-size:13px;color:#1f7a45">${meilleur.nom}</td>
-                  <td style="padding:10px 12px;font-size:12px;font-weight:600;color:#1f7a45;text-align:right;white-space:nowrap">${meilleur.ok}/${meilleur.total}</td>
-                </tr></table>
-              </div>`
-            : `<div style="margin-top:16px">
-                <p style="font-size:13px;color:#444">La régularité compte plus que le score de la journée — <strong>${esc(prenom)}</strong> a quand même pris le temps de s'entraîner ${quand}.</p>
-              </div>`
-
-        const aRevoirHTML = !detailComplet
-          ? (badgesData.length > 0
-              ? `<div style="margin-top:16px">
-                  <p style="font-size:13px;font-weight:600;color:#1a1a1a;margin:0">📚 Des points à retravailler ont été identifiés — le détail est disponible avec l'offre Accompagné.</p>
-                </div>`
-              : '')
-          : (aRevoir.length > 0
-              ? `<div style="margin-top:16px">
-                  <p style="font-size:13px;font-weight:600;color:#8a6416;margin-bottom:8px">📚 À retravailler</p>
-                  ${aRevoir.map(b => `<table style="width:100%;border-collapse:collapse;margin-bottom:6px"><tr style="background:#FBF4E4;border-radius:8px">
-                    <td style="padding:10px 12px;font-size:13px;color:#8a6416">${b.nom}</td>
-                    <td style="padding:10px 12px;font-size:12px;font-weight:600;color:#8a6416;text-align:right;white-space:nowrap">${b.ok}/${b.total}</td>
-                  </tr></table>`).join('')}
-                </div>`
-              : '')
-
-        html = `
-          <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
-            <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
-              <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
-              <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Suivi de révision</div>
-            </div>
-            <p style="margin-bottom:16px">Bonjour Madame, Monsieur,</p>
-            <p style="margin-bottom:20px;color:#444">
-              <strong>${esc(prenom)}</strong> a passé ${totalSessions} session${totalSessions>1?'s':''} de révision ${quand}.
-            </p>
-            <div style="background:#f5f5f0;border-left:4px solid #3730a3;border-radius:0 8px 8px 0;padding:16px 20px;margin:20px 0">
-              <div style="font-size:24px;font-weight:700;color:#3730a3">
-                ${scoreTotal}/${totalTotal} — ${pct}%
-              </div>
-              <div style="font-size:12px;color:#888;margin-top:4px">⏱️ ${tempsFormat}</div>
-              ${activite ? `<div style="font-size:12px;color:#888;margin-top:2px">🕐 ${activite}</div>` : ''}
-            </div>
-            ${positifHTML}
-            ${aRevoirHTML}
-            <p style="color:#444;line-height:1.6;margin-top:20px">
-              Un petit encouragement peut faire toute la différence !
-              <strong>10 minutes par jour</strong> suffisent pour progresser.
-            </p>
-            <div style="text-align:center;margin:28px 0">
-              <a href="https://www.academika.fr/espace-parent.html" style="background:#1a1a1a;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;display:inline-block">
-                Voir ses résultats complets →
-              </a>
-            </div>
-            <p style="color:#888;font-size:12px;text-align:center;margin-top:24px">
-              Pour toute question : <a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a>
-            </p>
-            <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-              <a href="${lienDesabonnement}" style="color:#bbb">Se désabonner des emails automatiques</a>
-            </p>
-          </div>`
-      }
 
       const rateOk = await verifierRateLimit(email_parent)
       if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
@@ -1277,7 +1133,7 @@ export default async function handler(req, res) {
       // réponse (voir sa définition plus haut).
       await marquerCouvertes(sessionsNonCouvertes)
 
-      return res.status(200).json({ success: true, envoye: true, totalSessions, moyGlobale })
+      return res.status(200).json({ success: true, envoye: true, totalSessions })
 
     } catch (e) {
       console.log('Erreur recap-journalier-user:', e.message)

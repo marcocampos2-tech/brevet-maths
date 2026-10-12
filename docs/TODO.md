@@ -7,17 +7,11 @@
 - Écrire `db/policies.test.sql` (jamais fait ; seul `db/policies.sql` existe)
 - Normaliser l'email dans le formulaire d'inscription (au lieu de dépendre du rattrapage `lower(trim(...))` en lecture)
 
-## 🟠 Ouvert — aligner `cron-rappel.js` sur la logique niveau
+## 🟠 Ouvert — aligner le bilan périodique sur la logique niveau
 
-Le mail récap journalier affiche encore le score brut de la session + seuil "Acquis ≥70%/À revoir <70%" plaqué sur une session isolée — trompeur (une session à 60% peut faire partie d'une progression normale).
+Le récap journalier n'est plus concerné : depuis le 12/10/2026 il livre un constat factuel (sessions, durée, sous-thèmes travaillés), sans « Acquis / À revoir » ni score (cf. `CLAUDE.md`, § Bascule décembre 2026). Reste le bilan périodique de `api/cron-rappel.js`, qui garde un vocabulaire et un seuil de réussite propres.
 
-**À faire** : réutiliser la logique niveau/progression de la refonte suivi-parent, étendre à `cron-rappel.js` (récap journalier) et au bilan périodique (21 jours, `sous_themes_snapshot`, qui mesure la difficulté tentée sur la fenêtre et non le niveau débloqué — source de régressions fantômes).
-
-**Point de contenu à trancher à la conception** : garder une mention de la session du jour en plus du niveau global, ou basculer entièrement sur niveau/progression.
-
-**Confirmé et complété (14/09)** : le récap journalier (`api/email.js`, `recap-journalier-user`) ne mentionne effectivement jamais le niveau atteint ni la progression de déblocage — seulement "acquis/à revoir" sur la journée.
-
-**Sens du mot « Acquis » à aligner (constat du 08/10/2026)** : « Acquis » n'a pas le même sens dans le récap email (≥ 70 % sur la journée) et dans le tableau de suivi (5 sessions réussies au niveau, vue `niveaux_sous_theme`). À aligner dans ce même chantier.
+**À faire** : réutiliser la logique niveau/progression de la refonte suivi-parent pour le bilan périodique (21 jours, `sous_themes_snapshot`, qui mesure la difficulté tentée sur la fenêtre et non le niveau débloqué — source de régressions fantômes), et vérifier que le mot « acquis » y a le même sens que dans la vue `niveaux_sous_theme` (5 réussites par niveau).
 
 ## 🟠 Ouvert — captures d'écran : état `maitrise`
 
@@ -43,6 +37,17 @@ Maquette validée, non implémentée : icônes 3 étapes "Comment ça marche", i
 ## ⚠️ Échéance critique — Bascule décembre 2026
 
 Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'échéance. Code fait et déployé (16/08) : bandeau, sélecteur d'offre, détail récap masqués via `enPeriodeGratuite()`. **Point ouvert** : vérifier au 01/12/2026 que Stripe est opérationnel (SIRET, mode live) avant réactivation automatique. Rappel agenda mi-novembre déjà posé. Vérifier la formulation marketing validée le 13/08 reprise partout (pas que sur le flyer).
+
+**Distinction gratuit/abonnement — à appliquer avant le 01/12/2026** (gating email fait ; reste à construire, décisions du 13/08 et du 12/10/2026) :
+- bilan 21 jours : le premier complet, les suivants tronqués avec incitation ;
+- tableau de bord : 7 jours visibles, 14 et 21 jours verrouillés ;
+- export PDF : visible mais verrouillé ;
+- examen blanc en ligne : verrouillé ;
+- bloc « Niveau atteint par sous-thème » de `suivi-parent.html` : visible mais verrouillé pour le gratuit (décision du 12/10/2026).
+
+**Condition de vérité du récap journalier** : sa phrase « Le détail par sous-thème est disponible avec l'offre Accompagné » n'est vraie qu'une fois le verrouillage du bloc « Niveau atteint par sous-thème » en place ; sinon un parent gratuit trouverait ce détail librement accessible et l'incitation serait fausse.
+
+**Bandeau commercial de `suivi-parent.html`** (~l.557) : il promet « un e-mail à chaque déconnexion, avec un récapitulatif détaillé par sous-thème et une alerte si des difficultés sont détectées » — faux avec le nouveau récap (constat sans verdict, aucune alerte). À réécrire avant le 01/12.
 
 ---
 
@@ -90,7 +95,6 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 6. Déconnexion lente — piste : `logout()` attend fin d'appels réseau
 8. Fuseaux horaires — recensé le 17/09/2026, aucun bug actif, deux points de fragilité. (a) Pour le récap journalier, la lecture de `created_at` est désormais explicitement UTC (`lib/recap-journalier.js`, `parseUTC()` et `dateParis()`, PR #113, 11/10/2026) ; `api/stripe-webhook.js:247` est correct (timestamp Stripe en secondes + `timeZone: 'Europe/Paris'`). Restent implicites, car dépendants du fuseau du runtime Vercel (UTC aujourd'hui, silencieusement faux s'il changeait) : `api/cron-rappel.js` — branche saisonnière, `maintenant.getMonth()` / `getDate()` (l. 238-239, mois et jour pris en heure serveur et non en heure de Paris) ; bilan périodique, `new Date(premiereSession[0].created_at)` (l. 412, timestamp naïf lu en heure locale du serveur, d'où `dateDebut` et `dateDebutISO`, l. 424), `new Date(s.created_at).toISOString().slice(0, 10)` pour `jours_actifs` (l. 444, jour UTC et non Paris : cf. n°1 « UTC vs Europe/Paris sur bilan périodique »), et `toLocaleDateString('fr-FR', …)` sans `timeZone` pour `dateDebutFr` / `dateFinFr` (l. 513-514) ; `api/inscription-brevet.js:41` et `api/inscription-stage.js:45`, `new Date().toISOString().split('T')[0]` pour « aujourd'hui » (jour UTC : entre minuit et 1 h-2 h à Paris, c'est encore la veille). Les lectures `new Date(dateISO + 'T00:00:00')` suivies de `getDate()` / `getMonth()` (`api/inscription-brevet.js:6`, `api/inscription-stage.js:12`) sont cohérentes quel que soit le fuseau et ne sont pas concernées. Hypothèse à documenter ou à corriger au fil des modifications de ces fichiers, pas d'urgence. (b) `suivi-parent.html` (lignes 728, 866, 973) regroupe les sessions par jour selon le fuseau du NAVIGATEUR du parent (`dateLocaleISO`), pas selon Paris : identique pour un parent en France, découpage des journées différent de l'email reçu pour un parent à l'étranger. Cas limite jamais rencontré, correction non prioritaire.
 9. Warning console — meta tag `apple-mobile-web-app-capable` déprécié (ajouter `mobile-web-app-capable`) ; `favicon.ico` en 404 en production (constaté le 04/10/2026). Pour `quiz.html`, à glisser dans la prochaine modification du fichier (cosmétique) : ajouter `<meta name="mobile-web-app-capable" content="yes">` (avertissement Chrome) et corriger l'espace manquante `deblocageCache[cle] ={` dans `verifierDeblocage()`
-11. Distinction gratuit/abonnement — gating email fait, dashboard/PDF/examen blanc à construire
 12. Espace parent persistant (option B) — en attente depuis 24/07, sans date
 14. Policies ciblant `{public}` au lieu de `{authenticated}` — pas exploitable aujourd'hui, fragile
 15. `historique_bilans`/`rappels_envoyes`/`email_rate_limit` — RLS active, zéro policy
@@ -142,7 +146,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     4. **Le message « ✅ Session réussie ! » (`prog-msg`, ligne ~1020/1026/1028) s'affiche même quand le résultat n'est pas enregistré** (cas `'definitif'`) — puisque `progMsg` est construit indépendamment du statut de `sauvegarder()`, sur le seul score local (`pct >= SEUIL_PCT`). À rendre neutre (ou conditionner à un enregistrement réussi) dans ce cas, pour ne pas contredire le bandeau `❌ Résultat non enregistré` juste au-dessus.
     5. **Titre trompeur `Progression — ${themeCourt}` (ligne ~1063)** : le thème entier est affiché en titre, alors que les compteurs de la section (`ligneMoyen`/`ligneDifficile`, sessions `SEUIL_SESSIONS`) sont en réalité comptés **par sous-thème**, pas par thème — un élève ayant progressé sur un sous-thème du thème peut lire un titre qui laisse croire à une progression sur le thème entier.
 
-34. **Bilan périodique 21 jours : les abandons de quiz sont comptés comme des sessions à 0/5** — constaté le 30/09/2026 en vérifiant la prise en compte des abandons dans le récap journalier. `api/cron-rappel.js:295-297` lit `resultats` avec `select=score,total,sous_theme,difficulte,created_at` sans `abandonne` : aucun filtre, contrairement au récap journalier (`api/email.js:838-841`). Fausse à la baisse la moyenne et les compteurs de sessions du bilan. À traiter avec le chantier « aligner `cron-rappel.js` sur la logique niveau » (section 🟠 de tête), qui en héberge déjà la conception.
+34. **Bilan périodique 21 jours : les abandons de quiz sont comptés comme des sessions à 0/5** — constaté le 30/09/2026 en vérifiant la prise en compte des abandons dans le récap journalier. `api/cron-rappel.js:295-297` lit `resultats` avec `select=score,total,sous_theme,difficulte,created_at` sans `abandonne` : aucun filtre, contrairement au récap journalier (`api/email.js:838-841`). Fausse à la baisse la moyenne et les compteurs de sessions du bilan. À traiter avec le chantier « aligner le bilan périodique sur la logique niveau » (section 🟠 de tête), qui en héberge déjà la conception.
 
 36. **Test de bout en bout de la résiliation Stripe avant le passage en live** — constaté le 04/10/2026. L'email `resiliation-confirmee` part sur `customer.subscription.updated` (`cancel_at_period_end` de `false` à `true`), pas sur `customer.subscription.deleted`. Depuis la PR #94, `api/stripe-webhook.js` envoie `CRON_SECRET` et `api/email.js` l'exige : `CRON_SECRET` doit être posé sur les scopes Vercel Preview ET Production, sinon la confirmation échoue (webhook en 500, log « Erreur envoi email confirmation résiliation », Stripe rejoue l'événement). Jamais testé en conditions réelles depuis ce changement. Ferme aussi la partie (b) de « légal » n°2 (validation en conditions réelles de l'email de résiliation).
 
@@ -214,7 +218,6 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 73. **`suivi-parent.html`, Régularité — message de fenêtre vide trompeur** : « Aucun quiz effectué pour l'instant. Dès que <prénom> aura terminé sa première session… » s'affiche aussi pour un élève qui a déjà joué mais rien sur la fenêtre 7/14/21 jours (`chargerDonnees()`). À remplacer dans ce cas par « Aucun quiz sur les N derniers jours. » (N = 7, 14 ou 21) ; le message actuel reste pour un élève qui n'a jamais joué.
 
 74. **Récap journalier — suite du chantier du 08-12/10/2026** (ordre à respecter)
-    - **a. Petite PR** : ne pas répéter « · N session(s) » sur la ligne d'activité quand il n'y a aucun abandon (déjà présent sur la ligne de résumé ; constaté le 12/10/2026 : « 1 session » affiché deux fois). Corriger aussi dans `CLAUDE.md` « depuis le 24/10/2026 » → « depuis le 11/10/2026 » (merge réel de la PR #113).
     - **b. Bouton « Envoyer un récap de test »** dans `prof.html`, utilisable sur mobile : élève et date au choix, envoi TOUJOURS vers l'adresse du prof (jamais au parent), ne modifie jamais `alerte_envoyee`, contrôle prof côté serveur.
     - **c. Canal unique** : retirer l'envoi du récap au clic (`logout()` / `terminer()` dans `quiz.html`), puis réserver le récap de `/api/email` au cron (`CRON_SECRET`). Préalables : bouton b en place + 3 soirs sans alerte Healthchecks. Motifs : double email cumulatif constaté (09/10/2026 et 12/10/2026 sur le compte de test) ; un élève peut aujourd'hui déclencher un email vers ses parents ; décision « cron seul déclencheur » déjà prise le 16/08/2026. Reprend l'ancien point « chevauchement du contenu du récap si plusieurs sessions le même jour ».
     - **d. `Reply-To: contact@academika.fr`** sur les envois Resend (~17 appels, 4 fichiers : `api/email.js`, `api/cron-rappel.js`, `api/inscription-brevet.js`, `api/inscription-stage.js`), à faire avec c. Contexte : `noreply@academika.fr` n'existait pas chez Hostinger (réponses des parents rejetées « 550 User doesn't exist ») ; corrigé le 12/10/2026 par un alias Hostinger noreply@ → contact@, testé OK. Le `Reply-To` reste la solution propre.
@@ -227,6 +230,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 76. **Contrôles à faire** (supprimer ce point une fois les deux contrôles faits)
     - Libellé « hier » : faire une session après le passage du cron sans se déconnecter, puis vérifier le récap du lendemain.
     - 25/10/2026 vers 23 h (passage à l'heure d'hiver) : la check Healthchecks doit être verte, ping entre 22 h et 23 h Paris.
+
+77. **`suivi-parent.html`, `estAbandon()` (déf. ~l.846, utilisée ~l.629) détecte les abandons par le texte « Quiz abandonné » dans `questions_ratees`** au lieu de la colonne `resultats.abandonne` (incohérence avec le récap, la vue `niveaux_sous_theme` et `resultats.html`). PR séparée.
 
 ---
 
