@@ -915,6 +915,73 @@ function figurePythagoreSVG(f,pxW,pxH){
     +'</svg>'
 }
 
+// Figure de trigonométrie (même langage visuel que figurePythagoreSVG). Même logique dans quiz.html et prof.html : à garder identiques.
+// Aucun côté n'est étiqueté « opposé/adjacent » : c'est ce que l'élève doit trouver.
+// Clés : a (côté vertical), b (côté horizontal), c (hypoténuse), unite, sommets (facultatif, [angle droit, bas-droite, haut]),
+//        angle_sommet : "bas" (angle en bas à droite) ou "haut", angle : nombre ou "?"
+function figureTrigoSVG(f,pxW,pxH){
+  var esc=function(s){return String(s).replace(/[&<>"']/g,'')}
+  var u=esc(f.unite||'cm')
+  var num=function(v){if(v===undefined||v===null||v===''||v==='?')return null;var n=Number(String(v).replace(',','.'));return isNaN(n)||n<=0?null:n}
+  var a=num(f.a),b=num(f.b),c=num(f.c),ang=num(f.angle)
+  var bas=f.angle_sommet!=='haut'
+  var ratio // b/a
+  if(ang!==null&&ang<90){var t=Math.tan(ang*Math.PI/180);ratio=bas?1/t:t}
+  else{
+    if(a===null&&b!==null&&c!==null&&c>b)a=Math.sqrt(c*c-b*b)
+    if(b===null&&a!==null&&c!==null&&c>a)b=Math.sqrt(c*c-a*a)
+    if(a===null&&b===null){a=3;b=4}else if(a===null){a=b}else if(b===null){b=a}
+    ratio=b/a
+  }
+  ratio=Math.min(2,Math.max(0.5,ratio))
+  var maxW=146,maxH=120,H=maxH,W=ratio*maxH
+  if(W>maxW){W=maxW;H=maxW/ratio}
+  var ox=70+(maxW-W)/2,top=36+(maxH-H)/2,oy=top+H,bx=ox+W
+  var len=Math.sqrt(W*W+H*H),mx=(ox+bx)/2,my=(oy+top)/2,nx=H/len,ny=-W/len
+  var r=function(n){return Math.round(n*10)/10}
+  var halo='stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Inter,sans-serif"'
+  var lab=function(v,x,y,anchor){
+    var inconnu=(num(v)===null)
+    var t=inconnu?'?':esc(v)+' '+u
+    return '<text x="'+r(x)+'" y="'+r(y)+'" text-anchor="'+anchor+'" font-size="'+(inconnu?18:16)+'" font-weight="'+(inconnu?700:600)+'" fill="'+(inconnu?'#B45309':'#14304F')+'" '+halo+'>'+t+'</text>'
+  }
+  var s=Array.isArray(f.sommets)&&f.sommets.length===3?f.sommets.map(esc):null
+  var let_=function(t,x,y){return '<text x="'+r(x)+'" y="'+r(y)+'" text-anchor="middle" font-size="17" font-weight="700" fill="#14304F" font-family="Inter,sans-serif">'+t+'</text>'}
+  // arc d'angle
+  var R=30,arc,lx,ly,anchor
+  if(bas){
+    var th=Math.atan2(H,W) // angle au sommet bas-droite
+    var p1=[bx-R,oy],p2=[bx-R*Math.cos(th),oy-R*Math.sin(th)]
+    arc='M'+r(p1[0])+' '+r(p1[1])+' A'+R+' '+R+' 0 0 1 '+r(p2[0])+' '+r(p2[1])
+    var bis=[-(1+Math.cos(th)),-Math.sin(th)],bl=Math.hypot(bis[0],bis[1])
+    lx=bx+bis[0]/bl*(R+(num(f.angle)===null?31:24));ly=oy+bis[1]/bl*(R+(num(f.angle)===null?31:24))+6;anchor='middle'
+    if(th>0.87){lx=bx+24;ly=oy-14} // triangle étroit : étiquette à l'extérieur, à droite du sommet
+  }else{
+    var ph=Math.atan2(W,H) // angle au sommet haut
+    var q1=[ox,top+R],q2=[ox+R*Math.sin(ph),top+R*Math.cos(ph)]
+    arc='M'+r(q1[0])+' '+r(q1[1])+' A'+R+' '+R+' 0 0 0 '+r(q2[0])+' '+r(q2[1])
+    var bis2=[Math.sin(ph)*1+0,1+Math.cos(ph)],b2=Math.hypot(bis2[0],bis2[1])
+    lx=ox+bis2[0]/b2*(R+(num(f.angle)===null?31:24));ly=top+bis2[1]/b2*(R+(num(f.angle)===null?31:24))+6;anchor='middle'
+    if(ph<0.55){lx=ox+34;ly=top+14} // angle aigu : étiquette à l'extérieur, à droite de l'hypoténuse
+  }
+  var inc=(num(f.angle)===null)
+  var angTxt=inc?'?':esc(f.angle)+'°'
+  var alt='Triangle rectangle, angle marqué '+(num(f.angle)===null?'inconnu':esc(f.angle)+'°')+' ; côtés '+esc(f.a)+', '+esc(f.b)+', hypoténuse '+esc(f.c)+' ('+u+')'
+  return '<svg width="'+pxW+'" height="'+pxH+'" viewBox="0 0 250 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="'+alt+'">'
+    +'<defs><pattern id="fg-trig" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#E3EAF5" stroke-width="1"/></pattern></defs>'
+    +'<rect width="250" height="210" rx="10" fill="#fff"/><rect width="250" height="210" rx="10" fill="url(#fg-trig)"/>'
+    +'<polygon points="'+r(ox)+','+r(oy)+' '+r(bx)+','+r(oy)+' '+r(ox)+','+r(top)+'" fill="rgba(37,99,168,0.10)" stroke="#14304F" stroke-width="2.5" stroke-linejoin="round"/>'
+    +'<polygon points="'+r(ox)+','+r(oy-13)+' '+r(ox+13)+','+r(oy-13)+' '+r(ox+13)+','+r(oy)+' '+r(ox)+','+r(oy)+'" fill="none" stroke="#14304F" stroke-width="1.5"/>'
+    +'<path d="'+arc+'" fill="none" stroke="'+(inc?'#B45309':'#2563A8')+'" stroke-width="2.5"/>'
+    +'<text x="'+r(lx)+'" y="'+r(ly)+'" text-anchor="'+anchor+'" font-size="'+(inc?18:15)+'" font-weight="700" fill="'+(inc?'#B45309':'#2563A8')+'" '+halo+'>'+angTxt+'</text>'
+    +(s?let_(s[0],ox-14,oy+16)+let_(s[1],bx+14,oy+16)+let_(s[2],ox-14,top-6):'')
+    +lab(f.a,ox-9,(oy+top)/2+5.5,'end')
+    +lab(f.b,mx,oy+26,'middle')
+    +lab(f.c,mx+nx*30,my+ny*30+5.5,'middle')
+    +'</svg>'
+}
+
+
 function renderFigure(fig){
   if(!fig||!fig.type)return ''
   var f=fig;if(typeof f==='string'){try{f=JSON.parse(f)}catch(e){return ''}}
@@ -937,6 +1004,7 @@ function renderFigure(fig){
   if(f.type==='rectangle'){const u=f.unite||'cm',sc=Math.min((S-2*P)/f.largeur,(S-2*P)/f.hauteur)*0.85;const W=f.largeur*sc,H=f.hauteur*sc,ox=(S-W)/2,oy=(S-H)/2;return '<div class="q-figure">'+open+'<rect class="fig-sh" x="'+ox+'" y="'+oy+'" width="'+W+'" height="'+H+'"/><text class="fig-lb" x="'+(ox+W/2)+'" y="'+(oy+H+17)+'" text-anchor="middle">'+f.largeur+' '+u+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy+H/2+4)+'" text-anchor="end">'+f.hauteur+' '+u+'</text></svg></div>'}
   if(f.type==='cercle'){const u=f.unite||'cm',R=(S-2*P)/2*0.82,cx=S/2,cy=S/2;return '<div class="q-figure">'+open+'<circle class="fig-sh" cx="'+cx+'" cy="'+cy+'" r="'+R+'"/><line class="fig-dm" x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R)+'" y2="'+cy+'"/><circle class="fig-dot" cx="'+cx+'" cy="'+cy+'" r="2.5"/><text class="fig-lb" x="'+(cx+R/2)+'" y="'+(cy-8)+'" text-anchor="middle">r = '+f.rayon+' '+u+'</text></svg></div>'}
   if(f.type==='pythagore')return '<div class="q-figure">'+figurePythagoreSVG(f,260,218)+'</div>'
+  if(f.type==='trigonometrie')return '<div class="q-figure">'+figureTrigoSVG(f,260,218)+'</div>'
   if(f.type==='thales'){
     // Deux configurations partagent les memes cles ab / am, avec la meme semantique :
     // ab = longueur AB, am = longueur AM, rapport = am/ab. Seule la position de M et N change —
