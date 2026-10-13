@@ -917,6 +917,7 @@ function figurePythagoreSVG(f,pxW,pxH){
 
 // Figure de trigonométrie (même langage visuel que figurePythagoreSVG). Même logique dans quiz.html et prof.html : à garder identiques.
 // Aucun côté n'est étiqueté « opposé/adjacent » : c'est ce que l'élève doit trouver.
+// Clé a, b ou c ABSENTE : aucune étiquette sur ce côté (questions de vocabulaire) ; "?" : inconnue en orange.
 // Clés : a (côté vertical), b (côté horizontal), c (hypoténuse), unite, sommets (facultatif, [angle droit, bas-droite, haut]),
 //        angle_sommet : "bas" (angle en bas à droite) ou "haut", angle : nombre ou "?"
 function figureTrigoSVG(f,pxW,pxH){
@@ -966,7 +967,7 @@ function figureTrigoSVG(f,pxW,pxH){
   }
   var inc=(num(f.angle)===null)
   var angTxt=inc?'?':esc(f.angle)+'°'
-  var alt='Triangle rectangle, angle marqué '+(num(f.angle)===null?'inconnu':esc(f.angle)+'°')+' ; côtés '+esc(f.a)+', '+esc(f.b)+', hypoténuse '+esc(f.c)+' ('+u+')'
+  var alt='Triangle rectangle, angle marqué '+(num(f.angle)===null?'inconnu':esc(f.angle)+'°')+(f.a!==undefined||f.b!==undefined||f.c!==undefined?' ; côtés '+esc(f.a)+', '+esc(f.b)+', hypoténuse '+esc(f.c)+' ('+u+')':'')
   return '<svg width="'+pxW+'" height="'+pxH+'" viewBox="0 0 250 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="'+alt+'">'
     +'<defs><pattern id="fg-trig" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#E3EAF5" stroke-width="1"/></pattern></defs>'
     +'<rect width="250" height="210" rx="10" fill="#fff"/><rect width="250" height="210" rx="10" fill="url(#fg-trig)"/>'
@@ -975,9 +976,9 @@ function figureTrigoSVG(f,pxW,pxH){
     +'<path d="'+arc+'" fill="none" stroke="'+(inc?'#B45309':'#2563A8')+'" stroke-width="2.5"/>'
     +'<text x="'+r(lx)+'" y="'+r(ly)+'" text-anchor="'+anchor+'" font-size="'+(inc?18:15)+'" font-weight="700" fill="'+(inc?'#B45309':'#2563A8')+'" '+halo+'>'+angTxt+'</text>'
     +(s?let_(s[0],ox-14,oy+16)+let_(s[1],bx+14,oy+16)+let_(s[2],ox-14,top-6):'')
-    +lab(f.a,ox-9,(oy+top)/2+5.5,'end')
-    +lab(f.b,mx,oy+26,'middle')
-    +lab(f.c,mx+nx*30,my+ny*30+5.5,'middle')
+    +(f.a!==undefined?lab(f.a,ox-9,(oy+top)/2+5.5,'end'):'')
+    +(f.b!==undefined?lab(f.b,mx,oy+26,'middle'):'')
+    +(f.c!==undefined?lab(f.c,mx+nx*30,my+ny*30+5.5,'middle'):'')
     +'</svg>'
 }
 
