@@ -1,4 +1,4 @@
-# TODO consolidé — 12/10/2026
+# TODO consolidé — 13/10/2026
 
 ---
 
@@ -54,8 +54,10 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 ## 🔴 Banque de questions — chantier en cours
 
 1. Angles — périmètre validé 02/09, calibrage facile/moyen/difficile à faire
-2. 8 sous-thèmes restants du tour des 20 : Algorithmique, Trigonométrie, Transformations, Triangles semblables, Représentation de l'espace, Agrandissement, Aires et volumes (Proportionnalité rédigeable)
-    - **Fait le 12/10/2026 : Pythagore et Thalès refaits à 30 / 30 / 30 (90 questions actives chacun).** Pythagore : 90 nouvelles questions, les 29 anciennes archivées. Thalès : 60 nouvelles, 10 questions actives corrigées en place (1865, 1866, 1869, 1870, 1881, 1883, 1886, 1887, 1888, 1890, indice de bonne réponse conservé), les 34 archivées inchangées. Procédure : insertion en `brouillon`, contrôle md5, activation atomique gardée, rollback sans suppression (jamais de `DELETE` : des résultats élèves peuvent référencer ces lignes). Rédaction et audit par script, rejoués sur PostgreSQL local avant exécution.
+2. 7 sous-thèmes restants du tour des 20 : Algorithmique, Transformations, Triangles semblables, Représentation de l'espace, Agrandissement, Aires et volumes (Proportionnalité rédigeable)
+    - Supprimer les tables `backup_explications_pyth_20261013` et `backup_explications_thales_20261013` quand CM le décide
+    - Thalès : un quiz contient au plus 2 questions de calcul sur 5 (une par famille) — garder, ou autoriser 2 par famille ?
+    - Mesurer combien d'élèves bouclent leur pool (`questions_vues`) avant de décider d'écrire 10 ou 20 questions de plus par famille
 3. Transformations/difficile — 2 questions actives seulement, sans garde-fou serveur
 4. Représentation de l'espace — 0 question, format QCM pas confirmé
 5. 6 sous-thèmes de prérequis validés, aucun construit : Proportionnalité, Fractions, Nombres relatifs, Opérations, Opérations combinées, Angles
@@ -66,8 +68,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     ⚠️ **Contradiction à arbitrer par CM (constatée le 30/09/2026, non tranchée)** : ce point traite le `SOUS_THEMES` codé en dur comme une dette à généraliser, alors que la refonte de `suivi-parent.html` (PR #43) l'avait retenu comme un écart assumé (pas de `COUNT` dynamique, lecture publique de `questions_banque` retirée par l'audit sécurité). Écart assumé ou dette ?
 10. `api/generer.js` — "Triangles semblables" absent de `chapitres['Espace et géométrie']`
 11. Refonte `examen_questions` (chantier 2) — jamais entamée, 180 questions non auditées, pas de dédoublonnage par énoncé
-12. Stratification par difficulté inopérante dans `api/examen.js` — tri après `sort(() => Math.random()-0.5)`, tirage aléatoire pur en pratique
-13. Shuffle biaisé — motif présent dans tout le dépôt
+12. Stratification par difficulté inopérante dans `api/examen.js` (l. 127-130) — tri après `sort(() => Math.random()-0.5)`, tirage aléatoire pur en pratique
+13. Shuffle biaisé (`sort(() => Math.random() - 0.5)`) — reste dans le mélange des options (`api/generer.js` l. 367), `api/examen.js` (l. 127-130 et 152) et `questions.js` (l. 234)
 14. **Audit doublons numériques (22/09/2026)** — 13 questions remontées par script SQL, 6 corrigées en base directement (`examen_questions` 116/122/125/186, `questions_banque` 234/627 — bonne réponse dupliquée dans les options). Sur `questions_banque` 234, premier distracteur proposé (`6/8`) lui-même invalide — simplification incomplète de `36/48`, donc toujours égal à `3/4` — corrigé en `4/3` (inversion numérateur/dénominateur). Audit relancé après corrections : 8 lignes restantes, toutes des cas déjà identifiés, aucune nouvelle anomalie, bonne réponse distincte des doublons dans tous les cas restants. Reste pour la refonte :
     - `examen_questions` 181 (roue de loterie, 2/8 vs 1/4) — les deux options sont mathématiquement justes et l'explication le reconnaît elle-même ; à reformuler (ex. demander la forme irréductible), pas une simple substitution d'option
     - `examen_questions` 113 (126/180) — faux positif assumé : les 4 options valent 0,7, mais c'est le principe même de la question (identifier la seule écriture irréductible)
