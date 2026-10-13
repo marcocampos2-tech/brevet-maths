@@ -1141,7 +1141,7 @@ function figurePythagoreSVG(f,pxW,pxH){
 
 // Figure de trigonométrie (même langage visuel que figurePythagoreSVG). Même logique dans quiz.html et prof.html : à garder identiques.
 // Aucun côté n'est étiqueté « opposé/adjacent » : c'est ce que l'élève doit trouver.
-// Clé angle ABSENTE : aucun arc. Clé a, b ou c ABSENTE : aucune étiquette sur ce côté (questions de vocabulaire) ; "?" : inconnue en orange.
+// Clé angle ABSENTE : aucun arc ; angle_masque:true : arc dessiné sans valeur (la forme suit quand même angle). Clé a, b ou c ABSENTE : aucune étiquette sur ce côté (questions de vocabulaire) ; "?" : inconnue en orange.
 // Clés : a (côté vertical), b (côté horizontal), c (hypoténuse), unite, sommets (facultatif, [angle droit, bas-droite, haut]),
 //        angle_sommet : "bas" (angle en bas à droite) ou "haut", angle : nombre ou "?"
 function figureTrigoSVG(f,pxW,pxH){
@@ -1198,7 +1198,7 @@ function figureTrigoSVG(f,pxW,pxH){
     +'<polygon points="'+r(ox)+','+r(oy)+' '+r(bx)+','+r(oy)+' '+r(ox)+','+r(top)+'" fill="rgba(37,99,168,0.10)" stroke="#14304F" stroke-width="2.5" stroke-linejoin="round"/>'
     +'<polygon points="'+r(ox)+','+r(oy-13)+' '+r(ox+13)+','+r(oy-13)+' '+r(ox+13)+','+r(oy)+' '+r(ox)+','+r(oy)+'" fill="none" stroke="#14304F" stroke-width="1.5"/>'
     +(f.angle!==undefined?'<path d="'+arc+'" fill="none" stroke="'+(inc?'#B45309':'#2563A8')+'" stroke-width="2.5"/>'
-    +'<text x="'+r(lx)+'" y="'+r(ly)+'" text-anchor="'+anchor+'" font-size="'+(inc?18:15)+'" font-weight="700" fill="'+(inc?'#B45309':'#2563A8')+'" '+halo+'>'+angTxt+'</text>':'')
+    +(f.angle_masque?'':'<text x="'+r(lx)+'" y="'+r(ly)+'" text-anchor="'+anchor+'" font-size="'+(inc?18:15)+'" font-weight="700" fill="'+(inc?'#B45309':'#2563A8')+'" '+halo+'>'+angTxt+'</text>'):'')
     +(s?let_(s[0],ox-14,oy+16)+let_(s[1],bx+14,oy+16)+let_(s[2],ox-14,top-6):'')
     +(f.a!==undefined?lab(f.a,ox-9,(oy+top)/2+5.5,'end'):'')
     +(f.b!==undefined?lab(f.b,mx,oy+26,'middle'):'')
