@@ -1,4 +1,5 @@
 import { memoireQuestionsVues, contexteEleve, noterEchec, journaliserEchec } from '../lib/questions-vues.js'
+import { tirerParFamille } from '../lib/tirage-familles.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -287,7 +288,7 @@ async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
   const diag = { actif: false, raison: 'anonyme' }
   try {
     const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY
-    const url = `${SUPABASE_URL}/rest/v1/questions_banque?theme=eq.${encodeURIComponent(theme)}&sous_theme=eq.${encodeURIComponent(sous_theme)}&difficulte=eq.${encodeURIComponent(difficulte)}&statut=eq.actif&select=id,question,opts,answer,explication,tableau,figure`
+    const url = `${SUPABASE_URL}/rest/v1/questions_banque?theme=eq.${encodeURIComponent(theme)}&sous_theme=eq.${encodeURIComponent(sous_theme)}&difficulte=eq.${encodeURIComponent(difficulte)}&statut=eq.actif&select=id,question,opts,answer,explication,tableau,figure,famille`
     const res = await fetch(url, {
       headers: {
         'apikey': SUPABASE_KEY,
@@ -342,7 +343,8 @@ async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
       }
     }
 
-    const shuffled = [...candidats].sort(() => Math.random() - 0.5).slice(0, 5)
+    // Une question par famille tant que possible (voir lib/tirage-familles.js).
+    const shuffled = tirerParFamille(candidats, 5)
 
     // ── Marquage : tous les ids partageant l'énoncé servi ────────
     if (ctx && diag.actif) {

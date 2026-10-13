@@ -265,6 +265,8 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 
 **`node lib/questions-vues.manual-test.js`** — 107 assertions, faux Supabase en mémoire, les deux handlers exercés de bout en bout. Aucune dépendance, aucun accès réseau. À relancer après toute modification du mécanisme. Le fichier explique pourquoi il recopie les sources en `.mjs` dans un répertoire temporaire, et pourquoi il ne faut **pas** ajouter `"type": "module"` à `package.json` pour éviter ce détour.
 
+**`node lib/tirage-familles.manual-test.js`** — tirage des 5 questions d'un quiz avec au plus une question par famille (colonne `questions_banque.famille`), complété au hasard s'il y a moins de 5 familles ; une question sans famille se comporte comme avant. Aucune dépendance.
+
 ### Reste ouvert
 
 * **Découpage en tiers inopérant** (`api/examen.js`) : `acc`/`std`/`exp` sont découpés *après* `sort(() => Math.random() - 0.5)`, la stratification par difficulté ne produit rien. C'est aussi ce qui impose le seuil à 6 — le corriger rendrait le 9ᵉ examen sans recouvrement. À traiter avec le vrai sujet derrière : stratification réelle par difficulté, ou tirage aléatoire assumé.
