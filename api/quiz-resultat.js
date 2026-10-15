@@ -13,7 +13,14 @@ export default async function handler(req, res) {
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
 
   try {
-    const { user_id, email, prenom, theme, sous_theme, difficulte, questions, reponses, temps_secondes, source_questions, abandonne, client_key } = req.body
+    // navigator.sendBeacon (pagehide, quiz.html) ne peut pas poser d'en-tête
+    // Authorization et poste en Blob : le jeton arrive alors dans le corps
+    // (access_token), et le corps peut arriver sous forme de chaîne selon le
+    // Content-Type. Même validation du jeton dans les deux cas.
+    let corps = req.body
+    if (typeof corps === 'string') { try { corps = JSON.parse(corps) } catch (e) { corps = null } }
+    if (!corps || typeof corps !== 'object') return res.status(400).json({ error: 'Corps invalide' })
+    const { user_id, email, prenom, theme, sous_theme, difficulte, questions, reponses, temps_secondes, source_questions, abandonne, client_key } = corps
 
     if (!user_id || !theme || !difficulte) {
       return res.status(400).json({ error: 'Paramètres manquants' })
@@ -26,7 +33,8 @@ export default async function handler(req, res) {
     // loin). Même modèle que api/examen.js (verifierToken partagé,
     // lib/auth-token.js).
     const authHeader = req.headers['authorization'] || ''
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7)
+      : (typeof corps.access_token === 'string' ? corps.access_token : null)
     const userIdToken = await verifierToken(token, SUPABASE_URL, SERVICE_KEY)
     if (!userIdToken) return res.status(401).json({ error: 'Session invalide' })
     if (user_id !== userIdToken) return res.status(403).json({ error: 'Identité incohérente' })

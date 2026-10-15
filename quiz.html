@@ -130,6 +130,9 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .results-mention-sm { font-size:14px; font-weight:500; color:var(--ardoise); margin-bottom:2px; }
 .results-meta-sm { font-size:11px; color:var(--muted); }
 .results-saved { font-size:11px; color:var(--vert); margin-top:4px; }
+#quiz-area { transition: opacity .15s ease; }
+#quiz-area.masque { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { #quiz-area { transition: none; } }
 .prog-bloc { background:white; border-radius:12px; border:1px solid var(--border); padding:12px 16px; margin-bottom:10px; }
 .prog-titre { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
 .prog-msg { border-radius:8px; padding:9px 12px; margin-bottom:8px; font-size:13px; }
@@ -313,14 +316,19 @@ let questions=[], answers={}, submitted={}, saved=false
 // init()) — même raison que examen.html : sert dans sauvegarderAbandonne()
 // (pagehide), où on ne peut pas attendre un getSession() async.
 let accessToken=null
-// Corps de la dernière tentative de sauvegarde en échec (transitoire ou
-// définitif) — permet à reessayerSauvegarde() de rejouer exactement le même
-// envoi (même client_key, donc pas de doublon possible) sans redemander
-// l'état du quiz. Le STATUT ('ok'/'transitoire'/'definitif'), lui, n'est
-// jamais stocké dans une variable partagée : il est renvoyé directement par
-// tenterSauvegarde()/sauvegarder() à qui les appelle (cf. docs/TODO.md,
-// item 29).
-let dernierCorpsEchec=null
+// Fin de quiz (toutes les questions validées) : corpsResultat est construit
+// UNE fois, avec son client_key, puis rejoué tel quel par la sauvegarde, la
+// relance automatique, « Réessayer » et le sendBeacon de pagehide — un seul
+// client_key pour toutes les tentatives, donc jamais de doublon en base
+// (contrainte resultats_client_key_unique, db/policies.sql). Le STATUT
+// ('ok'/'transitoire'/'definitif'), lui, n'est jamais stocké dans une variable
+// partagée : il est renvoyé directement par tenterSauvegarde()/sauvegarder()
+// à qui les appelle (cf. docs/TODO.md, item 29).
+// quizTermine distingue un quiz fini d'un quiz abandonné : pagehide, logout et
+// les liens n'écrivent un abandon (score 0) que si quizTermine est faux.
+// resultatConfirme n'est vrai qu'après un 'ok' du serveur. promesseSauvegarde
+// : sauvegarde lancée par « Voir mon résultat », attendue avant de quitter.
+let corpsResultat=null, quizTermine=false, resultatConfirme=false, promesseSauvegarde=null, resultatAffiche=false
 let chronoInterval=null, chronoSecondes=0, sourceQuestions='ia'
 let quizEnCours=false
 let modeAffichage={}, charts={}
@@ -333,15 +341,47 @@ let deblocageCache={}
 // déportée sur pagehide, qui ne se déclenche que si la page se décharge
 // effectivement.
 window.addEventListener('beforeunload', function(e) {
-  if(quizEnCours&&!saved){e.preventDefault();e.returnValue='⚠️ Si vous quittez, votre quiz sera enregistré avec un score de 0.'}
+  if(abandonPossible()){e.preventDefault();e.returnValue='⚠️ Si vous quittez, votre quiz sera enregistré avec un score de 0.'}
+  // Quiz fini dont la sauvegarde est lancée mais pas confirmée : le résultat
+  // n'est pas perdu (pagehide tente un sendBeacon), mais mieux vaut laisser
+  // à l'élève la chance d'attendre la confirmation.
+  else if(quizTermine&&promesseSauvegarde&&!resultatConfirme){e.preventDefault();e.returnValue='⚠️ Ton résultat n\'est pas encore enregistré.'}
 })
 
 // pagehide : event.persisted=true signifie mise en cache bfcache (retour
 // possible via le bouton précédent), pas un vrai déchargement — ne pas
 // sauvegarder l'abandon dans ce cas.
 window.addEventListener('pagehide', function(e) {
-  if(!e.persisted&&quizEnCours&&!saved){sauvegarderAbandonne()}
+  if(e.persisted)return
+  if(abandonPossible()){sauvegarderAbandonne()}
+  else if(quizTermine&&!resultatConfirme){envoyerResultatBeacon()}
 })
+
+// Quiz commencé et pas fini : seul cas où une ligne « abandonné, 0/5 » est
+// légitime. Un quiz fini mais non enregistré (échec réseau, fermeture pendant
+// l'envoi) n'est JAMAIS un abandon : son vrai résultat part via
+// envoyerResultatBeacon().
+function abandonPossible(){return quizEnCours&&!quizTermine&&!saved}
+
+// Dernier recours à la fermeture de la page : renvoie le vrai résultat avec le
+// MÊME client_key que les tentatives précédentes (idempotent côté base : une
+// requête déjà arrivée ne sera pas doublée). navigator.sendBeacon ne permet
+// pas de poser l'en-tête Authorization : le jeton voyage dans le corps
+// (access_token), que api/quiz-resultat.js accepte en repli et valide de la
+// même façon. Pas de refresh possible à ce stade : un jeton expiré donne un
+// 401 et le résultat n'est pas récupéré (limite assumée). Repli sur fetch
+// keepalive si sendBeacon refuse l'envoi (file pleine, API absente).
+function envoyerResultatBeacon(){
+  if(!corpsResultat||!accessToken)return false
+  const charge=JSON.stringify({ ...corpsResultat, access_token: accessToken })
+  try{
+    if(navigator.sendBeacon&&navigator.sendBeacon('/api/quiz-resultat', new Blob([charge],{type:'application/json'})))return true
+  }catch(e){console.log('[beacon] sendBeacon a échoué :',e.message)}
+  try{
+    fetch('/api/quiz-resultat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${accessToken}`},body:JSON.stringify(corpsResultat),keepalive:true}).catch(function(){})
+    return true
+  }catch(e){console.log('[beacon] repli keepalive a échoué :',e.message);return false}
+}
 
 // Classification d'une erreur Supabase Auth — même règle que connexion.html
 // (estRefusAuthentification), dupliquée ici (cf. docs/TODO.md : même choix
@@ -408,13 +448,16 @@ async function appelQuizResultatApi(corps){
 // serveur — bouton "Réessayer", qui rejoue le même corps (même client_key,
 // donc pas de doublon possible).
 function rendreStatutEnregistrement(statut){
+  if(statut==='enCours'){
+    return '<div class="results-saved" style="color:var(--muted)">Enregistrement…</div>'
+  }
   if(statut==='transitoire'){
-    return '<div class="results-saved" style="color:var(--bordeaux);font-size:12px">⚠️ Résultat pas encore enregistré<br><button class="btn" style="margin-top:4px" onclick="reessayerSauvegarde()">Réessayer</button></div>'
+    return '<div class="results-saved" style="color:var(--bordeaux);font-size:12px">⚠️ Résultat pas encore enregistré (problème de connexion)<br><button class="btn" style="margin-top:4px" onclick="reessayerSauvegarde()">Réessayer</button></div>'
   }
   if(statut==='definitif'){
     return '<div class="results-saved" style="color:var(--bordeaux);font-size:12px">❌ Résultat non enregistré : ta session a expiré<br><button class="btn" style="margin-top:4px" onclick="meReconnecterDepuisQuiz()">Me reconnecter</button></div>'
   }
-  return '<div class="results-saved">✅ Résultats enregistrés</div>'
+  return '<div class="results-saved">✓ Résultat enregistré</div>'
 }
 
 // Met à jour en place le statut affiché (après un retry) sans reconstruire
@@ -427,13 +470,16 @@ function mettreAJourStatutEnregistrement(statut){
   if(zone) zone.innerHTML = rendreStatutEnregistrement(statut)
   const btnRonde = document.getElementById('btn-nouvelle-ronde')
   if(btnRonde) btnRonde.style.display = statut==='definitif' ? 'none' : ''
+  if(statut==='ok') afficherProgression()
+  else if(statut!=='enCours') afficherProgressionEnAttente(statut)
 }
 
 async function reessayerSauvegarde(){
-  if(!dernierCorpsEchec||saved)return
+  if(!corpsResultat||saved||resultatConfirme)return
   saved=true
-  const statut = await tenterSauvegarde(dernierCorpsEchec)
-  mettreAJourStatutEnregistrement(statut)
+  mettreAJourStatutEnregistrement('enCours')
+  promesseSauvegarde = tenterSauvegarde(corpsResultat)
+  mettreAJourStatutEnregistrement(await promesseSauvegarde)
 }
 
 // Purge locale — même méthode que examen.html (seReconnecter) et
@@ -459,7 +505,7 @@ async function meReconnecterDepuisQuiz(){
 }
 
 async function sauvegarderAbandonne() {
-  if(saved||!user||questions.length===0)return
+  if(saved||quizTermine||!user||questions.length===0)return
   try{
     await fetch('/api/quiz-resultat', {
       method: 'POST',
@@ -479,7 +525,13 @@ async function sauvegarderAbandonne() {
 }
 
 async function allerVersLien(e, url) {
-  if(quizEnCours&&!saved){
+  if(quizTermine&&!resultatConfirme){
+    e.preventDefault()
+    if(!(await peutQuitter()))return false
+    window.location.href=url
+    return false
+  }
+  if(abandonPossible()){
     e.preventDefault()
     const ok=confirm('⚠️ Tu as un quiz en cours. Si tu te déconnectes, il sera enregistré avec un score de 0. Continuer ?')
     if(!ok)return false
@@ -733,7 +785,8 @@ function setDiff(el,val){
 }
 
 async function logout(){
-  if(quizEnCours&&!saved){
+  if(!(await peutQuitter()))return
+  if(abandonPossible()){
     const ok=confirm('⚠️ Tu as un quiz en cours. Si tu te déconnectes, il sera enregistré avec un score de 0. Continuer ?')
     if(!ok)return
     await sauvegarderAbandonne()
@@ -747,10 +800,26 @@ function demarrerChrono(){chronoSecondes=0;chronoInterval=setInterval(()=>{chron
 function arreterChrono(){clearInterval(chronoInterval)}
 function formatTemps(secondes){const m=Math.floor(secondes/60);const s=secondes%60;if(m===0)return `${s} sec`;return `${m} min ${s} sec`}
 
+// Préchauffage des fonctions serverless : un OPTIONS part au démarrage du quiz
+// vers les deux endpoints sollicités à la fin (enregistrement du résultat,
+// récap à la déconnexion). Leurs handlers répondent 200 avant tout travail
+// (api/quiz-resultat.js, api/email.js) : le but est que l'instance soit déjà
+// chaude quand l'élève termine, pas le résultat de l'appel. Constaté sur
+// iPhone (15/10/2026) : le 1ᵉʳ quiz met 3-4 s à confirmer l'enregistrement
+// (démarrage à froid), le suivant moins d'une seconde. Fire-and-forget, erreurs
+// ignorées, jamais d'effet sur le quiz.
+function prechaufferFonctions(){
+  ;['/api/quiz-resultat','/api/email'].forEach(function(url){
+    try{ fetch(url,{method:'OPTIONS'}).catch(function(){}) }catch(e){}
+  })
+}
+
 async function generer() {
+  prechaufferFonctions()
   const btn=document.getElementById('gen-btn')
   btn.disabled=true;btn.textContent='⏳ Chargement des questions...'
   questions=[];answers={};submitted={};saved=false;modeAffichage={};charts={}
+  corpsResultat=null;quizTermine=false;resultatConfirme=false;promesseSauvegarde=null;resultatAffiche=false
   arreterChrono()
   document.getElementById('quiz-area').innerHTML='<div class="loader">⏳ Chargement des questions…</div>'
   try{
@@ -1093,16 +1162,8 @@ function renderQuiz() {
   const area=document.getElementById('quiz-area')
   const nbDone=Object.keys(submitted).length
   const toutFini=nbDone===questions.length&&questions.length>0
-  if(toutFini){
-    let html='';const letters=['A','B','C','D'];const i=questions.length-1;const q=questions[i];const sel=answers[i],estAucune=submitted[i]==='aucune'
-    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${formaterVVF(adapterEnonce(q,i))}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
-    q.opts.forEach((opt,j)=>{let cls='option';if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong';html+=`<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`})
-    if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`}
-    else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`}
-    html+='</div>';area.innerHTML=html;return
-  }
   let html=''
-  html+=`<div class="quiz-en-cours">⚠️ Quiz en cours — Ne quitte pas la page !</div>`
+  if(!toutFini)html+=`<div class="quiz-en-cours">⚠️ Quiz en cours — Ne quitte pas la page !</div>`
   html+=`<div class="quiz-progress"><div class="progress-steps">${questions.map((_,i)=>{let cls='progress-step';if(submitted[i]!==undefined)cls+=' done';else if(i===nbDone)cls+=' current';return `<div class="${cls}"></div>`}).join('')}</div><span class="progress-label">Question ${Math.min(nbDone+1,questions.length)}/${questions.length}</span></div>`
   const letters=['A','B','C','D']
   questions.forEach((q,i)=>{
@@ -1114,21 +1175,26 @@ function renderQuiz() {
     else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`}
     html+='</div>'
   })
+  if(toutFini)html+=`<button class="btn btn-primary btn-full" id="btn-voir-resultat" style="margin-bottom:14px" onclick="voirResultat()" ${resultatAffiche?'disabled':''}>Voir mon résultat 🎯</button>`
   area.innerHTML=html
 }
 
-async function renderResultats() {
-  const area = document.getElementById('quiz-area')
+function prefereMoinsDeMouvement(){
+  try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches }catch(e){ return false }
+}
+
+// Même formule que le recalcul de api/quiz-resultat.js (réponse numérique égale
+// à q.answer) : le score affiché est celui qui sera enregistré.
+function calculerScore() {
   const nbOk = Object.values(submitted).filter(v => v === 'correct').length
-  const pct = Math.round((nbOk / questions.length) * 100)
-  let mention = '', couleur = ''
-  if(pct >= 80){ mention = '🌟 Excellent !'; couleur = '#1f7a45' }
-  else if(pct >= 60){ mention = '👍 Bien !'; couleur = 'var(--marine)' }
-  else if(pct >= 40){ mention = '💪 Continue !'; couleur = '#8a6416' }
-  else { mention = '📚 À retravailler'; couleur = 'var(--bordeaux)' }
-  const statutSauvegarde = await sauvegarder()
-  delete deblocageCache[cleDeblocage(theme,sousTheme)]
-  const d = await verifierDeblocage(theme, sousTheme)
+  return { nbOk, pct: Math.round((nbOk / questions.length) * 100) }
+}
+
+// Message de progression + barres, à partir de la lecture de la vue
+// niveaux_sous_theme. Appelé seulement APRÈS confirmation de l'enregistrement :
+// avant, la vue ne contient pas encore cette session et les compteurs seraient
+// périmés.
+function construireProgression(d, pct) {
   let progMsg = ''
   if(pct >= SEUIL_PCT) {
     if(diff === 'facile' && d.sessionsFacile === SEUIL_SESSIONS) {
@@ -1167,23 +1233,7 @@ async function renderResultats() {
   const ligneDifficile = d.difficile
     ? `<div class="prog-barre-wrap"><div class="prog-barre-fill" style="width:${Math.min(Math.round((d.sessionsDifficile/SEUIL_SESSIONS)*100),100)}%;background:#D4A23C"></div></div><span class="prog-reste" style="color:var(--ardoise)">${sessionsDifficileAffiche}/${SEUIL_SESSIONS}</span>`
     : `<span class="prog-reste" style="color:var(--muted);flex:1;text-align:left">bloqué</span>`
-  const themeCourt = THEMES.find(t => t.value === theme)?.label || theme
-  let html = `
-    <div class="results-bande">
-      <div class="results-score-col">
-        <div class="results-score-num">${nbOk}/${questions.length}</div>
-        <div class="results-pct-sm" style="color:${couleur}">${pct}%</div>
-      </div>
-      <div class="results-sep"></div>
-      <div class="results-detail">
-        <div class="results-mention-sm">${mention}</div>
-        <div class="results-meta-sm">${themeCourt} · ${diff} · ${formatTemps(chronoSecondes)}</div>
-        <div id="statut-enregistrement">${rendreStatutEnregistrement(statutSauvegarde)}</div>
-      </div>
-    </div>
-    <div class="prog-bloc">
-      <div class="prog-titre">Progression — ${themeCourt}</div>
-      ${progMsg}
+  return `${progMsg}
       <div class="prog-ligne">
         <span class="prog-label">Moyen</span>
         ${ligneMoyen}
@@ -1191,10 +1241,87 @@ async function renderResultats() {
       <div class="prog-ligne">
         <span class="prog-label">Difficile</span>
         ${ligneDifficile}
+      </div>`
+}
+
+async function afficherProgression() {
+  delete deblocageCache[cleDeblocage(theme,sousTheme)]
+  const d = await verifierDeblocage(theme, sousTheme)
+  const zone = document.getElementById('prog-contenu')
+  if(zone) zone.innerHTML = construireProgression(d, calculerScore().pct)
+}
+
+function afficherProgressionEnAttente(statut) {
+  const zone = document.getElementById('prog-contenu')
+  if(!zone) return
+  zone.innerHTML = statut==='definitif'
+    ? '<div class="prog-msg info">Progression indisponible : ton résultat n\'a pas pu être enregistré.</div>'
+    : '<div class="prog-msg info">Ta progression sera mise à jour dès que ton résultat sera enregistré.</div>'
+}
+
+// Compteur animé du score (≈ 600 ms). Le texte final est posé tout de suite
+// pour les lecteurs d'écran (aria-label) et si l'animation est inutile.
+function animerScore(el, cible, total) {
+  if(!el) return
+  el.setAttribute('aria-label', `${cible} sur ${total}`)
+  if(cible === 0 || prefereMoinsDeMouvement()) { el.textContent = `${cible}/${total}`; return }
+  const debut = performance.now(), duree = 600
+  el.textContent = `0/${total}`
+  function etape(t) {
+    const k = Math.min((t - debut) / duree, 1)
+    el.textContent = `${Math.round(cible * k)}/${total}`
+    if(k < 1) requestAnimationFrame(etape)
+  }
+  requestAnimationFrame(etape)
+}
+
+// Clic sur « Voir mon résultat » : le score s'affiche immédiatement (calculé
+// ici), l'enregistrement se fait ensuite en arrière-plan.
+async function voirResultat() {
+  if(resultatAffiche || !quizTermine) return
+  resultatAffiche = true
+  const btn = document.getElementById('btn-voir-resultat')
+  if(btn) btn.disabled = true
+  const area = document.getElementById('quiz-area')
+  const mouvement = !prefereMoinsDeMouvement()
+  if(mouvement) { area.classList.add('masque'); await new Promise(function(r){ setTimeout(r, 160) }) }
+  renderResultats()
+  requestAnimationFrame(function(){
+    area.classList.remove('masque')
+    area.scrollIntoView({ behavior: mouvement ? 'smooth' : 'auto', block: 'start' })
+  })
+  const statut = await lancerSauvegarde()
+  mettreAJourStatutEnregistrement(statut)
+}
+
+function renderResultats() {
+  const area = document.getElementById('quiz-area')
+  const { nbOk, pct } = calculerScore()
+  let mention = '', couleur = ''
+  if(pct >= 80){ mention = '🌟 Excellent !'; couleur = '#1f7a45' }
+  else if(pct >= 60){ mention = '👍 Bien !'; couleur = 'var(--marine)' }
+  else if(pct >= 40){ mention = '💪 Continue !'; couleur = '#8a6416' }
+  else { mention = '📚 À retravailler'; couleur = 'var(--bordeaux)' }
+  const themeCourt = THEMES.find(t => t.value === theme)?.label || theme
+  let html = `
+    <div class="results-bande">
+      <div class="results-score-col">
+        <div class="results-score-num" id="score-num">${nbOk}/${questions.length}</div>
+        <div class="results-pct-sm" style="color:${couleur}">${pct}%</div>
+      </div>
+      <div class="results-sep"></div>
+      <div class="results-detail">
+        <div class="results-mention-sm">${mention}</div>
+        <div class="results-meta-sm">${themeCourt} · ${diff} · ${formatTemps(chronoSecondes)}</div>
+        <div id="statut-enregistrement">${rendreStatutEnregistrement('enCours')}</div>
       </div>
     </div>
+    <div class="prog-bloc">
+      <div class="prog-titre">Progression — ${themeCourt}</div>
+      <div id="prog-contenu"><div class="prog-msg info">Ta progression apparaîtra ici dans un instant.</div></div>
+    </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
-      <button class="btn btn-green btn-full" id="btn-nouvelle-ronde" onclick="nouvelleRonde()" ${statutSauvegarde==='definitif'?'style="display:none"':''}>🔄 Nouvelle ronde</button>
+      <button class="btn btn-green btn-full" id="btn-nouvelle-ronde" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
       <button class="btn btn-outline btn-full" onclick="terminer()">🚪 Terminer et se déconnecter</button>
     </div>
     <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--ardoise);padding:0 4px">📋 Récapitulatif</div>`
@@ -1217,8 +1344,9 @@ async function renderResultats() {
     html += '</div>'
   })
   area.innerHTML = html
-  setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
+  animerScore(document.getElementById('score-num'), nbOk, questions.length)
 }
+
 
 // Coeur partagé par sauvegarder() et reessayerSauvegarde() — renvoie le
 // statut directement à l'appelant (jamais de variable partagée pour le
@@ -1231,25 +1359,25 @@ async function renderResultats() {
 async function tenterSauvegarde(corps){
   try{
     const { res, refusConfirme } = await appelQuizResultatApi(corps)
-    if(res.status===403){saved=false;dernierCorpsEchec=corps;return 'definitif'}
+    if(res.status===403){saved=false;return 'definitif'}
     if(res.status===401){
-      saved=false;dernierCorpsEchec=corps
+      saved=false
       return refusConfirme===true ? 'definitif' : 'transitoire'
     }
     const data = await res.json()
-    if(data.error){console.log('Erreur sauvegarde:',data.error);saved=false;dernierCorpsEchec=corps;return 'transitoire'}
+    if(data.error){console.log('Erreur sauvegarde:',data.error);saved=false;return 'transitoire'}
     delete deblocageCache[cleDeblocage(theme,sousTheme)]
-    dernierCorpsEchec=null
+    resultatConfirme=true
     return 'ok'
-  }catch(e){console.log('Erreur sauvegarde:',e.message);saved=false;dernierCorpsEchec=corps;return 'transitoire'}
+  }catch(e){console.log('Erreur sauvegarde:',e.message);saved=false;return 'transitoire'}
 }
 
-async function sauvegarder() {
-  if(saved||!user||questions.length===0)return 'ok'
-  saved=true // verrou optimiste : posé avant le fetch pour bloquer tout appel concurrent ; relâché dans tenterSauvegarde() en cas d'échec
+// Construit une seule fois, à la validation de la dernière question (cf.
+// valider()) : le client_key est ensuite partagé par toutes les tentatives.
+function construireCorpsResultat() {
   const reponsesEnvoyees = {}
   Object.keys(submitted).forEach(i => { reponsesEnvoyees[i] = answers[i] })
-  const corps = {
+  return {
     user_id: user.id, email: user.email, prenom,
     theme, sous_theme: sousTheme, difficulte: diff,
     questions, reponses: reponsesEnvoyees,
@@ -1257,11 +1385,51 @@ async function sauvegarder() {
     source_questions: sourceQuestions,
     client_key: crypto.randomUUID() // clé d'idempotence : ferme le TOCTOU via la contrainte unique côté base
   }
-  return await tenterSauvegarde(corps)
+}
+
+async function sauvegarder() {
+  if(saved||!user||!corpsResultat)return 'ok'
+  saved=true // verrou optimiste : posé avant le fetch pour bloquer tout appel concurrent ; relâché dans tenterSauvegarde() en cas d'échec
+  return await tenterSauvegarde(corpsResultat)
+}
+
+const DELAI_RELANCE_MS = 1500
+
+// Enregistrement en arrière-plan : un échec transitoire (réseau, 5xx) déclenche
+// UNE relance silencieuse, avec le même corps donc le même client_key, avant
+// que l'élève ne voie « Réessayer ». 'definitif' (session expirée) n'est jamais
+// relancé : rejouer ne changerait rien.
+async function sauvegarderAvecRelance() {
+  let statut = await sauvegarder()
+  if(statut==='transitoire'){
+    await new Promise(function(r){ setTimeout(r, DELAI_RELANCE_MS) })
+    saved=true
+    statut = await tenterSauvegarde(corpsResultat)
+  }
+  return statut
+}
+
+function lancerSauvegarde() {
+  if(!promesseSauvegarde) promesseSauvegarde = sauvegarderAvecRelance()
+  return promesseSauvegarde
+}
+
+// Avant de quitter la page par un chemin applicatif (déconnexion, lien du
+// menu, nouvelle ronde) : un quiz fini mais non enregistré est enregistré
+// d'abord. Si la sauvegarde échoue, l'élève décide en connaissance de cause —
+// jamais d'abandon à 0 écrit à la place du vrai résultat.
+async function peutQuitter() {
+  if(!quizTermine||resultatConfirme)return true
+  if(corpsResultat&&!promesseSauvegarde) lancerSauvegarde()
+  try{ await promesseSauvegarde }catch(e){}
+  if(resultatConfirme)return true
+  return confirm('⚠️ Ton résultat n\'a pas pu être enregistré. Si tu continues, il sera perdu. Continuer ?')
 }
 
 async function nouvelleRonde(){
+  if(!(await peutQuitter()))return
   questions=[];answers={};submitted={};saved=false;modeAffichage={};charts={}
+  corpsResultat=null;quizTermine=false;resultatConfirme=false;promesseSauvegarde=null;resultatAffiche=false
   deblocageCache={}
   quizEnCours=false;arreterChrono()
   document.getElementById('quiz-area').innerHTML=''
@@ -1269,6 +1437,7 @@ async function nouvelleRonde(){
 }
 
 async function terminer(){
+  if(!(await peutQuitter()))return
   await envoyerRecapJournalier()
   await sb.auth.signOut()
   window.location.href='index.html'
@@ -1283,8 +1452,18 @@ async function valider(qi) {
   submitted[qi] = sel === 'aucune' ? 'aucune' : (sel === questions[qi].answer ? 'correct' : 'wrong')
   const toutFini = Object.keys(submitted).length === questions.length
   if(toutFini) {
+    // Dernière question : même comportement que les précédentes (l'explication
+    // s'affiche), puis « Voir mon résultat ». Le temps est figé ici, avant la
+    // lecture de l'explication ; le corps (et son client_key) est construit une
+    // seule fois pour toutes les tentatives d'envoi.
     arreterChrono()
-    await renderResultats()
+    quizTermine = true
+    corpsResultat = construireCorpsResultat()
+    renderQuiz()
+    setTimeout(() => {
+      const btn = document.getElementById('btn-voir-resultat')
+      if(btn) btn.scrollIntoView({ behavior: prefereMoinsDeMouvement() ? 'auto' : 'smooth', block: 'center' })
+    }, 300)
   } else {
     renderQuiz()
     setTimeout(() => {
