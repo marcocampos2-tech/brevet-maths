@@ -800,7 +800,22 @@ function demarrerChrono(){chronoSecondes=0;chronoInterval=setInterval(()=>{chron
 function arreterChrono(){clearInterval(chronoInterval)}
 function formatTemps(secondes){const m=Math.floor(secondes/60);const s=secondes%60;if(m===0)return `${s} sec`;return `${m} min ${s} sec`}
 
+// Préchauffage des fonctions serverless : un OPTIONS part au démarrage du quiz
+// vers les deux endpoints sollicités à la fin (enregistrement du résultat,
+// récap à la déconnexion). Leurs handlers répondent 200 avant tout travail
+// (api/quiz-resultat.js, api/email.js) : le but est que l'instance soit déjà
+// chaude quand l'élève termine, pas le résultat de l'appel. Constaté sur
+// iPhone (15/10/2026) : le 1ᵉʳ quiz met 3-4 s à confirmer l'enregistrement
+// (démarrage à froid), le suivant moins d'une seconde. Fire-and-forget, erreurs
+// ignorées, jamais d'effet sur le quiz.
+function prechaufferFonctions(){
+  ;['/api/quiz-resultat','/api/email'].forEach(function(url){
+    try{ fetch(url,{method:'OPTIONS'}).catch(function(){}) }catch(e){}
+  })
+}
+
 async function generer() {
+  prechaufferFonctions()
   const btn=document.getElementById('gen-btn')
   btn.disabled=true;btn.textContent='⏳ Chargement des questions...'
   questions=[];answers={};submitted={};saved=false;modeAffichage={};charts={}
@@ -1303,7 +1318,7 @@ function renderResultats() {
     </div>
     <div class="prog-bloc">
       <div class="prog-titre">Progression — ${themeCourt}</div>
-      <div id="prog-contenu"><div class="prog-msg info">Calcul de ta progression…</div></div>
+      <div id="prog-contenu"><div class="prog-msg info">Ta progression apparaîtra ici dans un instant.</div></div>
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
       <button class="btn btn-green btn-full" id="btn-nouvelle-ronde" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
