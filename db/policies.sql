@@ -678,3 +678,25 @@ revoke execute on function public.verifier_email_parent(text) from public, anon,
 alter table profils add column if not exists email_actif boolean not null default true;
 -- Contrainte NOT NULL appliquée en base le 05/10/2026.
 alter table profils alter column email_actif set not null;
+
+-- ---------------------------------------------------------------------------
+-- resultats.client_key — idempotence de l'enregistrement d'un quiz
+-- (existe en production, vérifié par CM le 15/10/2026 ; versionnée ici)
+-- ---------------------------------------------------------------------------
+-- api/quiz-resultat.js insère avec `Prefer: resolution=ignore-duplicates`
+-- (INSERT ... ON CONFLICT DO NOTHING) : cette contrainte est ce qui rend
+-- atomique la protection contre les doubles envois. quiz.html construit un
+-- client_key unique par quiz terminé et le réutilise pour la sauvegarde, la
+-- relance automatique, « Réessayer » et le sendBeacon de pagehide : plusieurs
+-- requêtes pour un même quiz ne produisent qu'une ligne. NULL admis (un
+-- UNIQUE ignore les NULL) : les anciennes lignes et les clients sans clé
+-- restent possibles, couverts seulement par le contrôle applicatif de 5 s.
+-- Définition reconstituée d'après le nom et l'usage ; à confirmer par
+-- `select pg_get_constraintdef(oid) from pg_constraint where conname =
+-- 'resultats_client_key_unique';`. Idempotent : sans effet sur l'état actuel.
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'resultats_client_key_unique') then
+    alter table resultats add constraint resultats_client_key_unique unique (client_key);
+  end if;
+end $$;
