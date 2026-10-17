@@ -1,0 +1,46 @@
+/* css/niveaux.css — styles du bloc « Niveau atteint par sous-thème »
+   (js/niveaux.js). Autonome : aucune variable de la page hôte. Les polices
+   'Inter' et 'IBM Plex Mono' sont celles chargées par les pages hôtes.
+   Chargement : <link rel="stylesheet" href="/css/niveaux.css?v=1"> */
+:root {
+  --niv-marine: #1B2A4A;
+  --niv-dore: #D4A23C; --niv-dore-light: #FBF4E4;
+  --niv-creme: #FAF9F6; --niv-ardoise: #41454C; --niv-muted: #6B6E73;
+  --niv-border: #E4E1D8;
+  --niv-orange: #E8892B; --niv-orange-fonce: #8A3F05;
+}
+.niv-resume { font-size: 12px; color: var(--niv-muted); font-weight: 500; text-transform: none; letter-spacing: 0; font-family: 'Inter', sans-serif; white-space: nowrap; }
+.niv-tete { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 1rem; }
+.niv-titre { font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; color: var(--niv-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0; }
+.niv-bloc { border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; border: 1px solid transparent; }
+.niv-bloc-titre { display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; margin-bottom: 8px; }
+.niv-ico { font-size: 14px; line-height: 1; }
+.niv-bloc ul { list-style: none; }
+.niv-bloc li { font-size: 13px; line-height: 1.5; color: var(--niv-ardoise); padding: 3px 0; overflow-wrap: break-word; hyphens: auto; }
+.niv-bloc li strong { font-weight: 600; }
+.niv-bloc-acquis { background: #EAF6EF; border-color: #BFE3CD; }
+.niv-bloc-acquis .niv-bloc-titre { color: #1f7a45; }
+.niv-bloc-prog { background: var(--niv-dore-light); border-color: #EBD9A8; }
+.niv-bloc-prog .niv-bloc-titre { color: #8a6416; }
+.niv-bloc-surv { background: #FFF1E3; border-color: var(--niv-orange); }
+.niv-bloc-surv .niv-bloc-titre { color: var(--niv-orange-fonce); }
+.niv-aide { font-size: 12.5px; color: var(--niv-ardoise); line-height: 1.5; margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(232,137,43,.35); }
+.niv-aide a { color: var(--niv-marine); font-weight: 500; white-space: nowrap; }
+.niv-detail { margin-top: 14px; }
+.niv-detail summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--niv-marine); padding: 4px 0; }
+.niv-wrap { margin-top: 10px; border: 1px solid var(--niv-border); border-radius: 10px; overflow: hidden; }
+.niv-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.niv-table th { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500; color: var(--niv-muted); text-transform: uppercase; letter-spacing: .03em; text-align: center; padding: 8px 2px; border-bottom: 1px solid var(--niv-border); }
+.niv-table th.niv-col-nom { width: 31%; text-align: left; padding-left: 10px; }
+.niv-table td { padding: 7px 2px; border-bottom: 1px solid var(--niv-border); vertical-align: middle; text-align: center; font-size: 11px; line-height: 1.3; }
+.niv-table tr:last-child td { border-bottom: none; }
+.niv-table td.niv-nom { text-align: left; padding-left: 10px; font-size: 12.5px; font-weight: 600; color: var(--niv-ardoise); overflow-wrap: break-word; hyphens: auto; }
+.niv-cell { border-radius: 8px; padding: 6px 3px; margin: 0 2px; }
+.niv-c-acquis { background: #EAF6EF; color: #1f7a45; font-weight: 600; }
+.niv-c-encours { background: var(--niv-dore-light); color: #8a6416; }
+.niv-c-surv { background: #FFF1E3; color: var(--niv-orange-fonce); border: 1px solid var(--niv-orange); font-weight: 600; }
+.niv-c-jamais, .niv-c-verrou { background: var(--niv-creme); color: var(--niv-muted); }
+.niv-barre { height: 4px; background: rgba(0,0,0,.08); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+.niv-barre > span { display: block; height: 100%; background: var(--niv-dore); border-radius: 2px; }
+.niv-c-surv .niv-barre > span { background: var(--niv-orange); }
+.niv-legende { font-size: 11.5px; color: var(--niv-muted); margin-top: 10px; line-height: 1.5; }
