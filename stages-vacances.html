@@ -9,7 +9,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
+.banner-gratuit { text-align: center; margin: 0 auto 28px; max-width: 520px; background: var(--light-bg); border: 2px solid var(--bordeaux); border-radius: 10px; padding: 20px 24px; }
+.banner-gratuit-tag { font-size: 14px; font-weight: 600; color: var(--bordeaux); text-transform: uppercase; letter-spacing: 0.5px; }
+.banner-gratuit-detail { font-size: 17px; font-weight: 500; color: var(--navy); line-height: 1.4; margin-top: 6px; }
 .prix-stage { text-align: center; margin: 0 auto 24px; }
+.prix-stage-label { font-size: 12px; color: #6B7280; margin-bottom: 4px; }
 .prix-stage-montant { font-family: 'Newsreader', serif; font-size: 22px; color: var(--navy); }
 .prix-stage-montant span { font-size: 13px; color: #6B7280; font-family: 'Inter', sans-serif; }
 .prix-stage-detail { font-size: 11px; color: #9CA3AF; margin-top: 2px; }
@@ -73,7 +77,13 @@
 </section>
 
 <section>
+  <div class="banner-gratuit">
+    <div class="banner-gratuit-tag">Première édition gratuite</div>
+    <div class="banner-gratuit-detail">Lundi 26 et mercredi 28 octobre<br>18h–19h30 · en visio</div>
+  </div>
+
   <div class="prix-stage">
+    <div class="prix-stage-label">Tarif des stages suivants</div>
     <div class="prix-stage-montant">120€</div>
     <div class="prix-stage-detail">6h au total, soit 20€/h</div>
   </div>
@@ -81,7 +91,7 @@
   <div class="badges-row">
     <span class="badge-pill">5 élèves maximum</span>
     <span class="badge-pill">Visio</span>
-    <span class="badge-pill">Lundi · Mercredi · Vendredi · 2h/jour</span>
+    <span class="badge-pill">Stages de 3 jours : lundi · mercredi · vendredi · 2h/jour</span>
   </div>
 
   <div id="stages-area">
