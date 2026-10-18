@@ -39,6 +39,7 @@ Maquette validée, non implémentée : icônes 3 étapes "Comment ça marche", i
 Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'échéance. Code fait et déployé (16/08) : bandeau, sélecteur d'offre, détail récap masqués via `enPeriodeGratuite()`. **Point ouvert** : vérifier au 01/12/2026 que Stripe est opérationnel (SIRET, mode live) avant réactivation automatique. Rappel agenda mi-novembre déjà posé. Vérifier la formulation marketing validée le 13/08 reprise partout (pas que sur le flyer).
 
 **Distinction gratuit/abonnement — à appliquer avant le 01/12/2026** (gating email fait ; reste à construire, décisions du 13/08 et du 12/10/2026) :
+- statut Accompagné : brancher `estAccompagne` (`lib/gating.js`) et `est_accompagne` (SQL) sur les restrictions ci-dessous (lot 2) ;
 - bilan 21 jours : le premier complet, les suivants tronqués avec incitation ;
 - tableau de bord : 7 jours visibles, 14 et 21 jours verrouillés ;
 - export PDF : visible mais verrouillé ;
