@@ -36,19 +36,11 @@ Maquette validée, non implémentée : icônes 3 étapes "Comment ça marche", i
 
 ## ⚠️ Échéance critique — Bascule décembre 2026
 
-Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'échéance. Code fait et déployé (16/08) : bandeau, sélecteur d'offre, détail récap masqués via `enPeriodeGratuite()`. **Point ouvert** : vérifier au 01/12/2026 que Stripe est opérationnel (SIRET, mode live) avant réactivation automatique. Rappel agenda mi-novembre déjà posé. Vérifier la formulation marketing validée le 13/08 reprise partout (pas que sur le flyer).
+Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'échéance. Code fait et déployé (16/08) : encart d'abonnement, sélecteur d'offre, détail récap masqués via `enPeriodeGratuite()`. **Point ouvert** : vérifier au 01/12/2026 que Stripe est opérationnel (SIRET, mode live) avant réactivation automatique. Rappel agenda mi-novembre déjà posé. Vérifier la formulation marketing validée le 13/08 reprise partout (pas que sur le flyer).
 
-**Distinction gratuit/abonnement — à appliquer avant le 01/12/2026** (gating email fait ; reste à construire, décisions du 13/08 et du 12/10/2026) :
-- statut Accompagné : brancher `estAccompagne` (`lib/gating.js`) et `est_accompagne` (SQL) sur les restrictions ci-dessous (lot 2) ;
-- bilan 21 jours : le premier complet, les suivants tronqués avec incitation ;
-- tableau de bord : 7 jours visibles, 14 et 21 jours verrouillés ;
-- export PDF : visible mais verrouillé ;
-- examen blanc en ligne : verrouillé ;
-- bloc « Niveau atteint par sous-thème » de `suivi-parent.html` : visible mais verrouillé pour le gratuit (décision du 12/10/2026).
-
-**Condition de vérité du récap journalier** : sa phrase « Le détail par sous-thème est disponible avec l'offre Accompagné » n'est vraie qu'une fois le verrouillage du bloc « Niveau atteint par sous-thème » en place ; sinon un parent gratuit trouverait ce détail librement accessible et l'incitation serait fausse.
-
-**Bandeau commercial de `suivi-parent.html`** (~l.557) : il promet « un e-mail à chaque déconnexion, avec un récapitulatif détaillé par sous-thème et une alerte si des difficultés sont détectées » — faux avec le nouveau récap (constat sans verdict, aucune alerte). À réécrire avant le 01/12.
+**Distinction gratuit/abonnement — à appliquer avant le 01/12/2026** (gating email et verrous du lot 2 faits ; reste à construire, décisions du 13/08 et du 12/10/2026) :
+- lot 3 : brancher `estAccompagne` (`lib/gating.js`) sur les emails et le bilan 21 jours (le premier complet, les suivants tronqués avec incitation) ;
+- vérifier en conditions réelles les verrous du lot 2 (page parent, examen blanc) en aperçu avec `?simuler=apres-bascule`, puis après la bascule.
 
 ---
 
@@ -108,7 +100,6 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     Sur les trois, seule `historique_bilans` a été vérifiée (17/09/2026) : état voulu, accès serveur uniquement (`api/cron-rappel.js`, clé service, qui contourne RLS). `rappels_envoyes` et `email_rate_limit` restent à vérifier — probablement le même cas, non confirmé.
 
     **Mise à jour (04/10/2026)** : pour `historique_bilans`, les droits de table sont désormais retirés à `anon` et `authenticated` (`REVOKE ALL`) en plus de la RLS sans policy — documenté dans `db/policies.sql`. `rappels_envoyes` et `email_rate_limit` : toujours non vérifiés.
-16. Bandeau commercial `suivi-parent.html` vend "résultat examen blanc en ligne" — jamais implémenté, masqué jusqu'au 01/12
 17. Deux seuils désalignés "abordé" (1 session) vs "À découvrir" (<3 sessions) — assumé, pas un bug
 18. Lien "Offres" corrigé (`#quiz`→`#offres`) sur `index.html`/`tarifs.html` (09/09) ; même décalage nom/cible jamais corrigé sur `stages-vacances.html`, `connexion.html`, `cours-particuliers.html`, `abonnement-confirme.html` (liens vers `index.html#quiz`)
 19. **Chantier RGPD suppression des comptes — NON CADRÉ** (constat du 15/09/2026). La contrainte `rappels_envoyes_user_id_fkey` sans `ON DELETE CASCADE` n'est pas un chantier isolé mais le symptôme d'un chantier jamais conçu.
