@@ -81,7 +81,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .hist-score.abandon { color: var(--muted); font-family:'Inter',sans-serif; font-size: 13px; font-weight: 600; }
 .hist-ratees { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .hist-ratees-label { font-size: 11px; color: var(--bordeaux); font-weight: 600; margin-bottom: 5px; }
-.hist-ratee { font-size: 12px; color: var(--muted); padding: 2px 0; }
+.hist-ratee { font-size: 12px; color: var(--muted); padding: 2px 0; min-width: 0; overflow-wrap: anywhere; }
 @media (max-width:480px){
   .container{padding:1rem 1rem 2rem}
   .niv-table td{font-size:11px}
@@ -302,7 +302,9 @@ function renderDashboard(niveaux) {
 // Libellé d'une question ratée : retire le préfixe « thème — » (cf. api/quiz-resultat.js)
 // et ne laisse pas un énoncé tronqué à 40 caractères s'arrêter en plein mot
 // (un dernier morceau qui n'est pas un mot est conservé).
-// Toute entrée hors de ce format est rendue telle quelle.
+// Un préfixe « X — » est aussi retiré quand X est l'un des domaines de
+// SOUS_THEMES (js/catalogue.js), même si r.theme diffère ; jamais un « — »
+// ailleurs dans le texte. Toute entrée hors de ce format est rendue telle quelle.
 function libelleRatee(q, theme) {
   q = String(q == null ? '' : q)
   var marque = ''
@@ -311,7 +313,12 @@ function libelleRatee(q, theme) {
     q = q.slice(marque.length)
   }
   var prefixe = theme ? theme + ' — ' : ''
-  if (prefixe && q.indexOf(prefixe) === 0) q = q.slice(prefixe.length)
+  if (prefixe && q.indexOf(prefixe) === 0) {
+    q = q.slice(prefixe.length)
+  } else {
+    var domaine = Object.keys(SOUS_THEMES).find(function(d) { return q.indexOf(d + ' — ') === 0 })
+    if (domaine) q = q.slice(domaine.length + 3)
+  }
   if (q.length === 40) {
     // Le dernier morceau n'est retiré que s'il est un mot (lettres seules) :
     // un chiffre, un symbole ou une expression (« = 0 ») est gardé entier.
@@ -320,6 +327,23 @@ function libelleRatee(q, theme) {
     q += '…'
   }
   return marque + q
+}
+
+// Libellés des questions ratées d'une session. Détail non vide
+// (questions_ratees_detail, cf. CLAUDE.md) : énoncé complet, dans l'ordre du
+// détail ; sinon (NULL, [] ou ancienne session) : questions_ratees tronquées.
+function libellesRatees(r) {
+  var d = r.questions_ratees_detail
+  if (Array.isArray(d) && d.length) {
+    return d.map(function(e) {
+      e = e || {}
+      return (e.aucune_idee === true ? '[Aucune idée] ' : '') + String(e.enonce == null ? '' : e.enonce)
+    })
+  }
+  if (r.questions_ratees && r.questions_ratees.length) {
+    return r.questions_ratees.map(function(q) { return libelleRatee(q, r.theme) })
+  }
+  return []
 }
 
 function renderHistorique(rows) {
@@ -346,8 +370,9 @@ function renderHistorique(rows) {
       var pct = Math.round((r.score / r.total) * 100)
       var statut = getStatut(pct)
       scoreHtml = '<div class="hist-score ' + statut.classe + '">' + esc(r.score) + '/' + esc(r.total) + '</div>'
-      if (r.questions_ratees && r.questions_ratees.length) {
-        ratees = '<div class="hist-ratees"><div class="hist-ratees-label">Question' + (r.questions_ratees.length > 1 ? 's ratées' : ' ratée') + '</div>' + r.questions_ratees.map(function(q) { return '<div class="hist-ratee">• ' + esc(libelleRatee(q, r.theme)) + '</div>' }).join('') + '</div>'
+      var lib = libellesRatees(r)
+      if (lib.length) {
+        ratees = '<div class="hist-ratees"><div class="hist-ratees-label">Question' + (lib.length > 1 ? 's ratées' : ' ratée') + '</div>' + lib.map(function(l) { return '<div class="hist-ratee">• ' + esc(l) + '</div>' }).join('') + '</div>'
       }
     }
     html += '<div class="hist-card">' +

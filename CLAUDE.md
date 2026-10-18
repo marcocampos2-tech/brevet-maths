@@ -209,7 +209,7 @@ Trois points masquent volontairement tout ce qui suppose un accès payant pendan
 
 ## Détail des questions ratées (`resultats.questions_ratees_detail`)
 
-Colonne `jsonb` **nullable**, ajoutée en production le 18/10/2026 (`db/resultats-questions-ratees-detail.sql`, exécuté à la main ; `notify pgrst, 'reload schema'` fait). Elle s'ajoute à `questions_ratees`, qui **continue d'être écrite exactement comme avant** (chaînes « thème — chapitre ou 40 premiers caractères de l'énoncé », préfixe `[Aucune idée] `, `["Quiz abandonné"]`) : aucun lecteur existant n'a changé de comportement (`resultats.html`, `suivi-parent.html` et son `estAbandon()`, `prof.html` pour les anciennes sessions).
+Colonne `jsonb` **nullable**, ajoutée en production le 18/10/2026 (`db/resultats-questions-ratees-detail.sql`, exécuté à la main ; `notify pgrst, 'reload schema'` fait). Elle s'ajoute à `questions_ratees`, qui **continue d'être écrite exactement comme avant** (chaînes « thème — chapitre ou 40 premiers caractères de l'énoncé », préfixe `[Aucune idée] `, `["Quiz abandonné"]`) : aucun lecteur existant n'a changé de comportement à l'introduction de la colonne (`suivi-parent.html` et son `estAbandon()`, `prof.html` pour les anciennes sessions).
 
 **Format** : liste de `{ id, enonce, aucune_idee }`, une entrée par question de la **banque** ratée ou marquée « je ne sais pas » (`aucune_idee: true`), dans l'ordre des questions du quiz. `id` = `questions_banque.id` ; `enonce` = énoncé **complet** tel que servi (`q.q`), plafonné à 2000 caractères ; la liste est plafonnée à 20 entrées.
 
@@ -225,7 +225,9 @@ Colonne `jsonb` **nullable**, ajoutée en production le 18/10/2026 (`db/resultat
 
 **Lecture** (`prof.html`, onglet Questions ratées, `agregerRatees`) : détail **non vide** → notion = énoncé complet normalisé (trim, espaces réduits), regroupement par énoncé normalisé (plusieurs ids peuvent partager un énoncé), ids affichés en petit (« #753 ») ; sinon (détail `NULL` ou `[]`) → chaînes de `questions_ratees`, comme avant. Domaine et sous-thème viennent toujours des colonnes `theme` / `sous_theme` de la ligne. Pendant la transition, une même question peut apparaître en version tronquée (anciennes sessions) et en version complète (nouvelles) : pas de fusion voulue.
 
-**Droits** : les policies SELECT de `resultats` (élève, parent, prof) sont au niveau de la ligne et couvrent la colonne sans changement (aucun droit par colonne dans `db/`, à confirmer en base : `information_schema.column_privileges`). L'élève reçoit la colonne dans `select('*')` (`resultats.html`) sans l'afficher.
+**Lecture élève** (`resultats.html`, onglet Historique, `libellesRatees`) : détail **non vide** → un énoncé complet par entrée, dans l'ordre du détail, précédé de « [Aucune idée] » si `aucune_idee` est vrai, échappé par `esc()` ; sinon (détail `NULL` ou `[]`) → `questions_ratees` via `libelleRatee()`, qui retire le préfixe `r.theme — ` ou, à défaut, un préfixe « X — » où X est l'un des domaines de `SOUS_THEMES` (`js/catalogue.js`), jamais un « — » ailleurs. Sessions abandonnées : « Abandonné », inchangé. `prof.html` (onglet Questions ratées) trie les domaines par total d'échecs affichés décroissant, puis ordre de `THEMES`, puis ordre alphabétique.
+
+**Droits** : les policies SELECT de `resultats` (élève, parent, prof) sont au niveau de la ligne et couvrent la colonne sans changement (aucun droit par colonne dans `db/`, à confirmer en base : `information_schema.column_privileges`). L'élève reçoit la colonne dans `select('*')` (`resultats.html`), qui l'affiche depuis le 18/10/2026 (cf. « Lecture » ci-dessus).
 
 ## CHANTIER — Mémoire des questions vues (terminé)
 

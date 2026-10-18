@@ -543,7 +543,9 @@ function renderRatees(userId) {
     })
     const rang = d => { const i = THEMES.indexOf(d); return i < 0 ? 99 : i }
     const total = ns => ns.reduce((t, n) => t + n.nb, 0)   // total des notions AFFICHÉES du sous-thème
-    Object.keys(parDomaine).sort((a, b) => rang(a) - rang(b) || a.localeCompare(b, 'fr')).forEach(d => {
+    const totalDomaine = d => Object.values(parDomaine[d]).reduce((t, ns) => t + total(ns), 0)
+    // domaines par total d'échecs décroissant (notions affichées), puis ordre de THEMES, puis alphabétique
+    Object.keys(parDomaine).sort((a, b) => totalDomaine(b) - totalDomaine(a) || rang(a) - rang(b) || a.localeCompare(b, 'fr')).forEach(d => {
       h += '<div style="font-size:13px;font-weight:700;color:var(--blue);margin:16px 0 4px">'+escHtml(d)+'</div>'
       // sous-thèmes par total d'échecs décroissant ; « non renseigné » ('') toujours en dernier
       Object.keys(parDomaine[d]).sort((a, b) => (a === '') - (b === '') || total(parDomaine[d][b]) - total(parDomaine[d][a]) || a.localeCompare(b, 'fr')).forEach(st => {
