@@ -234,6 +234,7 @@ using (
 -- authenticated. Définition conforme au relevé pg_policies du 04/10/2026 :
 -- with_check = (email_parent_valide(email_parent) AND
 -- (COALESCE(plan_actif, false) = false)).
+-- (Historique : rejouée avec deux clauses de plus dans la section « Lot gating 1 » en fin de fichier.)
 drop policy if exists "Insertion profils" on profils;
 create policy "Insertion profils"
 on profils
@@ -718,3 +719,27 @@ on resultats
 for select
 to public
 using (is_prof());
+
+-- ---------------------------------------------------------------------------
+-- Lot gating 1 — statut « Accompagné » : policy « Insertion profils » rejouée
+-- ---------------------------------------------------------------------------
+-- À exécuter APRÈS db/accompagne.sql (les deux colonnes doivent exister).
+-- Raison : sans ces clauses, un parent pourrait créer le profil d'un enfant
+-- avec cours_particuliers_actif = true ou acces_offert_jusqu renseigné, donc
+-- s'offrir l'accès Accompagné à la création (authenticated a INSERT sur toute
+-- la table, la clause with_check est la seule protection). Les conditions
+-- d'origine (section Lot 3 ci-dessus) sont conservées à l'identique, rôle
+-- {public} compris. Les deux colonnes ne s'écrivent ensuite que par
+-- definir_offre_eleve() : aucun droit UPDATE n'est accordé dessus (le seul
+-- droit UPDATE d'authenticated sur profils est la colonne `source`).
+-- Tests : db/accompagne.test.sql.
+drop policy if exists "Insertion profils" on profils;
+create policy "Insertion profils"
+on profils
+for insert
+with check (
+  email_parent_valide(email_parent)
+  and coalesce(plan_actif, false) = false
+  and cours_particuliers_actif = false
+  and acces_offert_jusqu is null
+);

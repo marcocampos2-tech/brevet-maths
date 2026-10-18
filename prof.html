@@ -89,6 +89,21 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .loader { text-align: center; color: var(--muted); padding: 4rem 1rem; font-size: 13px; }
 .denied { text-align: center; color: var(--red); padding: 3rem 1rem 1rem; font-size: 14px; }
 .empty { color: var(--muted); font-size: 13px; padding: .5rem 0; }
+.offre-bloc { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 1rem; background: var(--surface); }
+.offre-tete { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.offre-titre { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: .08em; color: var(--muted); }
+.offre-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+.offre-badge.accompagne { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+.offre-ligne { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; font-size: 13px; padding: 4px 0; }
+.offre-ligne label { color: var(--text); }
+.offre-case { cursor: pointer; }
+.offre-case input { width: 16px; height: 16px; cursor: pointer; }
+.offre-bloc input[type=date] { padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 13px; max-width: 100%; }
+.offre-bloc input:focus-visible, .offre-bloc button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.offre-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.offre-msg { font-size: 12px; margin-top: 8px; min-height: 1em; overflow-wrap: anywhere; }
+.offre-msg.ok { color: var(--green); }
+.offre-msg.err { color: var(--red); }
 .dash-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .dash-table th { padding: 8px 6px; font-size: 10px; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); text-align: center; text-transform: uppercase; letter-spacing: .03em; }
 .dash-table th:first-child { text-align: left; }
@@ -1758,6 +1773,93 @@ async function supprimerQuestion() {
 // ═══════════════════════════════════════════════════
 let ficheEnCours = null // user_id de la fiche ouverte : écarte une réponse tardive
 
+// ── Bloc « Offre » (statut Accompagné, lot 1 du gating) ─────────────
+// Règle identique à public.est_accompagne() (db/accompagne.sql) et à
+// estAccompagne() de lib/gating.js (copie : cette page n'importe pas lib/).
+// Écriture uniquement par la fonction SQL definir_offre_eleve() (prof), jamais
+// par un UPDATE : aucun droit UPDATE sur ces deux colonnes.
+function dateParisAujourdhui() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date()) // AAAA-MM-JJ
+}
+function dateJJMMAAAA(iso) { // « AAAA-MM-JJ » → « JJ/MM/AAAA », sans objet Date (pas de fuseau)
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ''))
+  return m ? m[3] + '/' + m[2] + '/' + m[1] : ''
+}
+// Motif affiché : abonnement > cours particuliers > accès offert ; null = Libre.
+function statutOffre(p) {
+  p = p || {}
+  if (p.plan_actif === true) return 'abonnement'
+  if (p.cours_particuliers_actif === true) return 'cours'
+  if (typeof p.acces_offert_jusqu === 'string' && p.acces_offert_jusqu.slice(0, 10) >= dateParisAujourdhui()) return 'acces'
+  return null
+}
+function libelleBadgeOffre(p) {
+  const m = statutOffre(p)
+  if (m === 'abonnement') return 'Accompagné · abonnement'
+  if (m === 'cours') return 'Accompagné · cours particuliers'
+  if (m === 'acces') return 'Accompagné · accès offert jusqu\'au ' + dateJJMMAAAA(p.acces_offert_jusqu)
+  return 'Libre'
+}
+function majBadgeOffre(userId) {
+  const b = document.getElementById('offre-badge')
+  if (!b) return
+  const p = PROFILS[userId] || {}
+  b.textContent = libelleBadgeOffre(p)
+  b.classList.toggle('accompagne', statutOffre(p) !== null)
+}
+function blocOffre(userId) {
+  const p = PROFILS[userId] || {}
+  const acc = statutOffre(p) !== null
+  const id = escAttrJs(userId)
+  return '<section class="offre-bloc" aria-labelledby="offre-titre">' +
+    '<div class="offre-tete"><div class="offre-titre" id="offre-titre">OFFRE</div>' +
+    '<span class="offre-badge' + (acc ? ' accompagne' : '') + '" id="offre-badge">' + escHtml(libelleBadgeOffre(p)) + '</span></div>' +
+    '<div class="offre-ligne"><span>Abonnement payé</span><strong>' + (p.plan_actif === true ? 'oui' : 'non') + '</strong></div>' +
+    '<label class="offre-ligne offre-case"><input type="checkbox" id="offre-cours"' + (p.cours_particuliers_actif === true ? ' checked' : '') + '> Cours particuliers en cours</label>' +
+    '<div class="offre-ligne"><label for="offre-date">Accès offert jusqu\'au</label>' +
+    '<input type="date" id="offre-date" value="' + escHtml(String(p.acces_offert_jusqu || '').slice(0, 10)) + '"></div>' +
+    '<div class="offre-actions"><button type="button" class="btn btn-blue" id="offre-save" onclick="enregistrerOffre(\'' + id + '\')">Enregistrer</button>' +
+    '<button type="button" class="btn" id="offre-retirer" onclick="retirerAcces(\'' + id + '\')">Retirer l\'accès</button></div>' +
+    '<div class="offre-msg" id="offre-msg" role="status" aria-live="polite"></div></section>'
+}
+function messageOffre(texte, ok) {
+  const m = document.getElementById('offre-msg')
+  if (!m) return
+  m.textContent = texte
+  m.className = 'offre-msg ' + (ok ? 'ok' : 'err')
+}
+async function appliquerOffre(userId, cours, accesJusqu) {
+  const boutons = ['offre-save', 'offre-retirer'].map(i => document.getElementById(i))
+  boutons.forEach(b => { if (b) b.disabled = true })
+  messageOffre('', true)
+  const { data, error } = await sb.rpc('definir_offre_eleve', { p_user_id: userId, p_cours: cours, p_acces_jusqu: accesJusqu })
+  if (ficheEnCours !== userId) return // fiche fermée, ou autre élève ouvert entre-temps
+  boutons.forEach(b => { if (b) b.disabled = false })
+  const ligne = Array.isArray(data) ? data[0] : data
+  if (error || !ligne) {
+    console.error('[offre] definir_offre_eleve impossible :', error && error.message)
+    messageOffre('Impossible d\'enregistrer' + (error && error.message ? ' : ' + error.message : '.'), false)
+    return
+  }
+  const p = PROFILS[userId] || (PROFILS[userId] = {})
+  p.cours_particuliers_actif = ligne.cours_actif === true
+  p.acces_offert_jusqu = ligne.acces_jusqu || null
+  const c = document.getElementById('offre-cours'), d = document.getElementById('offre-date')
+  if (c) c.checked = p.cours_particuliers_actif
+  if (d) d.value = String(p.acces_offert_jusqu || '').slice(0, 10)
+  majBadgeOffre(userId)
+  messageOffre('Enregistré.', true)
+}
+function enregistrerOffre(userId) {
+  const c = document.getElementById('offre-cours'), d = document.getElementById('offre-date')
+  appliquerOffre(userId, !!(c && c.checked), (d && d.value) || null)
+}
+// Vide la date ; garde la valeur ENREGISTRÉE de « cours » (pas l'état de la case).
+function retirerAcces(userId) {
+  const p = PROFILS[userId] || {}
+  appliquerOffre(userId, p.cours_particuliers_actif === true, null)
+}
+
 async function openFiche(userId) {
   const e = ELEVES.find(x => x.user_id === userId)
   if (!e) return
@@ -1793,7 +1895,7 @@ async function openFiche(userId) {
     pied += '<button class="btn btn-green" id="btn-bilan" onclick="envoyerBilan(\''+escAttrJs(userId)+'\')">Envoyer bilan parents</button>'
   }
   pied += '<button class="btn" onclick="closeFiche()">Fermer</button></div>'
-  corps.innerHTML = contenu + pied
+  corps.innerHTML = blocOffre(userId) + contenu + pied
 }
 
 function closeFiche() {
