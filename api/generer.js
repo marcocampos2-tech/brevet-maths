@@ -367,6 +367,7 @@ async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
       const shuffledOpts = [...opts].sort(() => Math.random() - 0.5)
       const newAnswer = shuffledOpts.indexOf(correcte)
       return {
+        id: q.id,   // identifiant questions_banque : renvoyé par le client à api/quiz-resultat.js (questions_ratees_detail)
         q: q.question,
         chapitre: q.chapitre || '',
         opts: shuffledOpts,

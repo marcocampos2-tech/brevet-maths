@@ -207,6 +207,26 @@ Trois points masquent volontairement tout ce qui suppose un accès payant pendan
 * `quiz.html` (`verifierDeblocage()`) lit la vue et ne recalcule plus rien. `SEUIL_SESSIONS` / `SEUIL_PCT` y restent pour les textes et les barres, **sans valeur de règle** : toute modification de la règle se fait dans la vue.
 * **`suivi-parent.html`** lit la vue (carte « Niveau atteint par sous-thème » : synthèse Acquis / En progression / À surveiller, détail par niveau repliable) et charge `js/catalogue.js`. Plus aucune copie locale de la règle. Le classement et le rendu de la carte vivent dans **`js/niveaux.js`** (script classique, un seul global `window.Niveaux`, échappement HTML interne, `rendreCarteNiveaux(lignes, { cta, deplie })` avec `cta: true` et `deplie: false` par défaut ; `js/catalogue.js` à charger avant) et ses styles dans **`css/niveaux.css`** (variables `--niv-*` propres au fichier, classe de titre `niv-titre`). `suivi-parent.html` les charge, PDF compris, et ne garde que la lecture de la vue (`chargerNiveaux`) et le dessin PDF (`pdfCelluleNiveau`, `pdfSectionNiveaux`). `prof.html` les utilise aussi pour sa fiche élève (`rendreCarteNiveaux(lignes, { cta: false, deplie: true })`) et charge `js/catalogue.js`. `resultats.html` garde sa propre copie `niv-*`, hors de ce mécanisme.
 
+## Détail des questions ratées (`resultats.questions_ratees_detail`)
+
+Colonne `jsonb` **nullable**, ajoutée en production le 18/10/2026 (`db/resultats-questions-ratees-detail.sql`, exécuté à la main ; `notify pgrst, 'reload schema'` fait). Elle s'ajoute à `questions_ratees`, qui **continue d'être écrite exactement comme avant** (chaînes « thème — chapitre ou 40 premiers caractères de l'énoncé », préfixe `[Aucune idée] `, `["Quiz abandonné"]`) : aucun lecteur existant n'a changé de comportement (`resultats.html`, `suivi-parent.html` et son `estAbandon()`, `prof.html` pour les anciennes sessions).
+
+**Format** : liste de `{ id, enonce, aucune_idee }`, une entrée par question de la **banque** ratée ou marquée « je ne sais pas » (`aucune_idee: true`), dans l'ordre des questions du quiz. `id` = `questions_banque.id` ; `enonce` = énoncé **complet** tel que servi (`q.q`), plafonné à 2000 caractères ; la liste est plafonnée à 20 entrées.
+
+| Valeur | Sens |
+|---|---|
+| `NULL` | session abandonnée, ou antérieure au 18/10/2026 |
+| `[]` | aucune question ratée **avec id** : quiz parfait, ou quiz IA (les questions IA n'y figurent jamais ; leurs échecs restent dans `questions_ratees`) |
+| liste non vide | détail des questions ratées de la banque |
+
+**Écriture** (`api/quiz-resultat.js`) : la décision « avec ou sans détail » se prend sur la présence d'un **id entier** sur l'objet question (`api/generer.js` ajoute `id` aux questions de la banque, pas à celles de l'IA), jamais sur `source_questions` (champ du client). Un élément mal formé (null, énoncé absent) ne fait plus échouer l'enregistrement. **Repli** : si Supabase refuse l'insertion en citant `questions_ratees_detail`, un seul nouvel essai sans la colonne (avec `console.error`) — le résultat de l'élève passe avant le détail.
+
+**Énoncé et id fournis par le client, non vérifiés** (comme le score aujourd'hui) : un élève peut y mettre n'importe quel texte, que le prof voit échappé sur ses propres données. La correction propre (lecture de l'énoncé par id côté serveur) relève de la vérification du score par id (`docs/TODO.md` n°27).
+
+**Lecture** (`prof.html`, onglet Questions ratées, `agregerRatees`) : détail **non vide** → notion = énoncé complet normalisé (trim, espaces réduits), regroupement par énoncé normalisé (plusieurs ids peuvent partager un énoncé), ids affichés en petit (« #753 ») ; sinon (détail `NULL` ou `[]`) → chaînes de `questions_ratees`, comme avant. Domaine et sous-thème viennent toujours des colonnes `theme` / `sous_theme` de la ligne. Pendant la transition, une même question peut apparaître en version tronquée (anciennes sessions) et en version complète (nouvelles) : pas de fusion voulue.
+
+**Droits** : les policies SELECT de `resultats` (élève, parent, prof) sont au niveau de la ligne et couvrent la colonne sans changement (aucun droit par colonne dans `db/`, à confirmer en base : `information_schema.column_privileges`). L'élève reçoit la colonne dans `select('*')` (`resultats.html`) sans l'afficher.
+
 ## CHANTIER — Mémoire des questions vues (terminé)
 
 Quiz normal PR #24, durcissement du diagnostic PR #25, examen blanc PR #26, extraction du socle commun dans la PR qui a ajouté cette section.
