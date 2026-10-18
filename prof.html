@@ -21,7 +21,7 @@ body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); c
   --green-bg: #EAF6EF; --blue-bg: #EEF1F6; --amber-bg: #FBF4E4; --red-bg: #FBEDEC;
   --radius: 10px;
 }
-.wrap { max-width: 960px; margin: 0 auto; padding: 1.25rem 1rem; }
+.wrap { max-width: 1440px; margin: 0 auto; padding: 1.25rem 1rem; }
 nav { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.25rem; border-bottom: 2px solid var(--blue); margin-bottom: 1.5rem; }
 .logo { font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 500; letter-spacing: .08em; color: var(--blue); }
 .btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s; text-decoration: none; white-space: nowrap; }
@@ -82,9 +82,9 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .field textarea { resize: vertical; min-height: 65px; }
 .opt-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .opt-row label { font-size: 12px; color: var(--muted); width: 18px; flex-shrink: 0; font-weight: 600; }
-.opt-row input[type=text] { flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 13px; }
+.opt-row input[type=text] { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 13px; }
 .opt-row input[type=text]:focus { outline: none; border-color: var(--blue); }
-.opt-row .radio-label { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.opt-row .radio-label { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); cursor: pointer; white-space: nowrap; width: auto; flex-shrink: 0; }
 .opt-row input[type=radio] { cursor: pointer; }
 .loader { text-align: center; color: var(--muted); padding: 4rem 1rem; font-size: 13px; }
 .denied { text-align: center; color: var(--red); padding: 3rem 1rem 1rem; font-size: 14px; }
@@ -97,6 +97,9 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .dash-table td:first-child { text-align: left; }
 .dash-table tr:last-child td { border-bottom: none; }
 .eleve-cell { display: flex; align-items: center; gap: 8px; }
+.nom-eleve { background: none; border: none; padding: 0; margin: 0; font: inherit; font-weight: 700; color: inherit; text-align: left; cursor: pointer; }
+.nom-eleve:hover { text-decoration: underline; }
+.nom-eleve:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 3px; }
 .avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--blue-bg); color: var(--blue); display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; flex-shrink: 0; }
 .pct-global { font-size: 14px; }
 .q-card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
@@ -366,20 +369,30 @@ function analyserRatee(brut) {
 }
 
 // Notions ratées des sessions de quiz TERMINÉES (examens blancs hors
-// périmètre), par nombre d'échecs décroissant puis ordre alphabétique. nb
-// compte les échecs et les « aucune idée » ; aucune, la part « aucune idée ».
+// périmètre), agrégées par domaine + sous-thème + notion, puis triées par
+// nombre d'échecs décroissant et ordre alphabétique. nb compte les échecs et les
+// « aucune idée » ; aucune, la part « aucune idée ».
+//  - domaine : colonne theme de la ligne resultats (même valeur que le préfixe
+//    de la chaîne, écrit par le même appel dans api/quiz-resultat.js : elle sert
+//    de source unique, comme la vue niveaux_sous_theme) ; à défaut, préfixe de la
+//    chaîne.
+//  - sous-thème : colonne sous_theme de la ligne (une session = un sous-thème),
+//    jamais la chaîne. '' si NULL, vide ou blanc : « non renseigné » à l'affichage.
 function agregerRatees(rows) {
   const m = {}
   rows.forEach(r => {
     if (r.abandonne) return
+    const sousTheme = String(r.sous_theme == null ? '' : r.sous_theme).trim()
     ;(Array.isArray(r.questions_ratees) ? r.questions_ratees : []).forEach(q => {
-      const a = analyserRatee(q), k = a.domaine + '\u0000' + a.notion
-      const e = m[k] || (m[k] = { domaine: a.domaine, notion: a.notion, nb: 0, aucune: 0 })
+      const a = analyserRatee(q)
+      const domaine = String(r.theme == null ? '' : r.theme).trim() || a.domaine
+      const k = domaine + '\u0000' + sousTheme + '\u0000' + a.notion
+      const e = m[k] || (m[k] = { domaine, sousTheme, notion: a.notion, nb: 0, aucune: 0 })
       e.nb++
       if (a.aucune) e.aucune++
     })
   })
-  return Object.values(m).sort((x, y) => y.nb - x.nb || x.notion.localeCompare(y.notion, 'fr'))
+  return Object.values(m).sort((x, y) => y.nb - x.nb || x.notion.localeCompare(y.notion, 'fr') || x.sousTheme.localeCompare(y.sousTheme, 'fr'))
 }
 
 // Appel unique vers /api/email pour tous les boutons du prof. Le jeton est relu
@@ -505,13 +518,22 @@ function renderRatees(userId) {
   } else {
     if (!id && toutes.length > liste.length) h += '<p class="empty" style="margin-bottom:6px">'+liste.length+' notions les plus ratées, sur '+toutes.length+'.</p>'
     const parDomaine = {}
-    liste.forEach(n => (parDomaine[n.domaine] ||= []).push(n))
+    liste.forEach(n => {
+      const d = parDomaine[n.domaine] || (parDomaine[n.domaine] = {})
+      ;(d[n.sousTheme] ||= []).push(n)
+    })
     const rang = d => { const i = THEMES.indexOf(d); return i < 0 ? 99 : i }
+    const total = ns => ns.reduce((t, n) => t + n.nb, 0)   // total des notions AFFICHÉES du sous-thème
     Object.keys(parDomaine).sort((a, b) => rang(a) - rang(b) || a.localeCompare(b, 'fr')).forEach(d => {
-      h += '<div style="font-size:12px;font-weight:700;color:var(--blue);margin:14px 0 2px">'+escHtml(d)+'</div>'
-      parDomaine[d].forEach(n => {
-        const compte = n.nb + '×' + (n.aucune ? ' (dont ' + n.aucune + ' « aucune idée »)' : '')
-        h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="color:#444">'+escHtml(n.notion)+'</span><span style="color:#9E2B25;font-weight:600;text-align:right">'+escHtml(compte)+'</span></div>'
+      h += '<div style="font-size:13px;font-weight:700;color:var(--blue);margin:16px 0 4px">'+escHtml(d)+'</div>'
+      // sous-thèmes par total d'échecs décroissant ; « non renseigné » ('') toujours en dernier
+      Object.keys(parDomaine[d]).sort((a, b) => (a === '') - (b === '') || total(parDomaine[d][b]) - total(parDomaine[d][a]) || a.localeCompare(b, 'fr')).forEach(st => {
+        const ns = parDomaine[d][st], t = total(ns)
+        h += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:10px 0 0 10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted)"><span>'+escHtml(st || 'Sous-thème non renseigné')+'</span><span style="white-space:nowrap">'+t+' échec'+(t > 1 ? 's' : '')+'</span></div>'
+        ns.forEach(n => {
+          const compte = n.nb + '×' + (n.aucune ? ' (dont ' + n.aucune + ' « aucune idée »)' : '')
+          h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 0 7px 22px;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="color:#444">'+escHtml(n.notion)+'</span><span style="color:#9E2B25;font-weight:600;text-align:right">'+escHtml(compte)+'</span></div>'
+        })
       })
     })
   }
@@ -1917,7 +1939,7 @@ function render() {
     const st=statsEleve(e.user_id), ex=st.dernierExamen
     const examCell=ex?'<strong>'+escHtml(ex.score)+'/20</strong> <span style="font-size:11px;color:var(--muted)">· '+dateStr(ex.created_at)+'</span>':'<span style="color:#999;font-size:12px">Aucun</span>'
     const actCell=st.derniereActivite?dateStr(st.derniereActivite):'<span style="color:#999">—</span>'
-    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+escHtml(initiales(e.prenom,e.nom))+'</div><strong>'+escHtml(e.prenom)+' '+escHtml(e.nom)+'</strong></div></td><td style="color:var(--blue);font-size:12px">'+escHtml(e.email_parent)+'</td><td>'+st.terminees+'</td><td>'+st.interrompues+'</td><td style="white-space:nowrap">'+fmtTemps(st.dureeSec)+'</td><td style="white-space:nowrap">'+examCell+'</td><td style="font-size:12px;white-space:nowrap">'+actCell+'</td><td style="font-size:12px">'+origineLabel(e.source)+'</td>'
+    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+escHtml(initiales(e.prenom,e.nom))+'</div><button type="button" class="nom-eleve" onclick="openFiche(\''+escAttrJs(e.user_id)+'\')">'+escHtml(e.prenom)+' '+escHtml(e.nom)+'</button></div></td><td style="color:var(--blue);font-size:12px">'+escHtml(e.email_parent)+'</td><td>'+st.terminees+'</td><td>'+st.interrompues+'</td><td style="white-space:nowrap">'+fmtTemps(st.dureeSec)+'</td><td style="white-space:nowrap">'+examCell+'</td><td style="font-size:12px;white-space:nowrap">'+actCell+'</td><td style="font-size:12px;white-space:nowrap">'+origineLabel(e.source)+'</td>'
     h+='<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+escAttrJs(e.user_id)+'\')">Fiche</button></td></tr>'
   })
   h+='</tbody></table></div></div></div>'

@@ -244,6 +244,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 79. **`prof.html` : trois affichages restent sur l'ancienne logique en %, en contradiction avec la fiche élève alignée sur la vue `niveaux_sous_theme`** (constat du 18/10/2026) : le tableau comparatif du dashboard (global et % par thème, légende « ≥70 % Maîtrisé / 50-69 % En cours / <50 % À retravailler »), le bandeau « Moyenne générale » et la colonne « Moyenne » de l'onglet Thèmes. À arbitrer : les aligner sur la vue (acquis, en progression, à surveiller), les retirer, ou les garder comme indicateurs bruts assumés.
 
+80. **`prof.html`, onglet Sessions (« 30 dernières activités ») : débordement horizontal de la page à 390 px** — constaté le 18/10/2026 en testant la largeur du conteneur : la page atteint 447 px pour 390 px de fenêtre, déjà avant le passage du conteneur à 1440 px. Le tableau `.tbl` n'a pas de conteneur à défilement (l'onglet Examens et la liste des élèves en ont un). À faire : l'entourer de `<div style="overflow-x:auto">`, comme les autres tableaux.
+
 ---
 
 ## 🟡 Plateforme Academika — légal
