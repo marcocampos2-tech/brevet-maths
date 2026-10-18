@@ -312,6 +312,76 @@ const dateSessionAff = s => new Date(s.date_session + 'T00:00:00').toLocaleDateS
 const initiales = (prenom, nom) => ((prenom||'?')[0] + (nom||'')[0]).toUpperCase()
 const origineLabel = s => ({ flyer: 'Flyer / affiche', ami: 'Bouche à oreille', internet: 'Recherche internet', reseaux: 'Réseaux sociaux', autre: 'Autre' })[s] || '—'
 
+// ═══════════════════════════════════════════════════
+// ACTIVITÉ PAR ÉLÈVE — une seule définition, partagée par l'onglet Élèves et
+// l'onglet Questions ratées.
+//  - session terminée = ligne de resultats avec abandonne = false (NULL
+//    compris) ; interrompue = abandonne = true. Critère UNIQUEMENT sur la
+//    colonne abandonne, jamais sur le texte « abandonné ».
+//  - durée = somme de temps_secondes des sessions terminées.
+//  - dernier examen blanc = examen non abandonné le plus récent.
+//  - dernière activité = created_at le plus récent, resultats et examens
+//    confondus, abandons compris.
+// ═══════════════════════════════════════════════════
+let STATS_ELEVES = {}
+
+function calculerStatsEleves() {
+  const m = {}
+  const get = id => m[id] || (m[id] = { terminees: 0, interrompues: 0, dureeSec: 0, dernierExamen: null, derniereActivite: null })
+  const plusRecent = (a, b) => (!a || new Date(b) > new Date(a)) ? b : a
+  ROWS.forEach(r => {
+    const st = get(r.user_id)
+    if (r.abandonne) st.interrompues++
+    else { st.terminees++; st.dureeSec += r.temps_secondes || 0 }
+    st.derniereActivite = plusRecent(st.derniereActivite, r.created_at)
+  })
+  EXAMENS.forEach(x => {
+    const st = get(x.user_id)
+    if (!x.abandonne && (!st.dernierExamen || new Date(x.created_at) > new Date(st.dernierExamen.created_at))) st.dernierExamen = x
+    st.derniereActivite = plusRecent(st.derniereActivite, x.created_at)
+  })
+  return m
+}
+
+function statsEleve(userId) {
+  return STATS_ELEVES[userId] || { terminees: 0, interrompues: 0, dureeSec: 0, dernierExamen: null, derniereActivite: null }
+}
+
+// Entrée de questions_ratees → { domaine, notion, aucune }. Format écrit par
+// api/quiz-resultat.js : « <thème> — <chapitre ou 40 premiers caractères de
+// l'énoncé> », précédé de « [Aucune idée] » pour une question sans réponse.
+// La notion est prise telle quelle (aucun trim). Pas de détection des énoncés
+// tronqués : elle n'est pas fiable (cf. PR 4, identifiants de questions).
+const MARQUE_AUCUNE_IDEE = '[Aucune idée] '
+function analyserRatee(brut) {
+  let t = String(brut == null ? '' : brut)
+  const aucune = t.startsWith(MARQUE_AUCUNE_IDEE)
+  if (aucune) t = t.slice(MARQUE_AUCUNE_IDEE.length)
+  const i = t.indexOf(' — ')
+  return {
+    domaine: i === -1 ? 'Sans domaine' : t.slice(0, i),
+    notion: (i === -1 ? t : t.slice(i + 3)) || '(sans intitulé)',
+    aucune
+  }
+}
+
+// Notions ratées des sessions de quiz TERMINÉES (examens blancs hors
+// périmètre), par nombre d'échecs décroissant puis ordre alphabétique. nb
+// compte les échecs et les « aucune idée » ; aucune, la part « aucune idée ».
+function agregerRatees(rows) {
+  const m = {}
+  rows.forEach(r => {
+    if (r.abandonne) return
+    ;(Array.isArray(r.questions_ratees) ? r.questions_ratees : []).forEach(q => {
+      const a = analyserRatee(q), k = a.domaine + '\u0000' + a.notion
+      const e = m[k] || (m[k] = { domaine: a.domaine, notion: a.notion, nb: 0, aucune: 0 })
+      e.nb++
+      if (a.aucune) e.aucune++
+    })
+  })
+  return Object.values(m).sort((x, y) => y.nb - x.nb || x.notion.localeCompare(y.notion, 'fr'))
+}
+
 // Appel unique vers /api/email pour tous les boutons du prof. Le jeton est relu
 // au moment de l'envoi (sb.auth.getSession() rafraîchit un jeton expiré) :
 // api/email.js exige un jeton valide dont le rôle serveur est 'prof'.
@@ -407,6 +477,53 @@ function setTab(id) {
   if (id === 'banque') { banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0, resetParId: false }; chargerBanque() }
   if (id === 'inscriptions') chargerInscriptions()
   if (id === 'stages') chargerStages()
+  if (id === 'ratees') renderRatees('')
+}
+
+// ═══════════════════════════════════════════════════
+// ONGLET QUESTIONS RATÉES — « Tous les élèves » (20 premières notions) ou un
+// élève (indicateurs d'activité + toutes ses notions), regroupées par domaine.
+// ═══════════════════════════════════════════════════
+function renderRatees(userId) {
+  const sel = document.getElementById('ratees-eleve'), cible = document.getElementById('ratees-contenu')
+  if (!sel || !cible) return
+  if (userId !== undefined) sel.value = userId
+  const id = sel.value
+  let h = ''
+  if (id) {
+    const st = statsEleve(id), ex = st.dernierExamen
+    const carte = (val, label) => '<div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center"><div style="font-family:\'Newsreader\',serif;font-size:22px;font-weight:700;color:var(--blue)">'+escHtml(val)+'</div><div style="font-size:11px;color:var(--muted);margin-top:4px">'+escHtml(label)+'</div></div>'
+    h += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:1.25rem">'
+    h += carte(st.terminees, 'Sessions terminées') + carte(st.interrompues, 'Interrompues') + carte(fmtTemps(st.dureeSec), 'Durée')
+    h += carte(ex ? ex.score + '/20' : 'Aucun', ex ? 'Dernier examen blanc · ' + dateStr(ex.created_at) : 'Dernier examen blanc')
+    h += '</div>'
+  }
+  const toutes = agregerRatees(id ? ROWS.filter(r => r.user_id === id) : ROWS)
+  const liste = id ? toutes : toutes.slice(0, 20)
+  if (!liste.length) {
+    h += '<p class="empty">Aucune question ratée enregistrée'+(id ? ' pour cet élève' : '')+'.</p>'
+  } else {
+    if (!id && toutes.length > liste.length) h += '<p class="empty" style="margin-bottom:6px">'+liste.length+' notions les plus ratées, sur '+toutes.length+'.</p>'
+    const parDomaine = {}
+    liste.forEach(n => (parDomaine[n.domaine] ||= []).push(n))
+    const rang = d => { const i = THEMES.indexOf(d); return i < 0 ? 99 : i }
+    Object.keys(parDomaine).sort((a, b) => rang(a) - rang(b) || a.localeCompare(b, 'fr')).forEach(d => {
+      h += '<div style="font-size:12px;font-weight:700;color:var(--blue);margin:14px 0 2px">'+escHtml(d)+'</div>'
+      parDomaine[d].forEach(n => {
+        const compte = n.nb + '×' + (n.aucune ? ' (dont ' + n.aucune + ' « aucune idée »)' : '')
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="color:#444">'+escHtml(n.notion)+'</span><span style="color:#9E2B25;font-weight:600;text-align:right">'+escHtml(compte)+'</span></div>'
+      })
+    })
+  }
+  cible.innerHTML = h
+}
+
+// Lien « PROF UNIQUEMENT » de la fiche : ferme la fiche, ouvre l'onglet
+// Questions ratées et présélectionne l'élève.
+function voirRateesEleve(userId) {
+  closeFiche()
+  setTab('ratees')
+  renderRatees(userId)
 }
 
 // ═══════════════════════════════════════════════════
@@ -1623,7 +1740,10 @@ async function openFiche(userId) {
   // Bouton bilan : seulement si l'élève a au moins une ligne dans resultats
   // (abandons compris) — même garde-fou qu'avant, quand l'alerte « Pas encore
   // de données » empêchait d'ouvrir la fiche d'un élève sans aucune session.
-  let pied = '<div style="margin-top:1.5rem;display:flex;gap:8px;flex-wrap:wrap">'
+  let pied = '<div style="margin-top:1.5rem;padding-top:12px;border-top:1px solid var(--border)">' +
+    '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;letter-spacing:.08em;color:var(--muted);margin-bottom:6px">PROF UNIQUEMENT</div>' +
+    '<a href="#" style="font-size:13px;font-weight:500;color:var(--blue)" onclick="voirRateesEleve(\''+escAttrJs(userId)+'\');return false">Voir ses questions ratées et son activité →</a></div>'
+  pied += '<div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap">'
   if (ROWS.some(r => r.user_id === userId)) {
     pied += '<button class="btn btn-green" id="btn-bilan" onclick="envoyerBilan(\''+escAttrJs(userId)+'\')">Envoyer bilan parents</button>'
   }
@@ -1726,9 +1846,7 @@ function render() {
   const pctIA=ROWS.length?Math.round(nbIA/ROWS.length*100):0
   const themeStats={}
   ROWS.filter(r=>!r.abandonne).forEach(r=>{ if (!themeStats[r.theme]) themeStats[r.theme]={ok:0,tot:0,n:0}; themeStats[r.theme].ok+=r.score; themeStats[r.theme].tot+=r.total; themeStats[r.theme].n++ })
-  const rateeMap={}
-  ROWS.forEach(r=>(r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q=>rateeMap[q]=(rateeMap[q]||0)+1))
-  const topRatees=Object.entries(rateeMap).sort((a,b)=>b[1]-a[1]).slice(0,5)
+  STATS_ELEVES = calculerStatsEleves()
   const examMap={}
   EXAMENS.filter(e=>!e.abandonne).forEach(e=>{ if(!examMap[e.user_id]) examMap[e.user_id]=e })
   const sessionsAnnuleesIds = new Set(SESSIONS.filter(s=>s.annulee).map(s=>s.id))
@@ -1794,15 +1912,15 @@ function render() {
 
   // ÉLÈVES
   h+='<div class="section" id="sec-eleves"><div class="card"><div class="card-title">Liste des élèves</div>'
-  h+='<table class="tbl"><thead><tr><th>Élève</th><th>Email parents</th><th>Sessions</th><th>Moyenne</th><th>Examen</th><th>Origine</th><th>Actions</th></tr></thead><tbody>'
+  h+='<div style="overflow-x:auto"><table class="tbl"><thead><tr><th>Élève</th><th>Email parents</th><th>Sessions terminées</th><th>Interrompues</th><th>Durée</th><th>Dernier examen blanc</th><th>Dernière activité</th><th>Origine</th><th>Actions</th></tr></thead><tbody>'
   ELEVES.forEach(e=>{
-    const p=e.totalQ>0?pct(e.totalScore,e.totalQ):0, exam=examMap[e.user_id]
-    const moyCell=e.totalQ>0?'<strong style="color:'+color(p)+'">'+p+'%</strong>':'<span style="color:#999">—</span>'
-    const examCell=exam?mentionBadge(pct(exam.score,exam.total))+' <span style="font-size:12px">'+escHtml(exam.score)+'/20</span>':'<span style="color:#999;font-size:12px">—</span>'
-    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+escHtml(initiales(e.prenom,e.nom))+'</div><strong>'+escHtml(e.prenom)+' '+escHtml(e.nom)+'</strong></div></td><td style="color:var(--blue);font-size:12px">'+escHtml(e.email_parent)+'</td><td>'+e.sessions+'</td><td>'+moyCell+'</td><td>'+examCell+'</td><td style="font-size:12px">'+origineLabel(e.source)+'</td>'
+    const st=statsEleve(e.user_id), ex=st.dernierExamen
+    const examCell=ex?'<strong>'+escHtml(ex.score)+'/20</strong> <span style="font-size:11px;color:var(--muted)">· '+dateStr(ex.created_at)+'</span>':'<span style="color:#999;font-size:12px">Aucun</span>'
+    const actCell=st.derniereActivite?dateStr(st.derniereActivite):'<span style="color:#999">—</span>'
+    h+='<tr><td><div class="eleve-cell"><div class="avatar">'+escHtml(initiales(e.prenom,e.nom))+'</div><strong>'+escHtml(e.prenom)+' '+escHtml(e.nom)+'</strong></div></td><td style="color:var(--blue);font-size:12px">'+escHtml(e.email_parent)+'</td><td>'+st.terminees+'</td><td>'+st.interrompues+'</td><td style="white-space:nowrap">'+fmtTemps(st.dureeSec)+'</td><td style="white-space:nowrap">'+examCell+'</td><td style="font-size:12px;white-space:nowrap">'+actCell+'</td><td style="font-size:12px">'+origineLabel(e.source)+'</td>'
     h+='<td><button class="btn btn-sm btn-blue" onclick="openFiche(\''+escAttrJs(e.user_id)+'\')">Fiche</button></td></tr>'
   })
-  h+='</tbody></table></div></div>'
+  h+='</tbody></table></div></div></div>'
 
   // EXAMENS BLANCS — abandons inclus comme lignes distinctes (jamais 0/20,
   // cf. docs/TODO.md pour le même défaut côté email parent, pas reproduit ici).
@@ -1856,11 +1974,11 @@ function render() {
   })
   h+='</tbody></table></div></div>'
 
-  // QUESTIONS RATÉES
-  h+='<div class="section" id="sec-ratees"><div class="card"><div class="card-title">Questions les plus ratées</div>'
-  if (topRatees.length) { topRatees.forEach(([q,n])=>{ h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="color:#444">'+escHtml(q)+'</span><span style="color:#9E2B25;font-weight:600;margin-left:12px;white-space:nowrap">'+n+'× raté</span></div>' }) }
-  else { h+='<p class="empty">Pas encore de données.</p>' }
-  h+='</div></div>'
+  // QUESTIONS RATÉES — contenu rempli par renderRatees() à l'ouverture de l'onglet
+  h+='<div class="section" id="sec-ratees"><div class="card"><div class="card-title">Questions ratées</div>'
+  h+='<div class="field" style="max-width:340px;margin-bottom:1rem"><label for="ratees-eleve">Élève</label><select id="ratees-eleve" onchange="renderRatees()"><option value="">Tous les élèves</option>'
+  ;[...ELEVES].sort((x,y)=>(x.prenom+' '+x.nom).localeCompare(y.prenom+' '+y.nom,'fr')).forEach(e=>{ h+='<option value="'+escHtml(e.user_id)+'">'+escHtml(e.prenom+' '+e.nom)+'</option>' })
+  h+='</select></div><div id="ratees-contenu"></div></div></div>'
 
   // BANQUE
   h+='<div class="section" id="sec-banque">'
@@ -1927,8 +2045,7 @@ async function init() {
   ROWS=r1.data||[]; EXAMENS=r2.data||[]
   const profils=r3.data||[]
   PROFILS={}; profils.forEach(p=>PROFILS[p.user_id]=p)
-  ELEVES=profils.map(p=>({user_id:p.user_id,prenom:p.prenom_affiche||'—',nom:p.nom_affiche||'',email_parent:p.email_parent||'—',source:p.source||null,sessions:0,totalScore:0,totalQ:0}))
-  ROWS.forEach(r=>{ const e=ELEVES.find(x=>x.user_id===r.user_id); if(e){ e.sessions++; if(!r.abandonne){ e.totalScore+=r.score; e.totalQ+=r.total } } })
+  ELEVES=profils.map(p=>({user_id:p.user_id,prenom:p.prenom_affiche||'—',nom:p.nom_affiche||'',email_parent:p.email_parent||'—',source:p.source||null}))
   INSCRIPTIONS=r4.data||[]
   SESSIONS=r5.data||[]
   render()
