@@ -45,6 +45,7 @@ export default async function handler(req, res) {
         user_id: userIdToken, email, prenom, theme, sous_theme, difficulte,
         score: 0, total: 5,
         questions_ratees: ['Quiz abandonné'],
+        questions_ratees_detail: null,
         temps_secondes: temps_secondes || 0,
         aucune_idee: 0,
         source_questions: source_questions || 'ia',
@@ -60,19 +61,35 @@ export default async function handler(req, res) {
     }
 
     // ── Recalcul du score côté serveur (source de vérité) ──
+    // questions_ratees_detail : { id, enonce, aucune_idee } pour chaque question
+    // ratée ou « aucune idée » portant un id entier (questions de la banque).
+    // La décision se prend sur la présence de l'id, pas sur source_questions
+    // (champ du client). Les questions sans id (IA) n'y figurent pas et gardent
+    // le format texte de questions_ratees. L'énoncé vient du client (non
+    // vérifié) : borné en longueur et en nombre d'entrées.
+    const ENONCE_MAX = 2000
+    const DETAIL_MAX = 20
     let nbOk = 0, nbAucune = 0
     const ratees = []
     const inconnues = []
+    const detail = []
 
     questions.forEach((q, i) => {
       const rep = reponses[i]
+      // Un élément mal formé (null, énoncé absent) ne fait plus échouer tout
+      // l'enregistrement. Pour une question normale, le libellé est inchangé.
+      const enonce = typeof q?.q === 'string' ? q.q : ''
+      const libelle = `${theme} — ${q?.chapitre || enonce.substring(0, 40)}`
+      const avecId = Number.isInteger(q?.id)
       if (rep === 'aucune') {
         nbAucune++
-        inconnues.push(`${theme} — ${q.chapitre || q.q.substring(0, 40)}`)
-      } else if (typeof rep === 'number' && rep === q.answer) {
+        inconnues.push(libelle)
+        if (avecId) detail.push({ id: q.id, enonce: enonce.slice(0, ENONCE_MAX), aucune_idee: true })
+      } else if (typeof rep === 'number' && rep === q?.answer) {
         nbOk++
       } else {
-        ratees.push(`${theme} — ${q.chapitre || q.q.substring(0, 40)}`)
+        ratees.push(libelle)
+        if (avecId) detail.push({ id: q.id, enonce: enonce.slice(0, ENONCE_MAX), aucune_idee: false })
       }
     })
 
@@ -80,6 +97,7 @@ export default async function handler(req, res) {
       user_id: userIdToken, email, prenom, theme, sous_theme, difficulte,
       score: nbOk, total: questions.length,
       questions_ratees: [...ratees, ...inconnues.map(q => `[Aucune idée] ${q}`)],
+      questions_ratees_detail: detail.slice(0, DETAIL_MAX),
       temps_secondes: temps_secondes || 0,
       aucune_idee: nbAucune,
       source_questions: source_questions || 'ia',
@@ -98,7 +116,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function insererResultat({ user_id, email, prenom, theme, sous_theme, difficulte, score, total, questions_ratees, temps_secondes, aucune_idee, source_questions, client_key, abandonne }) {
+async function insererResultat({ user_id, email, prenom, theme, sous_theme, difficulte, score, total, questions_ratees, questions_ratees_detail, temps_secondes, aucune_idee, source_questions, client_key, abandonne }) {
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
   try {
     // ── Idempotence : ignore une écriture au fingerprint identique déjà
@@ -134,7 +152,9 @@ async function insererResultat({ user_id, email, prenom, theme, sous_theme, diff
     if (!gate.ok) return { error: 'Compte sans profil élève.' }
     const email_parent = gate.email_parent
 
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/resultats`, {
+    // Écriture factorisée pour permettre un second essai sans la colonne de
+    // détail (voir plus bas).
+    const ecrire = (ligne) => fetch(`${SUPABASE_URL}/rest/v1/resultats`, {
       method: 'POST',
       headers: {
         'apikey': SERVICE_KEY,
@@ -146,20 +166,33 @@ async function insererResultat({ user_id, email, prenom, theme, sous_theme, diff
         // (celui-ci reste utile pour un client qui n'enverrait pas encore client_key).
         'Prefer': 'return=minimal,resolution=ignore-duplicates'
       },
-      body: JSON.stringify({
-        user_id, email: email || '', prenom: prenom || '', email_parent,
-        theme, sous_theme: sous_theme || '', difficulte, score, total,
-        questions_ratees, temps_secondes, aucune_idee,
-        source_questions, alerte_envoyee: false,
-        client_key: client_key || null,
-        // Clé omise sur le chemin normal : la colonne prend son défaut
-        // (false) côté Postgres, pas besoin de l'envoyer explicitement.
-        ...(abandonne ? { abandonne: true } : {})
-      })
+      body: JSON.stringify(ligne)
     })
+
+    const ligne = {
+      user_id, email: email || '', prenom: prenom || '', email_parent,
+      theme, sous_theme: sous_theme || '', difficulte, score, total,
+      questions_ratees, temps_secondes, aucune_idee,
+      source_questions, alerte_envoyee: false,
+      client_key: client_key || null,
+      // Clé omise sur le chemin normal : la colonne prend son défaut
+      // (false) côté Postgres, pas besoin de l'envoyer explicitement.
+      ...(abandonne ? { abandonne: true } : {})
+    }
+
+    const res = await ecrire(questions_ratees_detail === undefined ? ligne : { ...ligne, questions_ratees_detail })
 
     if (!res.ok) {
       const errText = await res.text()
+      // Le résultat de l'élève passe avant le détail : si Supabase refuse
+      // l'insertion en citant questions_ratees_detail (colonne absente, cache de
+      // schéma périmé), un seul nouvel essai sans cette colonne.
+      if (questions_ratees_detail !== undefined && errText.includes('questions_ratees_detail')) {
+        console.error('[quiz-resultat] insertion refusée à cause de questions_ratees_detail, nouvel essai sans la colonne :', errText.slice(0, 300))
+        const res2 = await ecrire(ligne)
+        if (!res2.ok) return { error: await res2.text() }
+        return { success: true }
+      }
       return { error: errText }
     }
     return { success: true }

@@ -368,28 +368,47 @@ function analyserRatee(brut) {
   }
 }
 
+// Énoncé normalisé (trim + espaces multiples réduits) : clé de regroupement des
+// énoncés complets — plusieurs ids peuvent partager un même énoncé.
+const normaliserEnonce = s => String(s == null ? '' : s).trim().replace(/\s+/g, ' ')
+
 // Notions ratées des sessions de quiz TERMINÉES (examens blancs hors
 // périmètre), agrégées par domaine + sous-thème + notion, puis triées par
 // nombre d'échecs décroissant et ordre alphabétique. nb compte les échecs et les
-// « aucune idée » ; aucune, la part « aucune idée ».
-//  - domaine : colonne theme de la ligne resultats (même valeur que le préfixe
-//    de la chaîne, écrit par le même appel dans api/quiz-resultat.js : elle sert
-//    de source unique, comme la vue niveaux_sous_theme) ; à défaut, préfixe de la
-//    chaîne.
-//  - sous-thème : colonne sous_theme de la ligne (une session = un sous-thème),
-//    jamais la chaîne. '' si NULL, vide ou blanc : « non renseigné » à l'affichage.
+// « aucune idée » ; aucune, la part « aucune idée » ; ids, les identifiants
+// questions_banque rencontrés (vide pour une ancienne session).
+//  - domaine / sous-thème : colonnes theme et sous_theme de la ligne resultats
+//    (une session = un sous-thème), jamais la chaîne. Domaine : à défaut, préfixe
+//    de la chaîne. sous-thème '' si NULL, vide ou blanc : « non renseigné ».
+//  - notion : si la ligne a un questions_ratees_detail NON VIDE (banque, depuis le
+//    18/10/2026), énoncé complet normalisé de chaque entrée ; sinon (ancienne
+//    session, quiz IA : détail null ou []), chaîne tronquée de questions_ratees,
+//    comme avant. Les deux versions d'une même question ne sont pas fusionnées
+//    volontairement (sauf texte strictement identique après normalisation).
 function agregerRatees(rows) {
   const m = {}
+  const ajouter = (domaine, sousTheme, notion, aucune, id) => {
+    const k = domaine + '\u0000' + sousTheme + '\u0000' + notion
+    const e = m[k] || (m[k] = { domaine, sousTheme, notion, nb: 0, aucune: 0, ids: [] })
+    e.nb++
+    if (aucune) e.aucune++
+    if (id != null && !e.ids.includes(id)) e.ids.push(id)
+  }
   rows.forEach(r => {
     if (r.abandonne) return
     const sousTheme = String(r.sous_theme == null ? '' : r.sous_theme).trim()
+    const colTheme = String(r.theme == null ? '' : r.theme).trim()
+    const detail = Array.isArray(r.questions_ratees_detail) && r.questions_ratees_detail.length ? r.questions_ratees_detail : null
+    if (detail) {
+      detail.forEach(d => {
+        const enonce = normaliserEnonce(d && d.enonce)
+        ajouter(colTheme || 'Sans domaine', sousTheme, enonce || '(énoncé non enregistré)', !!(d && d.aucune_idee === true), Number.isInteger(d && d.id) ? d.id : null)
+      })
+      return
+    }
     ;(Array.isArray(r.questions_ratees) ? r.questions_ratees : []).forEach(q => {
       const a = analyserRatee(q)
-      const domaine = String(r.theme == null ? '' : r.theme).trim() || a.domaine
-      const k = domaine + '\u0000' + sousTheme + '\u0000' + a.notion
-      const e = m[k] || (m[k] = { domaine, sousTheme, notion: a.notion, nb: 0, aucune: 0 })
-      e.nb++
-      if (a.aucune) e.aucune++
+      ajouter(colTheme || a.domaine, sousTheme, a.notion, a.aucune, null)
     })
   })
   return Object.values(m).sort((x, y) => y.nb - x.nb || x.notion.localeCompare(y.notion, 'fr') || x.sousTheme.localeCompare(y.sousTheme, 'fr'))
@@ -532,7 +551,9 @@ function renderRatees(userId) {
         h += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:10px 0 0 10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted)"><span>'+escHtml(st || 'Sous-thème non renseigné')+'</span><span style="white-space:nowrap">'+t+' échec'+(t > 1 ? 's' : '')+'</span></div>'
         ns.forEach(n => {
           const compte = n.nb + '×' + (n.aucune ? ' (dont ' + n.aucune + ' « aucune idée »)' : '')
-          h += '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 0 7px 22px;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="color:#444">'+escHtml(n.notion)+'</span><span style="color:#9E2B25;font-weight:600;text-align:right">'+escHtml(compte)+'</span></div>'
+          // ids (énoncé complet) : « #753 » en petit ; 3 au plus puis « +N » si plusieurs ids partagent l'énoncé
+          const idsAff = n.ids.length ? '<span style="font-size:11px;color:var(--muted);margin-left:6px;white-space:nowrap">'+escHtml(n.ids.slice(0, 3).map(i => '#' + i).join(', ') + (n.ids.length > 3 ? ' +' + (n.ids.length - 3) : ''))+'</span>' : ''
+          h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:7px 0 7px 22px;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="flex:1;min-width:0;overflow-wrap:anywhere;color:#444">'+escHtml(n.notion)+idsAff+'</span><span style="flex:0 1 auto;max-width:9.5rem;color:#9E2B25;font-weight:600;text-align:right">'+escHtml(compte)+'</span></div>'
         })
       })
     })
