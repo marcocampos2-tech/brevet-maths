@@ -700,3 +700,21 @@ begin
     alter table resultats add constraint resultats_client_key_unique unique (client_key);
   end if;
 end $$;
+
+-- ---------------------------------------------------------------------------
+-- resultats — lecture par le prof (relevé du 18/10/2026)
+-- ---------------------------------------------------------------------------
+-- Policy existante en production, versionnée ici sans rien exécuter en base.
+-- État constaté le 18/10/2026 par dump de pg_policies. Seule cette policy de
+-- resultats est relevée ici (les policies élève et parent ne le sont pas).
+-- Elle donne au prof la lecture de resultats (prof.html) et, la vue
+-- public.niveaux_sous_theme étant en security_invoker, celle de la vue
+-- (db/vue-niveaux.sql). Tests du 18/10/2026 : lecture de niveaux_sous_theme
+-- en contexte prof OK (8 élèves) ; contre-test sans rôle prof : 2 élèves,
+-- ceux liés au compte.
+drop policy if exists "Prof voit tout resultats" on resultats;
+create policy "Prof voit tout resultats"
+on resultats
+for select
+to public
+using (is_prof());

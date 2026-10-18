@@ -151,6 +151,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   .dash-table th, .dash-table td { white-space: nowrap; }
 }
 </style>
+<link rel="stylesheet" href="/css/niveaux.css?v=1">
 </head>
 <body>
 <div class="wrap">
@@ -204,6 +205,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   </div>
 </div>
 
+<script src="/js/catalogue.js?v=1"></script>
+<script src="/js/niveaux.js?v=1"></script>
 <script>
 const SB_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SB_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
@@ -221,24 +224,6 @@ const THEMES = [
   'Algorithmique et programmation'
 ]
 const THEMES_SHORT = ['Nombres', 'Organisation', 'Grandeurs', 'Géométrie', 'Algo']
-
-const SOUS_THEMES = {
-  'Nombres et calculs': [
-    'Nombres relatifs', 'Équations', 'Calcul littéral', 'Fractions', 'Puissances', 'Arithmétique'
-  ],
-  'Organisation et gestion de données, fonctions': [
-    'Fonctions', 'Statistiques', 'Probabilités', 'Proportionnalité', 'Pourcentages'
-  ],
-  'Grandeurs et mesures': [
-    'Aires et volumes', 'Conversions', 'Agrandissement'
-  ],
-  'Espace et géométrie': [
-    'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie', 'Transformations', 'Triangles semblables'
-  ],
-  'Algorithmique et programmation': [
-    'Algorithmique'
-  ]
-}
 
 let ROWS = [], EXAMENS = [], PROFILS = {}, ELEVES = []
 let userIdCourant = null
@@ -376,12 +361,6 @@ function escAttrJs(v) {
   return escHtml(esc(v))
 }
 
-function getStatut(p) {
-  if (p >= 70) return { label: 'Maîtrisé', emoji: '✅', color: '#2F9E5C' }
-  if (p >= 50) return { label: 'En cours', emoji: '⚠️', color: '#8a6416' }
-  return { label: 'À retravailler', emoji: '❌', color: '#9E2B25' }
-}
-
 function mentionBadge(p) {
   if (p >= 80) return '<span class="badge badge-tb">Excellent</span>'
   if (p >= 70) return '<span class="badge badge-b">Très bon</span>'
@@ -428,10 +407,6 @@ function setTab(id) {
   if (id === 'banque') { banqueFiltre = { theme: '', sousTheme: '', diff: '', search: '', page: 0, resetParId: false }; chargerBanque() }
   if (id === 'inscriptions') chargerInscriptions()
   if (id === 'stages') chargerStages()
-}
-
-function miniStat(val, label, col) {
-  return '<div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center"><div style="font-family:\'Newsreader\',serif;font-size:24px;font-weight:700;color:'+col+'">'+val+'</div><div style="font-size:11px;color:var(--muted);margin-top:4px">'+label+'</div></div>'
 }
 
 // ═══════════════════════════════════════════════════
@@ -1614,106 +1589,52 @@ async function supprimerQuestion() {
 }
 
 // ═══════════════════════════════════════════════════
-// FICHE ÉLÈVE
+// FICHE ÉLÈVE — même carte « Niveau atteint par sous-thème » que celle du
+// parent (js/niveaux.js), lue dans la vue public.niveaux_sous_theme avec la
+// session prof : is_prof() donne accès à tous les élèves (RLS de resultats,
+// vue en security_invoker). Aucun calcul ici, uniquement de l'affichage.
 // ═══════════════════════════════════════════════════
-function openFiche(userId) {
+let ficheEnCours = null // user_id de la fiche ouverte : écarte une réponse tardive
+
+async function openFiche(userId) {
   const e = ELEVES.find(x => x.user_id === userId)
   if (!e) return
-  const rows = ROWS.filter(r => r.user_id === userId)
-  if (!rows.length) { alert('Pas encore de données pour cet élève.'); return }
-  const rowsValides = rows.filter(r => !r.abandonne)
-  const moyPct = rowsValides.length ? Math.round((rowsValides.reduce((a,r) => a + r.score/r.total, 0)/rowsValides.length)*100) : 0
-  const tempsTot = rows.reduce((a,r) => a + (r.temps_secondes||0), 0)
-  const themes = {}
-  rowsValides.forEach(r => {
-    if (!themes[r.theme]) themes[r.theme] = { ok:0, tot:0, n:0, niveaux: { facile:{ok:0,tot:0}, moyen:{ok:0,tot:0}, difficile:{ok:0,tot:0} }, sousThemes: {} }
-    themes[r.theme].ok += r.score; themes[r.theme].tot += r.total; themes[r.theme].n++
-    if (r.difficulte && themes[r.theme].niveaux[r.difficulte]) { themes[r.theme].niveaux[r.difficulte].ok += r.score; themes[r.theme].niveaux[r.difficulte].tot += r.total }
-    if (r.sous_theme) {
-      if (!themes[r.theme].sousThemes[r.sous_theme]) themes[r.theme].sousThemes[r.sous_theme] = { ok:0, tot:0 }
-      themes[r.theme].sousThemes[r.sous_theme].ok += r.score
-      themes[r.theme].sousThemes[r.sous_theme].tot += r.total
-    }
-  })
-  const chapitresRates = {}
-  rows.forEach(r => { (r.questions_ratees||[]).filter(q => !q.includes('abandonné')).forEach(q => { if (!chapitresRates[r.theme]) chapitresRates[r.theme]={}; chapitresRates[r.theme][q]=(chapitresRates[r.theme][q]||0)+1 }) })
-  const niveauEmoji = { facile: '😊 Facile', moyen: '😐 Moyen', difficile: '😤 Difficile' }
-  // Deux compteurs séparés (quiz vs examen blanc) — cf. docs/TODO.md.
-  // Affichés en ligne secondaire discrète, pas en miniStat pleine taille :
-  // un compte de travail/démo peut en accumuler des dizaines (bruit de
-  // développement), ça ne doit pas rivaliser visuellement avec les stats
-  // d'apprentissage réelles. Absente plutôt qu'à "0" quand rien à signaler.
-  const nbAbandonsQuiz = rows.filter(r => r.abandonne).length
-  const nbAbandonsExamen = EXAMENS.filter(ex => ex.user_id === userId && ex.abandonne).length
+  ficheEnCours = userId
   document.getElementById('fiche-titre').textContent = e.prenom + ' ' + e.nom
-  let body = ''
-  body += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:1.5rem">'
-  body += miniStat(moyPct+'%', 'Moyenne quiz', color(moyPct))
-  body += miniStat(rows.length, 'Sessions', 'var(--blue)')
-  body += miniStat(fmtTemps(tempsTot), 'Temps total', 'var(--blue)')
-  body += '</div>'
-  if (nbAbandonsQuiz > 0 || nbAbandonsExamen > 0) {
-    const parts = []
-    if (nbAbandonsQuiz > 0) parts.push(nbAbandonsQuiz + ' quiz abandonné' + (nbAbandonsQuiz > 1 ? 's' : ''))
-    if (nbAbandonsExamen > 0) parts.push(nbAbandonsExamen + ' examen' + (nbAbandonsExamen > 1 ? 's' : '') + ' abandonné' + (nbAbandonsExamen > 1 ? 's' : ''))
-    body += '<div style="font-size:11px;color:#999;margin:-10px 0 14px">⚠️ ' + parts.join(' · ') + '</div>'
-  }
-  const examMap = {}
-  EXAMENS.filter(e=>!e.abandonne).forEach(e=>{ if(!examMap[e.user_id]) examMap[e.user_id]=e })
-  const exam = examMap[userId]
-  if (exam) {
-    const ep = pct(exam.score, exam.total)
-    body += '<div style="background:var(--blue-bg);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">'
-    body += '<div style="font-size:13px;font-weight:700;color:var(--blue)">📝 Dernier examen en ligne</div>'
-    body += '<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:'+color(ep)+'">'+escHtml(exam.score)+'/20</div>'
-    body += '<div style="font-size:11px;color:'+color(ep)+';font-weight:600">'+mentionLabel(ep)+'</div></div></div>'
-  }
-  THEMES.forEach(t => {
-    const s = themes[t]; if (!s) return
-    const p = pct(s.ok, s.tot), statut = getStatut(p)
-    body += '<div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:10px">'
-    body += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-    body += '<div style="font-size:13px;font-weight:700;color:var(--text)">'+t+'</div>'
-    body += '<div style="text-align:right"><div style="font-size:14px;font-weight:700;color:'+statut.color+'">'+s.ok+'/'+s.tot+' bonnes réponses</div>'
-    body += '<div style="font-size:11px;color:'+statut.color+';font-weight:600">'+statut.emoji+' '+statut.label+'</div></div></div>'
-    ;['facile','moyen','difficile'].forEach(niv => {
-      const n = s.niveaux[niv]; if (n.tot === 0) return
-      const np = pct(n.ok, n.tot), ns = getStatut(np)
-      body += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0 5px 12px;font-size:12px;border-top:1px solid #e8e8e4">'
-      body += '<span style="color:#666">'+niveauEmoji[niv]+'</span>'
-      body += '<span style="color:'+ns.color+';font-weight:600">'+ns.emoji+' '+ns.label+' — '+n.ok+'/'+n.tot+'</span></div>'
-    })
-    const sousThemesData = Object.entries(s.sousThemes || {})
-    if (sousThemesData.length > 0) {
-      body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e8e8e4">'
-      body += '<div style="font-size:11px;color:var(--blue);font-weight:600;margin-bottom:6px">Par sous-thème :</div>'
-      sousThemesData.forEach(([nomSousTheme, st]) => {
-        const stp = pct(st.ok, st.tot), sts = getStatut(stp)
-        body += '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px">'
-        body += '<span style="color:#555">'+escHtml(nomSousTheme)+'</span>'
-        body += '<span style="color:'+sts.color+';font-weight:600">'+sts.emoji+' '+stp+'%</span></div>'
-      })
-      body += '</div>'
-    }
-    const chaps = chapitresRates[t]
-    if (chaps && Object.keys(chaps).length > 0) {
-      const topChaps = Object.entries(chaps).sort((a,b) => b[1]-a[1]).slice(0,3)
-      body += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e8e8e4">'
-      body += '<div style="font-size:11px;color:#9E2B25;font-weight:600;margin-bottom:4px">Questions ratées :</div>'
-      topChaps.forEach(([chap, nb]) => { body += '<div style="font-size:11px;color:#666;padding:2px 0">• '+escHtml(chap.replace(t+' — ',''))+' <span style="color:#9E2B25;font-weight:600">('+nb+'×)</span></div>' })
-      body += '</div>'
-    }
-    body += '</div>'
-  })
-  body += '<div style="margin-top:1.5rem;display:flex;gap:8px;flex-wrap:wrap">'
-  body += '<button class="btn btn-green" id="btn-bilan" onclick="envoyerBilan(\''+escAttrJs(userId)+'\')">Envoyer bilan parents</button>'
-  body += '<button class="btn" onclick="closeFiche()">Fermer</button>'
-  body += '</div>'
-  document.getElementById('fiche-body').innerHTML = body
+  const corps = document.getElementById('fiche-body')
+  corps.innerHTML = '<div class="loader" style="padding:2rem 1rem">Chargement…</div>'
   document.getElementById('overlay').classList.add('active')
+
+  const { data, error } = await sb.from('niveaux_sous_theme')
+    .select(Niveaux.SELECT_NIVEAUX)
+    .eq('user_id', userId)
+  if (ficheEnCours !== userId) return // fiche fermée, ou autre élève ouvert entre-temps
+
+  let contenu
+  if (error) {
+    console.error('[niveaux] lecture de niveaux_sous_theme impossible (fiche) :', error.message)
+    contenu = '<p class="empty" style="color:var(--red)">Impossible de charger le niveau atteint pour le moment.</p>'
+  } else if (!data || data.length === 0) {
+    contenu = '<p class="empty">Aucune session terminée pour l\'instant.</p>'
+  } else {
+    contenu = Niveaux.rendreCarteNiveaux(data, { cta: false, deplie: true })
+  }
+
+  // Bouton bilan : seulement si l'élève a au moins une ligne dans resultats
+  // (abandons compris) — même garde-fou qu'avant, quand l'alerte « Pas encore
+  // de données » empêchait d'ouvrir la fiche d'un élève sans aucune session.
+  let pied = '<div style="margin-top:1.5rem;display:flex;gap:8px;flex-wrap:wrap">'
+  if (ROWS.some(r => r.user_id === userId)) {
+    pied += '<button class="btn btn-green" id="btn-bilan" onclick="envoyerBilan(\''+escAttrJs(userId)+'\')">Envoyer bilan parents</button>'
+  }
+  pied += '<button class="btn" onclick="closeFiche()">Fermer</button></div>'
+  corps.innerHTML = contenu + pied
 }
 
-function closeFiche() { document.getElementById('overlay').classList.remove('active') }
+function closeFiche() {
+  ficheEnCours = null
+  document.getElementById('overlay').classList.remove('active')
+}
 
 async function envoyerBilan(userId) {
   const e = ELEVES.find(x => x.user_id === userId)
