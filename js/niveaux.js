@@ -17,7 +17,7 @@
 //
 // Dépendance : js/catalogue.js doit être chargé AVANT (SOUS_THEMES).
 // Styles : css/niveaux.css.
-// Chargement : <script src="/js/niveaux.js?v=2"></script> — incrémenter v à
+// Chargement : <script src="/js/niveaux.js?v=3"></script> — incrémenter v à
 // chaque modification pour contourner le cache.
 (function () {
   'use strict'
@@ -50,17 +50,32 @@
     return Object.keys(SOUS_THEMES).reduce((s, t) => s + SOUS_THEMES[t].length, 0)
   }
 
-  function celluleNiveau(l, niveau) {
+  // Contenu d'une case niveau, sans mise en forme : { type, texte, reussites }.
+  // type : 'acquis' | 'encours' | 'surv' (en cours ET à surveiller) | 'jamais' |
+  // 'verrou'. reussites (0-5) pilote la barre. Source unique du texte des cases :
+  // celluleNiveau() (page) et lib/bilan-email.js (grille de l'email) en dérivent.
+  function cellule(l, niveau) {
     const c = CHAMPS_NIVEAU[niveau]
     const etat = l[c.etat]
-    if (etat === 'acquis') return '<div class="niv-cell niv-c-acquis">✓ Acquis</div>'
+    if (etat === 'acquis') return { type: 'acquis', texte: '✓ Acquis', reussites: 5 }
     if (etat === 'en_cours') {
       const n = Math.min(Number(l[c.reussites]) || 0, 5)
-      const cls = (l.a_surveiller && l.niveau_courant === niveau) ? 'niv-c-surv' : 'niv-c-encours'
-      return `<div class="niv-cell ${cls}">${nbReussites(n)} sur 5<div class="niv-barre"><span style="width:${n * 20}%"></span></div></div>`
+      const type = (l.a_surveiller && l.niveau_courant === niveau) ? 'surv' : 'encours'
+      return { type, texte: `${nbReussites(n)} sur 5`, reussites: n }
     }
-    if (etat === 'jamais_joue') return `<div class="niv-cell niv-c-jamais">${nbReussites(0)} sur 5</div>`
-    return `<div class="niv-cell niv-c-verrou">Après le ${niveau === 'moyen' ? 'Facile' : 'Moyen'}</div>`
+    if (etat === 'jamais_joue') return { type: 'jamais', texte: `${nbReussites(0)} sur 5`, reussites: 0 }
+    return { type: 'verrou', texte: `Après le ${niveau === 'moyen' ? 'Facile' : 'Moyen'}`, reussites: 0 }
+  }
+
+  function celluleNiveau(l, niveau) {
+    const d = cellule(l, niveau)
+    if (d.type === 'acquis') return '<div class="niv-cell niv-c-acquis">' + d.texte + '</div>'
+    if (d.type === 'encours' || d.type === 'surv') {
+      const cls = d.type === 'surv' ? 'niv-c-surv' : 'niv-c-encours'
+      return `<div class="niv-cell ${cls}">${d.texte}<div class="niv-barre"><span style="width:${d.reussites * 20}%"></span></div></div>`
+    }
+    if (d.type === 'jamais') return `<div class="niv-cell niv-c-jamais">${d.texte}</div>`
+    return `<div class="niv-cell niv-c-verrou">${d.texte}</div>`
   }
 
   // Classement pur (lignes de la vue → textes bruts, non échappés), partagé par
@@ -136,7 +151,7 @@
   const API = {
     NOM_NIVEAU, CHAMPS_NIVEAU, SELECT_NIVEAUX,
     nbReussites, parRecence, totalCatalogue,
-    celluleNiveau, classerNiveaux, rendreCarteNiveaux
+    cellule, celluleNiveau, classerNiveaux, rendreCarteNiveaux
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = API
   else window.Niveaux = API

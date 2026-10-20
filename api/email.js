@@ -3,7 +3,7 @@
 const { peutRecevoirEmailDetaille, enPeriodeGratuite } = require('../lib/gating')
 const { verifierToken, verifierUtilisateur, verifierProf } = require('../lib/auth-token')
 const { dateParis, dateRecapValide, libelleJour, ligneActivite, resumeJour, formatDuree } = require('../lib/recap-journalier')
-const { UUID, lireProfil, lireHistorique, debutPeriode, calculerBilan } = require('../lib/bilan-email')
+const { UUID, lireProfil, lireHistorique, calculerBilan } = require('../lib/bilan-email')
 const { resoudreDestinataire, envoyerA } = require('../lib/garde-envoi')
 
 function esc(s) {
@@ -517,7 +517,8 @@ export default async function handler(req, res) {
   // niveaux et activité sont lus et calculés ICI (lib/bilan-email.js, le même
   // module que le cron de 21 jours). Aucun champ de l'ancien format
   // (emailParent, sousThemes, moyGlobale…) n'est lu.
-  //   - envoi : TOUJOURS la version complète (échantillon détaillé pour un
+  //   - période : les 21 derniers jours glissants ; envoi : TOUJOURS la version
+  //     complète (échantillon détaillé pour un
   //     parent en offre Libre, cf. CLAUDE.md § bilan manuel) ; n'écrit jamais
   //     historique_bilans (la cadence du cron n'est pas touchée) ; respecte
   //     email_actif (raison:'desabonne', avant le quota) ; quota de 10 par
@@ -556,12 +557,15 @@ export default async function handler(req, res) {
         if (!dest.to) return res.status(403).json({ error: "Envoi désactivé hors production : EMAIL_TEST_DESTINATAIRE absent ou invalide." })
       }
 
+      // Période : les 21 derniers jours glissants (et non « depuis le dernier
+      // bilan » comme le cron). Le dernier bilan du cron ne sert qu'à comparer
+      // les niveaux (ligne « Nouveaux niveaux validés »).
       const historique = await lireHistorique(ctx, user_id)
-      const dateDebut = await debutPeriode(ctx, user_id, historique.derniers[0] || null)
-      if (!dateDebut) return res.status(400).json({ error: 'Aucune session pour cet élève : pas de bilan.' })
+      const maintenant = new Date()
+      const dateDebut = new Date(maintenant.getTime() - 21 * 24 * 60 * 60 * 1000)
 
       const bilan = await calculerBilan(ctx, {
-        userId: user_id, profil, historique, dateDebut, maintenant: new Date(),
+        userId: user_id, profil, historique, dateDebut, maintenant, periodeFixe: true,
         versionForcee: apercu === true ? (version || 'complet') : 'complet',
         test: dest ? dest.test : false,
         // Aperçu : aucun lien de désabonnement exploitable (le HTML est seulement affiché au prof).
