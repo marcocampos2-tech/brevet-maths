@@ -223,8 +223,27 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   </div>
 </div>
 
+<div class="overlay" id="overlay-apercu">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-head">
+      <div class="modal-title">👁 Aperçu du bilan parents</div>
+      <button class="modal-close" onclick="closeApercu()">✕</button>
+    </div>
+    <div class="field">
+      <label for="apercu-version">Version</label>
+      <select id="apercu-version" onchange="chargerApercu()">
+        <option value="complet">Complet (celui du bouton « Envoyer bilan parents »)</option>
+        <option value="tronque">Tronqué (élève Libre, à partir du 2ᵉ bilan)</option>
+      </select>
+    </div>
+    <div id="apercu-sujet" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+    <iframe id="apercu-frame" sandbox="" title="Aperçu du bilan" style="width:100%;height:520px;border:1px solid var(--border);border-radius:8px;background:#fff"></iframe>
+    <div id="apercu-msg" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+  </div>
+</div>
+
 <script src="/js/catalogue.js?v=1"></script>
-<script src="/js/niveaux.js?v=1"></script>
+<script src="/js/niveaux.js?v=2"></script>
 <script>
 const SB_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SB_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
@@ -1893,6 +1912,7 @@ async function openFiche(userId) {
   pied += '<div style="margin-top:1rem;display:flex;gap:8px;flex-wrap:wrap">'
   if (ROWS.some(r => r.user_id === userId)) {
     pied += '<button class="btn btn-green" id="btn-bilan" onclick="envoyerBilan(\''+escAttrJs(userId)+'\')">Envoyer bilan parents</button>'
+    pied += '<button class="btn" onclick="ouvrirApercuBilan(\''+escAttrJs(userId)+'\')">Aperçu du bilan</button>'
   }
   pied += '<button class="btn" onclick="closeFiche()">Fermer</button></div>'
   corps.innerHTML = blocOffre(userId) + contenu + pied
@@ -1903,46 +1923,62 @@ function closeFiche() {
   document.getElementById('overlay').classList.remove('active')
 }
 
+// Bilan parents (lot 3, 20/10/2026) : le navigateur n'envoie plus que
+// l'identifiant de l'élève. Destinataire, niveaux (vue niveaux_sous_theme) et
+// activité sont calculés côté serveur (api/email.js, lib/bilan-email.js), le
+// même email complet que le bilan automatique de 21 jours. Hors production, le
+// serveur n'envoie qu'à l'adresse de test (EMAIL_TEST_DESTINATAIRE).
 async function envoyerBilan(userId) {
   const e = ELEVES.find(x => x.user_id === userId)
   if (!e?.email_parent || e.email_parent === '—') { alert("Pas d'email parent pour cet élève."); return }
   const btn = document.getElementById('btn-bilan')
+  const libelle = 'Envoyer bilan parents'
   btn.disabled = true; btn.textContent = 'Envoi…'
-  const rows = ROWS.filter(r => r.user_id === userId)
-  const rowsValides = rows.filter(r => !r.abandonne)
-  const gSBilan = rowsValides.reduce((a,r)=>a+r.score,0)
-  const gTBilan = rowsValides.reduce((a,r)=>a+r.total,0)
-  const moyGlobale = pct(gSBilan, gTBilan)
-
-  // Modifié le 16/08/2026 — aligné sur le bilan périodique automatique
-  // (cron-rappel.js) : détail par sous-thème (niveau de difficulté max
-  // atteint, Acquis ≥70%/À revoir), plus de texte de question brute.
-  // Portée volontairement conservée sur tout l'historique de l'élève
-  // (ROWS non filtré par période) — ce bouton sert d'échantillon complet
-  // à un parent en offre Libre, pas d'un suivi limité à une fenêtre.
-  // rowsValides (17/09/2026) : un abandon (score 0, api/quiz-resultat.js)
-  // ne doit ni faire baisser une moyenne ni compter comme le niveau de
-  // difficulté atteint sur un sous-thème.
-  const ORDRE_DIFFICULTE_BILAN = { facile: 1, moyen: 2, difficile: 3 }
-  const parSousTheme = {}
-  rowsValides.forEach(r => { if (!r.sous_theme || !r.difficulte) return; (parSousTheme[r.sous_theme] ||= []).push(r) })
-  const sousThemes = {}
-  Object.entries(parSousTheme).forEach(([st, list]) => {
-    let difficulteMax = null
-    list.forEach(r => { if (!difficulteMax || ORDRE_DIFFICULTE_BILAN[r.difficulte] > ORDRE_DIFFICULTE_BILAN[difficulteMax]) difficulteMax = r.difficulte })
-    const auNiveauMax = list.filter(r => r.difficulte === difficulteMax)
-    const ok = auNiveauMax.reduce((a,r)=>a+r.score,0)
-    const tot = auNiveauMax.reduce((a,r)=>a+r.total,0)
-    sousThemes[st] = { difficulte: difficulteMax, ok, tot, pct: tot>0?Math.round((ok/tot)*100):0 }
-  })
-
   try {
-    const res = await appelerEmail({ type: 'bilan', emailParent:e.email_parent, prenom:e.prenom, nom:e.nom, moyGlobale, totalSessions:rows.length, tempsTotal:rows.reduce((a,r)=>a+(r.temps_secondes||0),0), sousThemes }, { brut: true })
-    const data = await res.json()
-    if (data.raison === 'desabonne') { alert('Parent désabonné : bilan non envoyé.'); btn.disabled=false; btn.textContent='Envoyer bilan parents' }
-    else if (data.success) { btn.textContent='Envoyé ✓'; setTimeout(()=>{ btn.disabled=false; btn.textContent='Envoyer bilan parents' },3000) }
-    else throw new Error(data.error)
-  } catch(err) { alert('Erreur : '+err.message); btn.disabled=false; btn.textContent='Envoyer bilan parents' }
+    const res = await appelerEmail({ type: 'bilan', user_id: userId }, { brut: true })
+    const data = await res.json().catch(() => ({}))
+    if (data.raison === 'desabonne') { alert('Parent désabonné : bilan non envoyé.'); btn.disabled=false; btn.textContent=libelle }
+    else if (res.ok && data.success) {
+      btn.textContent = data.test ? 'Envoyé ✓ (adresse de test)' : 'Envoyé ✓'
+      setTimeout(()=>{ btn.disabled=false; btn.textContent=libelle },3000)
+    }
+    else throw new Error(data.error || ('statut ' + res.status))
+  } catch(err) { alert('Erreur : '+err.message); btn.disabled=false; btn.textContent=libelle }
+}
+
+// Aperçu du bilan sans envoi (iframe sandbox, srcdoc). Complet ou tronqué au choix.
+let apercuUserId = null
+async function ouvrirApercuBilan(userId) {
+  apercuUserId = userId
+  document.getElementById('apercu-version').value = 'complet'
+  document.getElementById('overlay-apercu').classList.add('active')
+  await chargerApercu()
+}
+async function chargerApercu() {
+  const uid = apercuUserId
+  if (!uid) return
+  const frame = document.getElementById('apercu-frame')
+  const msg = document.getElementById('apercu-msg')
+  const sujet = document.getElementById('apercu-sujet')
+  frame.srcdoc = ''; sujet.textContent = ''; msg.textContent = 'Chargement…'
+  try {
+    const version = document.getElementById('apercu-version').value
+    const res = await appelerEmail({ type: 'bilan', user_id: uid, apercu: true, version }, { brut: true })
+    const data = await res.json().catch(() => ({}))
+    if (apercuUserId !== uid) return // fermé ou changé entre-temps
+    if (!res.ok || !data.success) throw new Error(data.error || ('statut ' + res.status))
+    sujet.textContent = 'Objet : ' + data.sujet
+    frame.srcdoc = data.html
+    msg.textContent = ''
+  } catch(err) {
+    if (apercuUserId !== uid) return
+    msg.textContent = 'Aperçu impossible : ' + err.message
+  }
+}
+function closeApercu() {
+  apercuUserId = null
+  document.getElementById('overlay-apercu').classList.remove('active')
+  document.getElementById('apercu-frame').srcdoc = ''
 }
 
 // Se remplit dynamiquement selon le domaine choisi dans le formulaire

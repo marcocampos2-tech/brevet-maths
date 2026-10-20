@@ -3,6 +3,8 @@
 const { peutRecevoirEmailDetaille, enPeriodeGratuite } = require('../lib/gating')
 const { verifierToken, verifierUtilisateur, verifierProf } = require('../lib/auth-token')
 const { dateParis, dateRecapValide, libelleJour, ligneActivite, resumeJour, formatDuree } = require('../lib/recap-journalier')
+const { UUID, lireProfil, lireHistorique, debutPeriode, calculerBilan } = require('../lib/bilan-email')
+const { resoudreDestinataire, envoyerA } = require('../lib/garde-envoi')
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -507,100 +509,81 @@ export default async function handler(req, res) {
   }
 
   // ═══════════════════════════════════════════
-  // BILAN PARENTS (bouton "Envoyer bilan" prof.html)
+  // BILAN PARENTS (bouton "Envoyer bilan parents" et "Aperçu" de prof.html)
+  //
+  // Contrat (lot 3, 20/10/2026) : { type:'bilan', user_id, apercu?, version? }
+  // avec le jeton du prof (contrôle d'identité en tête de handler). Le
+  // navigateur n'envoie plus que l'identifiant de l'élève : destinataire,
+  // niveaux et activité sont lus et calculés ICI (lib/bilan-email.js, le même
+  // module que le cron de 21 jours). Aucun champ de l'ancien format
+  // (emailParent, sousThemes, moyGlobale…) n'est lu.
+  //   - envoi : TOUJOURS la version complète (échantillon détaillé pour un
+  //     parent en offre Libre, cf. CLAUDE.md § bilan manuel) ; n'écrit jamais
+  //     historique_bilans (la cadence du cron n'est pas touchée) ; respecte
+  //     email_actif (raison:'desabonne', avant le quota) ; quota de 10 par
+  //     heure et par destinataire inchangé ;
+  //   - apercu:true : renvoie { sujet, html } sans rien envoyer, sans quota ni
+  //     écriture ; version:'complet'|'tronque' n'est honorée qu'avec apercu ;
+  //   - hors production, le destinataire est l'adresse de test (lib/garde-envoi.js).
   // ═══════════════════════════════════════════
   if (req.body?.type === 'bilan') {
     try {
-      const { emailParent, prenom, nom, moyGlobale, totalSessions, tempsTotal, sousThemes } = req.body
+      const { user_id, apercu, version } = req.body
+      if (typeof user_id !== 'string' || !UUID.test(user_id)) {
+        return res.status(400).json({ error: 'user_id invalide (le bilan ne prend plus que l\'identifiant de l\'élève : recharge la page)' })
+      }
+      if (apercu !== undefined && typeof apercu !== 'boolean') return res.status(400).json({ error: 'apercu invalide' })
+      if (version !== undefined && version !== 'complet' && version !== 'tronque') return res.status(400).json({ error: 'version invalide' })
 
-      // Désabonnement respecté, avant tout calcul et avant le quota. Le prof
-      // lit raison: 'desabonne' dans prof.html (envoyerBilan).
-      const desabonne = await parentDesabonne(emailParent, 'https://vkkgadwqumqqwpaayjac.supabase.co', process.env.SUPABASE_SERVICE_KEY)
-      if (desabonne === null) return res.status(500).json({ error: 'Vérification du désabonnement impossible' })
-      if (desabonne) return res.status(200).json({ success: false, raison: 'desabonne' })
+      const SUPA_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
+      const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY
+      const ctx = { supaUrl: SUPA_URL, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPA_KEY}`, 'apikey': SUPA_KEY } }
 
-      const moyNote20 = (moyGlobale / 100 * 20).toFixed(1).replace('.0', '')
+      const profil = await lireProfil(ctx, user_id)
+      if (!profil) return res.status(404).json({ error: 'Élève introuvable' })
 
-      const couleur = moyGlobale >= 80 ? '#16a34a' : moyGlobale >= 60 ? '#3730a3' : moyGlobale >= 40 ? '#f59e0b' : '#dc2626'
-      const mention = moyGlobale >= 80 ? '🌟 Excellent !' : moyGlobale >= 60 ? '👍 Bien !' : moyGlobale >= 40 ? '💪 Continue !' : '📚 À retravailler'
+      let dest = null
+      if (apercu !== true) {
+        if (!profil.email_parent) return res.status(400).json({ error: "Pas d'email parent pour cet élève." })
 
-      const h = Math.floor(tempsTotal/3600)
-      const m = Math.floor((tempsTotal%3600)/60)
-      const tempsFormat = h > 0 ? `${h}h ${m}min` : `${m} min`
+        // Désabonnement respecté, avant tout calcul et avant le quota. Le prof
+        // lit raison: 'desabonne' dans prof.html (envoyerBilan).
+        const desabonne = await parentDesabonne(profil.email_parent, SUPA_URL, SUPA_KEY)
+        if (desabonne === null) return res.status(500).json({ error: 'Vérification du désabonnement impossible' })
+        if (desabonne) return res.status(200).json({ success: false, raison: 'desabonne' })
 
-      // Modifié le 16/08/2026 — aligné sur le bilan périodique automatique
-      // (cron-rappel.js) : détail par sous-thème, Acquis (≥70%) / À revoir,
-      // plus de texte de question brute. Gating volontairement absent ici
-      // (cf. CLAUDE.md § bilan manuel) : ce bouton sert d'échantillon
-      // détaillé pour un parent en offre Libre, dans une logique de
-      // conversion — pas de peutRecevoirEmailDetaille sur ce flux.
-      const NIVEAU_LABEL_BILAN = { facile: 'Facile', moyen: 'Moyen', difficile: 'Difficile' }
-      const sousThemesHTML = Object.entries(sousThemes || {}).map(([st, d]) => {
-        const acquis = d.pct >= 70
-        const bg = acquis ? '#EAF6EF' : '#FBF4E4'
-        const fg = acquis ? '#1f7a45' : '#8a6416'
-        const label = acquis ? 'Acquis' : 'À revoir'
-        const niveauLabel = NIVEAU_LABEL_BILAN[d.difficulte] || ''
-        return `<table style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr style="background:${bg};border-radius:8px">
-          <td style="padding:10px 12px;font-size:13px;color:${fg}">${esc(st)}${niveauLabel ? ` <span style="font-size:11px;opacity:0.75">· ${niveauLabel}</span>` : ''}</td>
-          <td style="padding:10px 12px;font-size:12px;font-weight:600;color:${fg};text-align:right;white-space:nowrap">${label} · ${d.ok}/${d.tot}</td>
-        </tr></table>`
-      }).join('')
+        dest = resoudreDestinataire(profil.email_parent)
+        if (!dest.to) return res.status(403).json({ error: "Envoi désactivé hors production : EMAIL_TEST_DESTINATAIRE absent ou invalide." })
+      }
 
-      const messageMotivation = moyGlobale >= 40
-        ? `Bonne nouvelle : <strong>${esc(prenom)} progresse !</strong><br>Encouragez-le à continuer sur les sous-thèmes à améliorer.`
-        : `<strong>${esc(prenom)}</strong> traverse une période plus difficile sur ces notions.<br>Un encouragement et un peu de temps supplémentaire sur les sous-thèmes ci-dessous peuvent faire la différence.`
+      const historique = await lireHistorique(ctx, user_id)
+      const dateDebut = await debutPeriode(ctx, user_id, historique.derniers[0] || null)
+      if (!dateDebut) return res.status(400).json({ error: 'Aucune session pour cet élève : pas de bilan.' })
 
-      const html = `
-        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
-          <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
-            <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
-            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Bilan de progression</div>
-          </div>
-          <p style="margin-bottom:6px;">Bonjour Madame, Monsieur,</p>
-          <p style="margin-bottom:20px;color:#444;">
-            Voici le bilan de progression de <strong>${esc(prenom)}${nom ? ' ' + esc(nom) : ''}</strong> sur ACADEMIKA.
-          </p>
-          <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
-            <div style="font-size:56px;font-weight:700;color:${couleur}">${moyNote20}<span style="font-size:24px;color:#999">/20</span></div>
-            <div style="font-size:18px;margin-top:8px">${mention} — ${moyGlobale}%</div>
-            <div style="font-size:13px;color:#666;margin-top:8px">${totalSessions} sessions · ${tempsFormat} de révision</div>
-          </div>
-          <p style="color:#444;margin-bottom:16px;">${messageMotivation}</p>
-          <h3 style="font-size:14px;font-weight:600;margin-bottom:8px">📊 Résultats par sous-thème :</h3>
-          ${sousThemesHTML || '<p style="color:#999;font-size:13px">Pas encore assez de sessions par sous-thème pour établir un détail.</p>'}
-          <div style="text-align:center;margin:28px 0">
-            <a href="https://www.academika.fr/espace-parent.html" style="background:#3730a3;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;display:inline-block">
-              Voir le suivi complet dans l'espace parent →
-            </a>
-          </div>
-          <div style="margin-top:30px;padding-top:16px;border-top:1px solid #e8e8e4;">
-            <p style="color:#444;font-size:13px;margin-bottom:16px;">
-              Pour toute question, contactez-nous : 
-              <a href="mailto:contact@academika.fr" style="color:#3730a3;text-decoration:none;font-weight:500">contact@academika.fr</a>
-            </p>
-            <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
-          </div>
-          <p style="color:#bbb;font-size:11px;text-align:center;margin-top:12px">
-            <a href="https://academika.fr/desabonner.html?email=${encodeURIComponent(emailParent)}" style="color:#bbb">Se désabonner des emails automatiques</a>
-          </p>
-        </div>`
-
-      const rateOk = await verifierRateLimit(emailParent)
-      if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
-
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
-        body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `📊 Bilan de progression de ${prenom} — ACADEMIKA`, html })
+      const bilan = await calculerBilan(ctx, {
+        userId: user_id, profil, historique, dateDebut, maintenant: new Date(),
+        versionForcee: apercu === true ? (version || 'complet') : 'complet',
+        test: dest ? dest.test : false,
+        // Aperçu : aucun lien de désabonnement exploitable (le HTML est seulement affiché au prof).
+        emailPourLien: dest ? dest.to : ''
       })
 
-      const responseData = await response.json()
-      if (!response.ok) return res.status(500).json({ error: 'Erreur : ' + JSON.stringify(responseData) })
-      return res.status(200).json({ success: true })
+      if (apercu === true) {
+        return res.status(200).json({ success: true, apercu: true, version: bilan.version, sujet: bilan.sujet, html: bilan.html })
+      }
+
+      const rateOk = await verifierRateLimit(dest.to)
+      if (!rateOk) return res.status(429).json({ error: 'Trop d\'emails envoyés à cette adresse. Réessayez plus tard.' })
+
+      const envoi = await envoyerA(dest, bilan.sujet, bilan.html)
+      if (!envoi.ok) {
+        console.log('Erreur bilan: Resend statut', envoi.status)
+        return res.status(500).json({ error: 'Erreur d\'envoi (statut ' + envoi.status + ')' })
+      }
+      return res.status(200).json({ success: true, test: dest.test })
     } catch(e) {
       console.log('Erreur bilan:', e.message)
-      return res.status(500).json({ error: e.message })
+      return res.status(500).json({ error: 'Bilan impossible à calculer pour le moment' })
     }
   }
 

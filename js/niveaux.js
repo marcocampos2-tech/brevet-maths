@@ -5,7 +5,11 @@
 // Ce fichier ne calcule aucun niveau : il classe et met en forme les lignes
 // de la vue.
 //
-// Un SEUL nom global : window.Niveaux. Tout le reste est interne à la
+// Un SEUL nom global : window.Niveaux (dans un navigateur). Sous Node, le même
+// fichier s'importe par require() : lib/bilan-email.js s'en sert pour que le
+// bilan envoyé par email classe les sous-thèmes EXACTEMENT comme la page
+// parent (une seule source, aucune copie de la règle). Seul l'export final
+// change entre les deux contextes. Tout le reste est interne à la
 // fermeture, pour éviter toute collision avec les pages hôtes (resultats.html
 // définit sa propre celluleNiveau ; esc n'a pas le même sens selon les pages).
 // L'échappement HTML ci-dessous est interne : ce fichier n'appelle jamais le
@@ -13,7 +17,7 @@
 //
 // Dépendance : js/catalogue.js doit être chargé AVANT (SOUS_THEMES).
 // Styles : css/niveaux.css.
-// Chargement : <script src="/js/niveaux.js?v=1"></script> — incrémenter v à
+// Chargement : <script src="/js/niveaux.js?v=2"></script> — incrémenter v à
 // chaque modification pour contourner le cache.
 (function () {
   'use strict'
@@ -129,9 +133,11 @@
     return html
   }
 
-  window.Niveaux = {
+  const API = {
     NOM_NIVEAU, CHAMPS_NIVEAU, SELECT_NIVEAUX,
     nbReussites, parRecence, totalCatalogue,
     celluleNiveau, classerNiveaux, rendreCarteNiveaux
   }
+  if (typeof module !== 'undefined' && module.exports) module.exports = API
+  else window.Niveaux = API
 })()
