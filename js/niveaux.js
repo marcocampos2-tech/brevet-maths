@@ -17,7 +17,7 @@
 //
 // Dépendance : js/catalogue.js doit être chargé AVANT (SOUS_THEMES).
 // Styles : css/niveaux.css.
-// Chargement : <script src="/js/niveaux.js?v=3"></script> — incrémenter v à
+// Chargement : <script src="/js/niveaux.js?v=4"></script> — incrémenter v à
 // chaque modification pour contourner le cache.
 (function () {
   'use strict'
@@ -35,7 +35,7 @@
     difficile: { reussites: 'd_reussites', essais: 'd_essais', etat: 'd_etat' }
   }
 
-  const SELECT_NIVEAUX = 'theme, sous_theme, f_reussites, f_essais, m_reussites, m_essais, d_reussites, d_essais, f_etat, m_etat, d_etat, niveau_courant, a_surveiller, derniere_session'
+  const SELECT_NIVEAUX = 'theme, sous_theme, f_reussites, f_essais, m_reussites, m_essais, d_reussites, d_essais, f_etat, m_etat, d_etat, niveau_courant, a_surveiller, derniere_session, derniers_essais, dernieres_reussites'
 
   function nbReussites(n) {
     n = Math.min(Number(n) || 0, 5)
@@ -78,80 +78,71 @@
     return `<div class="niv-cell niv-c-verrou">${d.texte}</div>`
   }
 
-  // Classement pur (lignes de la vue → textes bruts, non échappés), partagé par
-  // la carte HTML et le PDF de bilan. Ordre : récence décroissante.
-  function classerNiveaux(lignes) {
-    const tries = lignes.slice().sort(parRecence)
-    const acquis = [], progression = [], surveiller = []
-
-    tries.forEach(l => {
-      const nom = l.sous_theme
-      if (l.d_etat === 'acquis') {
-        acquis.push(`${nom} : les 3 niveaux validés.`)
-      } else if (l.m_etat === 'acquis') {
-        acquis.push(`${nom} : niveau Moyen validé.`)
-      } else if (l.f_etat === 'acquis') {
-        acquis.push(`${nom} : niveau Facile validé.`)
-      }
-
-      const niv = l.niveau_courant
-      const c = CHAMPS_NIVEAU[niv]
-      if (!c || l[c.etat] === 'acquis') return
-      const essais = Number(l[c.essais]) || 0
-      if (l.a_surveiller) {
-        surveiller.push(`${nom} : ${essais} essais au niveau ${NOM_NIVEAU[niv]}, ${nbReussites(l[c.reussites])}.`)
-      } else if (essais >= 1) {
-        progression.push(`${nom} : ${nbReussites(l[c.reussites])} sur 5 au niveau ${NOM_NIVEAU[niv]}.`)
-      }
-    })
-    return { acquis, progression, surveiller }
+  // Phrase « à surveiller » (texte brut, non échappé), utilisée par la carte de la
+  // page parent, la fiche prof, le PDF et l'email du bilan. Les chiffres viennent
+  // de la vue (derniers_essais / dernieres_reussites, AU NIVEAU COURANT) : aucun
+  // calcul ici. La règle (a_surveiller) est dans db/vue-niveaux.sql : Facile ou
+  // Moyen non acquis, au moins 4 essais, au plus 1 réussite sur les 4 derniers,
+  // jamais en Difficile.
+  function phraseSurveiller(l) {
+    return `${l.sous_theme} : ${nbReussites(l.dernieres_reussites)} sur ses 4 derniers essais au niveau ${NOM_NIVEAU[l.niveau_courant]}.`
   }
 
-  // Rendu pur (lignes de la vue → HTML) : aucune lecture réseau.
-  // options.cta    (défaut true)  : false retire tout l'encart « aide
-  //                                 ponctuelle » (phrase et lien vers les
-  //                                 cours particuliers).
-  // options.deplie (défaut false) : true affiche le détail par niveau ouvert.
+  // Classement pur (lignes de la vue → textes bruts, non échappés), partagé par
+  // la carte HTML, le PDF et l'email. Ordre : récence décroissante. Seul « à
+  // surveiller » est mis en phrases ; le reste de l'état est dans la grille.
+  function classerNiveaux(lignes) {
+    const surveiller = lignes.slice().sort(parRecence)
+      .filter(l => l.a_surveiller && CHAMPS_NIVEAU[l.niveau_courant])
+      .map(phraseSurveiller)
+    return { surveiller }
+  }
+
+  // Légende de la grille : carrés de couleur (mêmes couleurs que les cases).
+  const LEGENDE = [['acquis', 'Acquis'], ['encours', 'En cours'], ['surv', 'À surveiller'], ['verrou', 'Pas encore ouvert']]
+  const PHRASE_REGLE = 'Une réussite = au moins 4 bonnes réponses sur 5. Un niveau est acquis après 5 réussites, ce qui ouvre le niveau suivant.'
+
+  // Rendu pur (lignes de la vue → HTML) : aucune lecture réseau. Ordre : en-tête,
+  // bloc « À surveiller » (absent s'il est vide), grille sous-thème × niveau
+  // (toujours visible), légende en carrés, phrase de règle.
+  // options.cta (défaut true) : false retire la phrase d'aide et le lien vers les
+  //                             cours particuliers du bloc « À surveiller ».
   // Les défauts reproduisent exactement la page parent.
   function rendreCarteNiveaux(lignes, options) {
-    const opt = Object.assign({ cta: true, deplie: false }, options)
+    const opt = Object.assign({ cta: true }, options)
     const tries = lignes.slice().sort(parRecence)
-    const { acquis, progression, surveiller } = classerNiveaux(lignes)
+    const { surveiller } = classerNiveaux(lignes)
 
     const liste = items => '<ul>' + items.map(t => `<li>${echapper(t)}</li>`).join('') + '</ul>'
     const n = tries.length
     let html = `<div class="card"><div class="niv-tete"><div class="niv-titre">Niveau atteint par sous-thème</div>` +
       `<div class="niv-resume">${n} commencé${n > 1 ? 's' : ''} sur ${totalCatalogue()}</div></div>`
 
-    if (acquis.length) {
-      html += `<div class="niv-bloc niv-bloc-acquis"><div class="niv-bloc-titre"><span class="niv-ico" aria-hidden="true">✓</span>Acquis</div>${liste(acquis)}</div>`
-    }
-    if (progression.length) {
-      html += `<div class="niv-bloc niv-bloc-prog"><div class="niv-bloc-titre">En progression</div>${liste(progression)}</div>`
-    }
     if (surveiller.length) {
       html += `<div class="niv-bloc niv-bloc-surv"><div class="niv-bloc-titre"><span class="niv-ico" aria-hidden="true">⚠</span>À surveiller</div>${liste(surveiller)}` +
         (opt.cta ? `<div class="niv-aide">Une aide ponctuelle peut l'aider à débloquer. <a href="cours-particuliers.html">Découvrir les cours particuliers</a></div>` : '') +
         `</div>`
     }
 
-    html += `<details class="niv-detail"${opt.deplie ? ' open' : ''}><summary>Voir le détail par niveau</summary>` +
-      '<div class="niv-wrap"><table class="niv-table"><thead><tr><th class="niv-col-nom" scope="col">Sous-thème</th>' +
+    html += '<div class="niv-wrap"><table class="niv-table"><thead><tr><th class="niv-col-nom" scope="col">Sous-thème</th>' +
       '<th scope="col">Facile</th><th scope="col">Moyen</th><th scope="col">Difficile</th></tr></thead><tbody>'
     tries.forEach(l => {
       html += `<tr><td class="niv-nom">${echapper(l.sous_theme)}</td>` +
         `<td>${celluleNiveau(l, 'facile')}</td><td>${celluleNiveau(l, 'moyen')}</td><td>${celluleNiveau(l, 'difficile')}</td></tr>`
     })
     html += '</tbody></table></div>' +
-      '<div class="niv-legende">Une réussite = au moins 4 bonnes réponses sur 5. Un niveau est acquis après 5 réussites, ce qui ouvre le niveau suivant.</div>' +
-      '</details></div>'
+      '<div class="niv-legende-cases">' +
+      LEGENDE.map(([type, libelle]) => `<span class="niv-leg"><i class="niv-carre niv-carre-${type}" aria-hidden="true"></i>${libelle}</span>`).join('') +
+      '</div>' +
+      `<div class="niv-legende">${PHRASE_REGLE}</div></div>`
     return html
   }
 
   const API = {
     NOM_NIVEAU, CHAMPS_NIVEAU, SELECT_NIVEAUX,
     nbReussites, parRecence, totalCatalogue,
-    cellule, celluleNiveau, classerNiveaux, rendreCarteNiveaux
+    cellule, celluleNiveau, phraseSurveiller, classerNiveaux, rendreCarteNiveaux,
+    LEGENDE, PHRASE_REGLE
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = API
   else window.Niveaux = API

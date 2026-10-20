@@ -122,11 +122,10 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .pdf-btn:disabled .cadenas { margin-left: 0; }
 .niv-verrou-tete { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 1rem; }
 .niv-verrou-tete .niv-titre { margin-bottom: 0; }
-.niv-verrou-bandes { display: grid; gap: 8px; margin-bottom: 14px; }
-.niv-verrou-bandes span { display: block; height: 30px; border-radius: 10px; border: 1px solid transparent; }
-.niv-verrou-bandes .bande-acquis { background: #EAF6EF; border-color: #BFE3CD; }
-.niv-verrou-bandes .bande-prog { background: var(--dore-light, #FBF4E4); border-color: #EBD9A8; }
-.niv-verrou-bandes .bande-surv { background: #FFF1E3; border-color: #E8892B; }
+.niv-verrou-grille { display: grid; gap: 8px; margin-bottom: 14px; opacity: .8; }
+.niv-verrou-ligne { display: grid; grid-template-columns: 31% 1fr 1fr 1fr; gap: 6px; align-items: center; }
+.niv-verrou-ligne .vnom { display: block; height: 10px; width: 78%; border-radius: 5px; background: #E4E1D8; }
+.niv-verrou-ligne .vcase { display: block; height: 30px; border-radius: 8px; background: #FAF9F6; border: 1px solid #E4E1D8; }
 .niv-verrou-texte { font-size: 13px; color: var(--ardoise); line-height: 1.5; }
 .niv-verrou-mention { font-size: 12.5px; font-weight: 600; color: var(--marine); margin-top: 6px; }
 .encart-suivi { border: 1px solid #1B2A4A; background: #1B2A4A; }
@@ -145,7 +144,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .examen-ligne-score { font-size: 12.5px; font-weight: 600; color: var(--marine); }
 .examen-ligne-abandon .examen-ligne-score { font-weight: 500; color: var(--muted); }
 </style>
-<link rel="stylesheet" href="/css/niveaux.css?v=1">
+<link rel="stylesheet" href="/css/niveaux.css?v=2">
 </head>
 <body>
 <nav>
@@ -283,7 +282,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 </div>
 
 <script src="/js/catalogue.js?v=1"></script>
-<script src="/js/niveaux.js?v=3"></script>
+<script src="/js/niveaux.js?v=4"></script>
 <script src="/js/simulation-bascule.js?v=1"></script>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -360,7 +359,9 @@ async function chargerNiveaux(uid) {
   if (eleveVerrouille(uid)) {
     const nom = (eleves.find(e => e.user_id === uid) || {}).prenom_affiche || prenom || 'votre enfant'
     zone.innerHTML = `<div class="card"><div class="niv-verrou-tete"><div class="niv-titre">Niveau atteint par sous-thème</div>${SVG_CADENAS}</div>` +
-      '<div class="niv-verrou-bandes" aria-hidden="true"><span class="bande-acquis"></span><span class="bande-prog"></span><span class="bande-surv"></span></div>' +
+      '<div class="niv-verrou-grille" aria-hidden="true">' +
+        '<div class="niv-verrou-ligne"><span class="vnom"></span><span class="vcase"></span><span class="vcase"></span><span class="vcase"></span></div>'.repeat(3) +
+      '</div>' +
       '<p class="niv-verrou-texte"></p><p class="niv-verrou-mention"></p></div>'
     zone.querySelector('.niv-verrou-texte').textContent = `Voyez quels sous-thèmes ${nom} a validés, ceux en progression et ceux où il bloque.`
     zone.querySelector('.niv-verrou-mention').textContent = MENTION_ACCOMPAGNE
@@ -808,24 +809,23 @@ function pdfTitreSection(doc, y, gauche, droite) {
   return y + 16
 }
 
-// Texte et couleurs d'une case du tableau (états calculés par la vue).
+// Texte et couleurs d'une case du tableau. Les états viennent de la vue et le
+// type de case de Niveaux.cellule (source unique, la même que la grille HTML) ;
+// seul le libellé est propre au PDF (polices WinAnsi : pas de coche).
 function pdfCelluleNiveau(l, niveau) {
-  const c = Niveaux.CHAMPS_NIVEAU[niveau]
-  const etat = l[c.etat]
-  if (etat === 'acquis') return { txt: 'Acquis', coul: PDF_COUL.acquis, gras: true }
-  if (etat === 'en_cours') {
-    const n = Math.min(Number(l[c.reussites]) || 0, 5)
-    if (l.a_surveiller && l.niveau_courant === niveau) return { txt: n + '/5', coul: PDF_COUL.surveiller, gras: true }
-    return { txt: n + '/5', coul: PDF_COUL.progression, gras: false }
-  }
-  if (etat === 'jamais_joue') return { txt: '0/5', coul: PDF_COUL.neutre, gras: false }
-  return { txt: 'après ' + (niveau === 'moyen' ? 'Facile' : 'Moyen'), coul: PDF_COUL.neutre, gras: false }
+  const d = Niveaux.cellule(l, niveau)
+  if (d.type === 'acquis') return { txt: 'Acquis', coul: PDF_COUL.acquis, gras: true }
+  if (d.type === 'surv') return { txt: d.reussites + '/5', coul: PDF_COUL.surveiller, gras: true }
+  if (d.type === 'encours') return { txt: d.reussites + '/5', coul: PDF_COUL.progression, gras: false }
+  if (d.type === 'jamais') return { txt: '0/5', coul: PDF_COUL.neutre, gras: false }
+  return { txt: d.texte.replace(/^Après le /, 'après '), coul: PDF_COUL.neutre, gras: false }
 }
 
 // Dessine la section à partir de y (page courante) et renvoie le y de fin,
 // éventuellement sur une page suivante. lignes === null : lecture en erreur.
-// Les blocs de synthèse ne sont jamais coupés ; le tableau continue sur la
-// page suivante (en-tête répété), les deux colonnes se remplissent page par page.
+// Ordre : « À surveiller » (s'il n'est pas vide, jamais coupé), puis la grille
+// pleine largeur (en-tête répété à chaque page, une ligne n'est jamais coupée),
+// puis la légende en texte simple (jamais seule en haut d'une page sans titre).
 function pdfSectionNiveaux(doc, y, lignes) {
   const pageW = doc.internal.pageSize.getWidth()
   const bas = doc.internal.pageSize.getHeight() - PDF_MARGE_B
@@ -844,86 +844,74 @@ function pdfSectionNiveaux(doc, y, lignes) {
   y = pdfTitreSection(doc, y, titre, `au ${dateJ} · ${n} commencé${n > 1 ? 's' : ''} sur ${Niveaux.totalCatalogue()}`)
 
   const largeur = pageW - 2 * PDF_MARGE_G
-  const colG = Math.round(largeur * 0.42), ecart = 20
-  const xD = PDF_MARGE_G + colG + ecart, colD = largeur - colG - ecart
-  const wNom = Math.round(colD * 0.34), wNiv = (colD - wNom) / 3
+  const nouvellePage = () => {
+    doc.addPage()
+    return pdfTitreSection(doc, PDF_MARGE_H, titre + ' (suite)', null)
+  }
 
-  // Blocs (colonne gauche) : hauteur calculée avant dessin.
-  const { acquis, progression, surveiller } = Niveaux.classerNiveaux(lignes)
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
-  // Ordre propre au PDF : l'urgent d'abord (la carte HTML garde Acquis en premier).
-  const blocs = [['À surveiller', 'surveiller', surveiller], ['En progression', 'progression', progression], ['Acquis', 'acquis', acquis]]
-    .filter(b => b[2].length)
-    .map(([nom, cle, items]) => {
-      const textes = items.map(t => doc.splitTextToSize(t, colG - 24))
-      const nbL = textes.reduce((a, t) => a + t.length, 0)
-      return { nom, cle, textes, h: 10 + 14 + nbL * 11 + (items.length - 1) * 3 + 10 }
-    })
+  // « À surveiller » : pleine largeur.
+  const { surveiller } = Niveaux.classerNiveaux(lignes)
+  if (surveiller.length) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
+    const textes = surveiller.map(t => doc.splitTextToSize(t, largeur - 24))
+    const nbL = textes.reduce((a, t) => a + t.length, 0)
+    const h = 10 + 14 + nbL * 11 + (surveiller.length - 1) * 3 + 10
+    if (y + h > bas) y = nouvellePage()
+    const c = PDF_COUL.surveiller
+    doc.setFillColor(...c.fond); doc.setDrawColor(...c.bord); doc.setLineWidth(1)
+    doc.roundedRect(PDF_MARGE_G, y, largeur, h, 5, 5, 'FD')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...c.texte)
+    doc.text('À surveiller', PDF_MARGE_G + 12, y + 18)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(65, 69, 76)
+    let ty = y + 32
+    textes.forEach(lg => { doc.text(lg, PDF_MARGE_G + 12, ty); ty += lg.length * 11 + 3 })
+    y += h + 12
+  }
 
-  // Lignes (colonne droite).
+  // Grille pleine largeur.
+  const wNom = Math.round(largeur * 0.30), wNiv = (largeur - wNom) / 3
+  const hEntete = 18
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9)
   const rows = tries.map(l => {
     const nomL = doc.splitTextToSize(l.sous_theme, wNom - 10)
     return { l, nomL, h: Math.max(22, nomL.length * 10.5 + 10) }
   })
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
-  const legende = doc.splitTextToSize('N/5 = sessions réussies (au moins 4 bonnes réponses sur 5). Niveau acquis après 5 réussites.', colD)
-  const hLegende = legende.length * 10 + 8
-  const hEntete = 18
-
-  let iB = 0, iR = 0, haut = y
-  for (;;) {
-    let yL = haut, yR = haut, deja = 0
-
-    while (iB < blocs.length && (yL + blocs[iB].h <= bas || yL === haut)) {
-      const b = blocs[iB], c = PDF_COUL[b.cle]
-      doc.setFillColor(...c.fond); doc.setDrawColor(...c.bord); doc.setLineWidth(b.cle === 'surveiller' ? 1 : 0.6)
-      doc.roundedRect(PDF_MARGE_G, yL, colG, b.h, 5, 5, 'FD')
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(...c.texte)
-      doc.text(b.nom, PDF_MARGE_G + 12, yL + 18)
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(65, 69, 76)
-      let ty = yL + 32
-      b.textes.forEach(lg => { doc.text(lg, PDF_MARGE_G + 12, ty); ty += lg.length * 11 + 3 })
-      yL += b.h + 8
-      iB++
-    }
-
-    if (iR < rows.length) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(107, 110, 115)
-      doc.text('SOUS-THÈME', xD + 6, yR + 12)
-      ;['FACILE', 'MOYEN', 'DIFFICILE'].forEach((t, i) => doc.text(t, xD + wNom + i * wNiv + wNiv / 2, yR + 12, { align: 'center' }))
-      doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.6); doc.line(xD, yR + hEntete, xD + colD, yR + hEntete)
-      yR += hEntete
-    }
-    while (iR < rows.length) {
-      const r = rows[iR]
-      const dernier = iR === rows.length - 1
-      if (yR + r.h + (dernier ? hLegende : 0) > bas && deja > 0) break
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(65, 69, 76)
-      doc.text(r.nomL, xD + 6, yR + r.h / 2 - (r.nomL.length - 1) * 5.25 + 3)
-      ;['facile', 'moyen', 'difficile'].forEach((niv, i) => {
-        const cel = pdfCelluleNiveau(r.l, niv)
-        const cx = xD + wNom + i * wNiv
-        doc.setFillColor(...cel.coul.fond); doc.setDrawColor(...cel.coul.bord)
-        doc.setLineWidth(cel.coul === PDF_COUL.surveiller ? 1 : 0.4)
-        doc.roundedRect(cx + 3, yR + 3, wNiv - 6, r.h - 6, 4, 4, 'FD')
-        doc.setFont('helvetica', cel.gras ? 'bold' : 'normal'); doc.setFontSize(8.5); doc.setTextColor(...cel.coul.texte)
-        doc.text(cel.txt, cx + wNiv / 2, yR + r.h / 2 + 3, { align: 'center' })
-      })
-      yR += r.h
-      doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.4); doc.line(xD, yR, xD + colD, yR)
-      iR++; deja++
-    }
-    if (rows.length && iR >= rows.length) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(107, 110, 115)
-      doc.text(legende, xD, yR + 12)
-      yR += hLegende
-    }
-
-    if (iB >= blocs.length && iR >= rows.length) return Math.max(yL, yR)
-    doc.addPage()
-    haut = pdfTitreSection(doc, PDF_MARGE_H, titre + ' (suite)', null)
+  const entete = yy => {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(107, 110, 115)
+    doc.text('SOUS-THÈME', PDF_MARGE_G + 6, yy + 12)
+    ;['FACILE', 'MOYEN', 'DIFFICILE'].forEach((t, i) => doc.text(t, PDF_MARGE_G + wNom + i * wNiv + wNiv / 2, yy + 12, { align: 'center' }))
+    doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.6); doc.line(PDF_MARGE_G, yy + hEntete, PDF_MARGE_G + largeur, yy + hEntete)
+    return yy + hEntete
   }
+  // Légende en texte simple : sa hauteur est réservée avec la dernière ligne
+  // pour qu'elle ne reste jamais seule en haut d'une page.
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
+  const legende = doc.splitTextToSize('Légende : Acquis · En cours · À surveiller · Pas encore ouvert. N/5 = réussites obtenues sur les 5 nécessaires. ' + Niveaux.PHRASE_REGLE, largeur)
+  const hLegende = legende.length * 10 + 8
+
+  if (y + hEntete + rows[0].h > bas) y = nouvellePage()
+  y = entete(y)
+  rows.forEach((r, i) => {
+    const reserve = i === rows.length - 1 ? 8 + hLegende : 0
+    if (y + r.h + reserve > bas) y = entete(nouvellePage())
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(65, 69, 76)
+    doc.text(r.nomL, PDF_MARGE_G + 6, y + r.h / 2 - (r.nomL.length - 1) * 5.25 + 3)
+    ;['facile', 'moyen', 'difficile'].forEach((niv, j) => {
+      const cel = pdfCelluleNiveau(r.l, niv)
+      const cx = PDF_MARGE_G + wNom + j * wNiv
+      doc.setFillColor(...cel.coul.fond); doc.setDrawColor(...cel.coul.bord)
+      doc.setLineWidth(cel.coul === PDF_COUL.surveiller ? 1 : 0.4)
+      doc.roundedRect(cx + 3, y + 3, wNiv - 6, r.h - 6, 4, 4, 'FD')
+      doc.setFont('helvetica', cel.gras ? 'bold' : 'normal'); doc.setFontSize(8.5); doc.setTextColor(...cel.coul.texte)
+      doc.text(cel.txt, cx + wNiv / 2, y + r.h / 2 + 3, { align: 'center' })
+    })
+    y += r.h
+    doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.4); doc.line(PDF_MARGE_G, y, PDF_MARGE_G + largeur, y)
+  })
+
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(107, 110, 115)
+  doc.text(legende, PDF_MARGE_G, y + 16)
+  return y + 8 + hLegende
 }
 
 async function genererPDF(mode) {

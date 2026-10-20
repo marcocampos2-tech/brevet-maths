@@ -16,6 +16,11 @@ Le bilan 21 jours et le bouton prof lisent désormais la vue `niveaux_sous_theme
 - Généraliser le garde d'envoi (`lib/garde-envoi.js`, hors production = un seul destinataire de test) aux autres envois : types `adresse-brevet`, `stage`, `resultats-brevet`, `resiliation-confirmee` de `api/email.js`, `api/inscription-brevet.js`, `api/inscription-stage.js`. Une preview partage la base et la clé Resend de la production : ces envois partent aujourd'hui à de vrais destinataires.
 - Idempotency du bilan : si l'écriture de `historique_bilans` échoue après l'envoi, la cadence ne bouge pas et le bilan est renvoyé le lendemain (l'échec est journalisé et fait passer le ping Healthchecks en `/fail`).
 
+## 🟠 Ouvert — règle « à surveiller » : à réévaluer avec des données réelles
+
+- [ ] Réévaluer les seuils de la règle du 21/10/2026 (au moins 4 essais, au plus 1 réussite sur les 4 derniers essais, jamais en Difficile ; `db/vue-niveaux.sql`) avec des données d'usage réelles : nombre d'élèves signalés, signaux qui s'éteignent d'eux-mêmes, retours de parents.
+- [ ] Vérifier que les parents comprennent la différence entre la grille (réussites cumulées vers 5, « 4 réussites sur 5 ») et la phrase « 1 réussite sur ses 4 derniers essais ».
+
 ## 🟠 Ouvert — captures d'écran : état `maitrise`
 
 À vérifier manuellement ou via un second compte démo : l'état `maitrise` n'est pas couvert par le jeu de données de démo (niveau Difficile, exclu volontairement).

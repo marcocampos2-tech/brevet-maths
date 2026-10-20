@@ -169,7 +169,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   .dash-table th, .dash-table td { white-space: nowrap; }
 }
 </style>
-<link rel="stylesheet" href="/css/niveaux.css?v=1">
+<link rel="stylesheet" href="/css/niveaux.css?v=2">
 </head>
 <body>
 <div class="wrap">
@@ -243,7 +243,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 </div>
 
 <script src="/js/catalogue.js?v=1"></script>
-<script src="/js/niveaux.js?v=3"></script>
+<script src="/js/niveaux.js?v=4"></script>
 <script>
 const SB_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SB_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
@@ -1900,7 +1900,7 @@ async function openFiche(userId) {
   } else if (!data || data.length === 0) {
     contenu = '<p class="empty">Aucune session terminée pour l\'instant.</p>'
   } else {
-    contenu = Niveaux.rendreCarteNiveaux(data, { cta: false, deplie: true })
+    contenu = Niveaux.rendreCarteNiveaux(data, { cta: false })
   }
 
   // Bouton bilan : seulement si l'élève a au moins une ligne dans resultats
