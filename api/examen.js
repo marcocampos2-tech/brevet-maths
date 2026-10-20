@@ -1,7 +1,8 @@
 import { memoireQuestionsVues, contexteEleve, noterEchec, journaliserEchec } from '../lib/questions-vues.js'
 import { corrigerExamen } from '../lib/examen-score.js'
 import { verifierGateEleve } from '../lib/auth-eleve.js'
-import { verifierToken } from '../lib/auth-token.js'
+import { verifierToken, verifierProf } from '../lib/auth-token.js'
+import { apresBascule, estVerrouille } from '../lib/gating.js'
 
 const ACTIONS_VALIDES = ['demarrer', 'progression', 'reprise', 'enregistrer']
 const DUREE_EXAMEN_MS = 40 * 60 * 1000
@@ -43,6 +44,12 @@ export default async function handler(req, res) {
   // DEMARRER — sélectionne 20 questions, SANS answer ni explication
   // ═══════════════════════════════════════════
   if (action === 'demarrer') {
+    // Verrou Accompagné (lot 2, STRICT) : après la bascule du 01/12/2026, seul
+    // un élève Accompagné démarre un examen blanc. Une tentative déjà en cours
+    // se reprend et se termine (reprise/progression/enregistrer non verrouillés).
+    if (await examenVerrouille(userId, req.body.access_token, req.body.simuler_bascule === true, SUPA_URL, SUPA_KEY, headers)) {
+      return res.status(403).json({ success: false, code: 'offre_requise', error: "L'examen blanc en ligne est disponible avec l'offre Accompagné." })
+    }
     try {
       const parties = [1, 2, 3, 4]
       const pools = {}
@@ -396,6 +403,28 @@ export default async function handler(req, res) {
       console.error('[enregistrer] échec inattendu:', e.message)
       return res.status(500).json({ error: e.message })
     }
+  }
+}
+
+// Verrou de l'examen : true = refuser. Avant la bascule (et sans simulation en
+// aperçu) : aucune lecture, aucun coût. Après : lecture du profil de l'élève
+// (clé service). Sans ligne profils : seul le compte prof est exempté (pour
+// pouvoir tester), tout autre compte est verrouillé. Lecture en échec :
+// FAIL-OPEN avec console.error, conformément à la convention du dépôt (bloquer
+// un élève Accompagné qui paie est pire que laisser passer ponctuellement un
+// élève Libre).
+async function examenVerrouille(userId, accessToken, simulerBascule, supaUrl, serviceKey, headers) {
+  if (!apresBascule(new Date(), simulerBascule)) return false
+  try {
+    const r = await fetch(`${supaUrl}/rest/v1/profils?user_id=eq.${userId}&select=plan_actif,cours_particuliers_actif,acces_offert_jusqu&limit=1`, { headers })
+    if (!r.ok) throw new Error('statut ' + r.status)
+    const lignes = await r.json()
+    if (!Array.isArray(lignes)) throw new Error('réponse inattendue')
+    if (lignes.length === 0) return (await verifierProf(accessToken, supaUrl, serviceKey)) !== 'ok'
+    return estVerrouille(lignes[0], { simulerBascule })
+  } catch (e) {
+    console.error('[examen][offre] lecture du profil impossible, accès laissé (fail-open) :', e.message)
+    return false
   }
 }
 

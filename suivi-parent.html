@@ -101,18 +101,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .form-ajout-msg { font-size: 12.5px; border-radius: 8px; padding: 10px 14px; margin-top: 12px; line-height: 1.5; display: none; }
 .form-ajout-msg.erreur { background: var(--bordeaux-light); color: var(--bordeaux); display: block; }
 .form-ajout-msg.succes { background: #EAF6EF; color: #1f7a45; display: block; }
-.bandeau-suivi { background: var(--bordeaux-light); border-left: 3px solid var(--bordeaux); border-radius: 0 8px 8px 0; padding: 14px 16px; margin-bottom: 1.25rem; }
-.bandeau-suivi-texte { font-size: 12.5px; color: var(--bordeaux); line-height: 1.5; }
 .bandeau-suivi-btn { background: var(--bordeaux); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 12.5px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; }
 .bandeau-suivi-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-.bandeau-suivi-lien { background: none; border: none; color: var(--bordeaux); font-size: 11.5px; text-decoration: underline; cursor: pointer; font-family: 'Inter', sans-serif; padding: 0; }
-.bandeau-suivi-detail { display: none; margin-top: 12px; padding-top: 12px; border-top: 0.5px solid rgba(158,43,37,0.2); }
-.bandeau-suivi-detail.ouvert { display: block; }
-.bandeau-suivi-point { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 9px; }
-.bandeau-suivi-point:last-child { margin-bottom: 0; }
-.bandeau-suivi-point-texte { font-size: 11.5px; color: var(--ardoise); line-height: 1.5; }
-.bandeau-suivi-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 8px; }
-.bandeau-suivi-badge { background: white; color: var(--bordeaux); font-size: 10px; font-weight: 500; padding: 3px 9px; border-radius: 10px; }
 .encart-origine { display: none; background: var(--marine-light); border-radius: 10px; padding: 14px 16px; margin-top: 14px; }
 .encart-origine-confirmation { font-size: 12.5px; color: #1f7a45; margin-bottom: 8px; }
 .encart-origine-titre { font-size: 12.5px; color: var(--ardoise); margin-bottom: 10px; }
@@ -125,6 +115,29 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .encart-origine-acces-ligne { font-size: 12.5px; color: var(--ardoise); line-height: 1.55; }
 .encart-origine-acces-ligne + .encart-origine-acces-ligne { margin-top: 7px; }
 .encart-origine-acces-ligne strong { color: var(--marine); }
+.verrou-mention { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 8px; }
+#periode-verrou-note { margin: -0.5rem 0 1rem; }
+.cadenas { display: inline-flex; align-items: center; vertical-align: middle; margin-left: 6px; color: var(--muted); }
+.periode-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.pdf-btn:disabled .cadenas { margin-left: 0; }
+.niv-verrou-tete { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 1rem; }
+.niv-verrou-tete .niv-titre { margin-bottom: 0; }
+.niv-verrou-bandes { display: grid; gap: 8px; margin-bottom: 14px; }
+.niv-verrou-bandes span { display: block; height: 30px; border-radius: 10px; border: 1px solid transparent; }
+.niv-verrou-bandes .bande-acquis { background: #EAF6EF; border-color: #BFE3CD; }
+.niv-verrou-bandes .bande-prog { background: var(--dore-light, #FBF4E4); border-color: #EBD9A8; }
+.niv-verrou-bandes .bande-surv { background: #FFF1E3; border-color: #E8892B; }
+.niv-verrou-texte { font-size: 13px; color: var(--ardoise); line-height: 1.5; }
+.niv-verrou-mention { font-size: 12.5px; font-weight: 600; color: var(--marine); margin-top: 6px; }
+.encart-suivi { border: 1px solid #1B2A4A; background: #1B2A4A; }
+.encart-suivi-titre { font-family: 'Newsreader', serif; font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 10px; }
+.encart-suivi ul { list-style: none; margin: 0 0 14px; padding: 0; }
+.encart-suivi li { font-size: 13px; color: #fff; line-height: 1.5; padding: 2px 0 2px 16px; position: relative; }
+.encart-suivi li::before { content: '✓'; position: absolute; left: 0; color: #D4A23C; font-weight: 600; }
+.encart-suivi .bandeau-suivi-btn { background: #D4A23C; color: #1B2A4A; }
+.encart-suivi-note { font-size: 11.5px; color: #fff; opacity: 0.7; margin-top: 8px; }
+.encart-origine-btn:disabled, .encart-origine-passer:disabled { opacity: 0.5; cursor: not-allowed; }
+.encart-origine-statut { font-size: 12.5px; color: var(--marine); margin-top: 10px; min-height: 1em; }
 .examen-ligne { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; border-left: 3px solid var(--marine); background: var(--creme); margin-bottom: 6px; }
 .examen-ligne:last-child { margin-bottom: 0; }
 .examen-ligne-abandon { border-left-color: var(--border); background: white; }
@@ -160,8 +173,6 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   <div class="page-titre">Suivi de la progression</div>
   <div class="page-sub" id="page-sub">Activité de <span id="prenom-affiche">votre enfant</span></div>
 
-  <div id="bandeau-suivi" style="display:none"></div>
-
   <div id="zone-niveaux"></div>
 
   <div class="card-titre">Régularité</div>
@@ -186,6 +197,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <button class="pdf-btn" id="pdf-trimestre" onclick="genererPDF('trimestre')"><span>Les 3 derniers mois</span><span>PDF ↓</span></button>
     <button class="pdf-btn" id="pdf-debut" onclick="genererPDF('debut')"><span>Depuis le début</span><span>PDF ↓</span></button>
   </div>
+
+  <div id="zone-encart-suivi"></div>
 </div>
 
 <div id="zone-vide" style="display:none">
@@ -262,6 +275,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
     <button class="encart-origine-btn" onclick="repondreOrigine('autre')">Autre</button>
     <button class="encart-origine-passer" onclick="repondreOrigine(null)">Passer</button>
   </div>
+  <div class="encart-origine-statut" id="encart-origine-statut" role="status" aria-live="polite"></div>
 </div>
 
 <canvas id="chart-pdf-offscreen" width="600" height="260" style="display:none"></canvas>
@@ -270,6 +284,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 
 <script src="/js/catalogue.js?v=1"></script>
 <script src="/js/niveaux.js?v=1"></script>
+<script src="/js/simulation-bascule.js?v=1"></script>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SUPABASE_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
@@ -280,13 +295,51 @@ let eleveUserId = null, eleves = []
 let offreSelectionnee = 'autonomie'
 
 // Offre de lancement : Accompagné gratuit jusqu'au 01/12/2026 — même
-// constante que FIN_OFFRE_LANCEMENT dans api/stripe-checkout.js, à garder
-// synchronisée. Partagée par afficherBandeauSuivi() et
-// afficherFormulaireAjout() : aucun des deux ne doit exposer un chemin
-// vers /api/stripe-checkout pendant cette période (cf. CLAUDE.md
-// § Bascule décembre 2026).
+// constante que FIN_OFFRE_LANCEMENT dans lib/gating.js (source unique côté
+// serveur), à garder synchronisée. enPeriodeGratuite() est partagée par
+// afficherEncartSuivi() et afficherFormulaireAjout() : aucun des deux ne doit
+// exposer un chemin vers /api/stripe-checkout pendant cette période (cf.
+// CLAUDE.md § Bascule décembre 2026).
 const FIN_OFFRE_LANCEMENT = new Date('2026-12-01T00:00:00+01:00')
-function enPeriodeGratuite() { return new Date() < FIN_OFFRE_LANCEMENT }
+
+// Simulation de l'après-bascule (aperçus .vercel.app seulement, jamais en
+// production) : cf. js/simulation-bascule.js. Rend l'affichage plus restrictif,
+// jamais moins.
+const SIMULATION_BASCULE = window.SimulationBascule ? window.SimulationBascule.active() : false
+function apresBascule() { return SIMULATION_BASCULE || new Date() >= FIN_OFFRE_LANCEMENT }
+function enPeriodeGratuite() { return !apresBascule() }
+
+// Statut Accompagné : copie de estAccompagne() de lib/gating.js (même règle
+// que la fonction SQL public.est_accompagne(), cf. CLAUDE.md § Statut
+// « Accompagné ») : abonnement OU cours particuliers OU accès offert jusqu'à
+// une date incluse (heure de Paris). À garder alignée avec ces deux copies.
+function dateParisAujourdhui() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(new Date()) // AAAA-MM-JJ
+}
+function estAccompagne(p) {
+  p = p || {}
+  if (p.plan_actif === true || p.cours_particuliers_actif === true) return true
+  return typeof p.acces_offert_jusqu === 'string' && p.acces_offert_jusqu.slice(0, 10) >= dateParisAujourdhui()
+}
+// Verrou unique des fonctions réservées à Accompagné (souple, côté page) :
+// verrouillé = après la bascule ET NON Accompagné. Le contrôle strict de
+// l'examen blanc est côté serveur (api/examen.js).
+function estVerrouille(p) { return apresBascule() && !estAccompagne(p) }
+function eleveVerrouille(uid) { return estVerrouille(eleves.find(e => e.user_id === uid)) }
+
+const SVG_CADENAS = '<span class="cadenas" role="img" aria-label="disponible avec Accompagné"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>'
+const MENTION_ACCOMPAGNE = "Disponible avec l'offre Accompagné."
+
+// Ajoute (ou retire) une ligne de mention sous un élément, créée à la demande :
+// aucun nœud en plus dans la page tant que rien n'est verrouillé.
+function poserMention(id, apres, texte) {
+  const existante = document.getElementById(id)
+  if (existante) existante.remove()
+  if (!texte || !apres) return
+  const m = document.createElement('div')
+  m.id = id; m.className = 'verrou-mention'; m.textContent = texte
+  apres.insertAdjacentElement('afterend', m)
+}
 
 // ═══════════════════════════════════════════════════════════
 // NIVEAU ATTEINT PAR SOUS-THÈME — lu dans la vue public.niveaux_sous_theme
@@ -301,6 +354,18 @@ function enPeriodeGratuite() { return new Date() < FIN_OFFRE_LANCEMENT }
 async function chargerNiveaux(uid) {
   const zone = document.getElementById('zone-niveaux')
   if (!zone) return
+
+  // Verrouillé : la vue niveaux_sous_theme n'est PAS lue, la carte ne montre
+  // aucune donnée (verrou souple, côté page).
+  if (eleveVerrouille(uid)) {
+    const nom = (eleves.find(e => e.user_id === uid) || {}).prenom_affiche || prenom || 'votre enfant'
+    zone.innerHTML = `<div class="card"><div class="niv-verrou-tete"><div class="niv-titre">Niveau atteint par sous-thème</div>${SVG_CADENAS}</div>` +
+      '<div class="niv-verrou-bandes" aria-hidden="true"><span class="bande-acquis"></span><span class="bande-prog"></span><span class="bande-surv"></span></div>' +
+      '<p class="niv-verrou-texte"></p><p class="niv-verrou-mention"></p></div>'
+    zone.querySelector('.niv-verrou-texte').textContent = `Voyez quels sous-thèmes ${nom} a validés, ceux en progression et ceux où il bloque.`
+    zone.querySelector('.niv-verrou-mention').textContent = MENTION_ACCOMPAGNE
+    return
+  }
   zone.innerHTML = '<div class="card"><div class="loader" style="padding:1.5rem">⏳ Chargement…</div></div>'
 
   const { data, error } = await sb.from('niveaux_sous_theme')
@@ -319,6 +384,7 @@ async function chargerNiveaux(uid) {
 }
 
 async function init() {
+  if (window.SimulationBascule) window.SimulationBascule.afficherBandeau()
   const { data } = await sb.auth.getSession()
   if (!data.session) { window.location.href = 'espace-parent.html'; return }
   user = data.session.user
@@ -339,7 +405,7 @@ async function init() {
   }
 
   const { data: profils, error } = await sb.from('profils')
-    .select('user_id, prenom_affiche, plan_actif, plan_souhaite')
+    .select('user_id, prenom_affiche, plan_actif, plan_souhaite, cours_particuliers_actif, acces_offert_jusqu')
     .eq('email_parent', user.email)
 
   if (error || !profils || profils.length === 0) {
@@ -367,7 +433,11 @@ function choisirEnfant(uid, btn, prenomDirect) {
     btn.classList.add('active')
   }
   document.getElementById('prenom-affiche').textContent = prenom || 'votre enfant'
-  afficherBandeauSuivi(uid)
+  const verrou = eleveVerrouille(uid)
+  jours = verrou ? 7 : 14
+  appliquerVerrouPeriodes(verrou)
+  appliquerVerrouPdf(verrou)
+  afficherEncartSuivi(uid)
   chargerNiveaux(uid)
   chargerExamensBlancs(uid)
   chargerDonnees()
@@ -376,6 +446,13 @@ function choisirEnfant(uid, btn, prenomDirect) {
 async function chargerExamensBlancs(uid) {
   const zone = document.getElementById('zone-examens')
   if (!zone) return
+
+  // Verrouillé : examens_blancs n'est PAS lu.
+  if (eleveVerrouille(uid)) {
+    zone.innerHTML = `<div class="card"><div class="niv-verrou-tete"><div class="card-titre" style="margin-bottom:0">Examens blancs</div>${SVG_CADENAS}</div><div class="verrou-mention" style="margin-top:0"></div></div>`
+    zone.querySelector('.verrou-mention').textContent = MENTION_ACCOMPAGNE
+    return
+  }
 
   const { data, error } = await sb.from('examens_blancs')
     .select('created_at, score, total, abandonne')
@@ -395,65 +472,66 @@ async function chargerExamensBlancs(uid) {
   zone.innerHTML = `<div class="card"><div class="card-titre">Examens blancs</div>${lignes}</div>`
 }
 
-function afficherBandeauSuivi(uid) {
-  const bandeau = document.getElementById('bandeau-suivi')
+// Encart final « Suivre la progression de … en détail », en bas de page :
+// UNIQUEMENT après la bascule et si l'élève n'est pas Accompagné (il remplace
+// l'ancien bandeau du haut : un seul appel à s'abonner par page). Avant la
+// bascule, rien n'est affiché : le chemin Stripe n'est pas garanti
+// opérationnel (SIRET en attente, cf. CLAUDE.md) et un CTA qui mène à une
+// erreur de paiement est pire que pas de CTA. Réutilise passerASuivi().
+function afficherEncartSuivi(uid) {
+  const zone = document.getElementById('zone-encart-suivi')
+  if (!zone) return
+  zone.innerHTML = ''
   const eleve = eleves.find(e => e.user_id === uid)
+  if (!eleve || !estVerrouille(eleve)) return
 
-  // Pendant l'offre de lancement, aucune mention de passage à l'offre
-  // payante ne doit être affichée : le chemin Stripe n'est pas garanti
-  // opérationnel (SIRET en attente, cf. CLAUDE.md), et un CTA qui mène à
-  // une erreur de paiement est pire que pas de CTA.
-  if (!eleve || eleve.plan_actif || enPeriodeGratuite()) {
-    bandeau.style.display = 'none'
-    bandeau.innerHTML = ''
-    return
-  }
-  const nomEleve = eleve.prenom_affiche || 'Cet élève'
-  const texteHaut = eleve.plan_souhaite === 'suivi'
-    ? `${nomEleve} — abonnement Accompagné non finalisé`
-    : `${nomEleve} est en Libre`
+  const nomEleve = eleve.prenom_affiche || 'votre enfant'
   const libelleBtn = eleve.plan_souhaite === 'suivi' ? 'Finaliser Accompagné' : 'Passer à Accompagné'
-
-  const points = [
-    ['✉️', "Un e-mail à chaque déconnexion, avec un récapitulatif détaillé par sous-thème et une alerte si des difficultés sont détectées"],
-    ['📅', "Un bilan complet tous les 21 jours, avec le détail par sous-thème et sa trajectoire depuis le précédent"],
-    ['⏱️', "Son temps de révision, consultable à tout moment"],
-    ['📄', "Un export PDF des bilans : sur le mois en cours, les 3 derniers mois, ou depuis le début"],
-    ['📝', "Le résultat de chaque examen blanc en ligne, détaillé par domaine du programme officiel du Brevet"]
-  ]
-  const pointsHTML = points.map(([icone, texte]) => `
-    <div class="bandeau-suivi-point">
-      <span>${icone}</span>
-      <span class="bandeau-suivi-point-texte">${texte}</span>
-    </div>`).join('')
-
-  bandeau.innerHTML = `
-    <div class="bandeau-suivi">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-        <div>
-          <div class="bandeau-suivi-texte" style="font-weight:500;margin-bottom:2px">${texteHaut}</div>
-          <button class="bandeau-suivi-lien" onclick="toggleDetailSuivi()">Voir le détail de l'offre Accompagné <span id="chevron-suivi">⌄</span></button>
-        </div>
-        <button class="bandeau-suivi-btn" id="btn-passer-suivi" onclick="passerASuivi('${uid}')">${libelleBtn} →</button>
-      </div>
-      <div class="bandeau-suivi-detail" id="detail-suivi">
-        ${pointsHTML}
-        <div class="bandeau-suivi-footer">
-          <span class="bandeau-suivi-badge">Offert jusqu'à décembre</span>
-        </div>
-      </div>
+  zone.innerHTML = `
+    <div class="card encart-suivi">
+      <div class="encart-suivi-titre"></div>
+      <ul>
+        <li>Le niveau atteint par sous-thème</li>
+        <li>L'historique sur 14 et 21 jours</li>
+        <li>Les bilans PDF</li>
+        <li>Les examens blancs en ligne</li>
+      </ul>
+      <button class="bandeau-suivi-btn" id="btn-passer-suivi">${libelleBtn} · 7,90 €/mois</button>
+      <div class="encart-suivi-note">Sans engagement, résiliable à tout moment.</div>
     </div>`
-  bandeau.style.display = 'block'
+  zone.querySelector('.encart-suivi-titre').textContent = `Suivre la progression de ${nomEleve} en détail`
+  zone.querySelector('#btn-passer-suivi').addEventListener('click', () => passerASuivi(uid))
 }
 
-function toggleDetailSuivi() {
-  const detail = document.getElementById('detail-suivi')
-  const chevron = document.getElementById('chevron-suivi')
-  const ouvert = detail.classList.toggle('ouvert')
-  chevron.textContent = ouvert ? '⌃' : '⌄'
+// Boutons de période : 14 j et 21 j verrouillés (cadenas, désactivés) quand
+// l'élève est verrouillé ; restaurés sinon (changement d'enfant).
+function appliquerVerrouPeriodes(verrou) {
+  document.querySelectorAll('.periode-btn').forEach(b => {
+    const j = Number(b.dataset.jours)
+    const ferme = verrou && j !== 7
+    b.disabled = ferme
+    const ancien = b.querySelector('.cadenas')
+    if (ancien) ancien.remove()
+    if (ferme) b.insertAdjacentHTML('beforeend', SVG_CADENAS)
+    b.classList.toggle('active', j === jours)
+  })
+  poserMention('periode-verrou-note', document.querySelector('.periode-select'),
+    verrou ? 'Historique sur 14 et 21 jours : disponible avec l\'offre Accompagné.' : '')
+}
+
+// Export PDF : boutons désactivés avec cadenas quand verrouillé.
+function appliquerVerrouPdf(verrou) {
+  document.querySelectorAll('.pdf-btn').forEach(b => {
+    b.disabled = verrou
+    const droite = b.lastElementChild
+    if (droite) { if (verrou) droite.innerHTML = SVG_CADENAS; else droite.textContent = 'PDF ↓' }
+  })
+  poserMention('pdf-verrou-note', document.querySelector('#pdf-debut'),
+    verrou ? 'Bilans PDF : disponible avec l\'offre Accompagné.' : '')
 }
 
 function setPeriode(j) {
+  if (j !== 7 && eleveVerrouille(eleveUserId)) return // verrou souple : 14 j et 21 j réservés à Accompagné
   jours = j
   document.querySelectorAll('.periode-btn').forEach(b => b.classList.remove('active'))
   document.querySelector(`.periode-btn[data-jours="${j}"]`).classList.add('active')
@@ -849,6 +927,7 @@ function pdfSectionNiveaux(doc, y, lignes) {
 }
 
 async function genererPDF(mode) {
+  if (eleveVerrouille(eleveUserId)) return // verrou souple : export réservé à Accompagné
   const btn = document.getElementById('pdf-' + mode)
   const texteOriginal = btn.innerHTML
   btn.disabled = true
@@ -1080,7 +1159,7 @@ function afficherFormulaireAjout() {
 
   // Pendant l'offre de lancement : pas de choix d'offre à afficher, donc
   // pas de chemin possible vers /api/stripe-checkout depuis ce formulaire
-  // (même logique que afficherBandeauSuivi — cf. CLAUDE.md § Bascule
+  // (même logique que afficherEncartSuivi — cf. CLAUDE.md § Bascule
   // décembre 2026). Le compte est toujours créé en 'autonomie'.
   const gratuit = enPeriodeGratuite()
   document.getElementById('label-choisir-offre').style.display = gratuit ? 'none' : ''
@@ -1149,17 +1228,29 @@ function afficherEncartOrigine(userIdEnfant, prenom, nom) {
 async function repondreOrigine(valeur) {
   const encart = document.getElementById('encart-origine')
   const userIdEnfant = encart?.dataset.userId
-  if (encart) encart.style.display = 'none'
-  if (userIdEnfant) {
+  const statut = document.getElementById('encart-origine-statut')
+  const dire = texte => { if (statut) statut.textContent = texte }
+  // Retour immédiat : boutons désactivés, l'encart RESTE affiché (le masquer
+  // laissait un écran vide pendant l'écriture puis le rechargement complet de
+  // la page). Le navigateur garde cette page affichée jusqu'à ce que la
+  // suivante soit prête.
+  if (encart) encart.querySelectorAll('button').forEach(b => { b.disabled = true })
+  if (userIdEnfant && valeur !== null) {
+    dire('Enregistrement…')
     try {
       // Session parent (sb), pas la session élève (sbEleve) — la policy
       // UPDATE sur profils.source est restreinte à email_parent = email
       // du parent authentifié.
       const { error } = await sb.from('profils').update({ source: valeur }).eq('user_id', userIdEnfant)
-      if (error) console.log('Erreur mise à jour source:', error.message)
+      if (error) { console.log('Erreur mise à jour source:', error.message); dire('Réponse non enregistrée. Chargement de votre espace…') }
+      else dire('Merci ! Chargement de votre espace…')
     } catch (e) {
       console.log('Erreur mise à jour source:', e.message)
+      dire('Réponse non enregistrée. Chargement de votre espace…')
     }
+  } else {
+    // « Passer » : source est déjà NULL à la création du profil, rien à écrire.
+    dire('Chargement de votre espace…')
   }
   window.location.reload()
 }

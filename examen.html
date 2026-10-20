@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Examen en ligne — ACADEMIKA</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/simulation-bascule.js?v=1"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
@@ -65,14 +66,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .results-screen { background: white; border-radius: 16px; border: 1px solid #e8e8e4; padding: 2rem 1.5rem; margin-bottom: 1rem; text-align: center; }
 .results-score-big { font-size: 72px; font-weight: 700; color: #1a1a1a; line-height: 1; }
 .results-pct { font-size: 28px; font-weight: 600; margin: 10px 0 6px; }
-.results-mention { font-size: 20px; margin-bottom: 0.5rem; }
 .results-temps { font-size: 12px; color: #999; margin-bottom: 0.5rem; }
-.results-mention-officielle { font-size: 13px; font-weight: 600; padding: 6px 14px; border-radius: 20px; display: inline-block; margin-bottom: 1.5rem; }
-.mention-tb { background: #f0fdf4; color: #16a34a; border: 1px solid #16a34a; }
-.mention-b { background: #eef2ff; color: #3730a3; border: 1px solid #3730a3; }
-.mention-ab { background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; }
-.mention-admis { background: #f5f5f0; color: #555; border: 1px solid #ccc; }
-.mention-insuffisant { background: #fef2f2; color: #dc2626; border: 1px solid #dc2626; }
 .results-btns { display: flex; flex-direction: column; gap: 10px; }
 .themes-recap { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 1rem 0; }
 .theme-score { background: #f5f5f0; border-radius: 8px; padding: 10px; text-align: center; font-size: 12px; }
@@ -151,6 +145,30 @@ function construireReponses(){
   })
 }
 
+// Simulation de l'après-bascule (aperçus .vercel.app seulement, cf.
+// js/simulation-bascule.js). Le serveur ne la prend en compte que si
+// VERCEL_ENV vaut 'preview' (lib/gating.js) : ignorée en production.
+const SIMULATION_BASCULE = window.SimulationBascule ? window.SimulationBascule.active() : false
+
+// Verrou Accompagné de la page (souple) : copie de apresBascule() /
+// estAccompagne() / estVerrouille() de lib/gating.js, comme dans
+// suivi-parent.html (cf. CLAUDE.md § Verrous du lot 2) — à garder alignée.
+// Le contrôle strict reste côté serveur (api/examen.js, 403 offre_requise).
+const FIN_OFFRE_LANCEMENT = new Date('2026-12-01T00:00:00+01:00')
+function apresBascule(){ return SIMULATION_BASCULE || new Date() >= FIN_OFFRE_LANCEMENT }
+function dateParisAujourdhui(){
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Paris'}).format(new Date()) // AAAA-MM-JJ
+}
+function estAccompagne(p){
+  p=p||{}
+  if(p.plan_actif===true||p.cours_particuliers_actif===true)return true
+  return typeof p.acces_offert_jusqu==='string'&&p.acces_offert_jusqu.slice(0,10)>=dateParisAujourdhui()
+}
+function estVerrouille(p){ return apresBascule()&&!estAccompagne(p) }
+// Calculé une fois dans init() ; false par défaut (fail-open : lecture du
+// profil en échec, compte prof ou sans ligne profils → page normale).
+let examenVerrouille=false
+
 // Point d'entrée unique vers /api/examen pour demarrer/progression/reprise/
 // enregistrer (PAS pour l'abandon pagehide, cf. sauvegarderAbandonne() plus
 // bas) : sur un 401, tente sb.auth.refreshSession() puis rejoue l'appel une
@@ -162,7 +180,7 @@ async function appelExamenApi(corps){
     return fetch('/api/examen', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({}, corps, { access_token: accessToken }))
+      body: JSON.stringify(Object.assign({}, corps, { access_token: accessToken }, SIMULATION_BASCULE ? { simuler_bascule: true } : {}))
     })
   }
   let res = await faireAppel()
@@ -271,6 +289,7 @@ async function retourAccueil() {
 }
 
 async function init() {
+  if(window.SimulationBascule)window.SimulationBascule.afficherBandeau()
   const {data}=await sb.auth.getSession()
   if(!data.session){window.location.href='index.html';return}
   user=data.session.user
@@ -292,6 +311,13 @@ async function init() {
     emailParent=emailParent||profil[0].email_parent||''
   }
   document.getElementById('user-email').textContent=prenom||user.email
+  // Verrou d'offre : lecture séparée du gate ci-dessus (RLS élève = sa ligne).
+  // Échec ou absence de ligne → page normale, le serveur reste l'autorité.
+  if(user.app_metadata?.role!=='prof'){
+    const {data:offre,error:errOffre}=await sb.from('profils').select('plan_actif,cours_particuliers_actif,acces_offert_jusqu').eq('user_id',user.id).limit(1)
+    if(errOffre){console.log('[verrou offre] lecture échouée, page normale :',errOffre.message)}
+    else if(offre&&offre.length>0){examenVerrouille=estVerrouille(offre[0])}
+  }
   await tenterReprise()
 }
 
@@ -334,14 +360,6 @@ async function tenterReprise() {
     console.log('[reprise] échec, écran d\'intro :', e.message)
     await renderIntro()
   }
-}
-
-function getMention(pct){
-  if(pct>=80)return{label:'🌟 Excellent',cls:'mention-tb',officiel:'Excellent'}
-  if(pct>=70)return{label:'👍 Très bon',cls:'mention-b',officiel:'Très bon'}
-  if(pct>=60)return{label:'✅ Bon',cls:'mention-ab',officiel:'Bon'}
-  if(pct>=50)return{label:'📋 Correct',cls:'mention-admis',officiel:'Correct'}
-  return{label:'📚 À retravailler',cls:'mention-insuffisant',officiel:'À retravailler'}
 }
 
 function formatTemps(s){
@@ -459,6 +477,8 @@ function renderFigure(fig) {
 }
 
 async function renderIntro() {
+  // Verrouillé : écran cadenas, sans lire examens_blancs ni proposer de démarrage.
+  if(examenVerrouille){afficherExamenReserve();return}
   const {data:historique}=await sb.from('examens_blancs')
     .select('*').eq('user_id',user.id).eq('abandonne',false)
     .order('created_at',{ascending:false}).limit(5)
@@ -467,9 +487,8 @@ async function renderIntro() {
     let items=''
     historique.forEach(function(e){
       const pct=Math.round((e.score/e.total)*100)
-      const mention=getMention(pct)
       const date=new Date(e.created_at).toLocaleDateString('fr-FR')
-      items+='<div class="historique-item"><span>'+date+'</span><span><strong>'+e.score+'/20</strong> — '+pct+'%</span><span class="results-mention-officielle '+mention.cls+'" style="font-size:11px;padding:2px 8px">'+mention.officiel+'</span></div>'
+      items+='<div class="historique-item"><span>'+date+'</span><span><strong>'+e.score+'/20</strong> — '+pct+'%</span></div>'
     })
     historiqueHTML='<div style="margin-bottom:1.5rem;text-align:left"><p style="font-size:13px;font-weight:600;margin-bottom:8px;color:#1a1a1a">📊 Mes derniers examens :</p>'+items+'</div>'
   }
@@ -478,10 +497,10 @@ async function renderIntro() {
     '<div class="intro-icon">📝</div>'+
     '<div class="intro-title">Examen en ligne</div>'+
     '<div class="intro-sub">Évalue tes connaissances sur toutes les notions de 3ème !<br>20 questions tirées aléatoirement sur tous les thèmes du programme.</div>'+
-    '<div class="intro-deroulement"><p>📋 <strong>Déroulement :</strong> Tu vas répondre à 20 questions QCM réparties sur les 4 parties du programme. Tu as <strong>40 minutes</strong> pour tout répondre. La correction complète s\'affiche à la fin. Les questions changent à chaque passage !</p></div>'+
+    '<div class="intro-deroulement"><p>📋 <strong>Déroulement :</strong> Tu vas répondre à 20 questions QCM réparties sur les 5 domaines du programme. Tu as <strong>40 minutes</strong> pour tout répondre. La correction complète s\'affiche à la fin. Les questions changent à chaque passage !</p></div>'+
     '<div class="intro-rules">'+
     '<li>⏱️ <strong>40 minutes</strong> — 2 min par question</li>'+
-    '<li>📋 <strong>20 questions</strong> sur les 4 parties</li>'+
+    '<li>📋 <strong>20 questions</strong> sur les 5 domaines</li>'+
     '<li>🔀 <strong>Questions différentes</strong> à chaque passage</li>'+
     '<li>🔕 <strong>Pas de correction</strong> pendant l\'examen</li>'+
     '<li>🔔 <strong>Des rappels</strong> s\'afficheront à 10, 5 et 1 minute restantes</li>'+
@@ -494,6 +513,16 @@ async function renderIntro() {
 // ═══════════════════════════════════════════════════
 // DÉMARRAGE — appel serveur, plus jamais answer/explication ici
 // ═══════════════════════════════════════════════════
+function afficherExamenReserve(){
+  document.getElementById('main-area').innerHTML=
+    '<div class="intro-card">'+
+    '<div class="intro-icon">🔒</div>'+
+    '<div class="intro-title">Examen blanc en ligne</div>'+
+    '<div class="intro-sub">L\'examen blanc en ligne est disponible avec l\'offre Accompagné.</div>'+
+    '<button onclick="retourAccueil()" class="btn btn-primary btn-full" style="font-size:16px;padding:14px">← Retour</button>'+
+    '</div>'
+}
+
 async function demarrerExamen() {
   document.getElementById('main-area').innerHTML='<div class="loader">⏳ Préparation de ton examen…</div>'
   try {
@@ -504,6 +533,8 @@ async function demarrerExamen() {
     const res = await appelExamenApi({ action: 'demarrer' })
     if (res.status === 401) { afficherEcranReconnexion(); return }
     const data = await res.json()
+    // Verrou Accompagné (api/examen.js, 403) : message lisible, pas une erreur brute.
+    if (res.status === 403 && data.code === 'offre_requise') { afficherExamenReserve(); return }
     if (!data.success) throw new Error(data.error || 'Erreur de chargement')
     if (data.vues) console.log('[questions_vues]', data.vues)
 
@@ -691,14 +722,11 @@ function renderResultats(){
   const themes = resultatServeur ? resultatServeur.themes : {}
   const tempsSecondes = resultatServeur ? resultatServeur.tempsSecondes : chronoSecondes
   const pct=Math.round((nbOk/20)*100)
-  const mention=getMention(pct)
 
   let html='<div class="results-screen">'
   html+='<div class="results-score-big">'+nbOk+'/20</div>'
   html+='<div class="results-pct" style="color:'+(pct>=50?'#16a34a':'#dc2626')+'">'+pct+'%</div>'
-  html+='<div class="results-mention">'+mention.label+'</div>'
   html+='<div class="results-temps">⏱️ '+formatTemps(tempsSecondes)+'</div>'
-  html+='<div class="results-mention-officielle '+mention.cls+'">'+mention.officiel+'</div>'
   html+='<div class="themes-recap">'
   Object.keys(themes).forEach(function(theme){const s=themes[theme];const tpct=Math.round((s.ok/s.total)*100);html+='<div class="theme-score"><div class="theme-score-num" style="color:'+(tpct>=50?'#16a34a':'#dc2626')+'">'+s.ok+'/'+s.total+'</div><div class="theme-score-label">'+theme.split(' ')[0]+'</div></div>'})
   html+='</div>'
