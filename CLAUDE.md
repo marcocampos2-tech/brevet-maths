@@ -343,6 +343,16 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 * **Bouton prof** : `POST /api/email { type:'bilan', user_id, apercu?, version? }` (jeton prof). **Période = les 21 derniers jours glissants** (et non « depuis le dernier bilan » comme le cron, qui garde sa période) ; le dernier bilan du cron ne sert qu'à comparer les niveaux. `apercu: true` renvoie `{ sujet, html }` sans envoi, sans quota ni écriture ; `version: 'complet' | 'tronque'` n'est honorée qu'avec `apercu`. Bouton « Aperçu du bilan » dans la fiche prof (iframe `sandbox` + `srcdoc`, choix complet / tronqué). L'ancien format (`emailParent`, `sousThemes`…) n'est plus lu : 400.
 * **Garde d'envoi (`lib/garde-envoi.js`) — fail-closed.** Seul `VERCEL_ENV === 'production'` envoie à l'`email_parent` réel. Partout ailleurs (preview, development, variable absente) le **seul** destinataire possible est `EMAIL_TEST_DESTINATAIRE` (une adresse, variable du scope **Preview** uniquement, jamais lue dans une requête ; absente ou invalide : aucun envoi). `envoyerA()` revérifie au moment d'appeler Resend. Hors production, `api/cron-rappel.js` ne boucle JAMAIS sur les profils : ni rattrapage du récap, ni branches saisonnières, ni bilan de masse ; il exige `?test_user_id=<UUID>`, traite cet élève seul, n'écrit rien (ni `historique_bilans`, ni `alerte_envoyee`), cadence et pause ignorées, sujet `[TEST]` + bandeau, lien de désabonnement = adresse de test. `?simuler_bascule=1` (preview seulement, via `apresBascule`) simule l'après-bascule. Les crons Vercel ne tournent qu'en production : l'appel manuel d'une preview avec `CRON_SECRET` appelait auparavant le rattrapage, qui contacte la PRODUCTION (`BASE_URL_PROD`) et y envoie de vrais récaps. **Limite connue** : les autres envois (`adresse-brevet`, `stage`, `resultats-brevet`, `api/inscription-*.js`) n'ont pas ce garde (`docs/TODO.md`).
 
+## Nouvelles tables Supabase (depuis le 30/10/2026)
+
+Supabase n'accorde plus automatiquement de droits API aux nouvelles tables du schéma `public`. Toute nouvelle table utilisée par le site se crée dans **un seul SQL** avec : RLS activée, policies, et `GRANT` minimal par rôle.
+
+* Jamais `SELECT` à `anon` par défaut.
+* `service_role` : selon ce que font les `api/*.js`.
+* `authenticated` : selon ce que fait réellement le navigateur (vérifier dans le code, ne pas supposer).
+* `USAGE` sur la séquence si l'`id` est auto-incrémenté.
+* Les tables de sauvegarde ne reçoivent aucun `GRANT`.
+
 ## Rappel — Workflow Git
 
 **Une fois une PR mergée, ouvrir une nouvelle branche pour tout travail supplémentaire — ne jamais continuer à pousser sur une branche dont la PR est déjà fusionnée.** Incident constaté le 16/08/2026 : la branche `claude/academika-offers-pricing-9o9bjx` a reçu 6 commits après le merge de sa PR #21 ; seuls les 4 premiers ont été récupérés dans `main` par la suite, les 2 derniers (`992e5a1` — court-circuit `detailComplet` pendant la gratuité — et `628139d` — documentation associée dans CLAUDE.md) sont restés orphelins, jamais mergés, jusqu'à leur redécouverte fortuite ce même jour. Rien n'a été perdu (les commits existent toujours, `git show <hash>` les retrouve), mais le travail n'est jamais arrivé en production et sa disparition n'a été remarquée qu'après un test réel en boîte mail.

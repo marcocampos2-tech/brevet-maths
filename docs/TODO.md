@@ -104,7 +104,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
     Sur les trois, seule `historique_bilans` a été vérifiée (17/09/2026) : état voulu, accès serveur uniquement (`api/cron-rappel.js`, clé service, qui contourne RLS). `rappels_envoyes` et `email_rate_limit` restent à vérifier — probablement le même cas, non confirmé.
 
-    **Mise à jour (04/10/2026)** : pour `historique_bilans`, les droits de table sont désormais retirés à `anon` et `authenticated` (`REVOKE ALL`) en plus de la RLS sans policy — documenté dans `db/policies.sql`. `rappels_envoyes` et `email_rate_limit` : toujours non vérifiés.
+    **Mise à jour (04/10/2026)** : pour `historique_bilans`, les droits de table sont désormais retirés à `anon` et `authenticated` (`REVOKE ALL`) en plus de la RLS sans policy — documenté dans `db/policies.sql`. `rappels_envoyes` et `email_rate_limit` : le relevé Supabase du 21/10/2026 montre qu'elles n'ont pas de `REVOKE` pour `anon` / `authenticated` (protégées par la RLS seule) — à traiter avec le n°86.
 17. Deux seuils désalignés "abordé" (1 session) vs "À découvrir" (<3 sessions) — assumé, pas un bug
 18. Lien "Offres" corrigé (`#quiz`→`#offres`) sur `index.html`/`tarifs.html` (09/09) ; même décalage nom/cible jamais corrigé sur `stages-vacances.html`, `connexion.html`, `cours-particuliers.html`, `abonnement-confirme.html` (liens vers `index.html#quiz`)
 19. **Chantier RGPD suppression des comptes — NON CADRÉ** (constat du 15/09/2026). La contrainte `rappels_envoyes_user_id_fkey` sans `ON DELETE CASCADE` n'est pas un chantier isolé mais le symptôme d'un chantier jamais conçu.
@@ -167,7 +167,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 46. **`api/email.js` : la branche d'erreur de `brevet-blanc` renvoie au client le corps de l'erreur Resend** — constaté le 04/10/2026 (PR #97). Réponse 500 du type `'Erreur envoi email : ' + JSON.stringify(responseData)`. Fuite d'information mineure.
 
-47. **Suppression de compte non prévue proprement** — constat SQL du 04/10/2026, complète le n°19 (chantier RGPD non cadré). `examens_blancs` et `questions_vues` n'ont aucune clé étrangère vers `auth.users` : supprimer un compte laisse des lignes orphelines. `resultats` et `rappels_envoyes` ont une clé étrangère sans cascade (`ON DELETE NO ACTION`) : elle bloque la suppression d'un compte qui a des lignes. `profils` et `examens_progression` sont en cascade. (`historique_bilans`, listé au n°19 sans clé étrangère, n'est pas repris dans ce constat.) À traiter avant toute demande de suppression RGPD réelle.
+47. **Suppression de compte non prévue proprement** — constat SQL du 04/10/2026, complète le n°19 (chantier RGPD non cadré). `examens_blancs` et `questions_vues` n'ont aucune clé étrangère vers `auth.users` : supprimer un compte laisse des lignes orphelines. `resultats` et `rappels_envoyes` ont une clé étrangère sans cascade (`ON DELETE NO ACTION`) : elle bloque la suppression d'un compte qui a des lignes. `profils` et `examens_progression` sont en cascade. Le relevé du 21/10/2026 confirme le même état et précise que `historique_bilans` n'a, lui non plus, aucune clé étrangère (lignes orphelines après suppression, comme `examens_blancs` et `questions_vues`). À traiter avant toute demande de suppression RGPD réelle.
+    - [ ] **Avant toute correction** : compter les lignes déjà orphelines (`examens_blancs`, `questions_vues`, `historique_bilans` dont le `user_id` n'existe plus dans `auth.users`) pour mesurer ce qui est à nettoyer. Les choix de mécanisme restent ceux du n°19 (CASCADE ou suppression orchestrée, périmètre, traçabilité) : ne pas modifier les clés étrangères avant.
 
 48. **Domaine canonique : `academika.fr` redirige vers `www.academika.fr`** — constaté en production le 04/10/2026. Les liens de désabonnement des emails, écrits en apex (`https://academika.fr/desabonner.html?...`), passent donc par cette redirection. À harmoniser à l'occasion.
 
@@ -185,7 +186,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 56. **Réglages Supabase « Secure password change » et « Require current password » désactivés** — à étudier.
 
-57. **`verifier_disponibilite` reste appelable par tout compte connecté** (donc par quiconque crée un compte parent, cf. `shouldCreateUser`) : permet de savoir si un couple (prénom, nom) existe — à traiter avec le n°1.
+57. **`verifier_disponibilite` reste appelable par tout compte connecté** (donc par quiconque crée un compte parent, cf. `shouldCreateUser`) : permet de savoir si un couple (prénom, nom) existe — à traiter avec le n°1. Retrait du droit d'exécution : cf. n°86.
 
 58. **Compteurs de connexion (`login_tentatives`) : prévoir une purge des lignes expirées** (une ligne par prénom+nom ou IP ayant échoué, y compris des noms inventés).
 
@@ -245,6 +246,26 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 81. **`instagram.html` : mot de passe « academika2026 » vérifié côté navigateur** (`prompt`, l.144-145), lisible dans le code source — constaté le 18/10/2026. Vérifié le même jour : la page n'appelle aucune API (aucun `fetch`, aucune clé, aucun appel Supabase) et n'écrit rien ; elle dessine des visuels (canvas) à partir de 15 questions écrites en dur dans la page, déjà lisibles dans le source quel que soit le mot de passe. Risque faible. À décider : retirer le mot de passe (il ne protège rien), le garder comme simple filtre, ou protéger la page côté serveur. À corriger aussi : les commentaires d'en-tête de `api/generer-brevet.js` (l.4) et de `scripts/generer-questions.js` (l.3) citent ce même mot de passe alors que le code compare à `CRON_SECRET` (`generer-brevet.js` l.15, `generer-questions.js` l.13) — commentaires trompeurs.
 
 82. **`api/generer.js` bascule silencieusement sur le chemin IA quand la banque est en panne** (erreur Supabase ou exception : `getBanqueSupabase`, l.290, 299, 382-384) — constaté le 18/10/2026. À la suppression du chemin IA (n°27), décider du comportement en cas de panne de la banque : message à l'élève, alerte au prof, ou les deux.
+
+83. **Baseline Supabase rejouable : le schéma `public` n'existe que dans le dashboard** — relevé Supabase du 21/10/2026, aucun risque immédiat. Le dépôt ne contient que `db/*.sql` (correctifs ponctuels exécutés à la main), aucune migration : impossible de recréer la base à l'identique (environnement de test, reprise après incident). À faire : créer `supabase/migrations/` avec une baseline identique à la production (tables, vues, fonctions, policies, `GRANT` et `REVOKE` explicites), testée par `supabase db reset` en PostgreSQL 17 et comparée à la production. **Bloqué** : demande un poste avec Supabase CLI et Docker (impossible depuis une session cloud). À rapprocher du n°52 (références à `db/policies.sql`).
+
+84. **Connexion élève : homonymes** — relevé Supabase du 21/10/2026, aucun n'est connu à ce jour. Aucune unicité sur `profils (prenom, nom)` ; `verifier_login` (désormais fermée, sans appelant) faisait un `limit 1` sans ordre : deux homonymes se voyaient renvoyer un compte au hasard. Depuis `api/connexion-eleve.js`, un doublon donne le 401 uniforme (comme « élève inconnu » et « mot de passe faux ») : un homonyme serait bloqué sans explication plutôt que mal connecté (à revérifier dans le code avant toute décision). À faire : d'abord chercher les homonymes existants en base (`profils` groupé par `lower(trim(prenom))`, `lower(trim(nom))`), puis décider (contrainte d'unicité, identifiant supplémentaire, ou refus à la création d'un enfant dans `suivi-parent.html`). Aucune contrainte avant ce contrôle. À rapprocher du n°57 (`verifier_disponibilite`).
+
+85. **Anti-brute-force de la connexion élève : fail-open silencieux** — relevé Supabase du 21/10/2026. Les fonctions `login_*` ne sont pas `SECURITY DEFINER` et dépendent des droits de `service_role` sur `login_tentatives` ; si ces droits manquent ou sont retirés, `api/connexion-eleve.js` désactive la protection sans erreur visible (fail-open voulu pour ne pas bloquer un élève, mais sans signal). À faire : passer en échec fermé, ou conserver le fail-open et ajouter une alerte (log d'erreur surveillé, ping Healthchecks, ou test de santé des droits). Arbitrage à faire : un élève bloqué à tort contre une protection éteinte sans que personne le voie. À rapprocher des n°58 (purge de `login_tentatives`), n°59 et n°61.
+
+86. **Resserrement des droits SQL (défense en profondeur)** — relevé Supabase du 21/10/2026, aucune faille exploitable connue : la RLS protège les lignes. À traiter table par table, jamais en un lot (règle de CLAUDE.md), chaque changement précédé de la lecture du code qui appelle la table :
+    - `anon` et `authenticated` ont tous les droits SQL (`TRUNCATE` compris) sur la plupart des tables, protégées par la RLS seule (`TRUNCATE` ignore la RLS). Cible : droits minimaux par rôle d'après ce que fait réellement le navigateur.
+    - `examen_questions`, `examens_progression`, `rappels_envoyes`, `email_rate_limit` n'ont aucun `REVOKE` (cf. n°15).
+    - `verifier_disponibilite` exécutable par `authenticated` : oracle « cet élève existe » (cf. n°57).
+    - Sept fonctions `SECURITY DEFINER` ont `search_path = public` : `a_un_profil`, `email_parent_valide`, `est_parent_de`, `inscription_stage_valide`, `verifier_disponibilite`, `verifier_email_parent`, `verifier_login` (`is_prof()` et `definir_offre_eleve` ont déjà un `search_path` vide, non concernées). Cible : `search_path` vide, schémas qualifiés dans le corps.
+    - La policy INSERT de `profils` n'exige pas `user_id = auth.uid()` ; sans effet aujourd'hui (la contrainte `UNIQUE(user_id)` bloque la greffe), hygiène seulement.
+
+87. **Mineurs, faible priorité (relevé Supabase du 21/10/2026)** :
+    - `verifier_email_parent` compare l'email sans `lower(trim())` (cf. aussi la normalisation en tête de ce fichier).
+    - `verifier_login` et `verifier_email_parent` sont fermées (aucun droit d'exécution) et sans appelant : fonctions mortes, à supprimer (ce qui règle aussi leur `search_path` et le défaut de `lower(trim())` ci-dessus).
+    - `inscription_stage_valide` n'est pas atomique : deux inscriptions simultanées peuvent dépasser le nombre de places.
+    - Pas d'index sur `resultats.user_id`, `examens_blancs.user_id`, `profils.email_parent` : à poser quand le volume le justifie.
+    - 7 tables de sauvegarde `questions_banque_backup_*` / `backup_explications_*` à purger en fin de refonte de la banque (les deux tables `backup_explications_*_20261013` sont déjà suivies dans la section « Banque de questions »).
 
 ---
 
