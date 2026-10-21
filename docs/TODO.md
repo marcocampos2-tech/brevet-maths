@@ -262,7 +262,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 
 87. **Mineurs, faible priorité (relevé Supabase du 21/10/2026)** :
     - `verifier_email_parent` compare l'email sans `lower(trim())` (cf. aussi la normalisation en tête de ce fichier).
-    - `verifier_login` et `verifier_email_parent` sont fermées (aucun droit d'exécution) et sans appelant : fonctions mortes, à supprimer (ce qui règle aussi leur `search_path` et le défaut de `lower(trim())` ci-dessus).
+    - `verifier_login` et `verifier_email_parent` sont fermées à `anon` et `authenticated` (seul `service_role` peut encore les exécuter) et sans appelant : fonctions mortes, à supprimer (ce qui règle aussi leur `search_path` et le défaut de `lower(trim())` ci-dessus).
     - `inscription_stage_valide` n'est pas atomique : deux inscriptions simultanées peuvent dépasser le nombre de places.
     - Pas d'index sur `resultats.user_id`, `examens_blancs.user_id`, `profils.email_parent` : à poser quand le volume le justifie.
     - 7 tables de sauvegarde `questions_banque_backup_*` / `backup_explications_*` à purger en fin de refonte de la banque (les deux tables `backup_explications_*_20261013` sont déjà suivies dans la section « Banque de questions »).
