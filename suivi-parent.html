@@ -144,7 +144,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .examen-ligne-score { font-size: 12.5px; font-weight: 600; color: var(--marine); }
 .examen-ligne-abandon .examen-ligne-score { font-weight: 500; color: var(--muted); }
 </style>
-<link rel="stylesheet" href="/css/niveaux.css?v=4">
+<link rel="stylesheet" href="/css/niveaux.css?v=5">
 </head>
 <body>
 <nav>
@@ -282,7 +282,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 </div>
 
 <script src="/js/catalogue.js?v=1"></script>
-<script src="/js/niveaux.js?v=6"></script>
+<script src="/js/niveaux.js?v=9"></script>
 <script src="/js/simulation-bascule.js?v=1"></script>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -820,7 +820,7 @@ function pdfCelluleNiveau(l, niveau) {
   if (d.type === 'surv') return { ...base, coul: PDF_COUL.surveiller, gras: true, barre: [232, 137, 43] }
   if (d.type === 'encours') return { ...base, coul: PDF_COUL.progression, gras: true, barre: [212, 162, 60] }
   if (d.type === 'jamais') return { ...base, coul: PDF_COUL.progression, gras: true, barre: [212, 162, 60] }
-  return { ...base, l1: d.texte.replace(/^Après le /, 'après '), coul: PDF_COUL.neutre }
+  return { ...base, coul: PDF_COUL.neutre } // « Après le Facile » / « Après le Moyen » : comme la page et l'email
 }
 
 // Dessine la section à partir de y (page courante) et renvoie le y de fin,
@@ -875,7 +875,7 @@ function pdfSectionNiveaux(doc, y, lignes) {
   const hEntete = 18
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9)
   const rows = tries.map(l => {
-    const nomL = doc.splitTextToSize(l.sous_theme, wNom - 10)
+    const nomL = doc.splitTextToSize(Niveaux.sansCesures(l.sous_theme), wNom - 10) // jamais de U+00AD dans jsPDF
     return { l, nomL, h: Math.max(32, nomL.length * 10.5 + 10) }
   })
   const entete = yy => {
@@ -885,11 +885,13 @@ function pdfSectionNiveaux(doc, y, lignes) {
     doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.6); doc.line(PDF_MARGE_G, yy + hEntete, PDF_MARGE_G + largeur, yy + hEntete)
     return yy + hEntete
   }
-  // Légende en texte simple : sa hauteur est réservée avec la dernière ligne
-  // pour qu'elle ne reste jamais seule en haut d'une page.
+  // Légende : pastilles de couleur (mêmes couleurs que les cases) puis la phrase de
+  // règle. Sa hauteur est réservée avec la dernière ligne pour qu'elle ne reste
+  // jamais seule en haut d'une page.
+  const itemsLegende = [['Acquis', PDF_COUL.acquis], ['En cours', PDF_COUL.progression], ['À surveiller', PDF_COUL.surveiller], ['Pas encore ouvert', PDF_COUL.neutre]]
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
-  const legende = doc.splitTextToSize('Légende : Acquis · En cours · À surveiller · Pas encore ouvert. ' + Niveaux.PHRASE_REGLE, largeur)
-  const hLegende = legende.length * 10 + 8
+  const regle = doc.splitTextToSize(Niveaux.PHRASE_REGLE, largeur)
+  const hLegende = 14 + regle.length * 10 + 8
 
   if (y + hEntete + rows[0].h > bas) y = nouvellePage()
   y = entete(y)
@@ -927,8 +929,19 @@ function pdfSectionNiveaux(doc, y, lignes) {
     doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.4); doc.line(PDF_MARGE_G, y, PDF_MARGE_G + largeur, y)
   })
 
-  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(107, 110, 115)
-  doc.text(legende, PDF_MARGE_G, y + 16)
+  const yLeg = y + 16
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
+  let xLeg = PDF_MARGE_G
+  itemsLegende.forEach(([libelle, coul]) => {
+    doc.setFillColor(...coul.fond); doc.setDrawColor(...coul.bord)
+    doc.setLineWidth(coul === PDF_COUL.surveiller ? 0.9 : 0.5)
+    doc.roundedRect(xLeg, yLeg - 7, 8, 8, 2, 2, 'FD')
+    doc.setTextColor(107, 110, 115)
+    doc.text(libelle, xLeg + 12, yLeg)
+    xLeg += 12 + doc.getTextWidth(libelle) + 18
+  })
+  doc.setTextColor(107, 110, 115)
+  doc.text(regle, PDF_MARGE_G, yLeg + 14)
   return y + 8 + hLegende
 }
 

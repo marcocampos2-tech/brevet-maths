@@ -1,7 +1,7 @@
 /* css/niveaux.css — styles du bloc « Niveau atteint par sous-thème »
    (js/niveaux.js). Autonome : aucune variable de la page hôte. Les polices
    'Inter' et 'IBM Plex Mono' sont celles chargées par les pages hôtes.
-   Chargement : <link rel="stylesheet" href="/css/niveaux.css?v=4"> */
+   Chargement : <link rel="stylesheet" href="/css/niveaux.css?v=5"> */
 :root {
   --niv-marine: #1B2A4A;
   --niv-dore: #D4A23C; --niv-dore-light: #FBF4E4;
@@ -28,7 +28,7 @@
 .niv-table th.niv-col-nom { width: 31%; text-align: left; padding-left: 10px; }
 .niv-table td { padding: 7px 2px; border-bottom: 1px solid var(--niv-border); vertical-align: middle; text-align: center; font-size: 11px; line-height: 1.3; }
 .niv-table tr:last-child td { border-bottom: none; }
-.niv-table td.niv-nom { text-align: left; padding-left: 10px; font-size: 12.5px; font-weight: 600; color: var(--niv-ardoise); overflow-wrap: break-word; hyphens: auto; }
+.niv-table td.niv-nom { text-align: left; padding-left: 10px; font-size: 12.5px; font-weight: 600; color: var(--niv-ardoise); overflow-wrap: break-word; hyphens: manual; -webkit-hyphens: manual; }
 .niv-cell { border-radius: 8px; padding: 6px 3px; margin: 0 2px; }
 .niv-c-acquis { background: #EAF6EF; color: #1f7a45; font-weight: 600; }
 .niv-c-encours { background: var(--niv-dore-light); color: #8a6416; }

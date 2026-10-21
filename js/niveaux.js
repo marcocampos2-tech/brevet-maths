@@ -17,7 +17,7 @@
 //
 // Dépendance : js/catalogue.js doit être chargé AVANT (SOUS_THEMES).
 // Styles : css/niveaux.css.
-// Chargement : <script src="/js/niveaux.js?v=6"></script> — incrémenter v à
+// Chargement : <script src="/js/niveaux.js?v=8"></script> — incrémenter v à
 // chaque modification pour contourner le cache.
 (function () {
   'use strict'
@@ -89,6 +89,83 @@
     return `<div class="niv-cell niv-c-verrou">${d.texte}</div>`
   }
 
+  // Césures de confort pour les noms de sous-thèmes de la grille (première colonne,
+  // étroite sur mobile), sur la page, la fiche prof ET l'email (lib/bilan-email.js
+  // utilise cette même fonction : une seule source). Un mot long ne doit JAMAIS être coupé au milieu d'une
+  // syllabe sans trait d'union (constat Apple Mail iPhone : « Proportionnalit / é »).
+  // On insère des traits d'union conditionnels (&shy;) aux frontières de syllabes :
+  // ils ne s'affichent que si le mot ne tient pas, et alors avec un tiret. Pris en
+  // charge par Apple Mail, Gmail et Outlook et par les navigateurs ; `hyphens:auto`
+  // dépend d'un dictionnaire par navigateur et n'existe ni dans Gmail ni dans
+  // Outlook, d'où ce choix. Le premier rempart reste la largeur de
+  // colonne et la taille de police (le plus long mot du catalogue y tient seul).
+  // Règles (heuristique française, sans dictionnaire) : jamais dans un groupe de
+  // voyelles ; V|CV (pro-ba) ; entre deux consonnes (trans-for, por-tion) sauf
+  // groupes inséparables bl br cl cr dr fl fr gl gr pl pr tr vr et digraphes ch ph th
+  // gn sh qu ; jamais devant une syllabe finale muette (consonne(s) + e ou es :
+  // « tique », « tiques », « tages ») ; au moins 3 lettres de chaque côté ; seulement les mots d'au moins 11
+  // lettres : en dessous, le mot tient seul sur sa ligne dès 320 px et le retour à la
+  // ligne se fait aux espaces (« Théorème de / Pythagore », pas « Pytha- / gore »).
+  const VOYELLES = 'aeiouyàâäéèêëîïôöùûüœæ'
+  const GROUPES_INSEPARABLES = ['bl', 'br', 'cl', 'cr', 'dr', 'fl', 'fr', 'gl', 'gr', 'pl', 'pr', 'tr', 'vr']
+  const DIGRAPHES = ['ch', 'ph', 'th', 'gn', 'sh', 'qu']
+  const MOT_LETTRES = /^[A-Za-zÀ-ÖØ-öø-ÿŒœÆæ]+$/
+  const MOT_MIN_CESURE = 11
+  // Syllabe finale muette : consonne(s) puis e ou es (« que », « ques », « ges »), « qu »
+  // comptant pour une consonne. Règle typographique : jamais de coupure devant elle.
+  const SYLLABE_FINALE_MUETTE = new RegExp('^(?:qu|[^' + VOYELLES + '])+es?$')
+
+  // Indices (dans `mot`) où une césure est permise.
+  function pointsDeCesure(mot) {
+    const bas = mot.toLowerCase()
+    const unites = [] // { debut, fin, voyelle }
+    for (let i = 0; i < bas.length;) {
+      const deux = bas.slice(i, i + 2)
+      if (DIGRAPHES.includes(deux)) { unites.push({ debut: i, fin: i + 2, voyelle: false }); i += 2; continue }
+      unites.push({ debut: i, fin: i + 1, voyelle: VOYELLES.includes(bas[i]) }); i++
+    }
+    const points = []
+    let i = 0
+    while (i < unites.length) {
+      if (!unites[i].voyelle) { i++; continue }
+      while (i < unites.length && unites[i].voyelle) i++        // groupe de voyelles
+      let j = i
+      while (j < unites.length && !unites[j].voyelle) j++        // grappe de consonnes
+      if (j >= unites.length) break                              // consonnes finales : pas de césure
+      const n = j - i
+      if (n === 1) points.push(unites[i].debut)
+      else if (n >= 2) {
+        const deuxDernieres = bas.slice(unites[j - 2].debut, unites[j - 1].fin)
+        const inseparable = unites[j - 2].fin - unites[j - 2].debut === 1 && unites[j - 1].fin - unites[j - 1].debut === 1 && GROUPES_INSEPARABLES.includes(deuxDernieres)
+        points.push(inseparable ? unites[j - 2].debut : unites[j - 1].debut)
+      }
+      i = j
+    }
+    return points.filter(p => p >= 3 && mot.length - p >= 3 && !SYLLABE_FINALE_MUETTE.test(bas.slice(p)))
+  }
+
+  // Retire tout trait d'union conditionnel (U+00AD). Il n'existe QUE dans le HTML de
+  // la grille (page, email) : tout texte hors HTML (PDF jsPDF, phrases, sujet de
+  // l'email) passe par ici, car jsPDF imprimerait U+00AD comme un tiret visible
+  // (le jeu WinAnsi le contient : le test de jeu de caractères ne le détecte pas).
+  function sansCesures(texte) {
+    return String(texte == null ? '' : texte).replace(/\u00AD/g, '')
+  }
+
+  // Texte → HTML échappé avec traits d'union conditionnels dans les mots longs.
+  function avecCesures(texte) {
+    return sansCesures(texte).split(' ').map(mot => {
+      if (mot.length < MOT_MIN_CESURE || !MOT_LETTRES.test(mot)) return echapper(mot)
+      const pts = pointsDeCesure(mot)
+      if (!pts.length) return echapper(mot)
+      const morceaux = []
+      let debut = 0
+      for (const p of pts) { morceaux.push(mot.slice(debut, p)); debut = p }
+      morceaux.push(mot.slice(debut))
+      return morceaux.map(echapper).join('&shy;')
+    }).join(' ')
+  }
+
   // Phrase « à surveiller » (texte brut, non échappé), utilisée par la carte de la
   // page parent, la fiche prof, le PDF et l'email du bilan. Les chiffres viennent
   // de la vue (derniers_essais / dernieres_reussites, AU NIVEAU COURANT) : aucun
@@ -96,7 +173,7 @@
   // Moyen non acquis, au moins 4 essais, au plus 1 réussite sur les 4 derniers,
   // jamais en Difficile.
   function phraseSurveiller(l) {
-    return `${l.sous_theme} : ${nbReussites(l.dernieres_reussites)} sur ses 4 derniers essais au niveau ${NOM_NIVEAU[l.niveau_courant]}.`
+    return `${sansCesures(l.sous_theme)} : ${nbReussites(l.dernieres_reussites)} sur ses 4 derniers essais au niveau ${NOM_NIVEAU[l.niveau_courant]}.`
   }
 
   // Classement pur (lignes de la vue → textes bruts, non échappés), partagé par
@@ -138,7 +215,7 @@
     html += '<div class="niv-wrap"><table class="niv-table"><thead><tr><th class="niv-col-nom" scope="col">Sous-thème</th>' +
       '<th scope="col">Facile</th><th scope="col">Moyen</th><th scope="col">Difficile</th></tr></thead><tbody>'
     tries.forEach(l => {
-      html += `<tr><td class="niv-nom">${echapper(l.sous_theme)}</td>` +
+      html += `<tr><td class="niv-nom">${avecCesures(l.sous_theme)}</td>` +
         `<td>${celluleNiveau(l, 'facile')}</td><td>${celluleNiveau(l, 'moyen')}</td><td>${celluleNiveau(l, 'difficile')}</td></tr>`
     })
     html += '</tbody></table></div>' +
@@ -152,7 +229,7 @@
   const API = {
     NOM_NIVEAU, CHAMPS_NIVEAU, SELECT_NIVEAUX,
     nbReussites, parRecence, totalCatalogue,
-    cellule, celluleNiveau, phraseSurveiller, classerNiveaux, rendreCarteNiveaux,
+    avecCesures, sansCesures, pointsDeCesure, cellule, celluleNiveau, phraseSurveiller, classerNiveaux, rendreCarteNiveaux,
     LEGENDE, PHRASE_REGLE
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = API
