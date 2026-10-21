@@ -15,6 +15,10 @@ Le bilan 21 jours et le bouton prof lisent désormais la vue `niveaux_sous_theme
 - `api/cron-rappel.js` : les emails de fin d'année et d'été interpolent `prenom_affiche` sans échappement HTML (le bilan, lui, est échappé par `lib/bilan-email.js`).
 - Généraliser le garde d'envoi (`lib/garde-envoi.js`, hors production = un seul destinataire de test) aux autres envois : types `adresse-brevet`, `stage`, `resultats-brevet`, `resiliation-confirmee` de `api/email.js`, `api/inscription-brevet.js`, `api/inscription-stage.js`. Une preview partage la base et la clé Resend de la production : ces envois partent aujourd'hui à de vrais destinataires.
 - Email du bilan : le bouton « Voir le suivi complet dans l'espace parent → » est violet (`#3730a3`), hors charte (bleu marine `#1B2A4A` / or `#D4A23C`) ; même violet dans les liens et boutons des autres emails (`api/email.js`, `api/cron-rappel.js`). Hors périmètre de la PR #136.
+- PDF du bilan (`suivi-parent.html`, `genererPDF()`, section « Activité sur la période », ~l.1092-1110), hors périmètre de la PR #136 :
+  - [ ] « Quiz abandonnés » affiché en grand (41 sur le PDF vu) : alarmant pour un parent. Vérifier l'origine (tests de CM en août-septembre ?) puis réduire (petite ligne, comme « (+ M interrompue(s) ) » de l'email) ou retirer.
+  - [ ] La section commence sur une page 3 alors que la page 2 est presque vide : la remonter (contrôle de saut de page avant la section).
+  - [ ] Graphique : retirer le titre d'axe « Date » (~l.1057) et utiliser des graduations rondes (10, 20…).
 - Idempotency du bilan : si l'écriture de `historique_bilans` échoue après l'envoi, la cadence ne bouge pas et le bilan est renvoyé le lendemain (l'échec est journalisé et fait passer le ping Healthchecks en `/fail`).
 
 ## 🟠 Ouvert — règle « à surveiller » : à réévaluer avec des données réelles
