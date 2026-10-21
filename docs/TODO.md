@@ -277,6 +277,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     - Pas d'index sur `resultats.user_id`, `examens_blancs.user_id`, `profils.email_parent` : à poser quand le volume le justifie.
     - 7 tables de sauvegarde `questions_banque_backup_*` / `backup_explications_*` à purger en fin de refonte de la banque (les deux tables `backup_explications_*_20261013` sont déjà suivies dans la section « Banque de questions »).
 
+88. **`examen.html` : en-tête (`.nav-left`) non aligné** — 18 px, graisse 600, sans police serif, alors que `quiz.html`, `resultats.html`, `espace-parent.html` et `suivi-parent.html` utilisent Newsreader 22 px / 500, couleur marine, sans `letter-spacing`. À harmoniser (logo « ∑ ACADEMIKA »).
+
 ---
 
 ## 🟡 Plateforme Academika — légal
