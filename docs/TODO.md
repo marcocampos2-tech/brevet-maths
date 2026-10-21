@@ -19,7 +19,7 @@ Le bilan 21 jours et le bouton prof lisent désormais la vue `niveaux_sous_theme
 ## 🟠 Ouvert — règle « à surveiller » : à réévaluer avec des données réelles
 
 - [ ] Réévaluer les seuils de la règle du 21/10/2026 (au moins 4 essais, au plus 1 réussite sur les 4 derniers essais, jamais en Difficile ; `db/vue-niveaux.sql`) avec des données d'usage réelles : nombre d'élèves signalés, signaux qui s'éteignent d'eux-mêmes, retours de parents.
-- [ ] Vérifier que les parents comprennent la différence entre la grille (réussites cumulées vers 5, « 4 réussites sur 5 ») et la phrase « 1 réussite sur ses 4 derniers essais ».
+- [ ] Vérifier que les parents comprennent la différence entre la grille (réussites cumulées vers 5, « 4 / 5 réussites en 6 essais ») et la phrase « 1 réussite sur ses 4 derniers essais ».
 
 ## 🟠 Ouvert — captures d'écran : état `maitrise`
 

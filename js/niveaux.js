@@ -17,7 +17,7 @@
 //
 // Dépendance : js/catalogue.js doit être chargé AVANT (SOUS_THEMES).
 // Styles : css/niveaux.css.
-// Chargement : <script src="/js/niveaux.js?v=4"></script> — incrémenter v à
+// Chargement : <script src="/js/niveaux.js?v=5"></script> — incrémenter v à
 // chaque modification pour contourner le cache.
 (function () {
   'use strict'
@@ -50,21 +50,29 @@
     return Object.keys(SOUS_THEMES).reduce((s, t) => s + SOUS_THEMES[t].length, 0)
   }
 
-  // Contenu d'une case niveau, sans mise en forme : { type, texte, reussites }.
+  // Contenu d'une case niveau, sans mise en forme :
+  //   { type, texte, detail, reussites, essais }
   // type : 'acquis' | 'encours' | 'surv' (en cours ET à surveiller) | 'jamais' |
-  // 'verrou'. reussites (0-5) pilote la barre. Source unique du texte des cases :
-  // celluleNiveau() (page) et lib/bilan-email.js (grille de l'email) en dérivent.
+  // 'verrou'. texte = ligne 1 ; detail = ligne 2 (« en M essais », M = sessions
+  // terminées à CE niveau pour ce sous-thème, colonnes f_/m_/d_essais de la vue),
+  // vide hors case ouverte et non acquise ; reussites (0-5) pilote la barre
+  // (largeur = N/5). « N / 5 réussites » reste au pluriel (5 réussites sont
+  // nécessaires) ; « en 1 essai » est au singulier. Une case « en_cours » compte
+  // toujours au moins 1 essai (règle de la vue) : jamais de « en 0 essai ».
+  // Source unique du contenu des cases : celluleNiveau() (page, fiche prof),
+  // le PDF (suivi-parent.html) et la grille de l'email (lib/bilan-email.js) en dérivent.
   function cellule(l, niveau) {
     const c = CHAMPS_NIVEAU[niveau]
     const etat = l[c.etat]
-    if (etat === 'acquis') return { type: 'acquis', texte: '✓ Acquis', reussites: 5 }
+    const essais = Number(l[c.essais]) || 0
+    if (etat === 'acquis') return { type: 'acquis', texte: '✓ Acquis', detail: '', reussites: 5, essais }
     if (etat === 'en_cours') {
       const n = Math.min(Number(l[c.reussites]) || 0, 5)
       const type = (l.a_surveiller && l.niveau_courant === niveau) ? 'surv' : 'encours'
-      return { type, texte: `${nbReussites(n)} sur 5`, reussites: n }
+      return { type, texte: `${n} / 5 réussites`, detail: essais >= 1 ? `en ${essais} essai${essais > 1 ? 's' : ''}` : '', reussites: n, essais }
     }
-    if (etat === 'jamais_joue') return { type: 'jamais', texte: `${nbReussites(0)} sur 5`, reussites: 0 }
-    return { type: 'verrou', texte: `Après le ${niveau === 'moyen' ? 'Facile' : 'Moyen'}`, reussites: 0 }
+    if (etat === 'jamais_joue') return { type: 'jamais', texte: '0 / 5 réussites', detail: '', reussites: 0, essais: 0 }
+    return { type: 'verrou', texte: `Après le ${niveau === 'moyen' ? 'Facile' : 'Moyen'}`, detail: '', reussites: 0, essais }
   }
 
   function celluleNiveau(l, niveau) {
@@ -72,7 +80,9 @@
     if (d.type === 'acquis') return '<div class="niv-cell niv-c-acquis">' + d.texte + '</div>'
     if (d.type === 'encours' || d.type === 'surv') {
       const cls = d.type === 'surv' ? 'niv-c-surv' : 'niv-c-encours'
-      return `<div class="niv-cell ${cls}">${d.texte}<div class="niv-barre"><span style="width:${d.reussites * 20}%"></span></div></div>`
+      return `<div class="niv-cell ${cls}"><div class="niv-l1">${d.texte}</div>` +
+        (d.detail ? `<div class="niv-l2">${d.detail}</div>` : '') +
+        `<div class="niv-barre"><span style="width:${d.reussites * 20}%"></span></div></div>`
     }
     if (d.type === 'jamais') return `<div class="niv-cell niv-c-jamais">${d.texte}</div>`
     return `<div class="niv-cell niv-c-verrou">${d.texte}</div>`
@@ -100,7 +110,7 @@
 
   // Légende de la grille : carrés de couleur (mêmes couleurs que les cases).
   const LEGENDE = [['acquis', 'Acquis'], ['encours', 'En cours'], ['surv', 'À surveiller'], ['verrou', 'Pas encore ouvert']]
-  const PHRASE_REGLE = 'Une réussite = au moins 4 bonnes réponses sur 5. Un niveau est acquis après 5 réussites, ce qui ouvre le niveau suivant.'
+  const PHRASE_REGLE = '« 4 / 5 réussites » = 4 réussites obtenues sur les 5 nécessaires pour valider le niveau. Une réussite = au moins 4 bonnes réponses sur 5. Un niveau validé ouvre le niveau suivant.'
 
   // Rendu pur (lignes de la vue → HTML) : aucune lecture réseau. Ordre : en-tête,
   // bloc « À surveiller » (absent s'il est vide), grille sous-thème × niveau

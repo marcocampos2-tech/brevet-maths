@@ -144,7 +144,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .examen-ligne-score { font-size: 12.5px; font-weight: 600; color: var(--marine); }
 .examen-ligne-abandon .examen-ligne-score { font-weight: 500; color: var(--muted); }
 </style>
-<link rel="stylesheet" href="/css/niveaux.css?v=2">
+<link rel="stylesheet" href="/css/niveaux.css?v=3">
 </head>
 <body>
 <nav>
@@ -282,7 +282,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 </div>
 
 <script src="/js/catalogue.js?v=1"></script>
-<script src="/js/niveaux.js?v=4"></script>
+<script src="/js/niveaux.js?v=5"></script>
 <script src="/js/simulation-bascule.js?v=1"></script>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -809,16 +809,18 @@ function pdfTitreSection(doc, y, gauche, droite) {
   return y + 16
 }
 
-// Texte et couleurs d'une case du tableau. Les états viennent de la vue et le
-// type de case de Niveaux.cellule (source unique, la même que la grille HTML) ;
-// seul le libellé est propre au PDF (polices WinAnsi : pas de coche).
+// Contenu et couleurs d'une case du tableau. Le contenu vient de Niveaux.cellule
+// (source unique, le même que la grille HTML : « N / 5 réussites » + « en M
+// essais » + barre) ; seule la coche de « ✓ Acquis » est retirée (polices
+// WinAnsi). barre = couleur de la barre de progression, ou null.
 function pdfCelluleNiveau(l, niveau) {
   const d = Niveaux.cellule(l, niveau)
-  if (d.type === 'acquis') return { txt: 'Acquis', coul: PDF_COUL.acquis, gras: true }
-  if (d.type === 'surv') return { txt: d.reussites + '/5', coul: PDF_COUL.surveiller, gras: true }
-  if (d.type === 'encours') return { txt: d.reussites + '/5', coul: PDF_COUL.progression, gras: false }
-  if (d.type === 'jamais') return { txt: '0/5', coul: PDF_COUL.neutre, gras: false }
-  return { txt: d.texte.replace(/^Après le /, 'après '), coul: PDF_COUL.neutre, gras: false }
+  const base = { l1: d.texte, l2: d.detail, reussites: d.reussites, barre: null, gras: false }
+  if (d.type === 'acquis') return { ...base, l1: 'Acquis', coul: PDF_COUL.acquis, gras: true }
+  if (d.type === 'surv') return { ...base, coul: PDF_COUL.surveiller, gras: true, barre: [232, 137, 43] }
+  if (d.type === 'encours') return { ...base, coul: PDF_COUL.progression, gras: true, barre: [212, 162, 60] }
+  if (d.type === 'jamais') return { ...base, coul: PDF_COUL.neutre }
+  return { ...base, l1: d.texte.replace(/^Après le /, 'après '), coul: PDF_COUL.neutre }
 }
 
 // Dessine la section à partir de y (page courante) et renvoie le y de fin,
@@ -874,7 +876,7 @@ function pdfSectionNiveaux(doc, y, lignes) {
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9)
   const rows = tries.map(l => {
     const nomL = doc.splitTextToSize(l.sous_theme, wNom - 10)
-    return { l, nomL, h: Math.max(22, nomL.length * 10.5 + 10) }
+    return { l, nomL, h: Math.max(32, nomL.length * 10.5 + 10) }
   })
   const entete = yy => {
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(107, 110, 115)
@@ -886,7 +888,7 @@ function pdfSectionNiveaux(doc, y, lignes) {
   // Légende en texte simple : sa hauteur est réservée avec la dernière ligne
   // pour qu'elle ne reste jamais seule en haut d'une page.
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8)
-  const legende = doc.splitTextToSize('Légende : Acquis · En cours · À surveiller · Pas encore ouvert. N/5 = réussites obtenues sur les 5 nécessaires. ' + Niveaux.PHRASE_REGLE, largeur)
+  const legende = doc.splitTextToSize('Légende : Acquis · En cours · À surveiller · Pas encore ouvert. ' + Niveaux.PHRASE_REGLE, largeur)
   const hLegende = legende.length * 10 + 8
 
   if (y + hEntete + rows[0].h > bas) y = nouvellePage()
@@ -902,8 +904,24 @@ function pdfSectionNiveaux(doc, y, lignes) {
       doc.setFillColor(...cel.coul.fond); doc.setDrawColor(...cel.coul.bord)
       doc.setLineWidth(cel.coul === PDF_COUL.surveiller ? 1 : 0.4)
       doc.roundedRect(cx + 3, y + 3, wNiv - 6, r.h - 6, 4, 4, 'FD')
+      const centre = cx + wNiv / 2
+      const aDetail = !!cel.l2
+      // Ligne 1 (gras si « N / 5 réussites » ou « Acquis »), ligne 2 plus petite et
+      // atténuée (mélange 85 % texte / 15 % fond, équivalent de l'opacité 0.85).
       doc.setFont('helvetica', cel.gras ? 'bold' : 'normal'); doc.setFontSize(8.5); doc.setTextColor(...cel.coul.texte)
-      doc.text(cel.txt, cx + wNiv / 2, y + r.h / 2 + 3, { align: 'center' })
+      doc.text(cel.l1, centre, aDetail ? y + 13 : y + r.h / 2 + 3, { align: 'center' })
+      if (aDetail) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5)
+        doc.setTextColor(...cel.coul.texte.map((v, k) => Math.round(v * 0.85 + cel.coul.fond[k] * 0.15)))
+        doc.text(cel.l2, centre, y + 21.5, { align: 'center' })
+      }
+      if (cel.barre) {
+        // Barre de 3 pt : piste puis partie pleine (largeur = N/5).
+        const bx = cx + 10, bw = wNiv - 20, by = y + r.h - 9
+        doc.setFillColor(...cel.coul.fond.map(v => Math.round(v * 0.92)))
+        doc.roundedRect(bx, by, bw, 3, 1.5, 1.5, 'F')
+        if (cel.reussites > 0) { doc.setFillColor(...cel.barre); doc.roundedRect(bx, by, bw * cel.reussites / 5, 3, 1.5, 1.5, 'F') }
+      }
     })
     y += r.h
     doc.setDrawColor(228, 225, 216); doc.setLineWidth(0.4); doc.line(PDF_MARGE_G, y, PDF_MARGE_G + largeur, y)

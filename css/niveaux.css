@@ -1,7 +1,7 @@
 /* css/niveaux.css — styles du bloc « Niveau atteint par sous-thème »
    (js/niveaux.js). Autonome : aucune variable de la page hôte. Les polices
    'Inter' et 'IBM Plex Mono' sont celles chargées par les pages hôtes.
-   Chargement : <link rel="stylesheet" href="/css/niveaux.css?v=2"> */
+   Chargement : <link rel="stylesheet" href="/css/niveaux.css?v=3"> */
 :root {
   --niv-marine: #1B2A4A;
   --niv-dore: #D4A23C; --niv-dore-light: #FBF4E4;
@@ -34,6 +34,8 @@
 .niv-c-encours { background: var(--niv-dore-light); color: #8a6416; }
 .niv-c-surv { background: #FFF1E3; color: var(--niv-orange-fonce); border: 1px solid var(--niv-orange); font-weight: 600; }
 .niv-c-jamais, .niv-c-verrou { background: var(--niv-creme); color: var(--niv-muted); }
+.niv-l1 { font-weight: 700; }
+.niv-l2 { font-size: 10px; opacity: .85; margin-top: 1px; }
 .niv-barre { height: 4px; background: rgba(0,0,0,.08); border-radius: 2px; margin-top: 5px; overflow: hidden; }
 .niv-barre > span { display: block; height: 100%; background: var(--niv-dore); border-radius: 2px; }
 .niv-c-surv .niv-barre > span { background: var(--niv-orange); }
