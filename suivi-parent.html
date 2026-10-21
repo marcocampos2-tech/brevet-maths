@@ -144,7 +144,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .examen-ligne-score { font-size: 12.5px; font-weight: 600; color: var(--marine); }
 .examen-ligne-abandon .examen-ligne-score { font-weight: 500; color: var(--muted); }
 </style>
-<link rel="stylesheet" href="/css/niveaux.css?v=3">
+<link rel="stylesheet" href="/css/niveaux.css?v=4">
 </head>
 <body>
 <nav>
@@ -282,7 +282,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 </div>
 
 <script src="/js/catalogue.js?v=1"></script>
-<script src="/js/niveaux.js?v=5"></script>
+<script src="/js/niveaux.js?v=6"></script>
 <script src="/js/simulation-bascule.js?v=1"></script>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -819,7 +819,7 @@ function pdfCelluleNiveau(l, niveau) {
   if (d.type === 'acquis') return { ...base, l1: 'Acquis', coul: PDF_COUL.acquis, gras: true }
   if (d.type === 'surv') return { ...base, coul: PDF_COUL.surveiller, gras: true, barre: [232, 137, 43] }
   if (d.type === 'encours') return { ...base, coul: PDF_COUL.progression, gras: true, barre: [212, 162, 60] }
-  if (d.type === 'jamais') return { ...base, coul: PDF_COUL.neutre }
+  if (d.type === 'jamais') return { ...base, coul: PDF_COUL.progression, gras: true, barre: [212, 162, 60] }
   return { ...base, l1: d.texte.replace(/^Après le /, 'après '), coul: PDF_COUL.neutre }
 }
 

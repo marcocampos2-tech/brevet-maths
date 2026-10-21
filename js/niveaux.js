@@ -17,7 +17,7 @@
 //
 // Dépendance : js/catalogue.js doit être chargé AVANT (SOUS_THEMES).
 // Styles : css/niveaux.css.
-// Chargement : <script src="/js/niveaux.js?v=5"></script> — incrémenter v à
+// Chargement : <script src="/js/niveaux.js?v=6"></script> — incrémenter v à
 // chaque modification pour contourner le cache.
 (function () {
   'use strict'
@@ -52,13 +52,15 @@
 
   // Contenu d'une case niveau, sans mise en forme :
   //   { type, texte, detail, reussites, essais }
-  // type : 'acquis' | 'encours' | 'surv' (en cours ET à surveiller) | 'jamais' |
-  // 'verrou'. texte = ligne 1 ; detail = ligne 2 (« en M essais », M = sessions
-  // terminées à CE niveau pour ce sous-thème, colonnes f_/m_/d_essais de la vue),
-  // vide hors case ouverte et non acquise ; reussites (0-5) pilote la barre
-  // (largeur = N/5). « N / 5 réussites » reste au pluriel (5 réussites sont
-  // nécessaires) ; « en 1 essai » est au singulier. Une case « en_cours » compte
-  // toujours au moins 1 essai (règle de la vue) : jamais de « en 0 essai ».
+  // type : 'acquis' | 'encours' | 'surv' (en cours ET à surveiller) | 'jamais'
+  // (niveau ouvert, aucun essai) | 'verrou'. texte = ligne 1 ; detail = ligne 2
+  // (« en M essais », M = sessions terminées à CE niveau pour ce sous-thème,
+  // colonnes f_/m_/d_essais de la vue ; « aucun essai » à 0 essai), vide pour
+  // acquis et verrouillé ; reussites (0-5) pilote la barre (largeur = N/5).
+  // « N / 5 réussites » reste au pluriel (5 réussites sont nécessaires) ; « en 1
+  // essai » est au singulier ; jamais de « en 0 essai ».
+  // Un niveau ouvert jamais joué prend le style « en cours » (beige, barre vide) :
+  // le gris est réservé à « Pas encore ouvert ».
   // Source unique du contenu des cases : celluleNiveau() (page, fiche prof),
   // le PDF (suivi-parent.html) et la grille de l'email (lib/bilan-email.js) en dérivent.
   function cellule(l, niveau) {
@@ -69,22 +71,21 @@
     if (etat === 'en_cours') {
       const n = Math.min(Number(l[c.reussites]) || 0, 5)
       const type = (l.a_surveiller && l.niveau_courant === niveau) ? 'surv' : 'encours'
-      return { type, texte: `${n} / 5 réussites`, detail: essais >= 1 ? `en ${essais} essai${essais > 1 ? 's' : ''}` : '', reussites: n, essais }
+      return { type, texte: `${n} / 5 réussites`, detail: essais >= 1 ? `en ${essais} essai${essais > 1 ? 's' : ''}` : 'aucun essai', reussites: n, essais }
     }
-    if (etat === 'jamais_joue') return { type: 'jamais', texte: '0 / 5 réussites', detail: '', reussites: 0, essais: 0 }
+    if (etat === 'jamais_joue') return { type: 'jamais', texte: '0 / 5 réussites', detail: 'aucun essai', reussites: 0, essais: 0 }
     return { type: 'verrou', texte: `Après le ${niveau === 'moyen' ? 'Facile' : 'Moyen'}`, detail: '', reussites: 0, essais }
   }
 
   function celluleNiveau(l, niveau) {
     const d = cellule(l, niveau)
     if (d.type === 'acquis') return '<div class="niv-cell niv-c-acquis">' + d.texte + '</div>'
-    if (d.type === 'encours' || d.type === 'surv') {
+    if (d.type === 'encours' || d.type === 'surv' || d.type === 'jamais') {
       const cls = d.type === 'surv' ? 'niv-c-surv' : 'niv-c-encours'
       return `<div class="niv-cell ${cls}"><div class="niv-l1">${d.texte}</div>` +
-        (d.detail ? `<div class="niv-l2">${d.detail}</div>` : '') +
+        `<div class="niv-l2">${d.detail}</div>` +
         `<div class="niv-barre"><span style="width:${d.reussites * 20}%"></span></div></div>`
     }
-    if (d.type === 'jamais') return `<div class="niv-cell niv-c-jamais">${d.texte}</div>`
     return `<div class="niv-cell niv-c-verrou">${d.texte}</div>`
   }
 
