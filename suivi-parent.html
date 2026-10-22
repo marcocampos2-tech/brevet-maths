@@ -1079,7 +1079,7 @@ async function genererPDF(mode) {
 
     // a) En-tête
     doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(27, 42, 74)
-    doc.text('Academika — Bilan de progression', margeG, y)
+    doc.text('ACADEMIKA — Bilan de progression', margeG, y)
     y += 20
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(107, 110, 115)
     doc.text(`${prenom || 'Élève'} · ${libelle} · du ${debut.toLocaleDateString('fr-FR')} au ${fin.toLocaleDateString('fr-FR')}`, margeG, y)
