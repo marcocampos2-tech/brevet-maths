@@ -26,6 +26,7 @@ body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; back
 nav { display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 0; border-bottom: 2px solid var(--marine); margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
 .nav-left { font-family:'Newsreader',serif; font-size: 22px; font-weight: 500; color: var(--marine); }
 .nav-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lib-court { display: none; }
 .nav-email { font-size: 13px; color: var(--muted); margin-right: 4px; }
 .card { background: white; border-radius: 14px; border: 1px solid var(--border); padding: 1.75rem; margin-bottom: 1rem; }
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: white; color: var(--ardoise); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-decoration: none; font-family:'Inter',sans-serif; }
@@ -167,12 +168,8 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 }
 @media (max-width:480px){
   .container{padding:0 1rem 1rem}
-  nav{padding:1rem 0;gap:8px}
-  .nav-left{font-size:18px}
-  .nav-right{gap:4px}
-  .nav-right .ico{display:none}
-  .nav-right .btn{padding:8px}
-  .nav-right .btn-ghost{padding:8px 0}
+  nav{padding:1rem 0}
+  .nav-right{gap:6px}
   .nav-email{display:none}
   .card{padding:1.25rem}
   .theme-grid{gap:8px;grid-template-columns:repeat(2,1fr)}
@@ -185,6 +182,15 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   .banniere-examen{padding:18px 16px}
   .banniere-examen-titre{font-size:16.5px}
 }
+@media (max-width:440px){
+  nav{gap:8px}
+  .nav-right{gap:4px}
+  .nav-right .lib-long{display:none}
+  .nav-right .lib-court{display:inline}
+  .nav-right .btn,.nav-right .btn-ghost{font-size:12px;min-height:32px}
+  .nav-right .btn{padding:8px}
+  .nav-right .btn-ghost{padding:8px 0}
+}
 </style>
 </head>
 <body>
@@ -193,7 +199,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="nav-left">∑ ACADEMIKA</div>
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
-    <a href="resultats.html" class="btn" onclick="return allerVersLien(event,'resultats.html')"><span class="ico">📊</span> Mes résultats</a>
+    <a href="resultats.html" class="btn" onclick="return allerVersLien(event,'resultats.html')"><span class="lib-long">📊 Mes résultats</span><span class="lib-court">Résultats</span></a>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
