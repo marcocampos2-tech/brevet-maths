@@ -2,7 +2,7 @@
 
 const { peutRecevoirEmailDetaille, enPeriodeGratuite } = require('../lib/gating')
 const { verifierToken, verifierUtilisateur, verifierProf } = require('../lib/auth-token')
-const { dateParis, dateRecapValide, libelleJour, ligneActivite, resumeJour, formatDuree } = require('../lib/recap-journalier')
+const { dateParis, dateRecapValide, libelleJour, lignesActivite, resumeJour, formatDuree } = require('../lib/recap-journalier')
 const { UUID, lireProfil, lireHistorique, calculerBilan } = require('../lib/bilan-email')
 const { resoudreDestinataire, envoyerA } = require('../lib/garde-envoi')
 
@@ -1060,7 +1060,7 @@ export default async function handler(req, res) {
       // api/stripe-checkout.js, source unique dans lib/gating.js).
       const detailComplet = peutRecevoirEmailDetaille({ plan_actif }) || enPeriodeGratuite()
 
-      const activite = ligneActivite(sessionsDuJour)
+      const activite = lignesActivite(sessionsDuJour)
       const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`
       const resume = `${esc(prenom)} a révisé ${quand} : ${pluriel(totalSessions, 'session')}, ${formatDuree(dureeSecondes)}` +
         (interrompues > 0 ? ` (+ ${pluriel(interrompues, 'interrompue')})` : '')
@@ -1081,7 +1081,7 @@ export default async function handler(req, res) {
             </div>
             <p style="margin-bottom:10px">Bonjour,</p>
             <p style="font-size:15px;font-weight:600;margin:0 0 4px">${resume}</p>
-            ${activite ? `<p style="font-size:12px;color:#888;margin:0">${activite}</p>` : ''}
+            ${activite.length ? `<p style="font-size:12px;color:#888;margin:0">${activite.join('<br>')}</p>` : ''}
             ${detailHTML}
             <div style="text-align:center;margin:24px 0 4px">
               <a href="https://www.academika.fr/espace-parent.html" style="color:#3730a3;text-decoration:none;font-weight:600;font-size:13px">${detailComplet ? 'Voir son niveau par sous-thème →' : 'Voir son espace parent →'}</a>
