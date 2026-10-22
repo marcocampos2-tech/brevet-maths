@@ -15,10 +15,10 @@ Le bilan 21 jours et le bouton prof lisent désormais la vue `niveaux_sous_theme
 - `api/cron-rappel.js` : les emails de fin d'année et d'été interpolent `prenom_affiche` sans échappement HTML (le bilan, lui, est échappé par `lib/bilan-email.js`).
 - Généraliser le garde d'envoi (`lib/garde-envoi.js`, hors production = un seul destinataire de test) aux autres envois : types `adresse-brevet`, `stage`, `resultats-brevet`, `resiliation-confirmee` de `api/email.js`, `api/inscription-brevet.js`, `api/inscription-stage.js`. Une preview partage la base et la clé Resend de la production : ces envois partent aujourd'hui à de vrais destinataires.
 - Email du bilan : le bouton « Voir le suivi complet dans l'espace parent → » est violet (`#3730a3`), hors charte (bleu marine `#1B2A4A` / or `#D4A23C`) ; même violet dans les liens et boutons des autres emails (`api/email.js`, `api/cron-rappel.js`). Hors périmètre de la PR #136.
-- PDF du bilan (`suivi-parent.html`, `genererPDF()`, section « Activité sur la période », ~l.1092-1110), hors périmètre de la PR #136 :
+- PDF du bilan (`js/bilan-pdf.js`, `generer()`, section « Activité sur la période »), hors périmètre de la PR #136 :
   - [ ] « Quiz abandonnés » affiché en grand (41 sur le PDF vu) : alarmant pour un parent. Vérifier l'origine (tests de CM en août-septembre ?) puis réduire (petite ligne, comme « (+ M interrompue(s) ) » de l'email) ou retirer.
   - [ ] La section commence sur une page 3 alors que la page 2 est presque vide : la remonter (contrôle de saut de page avant la section).
-  - [ ] Graphique : retirer le titre d'axe « Date » (~l.1057) et utiliser des graduations rondes (10, 20…).
+  - [ ] Graphique (`js/bilan-pdf.js`, `generer()`) : retirer le titre d'axe « Date » et utiliser des graduations rondes (10, 20…). Granularité inadaptée aux périodes courtes : « Depuis le début » force `mois`, donc un élève inscrit depuis 3 jours n'a qu'une seule barre, inutile ; choisir jour (ou semaine) quand la période fait moins d'un mois (le choix se fait dans `getRangeEtGranularite`, dont le mode `debut` est le seul concerné). Le PDF est le même pour le parent et pour le prof (PR #143) : le correctif vaut pour les deux.
 - Idempotency du bilan : si l'écriture de `historique_bilans` échoue après l'envoi, la cadence ne bouge pas et le bilan est renvoyé le lendemain (l'échec est journalisé et fait passer le ping Healthchecks en `/fail`).
 
 ## 🟠 Ouvert — règle « à surveiller » : à réévaluer avec des données réelles
@@ -280,6 +280,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 88. **`examen.html` : en-tête (`.nav-left`) non aligné** — 18 px, graisse 600, sans police serif, alors que `quiz.html`, `resultats.html`, `espace-parent.html` et `suivi-parent.html` utilisent Newsreader 22 px / 500, couleur marine, sans `letter-spacing`. À harmoniser (logo « ∑ ACADEMIKA »).
 
 89. **`resultats.html` (tableau de bord élève) : cases de niveau à l'ancien format** — `celluleNiveau()` affiche encore « N réussite(s) sur 5 » et « 🔒 Verrouillé » (légende comprise), alors que `Niveaux.cellule` (`js/niveaux.js`) donne « N / 5 réussites », « en M essais » et « Après le Facile / Moyen ». À faire : aligner `resultats.html` sur `Niveaux.cellule` pour que l'élève et le parent voient les mêmes textes (le bloc « Dernier sous-thème travaillé » et sa phrase « N réussites sur 5 » sont à vérifier dans la foulée). `resultats.html` garde sa propre copie `niv-*`, hors du mécanisme `js/niveaux.js` (cf. `CLAUDE.md`, « Règle de déblocage des niveaux ») : choisir entre charger `js/niveaux.js` + `css/niveaux.css` et recopier les textes. Hors périmètre de la PR #138.
+90. **`lib/quiz-enonce.manual-test.js` (2 échecs sur 47) et `lib/quiz-graphique.manual-test.js` (3 échecs sur 50) échouent déjà sur `main`** — constaté le 22/10/2026 en préparant le bouton « PDF du bilan » (mêmes comptes sur `main` et sur la branche, donc sans rapport avec ce travail). À diagnostiquer : test devenu obsolète ou régression du code testé ; les autres suites `lib/*.manual-test.js` passent.
 
 ---
 
