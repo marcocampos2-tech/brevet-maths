@@ -13,6 +13,18 @@ function formatDateFr(dateISO) {
   return d.getDate() + ' ' + MOIS_FR[d.getMonth()]
 }
 
+// '*' = joker ilike côté PostgREST : une saisie qui en contient est refusée
+// AVANT la requête (même règle que api/email.js, contientJoker / escapeIlike).
+function contientJoker(s) {
+  return String(s).includes('*')
+}
+
+// Échappe \ % _ (métacaractères ILIKE, valides dans un email ou un prénom)
+// pour utiliser ilike comme égalité exacte insensible à la casse.
+function motifIlike(s) {
+  return String(s).replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_')
+}
+
 export default async function handler(req, res) {
   const origine = req.headers.origin
   if (ORIGINES_AUTORISEES.includes(origine)) {
@@ -69,9 +81,17 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' })
 
-  const { prenom, nom, email_parent, telephone, session_id } = req.body
+  const corps = req.body || {}
+  const prenom = String(corps.prenom ?? '').trim()
+  const nom = String(corps.nom ?? '').trim()
+  const email_parent = String(corps.email_parent ?? '').trim()
+  const telephone = String(corps.telephone ?? '').trim()
+  const session_id = corps.session_id
   if (!prenom || !nom || !email_parent || !session_id) {
     return res.status(400).json({ error: 'Champs obligatoires manquants' })
+  }
+  if (contientJoker(prenom) || contientJoker(email_parent)) {
+    return res.status(400).json({ error: 'Saisie invalide' })
   }
 
   try {
@@ -88,13 +108,17 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Ce stage a été annulé' })
     }
 
+    // Doublon = même email parent ET même prénom d'enfant sur cette session
+    // (sans tenir compte de la casse). Un parent peut donc inscrire plusieurs
+    // enfants avec la même adresse ; seul un même prénom est refusé.
     const checkRes = await fetch(
-      `${SUPA_URL}/rest/v1/inscriptions_stages?email_parent=eq.${encodeURIComponent(email_parent)}&session_id=eq.${session_id}&select=id`,
+      `${SUPA_URL}/rest/v1/inscriptions_stages?email_parent=ilike.${encodeURIComponent(motifIlike(email_parent))}&prenom=ilike.${encodeURIComponent(motifIlike(prenom))}&session_id=eq.${session_id}&select=id`,
       { headers }
     )
+    if (!checkRes.ok) throw new Error('Erreur vérification inscription')
     const existing = await checkRes.json()
     if (existing && existing.length > 0) {
-      return res.status(400).json({ error: 'Vous êtes déjà inscrit à ce stage' })
+      return res.status(400).json({ error: `Une inscription existe déjà pour ${prenom} sur ce stage.` })
     }
 
     const placesRes = await fetch(
