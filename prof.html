@@ -11,6 +11,7 @@
 <title>Prof — ACADEMIKA</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -242,8 +243,11 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
   </div>
 </div>
 
+<canvas id="chart-pdf-offscreen" width="600" height="260" style="display:none"></canvas>
+
 <script src="/js/catalogue.js?v=1"></script>
 <script src="/js/niveaux.js?v=9"></script>
+<script src="/js/bilan-pdf.js?v=1"></script>
 <script>
 const SB_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
 const SB_KEY = 'sb_publishable_3nwxCHSPliLzSB6B7BZYhw__sp7ToXI'
@@ -1913,9 +1917,48 @@ async function openFiche(userId) {
   if (ROWS.some(r => r.user_id === userId)) {
     pied += '<button class="btn btn-green" id="btn-bilan" onclick="envoyerBilan(\''+escAttrJs(userId)+'\')">Envoyer bilan parents</button>'
     pied += '<button class="btn" onclick="ouvrirApercuBilan(\''+escAttrJs(userId)+'\')">Aperçu du bilan</button>'
+    pied += '<span style="display:inline-flex;gap:6px;align-items:center">' +
+      '<select id="pdf-periode" aria-label="Période du PDF" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:12px;background:white">' +
+      '<option value="debut" selected>Depuis le début</option><option value="trimestre">Les 3 derniers mois</option><option value="mois">Ce mois-ci</option></select>' +
+      '<button class="btn" id="btn-pdf-bilan" onclick="pdfBilanEleve(\''+escAttrJs(userId)+'\')">PDF du bilan</button></span>'
   }
   pied += '<button class="btn" onclick="closeFiche()">Fermer</button></div>'
   corps.innerHTML = blocOffre(userId) + contenu + pied
+}
+
+// PDF du bilan : le MÊME document que celui du parent (js/bilan-pdf.js, source
+// unique), à imprimer et remettre en rendez-vous. Prénom seul, jamais le nom de
+// famille ; aucune information d'offre. Le verrou d'offre du parent ne
+// s'applique pas ici : le prof lit resultats et la vue par sa policy is_prof().
+async function pdfBilanEleve(userId) {
+  const btn = document.getElementById('btn-pdf-bilan')
+  const mode = document.getElementById('pdf-periode').value
+  const texteOriginal = btn.textContent
+  const restaurer = ms => setTimeout(() => { btn.textContent = texteOriginal; btn.disabled = false }, ms)
+  btn.disabled = true
+  btn.textContent = 'Génération…'
+  try {
+    const p = PROFILS[userId] || {}
+    const prenom = String(p.prenom_affiche || '').trim()
+    const slug = prenom.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'eleve'
+    const res = await BilanPDF.generer({
+      sb, userId, prenom, mode,
+      canvas: document.getElementById('chart-pdf-offscreen'),
+      nomFichier: 'academika-bilan-' + slug + '-' + mode + '-' + new Date().toISOString().split('T')[0] + '.pdf'
+    })
+    if (res.vide) {
+      btn.textContent = res.vide === 'aucune' ? 'Aucune activité sur cette période' : 'Que des abandons sur cette période'
+      restaurer(2500)
+      return
+    }
+  } catch (e) {
+    console.error('[pdf-bilan] génération impossible :', e && e.message)
+    btn.textContent = 'Erreur, réessayez'
+    restaurer(2500)
+    return
+  }
+  btn.textContent = texteOriginal
+  btn.disabled = false
 }
 
 function closeFiche() {
