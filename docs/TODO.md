@@ -18,7 +18,7 @@ Le bilan 21 jours et le bouton prof lisent désormais la vue `niveaux_sous_theme
 - PDF du bilan (`js/bilan-pdf.js`, `generer()`, section « Activité sur la période »), hors périmètre de la PR #136 :
   - [ ] « Quiz abandonnés » affiché en grand (41 sur le PDF vu) : alarmant pour un parent. Vérifier l'origine (tests de CM en août-septembre ?) puis réduire (petite ligne, comme « (+ M interrompue(s) ) » de l'email) ou retirer.
   - [ ] La section commence sur une page 3 alors que la page 2 est presque vide : la remonter (contrôle de saut de page avant la section).
-  - [ ] Graphique : retirer le titre d'axe « Date » (~l.1057) et utiliser des graduations rondes (10, 20…).
+  - [ ] Graphique (`js/bilan-pdf.js`, `generer()`) : retirer le titre d'axe « Date » et utiliser des graduations rondes (10, 20…). Granularité inadaptée aux périodes courtes : « Depuis le début » force `mois`, donc un élève inscrit depuis 3 jours n'a qu'une seule barre, inutile ; choisir jour (ou semaine) quand la période fait moins d'un mois (le choix se fait dans `getRangeEtGranularite`, dont le mode `debut` est le seul concerné). Le PDF est le même pour le parent et pour le prof (PR #143) : le correctif vaut pour les deux.
 - Idempotency du bilan : si l'écriture de `historique_bilans` échoue après l'envoi, la cadence ne bouge pas et le bilan est renvoyé le lendemain (l'échec est journalisé et fait passer le ping Healthchecks en `/fail`).
 
 ## 🟠 Ouvert — règle « à surveiller » : à réévaluer avec des données réelles
