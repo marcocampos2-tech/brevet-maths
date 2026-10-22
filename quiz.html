@@ -337,7 +337,8 @@ let accessToken=null
 // quizTermine distingue un quiz fini d'un quiz abandonné : pagehide, logout et
 // les liens n'écrivent un abandon (score 0) que si quizTermine est faux.
 // resultatConfirme n'est vrai qu'après un 'ok' du serveur. promesseSauvegarde
-// : sauvegarde lancée par « Voir mon résultat », attendue avant de quitter.
+// : sauvegarde lancée à la dernière réponse validée (valider()), attendue avant
+// de quitter ; « Voir mon résultat » n'en lance jamais une deuxième.
 let corpsResultat=null, quizTermine=false, resultatConfirme=false, promesseSauvegarde=null, resultatAffiche=false
 let chronoInterval=null, chronoSecondes=0, sourceQuestions='ia'
 let quizEnCours=false
@@ -1312,7 +1313,8 @@ function defilerVersResultats(doux) {
 }
 
 // Clic sur « Voir mon résultat » : le score s'affiche immédiatement (calculé
-// ici), l'enregistrement se fait ensuite en arrière-plan.
+// ici) ; l'enregistrement est déjà parti à la dernière réponse (valider()), on
+// en lit le statut dans la promesse mémorisée par lancerSauvegarde().
 async function voirResultat() {
   if(resultatAffiche || !quizTermine) return
   resultatAffiche = true
@@ -1496,6 +1498,14 @@ async function valider(qi) {
     quizTermine = true
     corpsResultat = construireCorpsResultat()
     renderQuiz()
+    // Enregistrement lancé ICI, en arrière-plan, et non au clic sur « Voir mon
+    // résultat » : un élève qui ferme l'onglet sans cliquer ne dépend plus du
+    // seul sendBeacon de pagehide, et created_at (lu par le récap journalier)
+    // est l'heure réelle de fin du quiz. RIEN ne change à l'écran tant que
+    // l'élève n'a pas cliqué : ni défilement, ni résultat, ni message — le
+    // statut est lu au clic dans la promesse mémorisée (même appel, même
+    // client_key : voirResultat() n'en lance pas un second).
+    lancerSauvegarde()
     setTimeout(() => {
       const btn = document.getElementById('btn-voir-resultat')
       if(btn) btn.scrollIntoView({ behavior: prefereMoinsDeMouvement() ? 'auto' : 'smooth', block: 'center' })

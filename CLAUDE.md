@@ -252,6 +252,18 @@ Colonne `jsonb` **nullable**, ajoutée en production le 18/10/2026 (`db/resultat
 
 **Droits** : les policies SELECT de `resultats` (élève, parent, prof) sont au niveau de la ligne et couvrent la colonne sans changement (aucun droit par colonne dans `db/`, à confirmer en base : `information_schema.column_privileges`). L'élève reçoit la colonne dans `select('*')` (`resultats.html`), qui l'affiche depuis le 18/10/2026 (cf. « Lecture » ci-dessus).
 
+## Fin de quiz — enregistrement (`quiz.html`)
+
+**L'enregistrement part à la dernière réponse validée** (`valider()`, `lancerSauvegarde()` en arrière-plan, sans `await`), **pas au clic sur « Voir mon résultat »** (changement du 22/10/2026 ; avant, depuis `dd8edad`, il partait au clic). Raisons : un élève qui ferme l'onglet sans cliquer ne dépend plus du seul `sendBeacon` de `pagehide` (limite documentée : jeton expiré = 401, iOS ne garantit pas `pagehide`), et `resultats.created_at` (lu par le récap journalier) est l'heure réelle de fin du quiz, à quelques secondes près (les sessions antérieures à cette date, enregistrées au clic, ont un `created_at` décalé de la durée de lecture de la dernière explication et du délai avant le clic).
+
+**Contrainte absolue : l'enregistrement anticipé ne change RIEN à l'écran tant que l'élève n'a pas cliqué.** Pourquoi : avant `dd8edad`, la page passait aux résultats dès la réponse à la 5ᵉ question, sans laisser lire l'explication ; la 5ᵉ question affiche donc son explication comme les autres, puis le bouton « Voir mon résultat » (décision CM). Ni défilement, ni zone de résultats, ni message (« Enregistrement… », « enregistré », erreur), ni dialogue : le statut n'est lu qu'au clic, dans la promesse mémorisée par `lancerSauvegarde()` (même appel, même `client_key` : `voirResultat()` n'en lance jamais un second ; un échec connu avant le clic s'affiche d'emblée avec « Réessayer »). Test : `lib/quiz-fin.manual-test.js`, section [6], compare l'écran (HTML de `#quiz-area`, texte de la page, position et appels de défilement) à un parcours de référence où `lancerSauvegarde` est neutralisé, à la dernière réponse puis à la fin de l'envoi ; vérifié par mutation (un message ajouté ou un `scrollTo` dans `lancerSauvegarde` fait échouer le test).
+
+* **Idempotence inchangée** : `corpsResultat` (avec son `client_key`) est construit une seule fois à la dernière réponse ; contrainte `resultats_client_key_unique` + `ignore-duplicates` côté base ; le `sendBeacon` de `pagehide` reste le filet pendant la seconde de l'envoi et rejoue la même clé.
+* **`temps_secondes`** : inchangé (chrono figé à la dernière réponse).
+* **Abandons** : inchangé (`abandonPossible()` repose sur `quizTermine`, vrai dès la dernière réponse).
+* **`beforeunload`** : l'avertissement « Ton résultat n'est pas encore enregistré » peut désormais apparaître avant le clic, uniquement pendant l'envoi ou après un échec, à la fermeture de l'onglet (ordinateur) : il n'est jamais affiché dans la page.
+* Test : `NODE_PATH=/opt/node-tools/node_modules node lib/quiz-fin.manual-test.js` (Playwright, environ 90 s).
+
 ## CHANTIER — Mémoire des questions vues (terminé)
 
 Quiz normal PR #24, durcissement du diagnostic PR #25, examen blanc PR #26, extraction du socle commun dans la PR qui a ajouté cette section.
