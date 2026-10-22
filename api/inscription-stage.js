@@ -158,7 +158,7 @@ export default async function handler(req, res) {
           <p><strong>Dates :</strong> Du ${dateDebutFormatee} au ${dateFinFormatee} · ${session.heure}</p>
           <p><strong>Contact :</strong> 06 26 53 90 13</p>
           <br>
-          <p>Cordialement,<br>Ingénieur · Cours particuliers · ACADEMIKA</p>
+          <p style="color:#444;font-size:13px;">Cordialement,<br><strong>L'équipe ACADEMIKA</strong></p>
         `
       })
     })
