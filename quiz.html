@@ -1285,6 +1285,32 @@ function animerScore(el, cible, total) {
   requestAnimationFrame(etape)
 }
 
+// Défile jusqu'au début du bloc résultats, SOUS la barre collante #focus-bar
+// (visible pendant tout le quiz et sur l'écran de résultats : un scrollIntoView
+// sur #quiz-area la laissait passer par-dessus le haut du bloc). Constaté sur
+// iPhone : le défilement doux lancé juste après le remplacement du contenu est
+// parfois abandonné par Safari et la page reste sur le message de fin. On
+// attend donc la mise en page (2 images), on vise une position calculée, et si
+// la page n'a pas bougé du tout 700 ms plus tard (défilement abandonné), on la
+// place directement. Une page que l'élève a déjà fait défiler lui-même n'est
+// jamais reprise.
+function defilerVersResultats(doux) {
+  const cible = document.querySelector('#quiz-area .results-bande') || document.getElementById('quiz-area')
+  if(!cible) return
+  const y0 = window.pageYOffset
+  const position = function(){
+    const barre = document.getElementById('focus-bar')
+    const hautBarre = barre && barre.classList.contains('visible') ? barre.getBoundingClientRect().bottom : 0
+    return Math.max(0, cible.getBoundingClientRect().top + window.pageYOffset - hautBarre - 8)
+  }
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){
+    window.scrollTo({ top: position(), behavior: doux ? 'smooth' : 'auto' })
+    if(doux) setTimeout(function(){
+      if(Math.abs(window.pageYOffset - y0) < 2) window.scrollTo({ top: position(), behavior: 'auto' })
+    }, 700)
+  }) })
+}
+
 // Clic sur « Voir mon résultat » : le score s'affiche immédiatement (calculé
 // ici), l'enregistrement se fait ensuite en arrière-plan.
 async function voirResultat() {
@@ -1298,7 +1324,7 @@ async function voirResultat() {
   renderResultats()
   requestAnimationFrame(function(){
     area.classList.remove('masque')
-    area.scrollIntoView({ behavior: mouvement ? 'smooth' : 'auto', block: 'start' })
+    defilerVersResultats(mouvement)
   })
   const statut = await lancerSauvegarde()
   mettreAJourStatutEnregistrement(statut)
