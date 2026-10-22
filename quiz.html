@@ -167,8 +167,12 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 }
 @media (max-width:480px){
   .container{padding:0 1rem 1rem}
-  nav{padding:1rem 0}
-  .nav-right{gap:6px}
+  nav{padding:1rem 0;gap:8px}
+  .nav-left{font-size:18px}
+  .nav-right{gap:4px}
+  .nav-right .ico{display:none}
+  .nav-right .btn{padding:8px}
+  .nav-right .btn-ghost{padding:8px 0}
   .nav-email{display:none}
   .card{padding:1.25rem}
   .theme-grid{gap:8px;grid-template-columns:repeat(2,1fr)}
@@ -189,7 +193,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="nav-left">∑ ACADEMIKA</div>
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
-    <a href="resultats.html" class="btn" onclick="return allerVersLien(event,'resultats.html')">📊 Mes résultats</a>
+    <a href="resultats.html" class="btn" onclick="return allerVersLien(event,'resultats.html')"><span class="ico">📊</span> Mes résultats</a>
     <button class="btn-ghost" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
