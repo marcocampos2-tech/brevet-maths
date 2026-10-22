@@ -34,6 +34,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn-primary { background: var(--bordeaux); color: white; border-color: var(--bordeaux); }
 .btn-primary:hover { background: #832019; }
 .btn-green { background: var(--vert); color: white; border-color: var(--vert); font-size: 16px; padding: 16px; }
+/* Sans cette règle, .btn:hover (même spécificité, déclarée plus haut) donnait un fond crème au texte blanc : illisible au survol sur ordinateur. */
+.btn-green:hover { background: #28864E; border-color: #28864E; }
 .btn-outline { background: white; color: var(--muted); border: 1px solid var(--border); font-size: 14px; padding: 12px; }
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
