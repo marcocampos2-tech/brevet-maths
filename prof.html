@@ -2147,7 +2147,7 @@ function render() {
   // SESSIONS
   h+='<div class="section" id="sec-sessions"><div class="card"><div class="card-title">30 dernières activités</div>'
   h+='<table class="tbl"><thead><tr><th>Élève</th><th>Type</th><th>Détail</th><th>Score</th><th>Date</th></tr></thead><tbody>'
-  const toutesActivites=[...ROWS.map(r=>({user_id:r.user_id,type:'quiz',detail:r.theme+' — '+r.difficulte,score:r.score,total:r.total,abandonne:r.abandonne,created_at:r.created_at})),...EXAMENS.filter(e=>!e.abandonne).map(e=>({user_id:e.user_id,type:'examen',detail:'Examen blanc',score:e.score,total:e.total,abandonne:e.abandonne,created_at:e.created_at}))]
+  const toutesActivites=[...ROWS.map(r=>({user_id:r.user_id,type:'quiz',detail:(String(r.sous_theme==null?'':r.sous_theme).trim()||r.theme)+' — '+r.difficulte,score:r.score,total:r.total,abandonne:r.abandonne,created_at:r.created_at})),...EXAMENS.filter(e=>!e.abandonne).map(e=>({user_id:e.user_id,type:'examen',detail:'Examen blanc',score:e.score,total:e.total,abandonne:e.abandonne,created_at:e.created_at}))]
   toutesActivites.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,30).forEach(r=>{
     const profil=PROFILS[r.user_id],nom=profil?profil.prenom_affiche+' '+profil.nom_affiche:'—',p=pct(r.score,r.total)
     const typeBadge=r.type==='examen'?'<span class="badge badge-blue">📝 Examen en ligne</span>':'<span class="badge badge-banque">🎲 Quiz</span>'
