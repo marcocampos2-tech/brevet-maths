@@ -34,6 +34,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn-primary { background: var(--bordeaux); color: white; border-color: var(--bordeaux); }
 .btn-primary:hover { background: #832019; }
 .btn-green { background: var(--vert); color: white; border-color: var(--vert); font-size: 16px; padding: 16px; }
+/* Sans cette règle, .btn:hover (même spécificité, déclarée plus haut) donnait un fond crème au texte blanc : illisible au survol sur ordinateur. */
+.btn-green:hover { background: #28864E; border-color: #28864E; }
 .btn-outline { background: white; color: var(--muted); border: 1px solid var(--border); font-size: 14px; padding: 12px; }
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -155,6 +157,8 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .st-row.active .st-check { display: inline; }
 .focus-bar { display: none; align-items: center; gap: 12px; background: white; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; margin-bottom: 1rem; position: sticky; top: 8px; z-index: 5; box-shadow: 0 4px 16px rgba(27,42,74,0.08); }
 .focus-bar.visible { display: flex; }
+/* Quiz fini, chrono arrêté : la barre reprend sa place normale dans la page et ne recouvre plus la bande du score */
+.focus-bar.termine { position: static; }
 .focus-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--marine-light); color: var(--marine); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .focus-icon svg { width: 16px; height: 16px; }
 .focus-info { flex: 1; min-width: 0; }
@@ -337,7 +341,8 @@ let accessToken=null
 // quizTermine distingue un quiz fini d'un quiz abandonné : pagehide, logout et
 // les liens n'écrivent un abandon (score 0) que si quizTermine est faux.
 // resultatConfirme n'est vrai qu'après un 'ok' du serveur. promesseSauvegarde
-// : sauvegarde lancée par « Voir mon résultat », attendue avant de quitter.
+// : sauvegarde lancée à la dernière réponse validée (valider()), attendue avant
+// de quitter ; « Voir mon résultat » n'en lance jamais une deuxième.
 let corpsResultat=null, quizTermine=false, resultatConfirme=false, promesseSauvegarde=null, resultatAffiche=false
 let chronoInterval=null, chronoSecondes=0, sourceQuestions='ia'
 let quizEnCours=false
@@ -564,6 +569,7 @@ function bloquerConfig(){
   quizEnCours=true
   document.getElementById('config').style.display='none'
   populateFocusBar()
+  document.getElementById('focus-bar').classList.remove('termine')
   document.getElementById('focus-bar').classList.add('visible')
 }
 
@@ -1285,34 +1291,27 @@ function animerScore(el, cible, total) {
   requestAnimationFrame(etape)
 }
 
-// Défile jusqu'au début du bloc résultats, SOUS la barre collante #focus-bar
-// (visible pendant tout le quiz et sur l'écran de résultats : un scrollIntoView
-// sur #quiz-area la laissait passer par-dessus le haut du bloc). Constaté sur
-// iPhone : le défilement doux lancé juste après le remplacement du contenu est
-// parfois abandonné par Safari et la page reste sur le message de fin. On
-// attend donc la mise en page (2 images), on vise une position calculée, et si
-// la page n'a pas bougé du tout 700 ms plus tard (défilement abandonné), on la
-// place directement. Une page que l'élève a déjà fait défiler lui-même n'est
-// jamais reprise.
+// Remonte tout en haut de la page après « Voir mon résultat » : l'en-tête, la
+// barre du quiz (non collante sur l'écran de résultats, classe `termine`) et la
+// bande du score sont alors visibles ensemble. Constaté sur iPhone : le
+// défilement doux lancé juste après le remplacement du contenu est parfois
+// abandonné par Safari et la page reste sur le message de fin. On attend donc la
+// mise en page (2 images) et, si la page n'a pas bougé du tout 700 ms plus tard
+// (défilement abandonné), on la place directement en haut. Une page que l'élève
+// a déjà fait défiler lui-même n'est jamais reprise.
 function defilerVersResultats(doux) {
-  const cible = document.querySelector('#quiz-area .results-bande') || document.getElementById('quiz-area')
-  if(!cible) return
   const y0 = window.pageYOffset
-  const position = function(){
-    const barre = document.getElementById('focus-bar')
-    const hautBarre = barre && barre.classList.contains('visible') ? barre.getBoundingClientRect().bottom : 0
-    return Math.max(0, cible.getBoundingClientRect().top + window.pageYOffset - hautBarre - 8)
-  }
   requestAnimationFrame(function(){ requestAnimationFrame(function(){
-    window.scrollTo({ top: position(), behavior: doux ? 'smooth' : 'auto' })
+    window.scrollTo({ top: 0, behavior: doux ? 'smooth' : 'auto' })
     if(doux) setTimeout(function(){
-      if(Math.abs(window.pageYOffset - y0) < 2) window.scrollTo({ top: position(), behavior: 'auto' })
+      if(y0 > 2 && Math.abs(window.pageYOffset - y0) < 2) window.scrollTo({ top: 0, behavior: 'auto' })
     }, 700)
   }) })
 }
 
 // Clic sur « Voir mon résultat » : le score s'affiche immédiatement (calculé
-// ici), l'enregistrement se fait ensuite en arrière-plan.
+// ici) ; l'enregistrement est déjà parti à la dernière réponse (valider()), on
+// en lit le statut dans la promesse mémorisée par lancerSauvegarde().
 async function voirResultat() {
   if(resultatAffiche || !quizTermine) return
   resultatAffiche = true
@@ -1332,6 +1331,7 @@ async function voirResultat() {
 
 function renderResultats() {
   const area = document.getElementById('quiz-area')
+  document.getElementById('focus-bar').classList.add('termine')
   const { nbOk, pct } = calculerScore()
   let mention = '', couleur = ''
   if(pct >= 80){ mention = '🌟 Excellent !'; couleur = '#1f7a45' }
@@ -1496,6 +1496,14 @@ async function valider(qi) {
     quizTermine = true
     corpsResultat = construireCorpsResultat()
     renderQuiz()
+    // Enregistrement lancé ICI, en arrière-plan, et non au clic sur « Voir mon
+    // résultat » : un élève qui ferme l'onglet sans cliquer ne dépend plus du
+    // seul sendBeacon de pagehide, et created_at (lu par le récap journalier)
+    // est l'heure réelle de fin du quiz. RIEN ne change à l'écran tant que
+    // l'élève n'a pas cliqué : ni défilement, ni résultat, ni message — le
+    // statut est lu au clic dans la promesse mémorisée (même appel, même
+    // client_key : voirResultat() n'en lance pas un second).
+    lancerSauvegarde()
     setTimeout(() => {
       const btn = document.getElementById('btn-voir-resultat')
       if(btn) btn.scrollIntoView({ behavior: prefereMoinsDeMouvement() ? 'auto' : 'smooth', block: 'center' })
