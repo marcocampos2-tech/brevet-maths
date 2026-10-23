@@ -1,3 +1,5 @@
+import { formater as formaterPrenom } from '../js/prenom.js' // affichage seulement : la base garde la saisie
+
 const ORIGINES_AUTORISEES = ['https://academika.fr', 'https://www.academika.fr']
 
 const MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre']
@@ -83,6 +85,7 @@ export default async function handler(req, res) {
 
   const corps = req.body || {}
   const prenom = String(corps.prenom ?? '').trim()
+  const prenomAff = formaterPrenom(prenom)
   const nom = String(corps.nom ?? '').trim()
   const email_parent = String(corps.email_parent ?? '').trim()
   const telephone = String(corps.telephone ?? '').trim()
@@ -152,10 +155,10 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'ACADEMIKA <noreply@academika.fr>',
         to: PROF_EMAIL,
-        subject: `📝 Nouvelle inscription stage — ${prenom} ${nom}`,
+        subject: `📝 Nouvelle inscription stage — ${prenomAff} ${nom}`,
         html: `
           <h2>Nouvelle inscription au stage</h2>
-          <p><strong>Élève :</strong> ${esc(prenom)} ${esc(nom)}</p>
+          <p><strong>Élève :</strong> ${esc(prenomAff)} ${esc(nom)}</p>
           <p><strong>Email parents :</strong> ${esc(email_parent)}</p>
           <p><strong>Téléphone :</strong> ${esc(telephone) || 'Non renseigné'}</p>
           <p><strong>Stage :</strong> ${esc(session.periode)} — ${esc(session.domaine)}</p>
@@ -172,12 +175,12 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'ACADEMIKA <noreply@academika.fr>',
         to: email_parent,
-        subject: `📝 Inscription stage — ${prenom}`,
+        subject: `📝 Inscription stage — ${prenomAff}`,
         html: `
           <h2>📋 Inscription reçue</h2>
           <p>Bonjour,</p>
           <p>Votre inscription est bien reçue. Vous serez contacté par email pour confirmation.</p>
-          <p><strong>Élève :</strong> ${esc(prenom)} ${esc(nom)}</p>
+          <p><strong>Élève :</strong> ${esc(prenomAff)} ${esc(nom)}</p>
           <p><strong>Stage :</strong> ${esc(session.periode)} — ${esc(session.domaine)}</p>
           <p><strong>Dates :</strong> Du ${dateDebutFormatee} au ${dateFinFormatee} · ${session.heure}</p>
           <p><strong>Contact :</strong> 06 26 53 90 13</p>

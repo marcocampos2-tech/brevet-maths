@@ -5,6 +5,7 @@ const { verifierToken, verifierUtilisateur, verifierProf } = require('../lib/aut
 const { dateParis, dateRecapValide, libelleJour, lignesActivite, resumeJour, formatDuree } = require('../lib/recap-journalier')
 const { UUID, lireProfil, lireHistorique, calculerBilan } = require('../lib/bilan-email')
 const { resoudreDestinataire, envoyerA } = require('../lib/garde-envoi')
+const { formater: formaterPrenom } = require('../js/prenom') // affichage seulement : jamais écrit en base
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -301,7 +302,7 @@ export default async function handler(req, res) {
             console.log('Erreur génération lien pour', p.user_id, ':', JSON.stringify(linkData))
             continue
           }
-          enfants.push({ user_id: p.user_id, prenom_affiche: p.prenom_affiche, nom_affiche: p.nom_affiche, lien: lienReset })
+          enfants.push({ user_id: p.user_id, prenom_affiche: formaterPrenom(p.prenom_affiche), nom_affiche: p.nom_affiche, lien: lienReset })
         } catch (e) {
           console.log('Erreur génération lien pour', p.user_id, ':', e.message)
         }
@@ -385,7 +386,8 @@ export default async function handler(req, res) {
   // ═══════════════════════════════════════════
   if (req.body?.type === 'adresse-brevet') {
     const RESEND_KEY = process.env.RESEND_API_KEY
-    const { emailParent, prenom, nom, date, heure, adresse, messageCompl, sousType } = req.body
+    const { emailParent, prenom: prenomSaisi, nom, date, heure, adresse, messageCompl, sousType } = req.body
+    const prenom = formaterPrenom(prenomSaisi)
     if (!emailParent || !prenom) return res.status(400).json({ error: 'Champs manquants' })
 
     let sujetInterne, contenuInterne
@@ -452,7 +454,8 @@ export default async function handler(req, res) {
   // ═══════════════════════════════════════════
   if (req.body?.type === 'stage') {
     const RESEND_KEY = process.env.RESEND_API_KEY
-    const { emailParent, prenom, nom, libelle, sousType } = req.body
+    const { emailParent, prenom: prenomSaisi, nom, libelle, sousType } = req.body
+    const prenom = formaterPrenom(prenomSaisi)
     if (!emailParent || !prenom) return res.status(400).json({ error: 'Champs manquants' })
 
     let sujetInterne, contenuInterne
@@ -618,7 +621,7 @@ export default async function handler(req, res) {
       if ((prenomBrut != null && typeof prenomBrut !== 'string') || (nomBrut != null && typeof nomBrut !== 'string')) {
         return res.status(400).json({ error: 'prenom/nom invalides' })
       }
-      const prenom = nettoyerTexte(prenomBrut, NOM_ELEVE_MAX)
+      const prenom = formaterPrenom(nettoyerTexte(prenomBrut, NOM_ELEVE_MAX))
       const nom = nettoyerTexte(nomBrut, NOM_ELEVE_MAX)
       const themes = scoresThemes ? themesBornes(scoresThemes) : []
 
@@ -747,7 +750,7 @@ export default async function handler(req, res) {
       if ((prenomBrut != null && typeof prenomBrut !== 'string') || (nomBrut != null && typeof nomBrut !== 'string')) {
         return res.status(400).json({ error: 'prenom/nom invalides' })
       }
-      const prenom = nettoyerTexte(prenomBrut, NOM_ELEVE_MAX)
+      const prenom = formaterPrenom(nettoyerTexte(prenomBrut, NOM_ELEVE_MAX))
       const nom = nettoyerTexte(nomBrut, NOM_ELEVE_MAX)
       if (!prenom) return res.status(400).json({ error: 'prenom requis' })
 
@@ -867,7 +870,8 @@ export default async function handler(req, res) {
   // ═══════════════════════════════════════════
   if (req.body?.type === 'resultats-brevet') {
     const RESEND_KEY = process.env.RESEND_API_KEY
-    const { emailParent, prenom, nom, date, note, commentaire } = req.body
+    const { emailParent, prenom: prenomSaisi, nom, date, note, commentaire } = req.body
+    const prenom = formaterPrenom(prenomSaisi)
     if (!emailParent || !prenom || note === undefined) return res.status(400).json({ error: 'Champs manquants' })
 
     const pct = Math.round((note / 20) * 100)
@@ -1051,7 +1055,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, skip: 'aucune session réelle aujourd\'hui' })
       }
 
-      const prenom = prenom_affiche || ''
+      const prenom = formaterPrenom(prenom_affiche)
       const lienDesabonnement = `https://academika.fr/desabonner.html?email=${encodeURIComponent(email_parent)}`
       // Pendant l'offre de lancement, tout le monde reçoit l'email détaillé,
       // indépendamment de plan_actif — Stripe n'est pas encore en service
@@ -1135,7 +1139,8 @@ export default async function handler(req, res) {
   // ═══════════════════════════════════════════
   if (req.body?.type === 'resiliation-confirmee') {
     try {
-      const { emailParent, prenom, dateFin } = req.body
+      const { emailParent, prenom: prenomSaisi, dateFin } = req.body
+      const prenom = formaterPrenom(prenomSaisi)
       if (!emailParent || !dateFin) return res.status(400).json({ error: 'Champs manquants' })
 
       const html = `
@@ -1218,7 +1223,7 @@ export default async function handler(req, res) {
       // envoyer — un 4xx apprendrait au robot à contourner le piège.
       if (societe) return res.status(200).json({ success: true })
 
-      const prenomN = String(prenom || '').trim()
+      const prenomN = formaterPrenom(prenom)
       const telephoneN = String(telephone || '').trim()
       const emailN = String(email || '').trim().toLowerCase()
       const messageN = String(message || '').trim().slice(0, 2000)

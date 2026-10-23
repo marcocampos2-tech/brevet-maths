@@ -394,7 +394,7 @@
     doc.text('ACADEMIKA — Bilan de progression', margeG, y)
     y += 20
     doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(107, 110, 115)
-    doc.text(`${prenom || 'Élève'} · ${libelle} · du ${debut.toLocaleDateString('fr-FR')} au ${fin.toLocaleDateString('fr-FR')}`, margeG, y)
+    doc.text(`${Prenom.formater(prenom) || 'Élève'} · ${libelle} · du ${debut.toLocaleDateString('fr-FR')} au ${fin.toLocaleDateString('fr-FR')}`, margeG, y)
     y += 28
 
     // b) Niveau atteint (tout l'historique, pas la période)

@@ -77,6 +77,7 @@
 import { dateParis } from '../lib/recap-journalier.js'
 import { UUID, lireProfil, lireHistorique, debutPeriode, calculerBilan, ecrireHistorique } from '../lib/bilan-email.js'
 import { estProduction, resoudreDestinataire, envoyerA } from '../lib/garde-envoi.js'
+import { formater as formaterPrenom } from '../js/prenom.js' // affichage seulement : jamais écrit en base
 
 const CADENCE_JOURS = 21
 
@@ -310,7 +311,8 @@ export default async function handler(req, res) {
     if (mois === 6 && jour >= 27) {
       let envoyes = 0
       for (const profil of profils) {
-        const { user_id, prenom_affiche, email_parent, email_actif } = profil
+        const { user_id, email_parent, email_actif } = profil
+        const prenom_affiche = formaterPrenom(profil.prenom_affiche)
         if (!email_parent || email_actif === false) continue
 
         const rappelRes = await fetch(
@@ -371,7 +373,8 @@ export default async function handler(req, res) {
     if (mois === 7) {
       let envoyes = 0
       for (const profil of profils) {
-        const { user_id, prenom_affiche, email_parent, email_actif } = profil
+        const { user_id, email_parent, email_actif } = profil
+        const prenom_affiche = formaterPrenom(profil.prenom_affiche)
         if (!email_parent || email_actif === false) continue
 
         const rappelRes = await fetch(

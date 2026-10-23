@@ -1,3 +1,5 @@
+import { formater as formaterPrenom } from '../js/prenom.js' // affichage seulement : la base garde la saisie
+
 const ORIGINES_AUTORISEES = ['https://academika.fr', 'https://www.academika.fr']
 
 const MOIS_FR = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre']
@@ -63,6 +65,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée' })
 
   const { prenom, nom, email_parent, telephone, session_id } = req.body
+  const prenomAff = formaterPrenom(prenom)
   if (!prenom || !nom || !email_parent || !session_id) {
     return res.status(400).json({ error: 'Champs obligatoires manquants' })
   }
@@ -139,10 +142,10 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'ACADEMIKA <noreply@academika.fr>',
         to: PROF_EMAIL,
-        subject: `📝 Nouvelle inscription brevet blanc — ${prenom} ${nom}`,
+        subject: `📝 Nouvelle inscription brevet blanc — ${prenomAff} ${nom}`,
         html: `
           <h2>Nouvelle inscription</h2>
-          <p><strong>Élève :</strong> ${prenom} ${nom}</p>
+          <p><strong>Élève :</strong> ${prenomAff} ${nom}</p>
           <p><strong>Email parents :</strong> ${email_parent}</p>
           <p><strong>Téléphone :</strong> ${telephone || 'Non renseigné'}</p>
           <p><strong>Session :</strong> ${dateFormatee} · ${session.heure}</p>
@@ -164,12 +167,12 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'ACADEMIKA <noreply@academika.fr>',
         to: email_parent,
-        subject: `📝 Inscription Examen Blanc Brevet — ${prenom}`,
+        subject: `📝 Inscription Examen Blanc Brevet — ${prenomAff}`,
         html: `
           <h2>📋 Inscription reçue</h2>
           <p>Bonjour,</p>
           ${msgPriorite}
-          <p><strong>Élève :</strong> ${prenom} ${nom}</p>
+          <p><strong>Élève :</strong> ${prenomAff} ${nom}</p>
           <p><strong>Date :</strong> ${dateFormatee} · ${session.heure}</p>
           <p><strong>Lieu :</strong> 77310 Ponthierry (adresse exacte communiquée à la confirmation)</p>
           <p><strong>Contact :</strong> 06 26 53 90 13</p>
