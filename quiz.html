@@ -40,6 +40,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .btn-full { width: 100%; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn-ghost { border: none; background: none; color: var(--muted); padding: 8px 4px; cursor: pointer; }
+.btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+.msg-sortie { font-size: 12px; color: var(--muted); text-align: center; margin: 4px 0 8px; }
 h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .msg-accueil { background: var(--marine-light); border-left: 3px solid var(--marine); border-radius: 0 10px 10px 0; padding: 12px 16px; margin-bottom: 2rem; font-size: 13.5px; color: var(--marine); line-height: 1.6; }
 .msg-accueil strong { font-weight: 600; }
@@ -204,7 +206,7 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
   <div class="nav-right">
     <span class="nav-email" id="user-email"></span>
     <a href="resultats.html" class="btn" onclick="return allerVersLien(event,'resultats.html')"><span class="lib-long">📊 Mes résultats</span><span class="lib-court">Résultats</span></a>
-    <button class="btn-ghost" onclick="logout()">Déconnexion</button>
+    <button class="btn-ghost" id="btn-deconnexion" onclick="logout()">Déconnexion</button>
   </div>
 </nav>
 <div class="card" id="config">
@@ -800,16 +802,51 @@ function setDiff(el,val){
   el.classList.add('active'); diff=val
 }
 
-async function logout(){
-  if(!(await peutQuitter()))return
-  if(abandonPossible()){
-    const ok=confirm('⚠️ Tu as un quiz en cours. Si tu te déconnectes, il sera enregistré avec un score de 0. Continuer ?')
-    if(!ok)return
-    await sauvegarderAbandonne()
+// Retour visuel IMMÉDIAT au clic sur « Déconnexion » / « Terminer et se
+// déconnecter » (docs/TODO.md n°6) : la sortie attend l'enregistrement, le récap
+// puis signOut (plusieurs secondes), et rien ne bougeait. Les deux boutons sont
+// désactivés (pas de double clic), le bouton cliqué passe à « Déconnexion… » et
+// un message discret s'affiche juste dessous (sous la barre du haut pour le
+// bouton de la barre). Le message ne parle ni des parents ni de l'email.
+// Renvoie la fonction qui rétablit l'état d'avant (sortie annulée : refus d'une
+// confirmation, erreur), ou null si une sortie est déjà en cours.
+let sortieEnCours=false
+function demarrerSortie(btn){
+  if(sortieEnCours||!btn)return null
+  sortieEnCours=true
+  const boutons=['btn-deconnexion','btn-terminer'].map(function(id){return document.getElementById(id)}).filter(Boolean)
+  const avant=boutons.map(function(b){return [b,b.textContent,b.disabled]})
+  boutons.forEach(function(b){b.disabled=true})
+  btn.textContent='Déconnexion…'
+  const msg=document.createElement('div')
+  msg.className='msg-sortie'
+  msg.setAttribute('role','status')
+  msg.textContent="Un instant, on termine l'enregistrement de ta séance."
+  ;(btn.id==='btn-deconnexion'?document.querySelector('nav'):btn).insertAdjacentElement('afterend',msg)
+  return function(){
+    sortieEnCours=false
+    avant.forEach(function(a){a[0].textContent=a[1];a[0].disabled=a[2]})
+    msg.remove()
   }
-  await envoyerRecapJournalier()
-  await sb.auth.signOut()
-  window.location.href='index.html'
+}
+
+async function logout(){
+  const annuler=demarrerSortie(document.getElementById('btn-deconnexion'))
+  if(!annuler)return
+  try{
+    if(!(await peutQuitter()))return annuler()
+    if(abandonPossible()){
+      const ok=confirm('⚠️ Tu as un quiz en cours. Si tu te déconnectes, il sera enregistré avec un score de 0. Continuer ?')
+      if(!ok)return annuler()
+      await sauvegarderAbandonne()
+    }
+    await envoyerRecapJournalier()
+    await sb.auth.signOut()
+    window.location.href='index.html'
+  }catch(e){
+    console.log('Erreur déconnexion:',e.message)
+    annuler()
+  }
 }
 
 function demarrerChrono(){chronoSecondes=0;chronoInterval=setInterval(()=>{chronoSecondes++;const m=Math.floor(chronoSecondes/60).toString().padStart(2,'0');const s=(chronoSecondes%60).toString().padStart(2,'0');const el=document.getElementById('focus-chrono-text');if(el)el.textContent=`${m}:${s}`},1000)}
@@ -1354,7 +1391,7 @@ function renderResultats() {
     </div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
       <button class="btn btn-green btn-full" id="btn-nouvelle-ronde" onclick="nouvelleRonde()">🔄 Nouvelle ronde</button>
-      <button class="btn btn-outline btn-full" onclick="terminer()">🚪 Terminer et se déconnecter</button>
+      <button class="btn btn-outline btn-full" id="btn-terminer" onclick="terminer()">🚪 Terminer et se déconnecter</button>
     </div>
     <div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--ardoise);padding:0 4px">📋 Récapitulatif</div>`
   const letters = ['A','B','C','D']
@@ -1469,10 +1506,17 @@ async function nouvelleRonde(){
 }
 
 async function terminer(){
-  if(!(await peutQuitter()))return
-  await envoyerRecapJournalier()
-  await sb.auth.signOut()
-  window.location.href='index.html'
+  const annuler=demarrerSortie(document.getElementById('btn-terminer'))
+  if(!annuler)return
+  try{
+    if(!(await peutQuitter()))return annuler()
+    await envoyerRecapJournalier()
+    await sb.auth.signOut()
+    window.location.href='index.html'
+  }catch(e){
+    console.log('Erreur déconnexion:',e.message)
+    annuler()
+  }
 }
 
 function pick(qi,oi){if(submitted[qi]!==undefined)return;answers[qi]=oi;renderQuiz()}
