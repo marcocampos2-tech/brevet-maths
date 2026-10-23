@@ -1291,29 +1291,20 @@ function animerScore(el, cible, total) {
   requestAnimationFrame(etape)
 }
 
-// Défile jusqu'au début du bloc résultats, SOUS la barre collante #focus-bar
-// pendant le quiz (un scrollIntoView sur #quiz-area la laissait passer par-dessus
-// le haut du bloc). Sur l'écran de résultats la barre n'est plus collante
-// (classe `termine`) : aucun décalage à prévoir, le score reste entièrement
-// visible. Constaté sur iPhone : le défilement doux lancé juste après le remplacement du contenu est
-// parfois abandonné par Safari et la page reste sur le message de fin. On
-// attend donc la mise en page (2 images), on vise une position calculée, et si
-// la page n'a pas bougé du tout 700 ms plus tard (défilement abandonné), on la
-// place directement. Une page que l'élève a déjà fait défiler lui-même n'est
-// jamais reprise.
+// Remonte tout en haut de la page après « Voir mon résultat » : l'en-tête, la
+// barre du quiz (non collante sur l'écran de résultats, classe `termine`) et la
+// bande du score sont alors visibles ensemble. Constaté sur iPhone : le
+// défilement doux lancé juste après le remplacement du contenu est parfois
+// abandonné par Safari et la page reste sur le message de fin. On attend donc la
+// mise en page (2 images) et, si la page n'a pas bougé du tout 700 ms plus tard
+// (défilement abandonné), on la place directement en haut. Une page que l'élève
+// a déjà fait défiler lui-même n'est jamais reprise.
 function defilerVersResultats(doux) {
-  const cible = document.querySelector('#quiz-area .results-bande') || document.getElementById('quiz-area')
-  if(!cible) return
   const y0 = window.pageYOffset
-  const position = function(){
-    const barre = document.getElementById('focus-bar')
-    const hautBarre = barre && barre.classList.contains('visible') && !barre.classList.contains('termine') ? barre.getBoundingClientRect().bottom : 0
-    return Math.max(0, cible.getBoundingClientRect().top + window.pageYOffset - hautBarre - 8)
-  }
   requestAnimationFrame(function(){ requestAnimationFrame(function(){
-    window.scrollTo({ top: position(), behavior: doux ? 'smooth' : 'auto' })
+    window.scrollTo({ top: 0, behavior: doux ? 'smooth' : 'auto' })
     if(doux) setTimeout(function(){
-      if(Math.abs(window.pageYOffset - y0) < 2) window.scrollTo({ top: position(), behavior: 'auto' })
+      if(y0 > 2 && Math.abs(window.pageYOffset - y0) < 2) window.scrollTo({ top: 0, behavior: 'auto' })
     }, 700)
   }) })
 }
