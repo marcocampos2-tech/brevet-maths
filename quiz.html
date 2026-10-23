@@ -1211,35 +1211,31 @@ function calculerScore() {
 // avant, la vue ne contient pas encore cette session et les compteurs seraient
 // périmés.
 function construireProgression(d, pct) {
+  const reussi = pct >= SEUIL_PCT
+  const nom = diff.charAt(0).toUpperCase() + diff.slice(1)
+  const sessions = diff === 'facile' ? d.sessionsFacile : diff === 'moyen' ? d.sessionsMoyen : d.sessionsDifficile
+  const restant = SEUIL_SESSIONS - sessions
+  const niveauSuivant = diff === 'facile' ? 'Moyen' : diff === 'moyen' ? 'Difficile' : null
   let progMsg = ''
-  if(pct >= SEUIL_PCT) {
-    if(diff === 'facile' && d.sessionsFacile === SEUIL_SESSIONS) {
-      progMsg = `<div class="prog-msg debloque">🔓 Niveau Moyen débloqué ! Tu peux maintenant le choisir.</div>`
-    } else if(diff === 'moyen' && d.sessionsMoyen === SEUIL_SESSIONS) {
-      progMsg = `<div class="prog-msg debloque">🔓 Niveau Difficile débloqué ! Tu es au top.</div>`
-    } else if(diff === 'difficile' && d.sessionsDifficile === SEUIL_SESSIONS) {
-      progMsg = `<div class="prog-msg debloque">🏆 Niveau Difficile maîtrisé ! Tu peux continuer à t'entraîner si tu veux.</div>`
-    } else if(diff === 'difficile') {
-      const restant = SEUIL_SESSIONS - d.sessionsDifficile
-      progMsg = `<div class="prog-msg reussi">✅ Session réussie ! ${d.sessionsDifficile}/${SEUIL_SESSIONS} sessions Difficile avec au moins 4 bonnes réponses sur 5 — encore ${restant} pour maîtriser ce niveau</div>`
-    } else {
-      const sessions = diff === 'facile' ? d.sessionsFacile : d.sessionsMoyen
-      const restant = SEUIL_SESSIONS - sessions
-      const niveauSuivant = diff === 'facile' ? 'Moyen' : 'Difficile'
-      if(restant > 0) {
-        progMsg = `<div class="prog-msg reussi">✅ Session réussie ! ${sessions}/${SEUIL_SESSIONS} sessions ${diff.charAt(0).toUpperCase()+diff.slice(1)} avec au moins 4 bonnes réponses sur 5 — encore ${restant} pour débloquer le ${niveauSuivant}</div>`
-      } else {
-        progMsg = `<div class="prog-msg reussi">✅ Session réussie !</div>`
-      }
-    }
-  } else if(diff === 'difficile') {
-    const restant = SEUIL_SESSIONS - d.sessionsDifficile
-    progMsg = `<div class="prog-msg info">💪 Score insuffisant cette fois. ${d.sessionsDifficile}/${SEUIL_SESSIONS} sessions avec au moins 4 bonnes réponses sur 5 — encore ${restant} pour maîtriser ce niveau</div>`
+  if(restant > 0) {
+    // Niveau pas encore validé : compteur de réussites vers les 5 nécessaires.
+    const but = niveauSuivant ? 'débloquer le ' + niveauSuivant : 'maîtriser ce niveau'
+    progMsg = reussi
+      ? `<div class="prog-msg reussi">✅ Session réussie ! ${sessions}/${SEUIL_SESSIONS} sessions ${nom} avec au moins 4 bonnes réponses sur 5 — encore ${restant} pour ${but}</div>`
+      : `<div class="prog-msg info">💪 Score insuffisant cette fois. ${sessions}/${SEUIL_SESSIONS} sessions avec au moins 4 bonnes réponses sur 5 — encore ${restant} pour ${but}</div>`
+  } else if(reussi && restant === 0) {
+    // Cette session est la 5ᵉ réussite : le niveau vient d'être validé.
+    progMsg = diff === 'facile' ? `<div class="prog-msg debloque">🔓 Niveau Moyen débloqué ! Tu peux maintenant le choisir.</div>`
+      : diff === 'moyen' ? `<div class="prog-msg debloque">🔓 Niveau Difficile débloqué ! Tu es au top.</div>`
+      : `<div class="prog-msg debloque">🏆 Niveau Difficile maîtrisé ! Tu peux continuer à t'entraîner si tu veux.</div>`
   } else {
-    const sessions = diff === 'facile' ? d.sessionsFacile : d.sessionsMoyen
-    const restant = SEUIL_SESSIONS - sessions
-    const niveauSuivant = diff === 'facile' ? 'Moyen' : 'Difficile'
-    progMsg = `<div class="prog-msg info">💪 Score insuffisant cette fois. ${sessions}/${SEUIL_SESSIONS} sessions avec au moins 4 bonnes réponses sur 5 — encore ${restant} pour débloquer le ${niveauSuivant}</div>`
+    // Niveau déjà validé avant cette session (5 réussites ou plus, ou session
+    // ratée alors que le compteur est à 5) : jamais de compteur au-delà de 5 ni
+    // de « encore -N ».
+    const etat = niveauSuivant ? `Niveau ${nom} déjà validé — le niveau ${niveauSuivant} est ouvert.` : 'Niveau Difficile déjà maîtrisé.'
+    progMsg = reussi
+      ? `<div class="prog-msg reussi">✅ Session réussie ! ${etat}</div>`
+      : `<div class="prog-msg info">💪 Score insuffisant cette fois. ${etat}</div>`
   }
   const sessionsMoyenAffiche = Math.min(d.sessionsMoyen, SEUIL_SESSIONS)
   const sessionsDifficileAffiche = Math.min(d.sessionsDifficile, SEUIL_SESSIONS)
