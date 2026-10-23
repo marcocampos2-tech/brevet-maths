@@ -283,7 +283,8 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 
 <script src="/js/catalogue.js?v=1"></script>
 <script src="/js/niveaux.js?v=9"></script>
-<script src="/js/bilan-pdf.js?v=1"></script>
+<script src="/js/prenom.js?v=1"></script>
+<script src="/js/bilan-pdf.js?v=2"></script>
 <script src="/js/simulation-bascule.js?v=1"></script>
 <script>
 const SUPABASE_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -416,7 +417,8 @@ async function init() {
     return
   }
 
-  eleves = profils
+  // Prénom mis en forme pour l'affichage seulement (jamais réécrit en base).
+  eleves = profils.map(p => ({ ...p, prenom_affiche: Prenom.formater(p.prenom_affiche) }))
   if (eleves.length > 1) {
     document.getElementById('selecteur-enfant').innerHTML = `
       <div class="selecteur-enfant">
