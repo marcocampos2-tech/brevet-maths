@@ -10,6 +10,8 @@
 <title>ACADEMIKA — Brevet Maths</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="/js/exposants.js?v=1"></script>
+<link rel="stylesheet" href="/css/exposants.css?v=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
@@ -912,7 +914,7 @@ function renderTableau(tableau){
   if(!tableau)return ''
   var t=tableau;if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return ''}}
   if(!t||!t.headers||!t.rows)return ''
-  return '<table class="q-tableau"><tr>'+t.headers.map(function(h){return '<th>'+h+'</th>'}).join('')+'</tr>'+t.rows.map(function(row){return '<tr>'+row.map(function(cell){return '<td>'+cell+'</td>'}).join('')+'</tr>'}).join('')+'</table>'
+  return '<table class="q-tableau"><tr>'+t.headers.map(function(h){return '<th>'+Exposants.formater(h)+'</th>'}).join('')+'</tr>'+t.rows.map(function(row){return '<tr>'+row.map(function(cell){return '<td>'+Exposants.formater(cell)+'</td>'}).join('')+'</tr>'}).join('')+'</table>'
 }
 
 // « ? » est une convention de la banque : la donnee que l'eleve doit justement retrouver (frequente en
@@ -1221,11 +1223,11 @@ function renderQuiz() {
   const letters=['A','B','C','D']
   questions.forEach((q,i)=>{
     const sel=answers[i],done=submitted[i]!==undefined,estAucune=submitted[i]==='aucune'
-    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${formaterVVF(adapterEnonce(q,i))}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
-    q.opts.forEach((opt,j)=>{let cls='option';if(done){if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong'}else if(j===sel)cls+=' selected';html+=`<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}><span class="letter">${letters[j]}</span>${opt}</div>`})
+    html+=`<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge">${diff}</span></div><p class="q-text">${Exposants.formater(formaterVVF(adapterEnonce(q,i)))}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
+    q.opts.forEach((opt,j)=>{let cls='option';if(done){if(j===q.answer)cls+=' correct';else if(j===sel&&sel!=='aucune')cls+=' wrong'}else if(j===sel)cls+=' selected';html+=`<div class="${cls}" ${done?'style="cursor:default"':`onclick="pick(${i},${j})"`}><span class="letter">${letters[j]}</span><span class="opt-texte">${Exposants.formater(opt)}</span></div>`})
     if(!done){const aucuneSel=sel==='aucune';html+=`<div class="option ${aucuneSel?'aucune-selected':''}" onclick="pick(${i},'aucune')" style="margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<button class="btn btn-primary btn-full" style="margin-top:8px" onclick="valider(${i})" ${sel===undefined?'disabled':''}>Valider</button>`}
-    else if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`}
-    else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`}
+    else if(estAucune){html+=`<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`;html+=`<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${Exposants.formater(q.opts[q.answer])}</strong><br><br>${Exposants.formater(q.explication)}</div>`}
+    else{html+=`<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${Exposants.formater(q.opts[q.answer])}</strong>`}<br><br>${Exposants.formater(q.explication)}</div>`}
     html+='</div>'
   })
   if(toutFini)html+=`<button class="btn btn-primary btn-full" id="btn-voir-resultat" style="margin-bottom:14px" onclick="voirResultat()" ${resultatAffiche?'disabled':''}>Voir mon résultat 🎯</button>`
@@ -1397,18 +1399,18 @@ function renderResultats() {
   const letters = ['A','B','C','D']
   questions.forEach((q, i) => {
     const estAucune = submitted[i] === 'aucune'
-    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge" style="${submitted[i]==='correct'?'background:#EAF6EF;color:#1f7a45':'background:var(--bordeaux-light);color:var(--bordeaux)'}">${submitted[i]==='correct'?'✅ Correct':'❌ Raté'}</span></div><p class="q-text">${formaterVVF(adapterEnonce(q,i))}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
+    html += `<div class="card"><div class="q-meta"><span class="q-num">Question ${i+1}/${questions.length}</span><span class="badge" style="${submitted[i]==='correct'?'background:#EAF6EF;color:#1f7a45':'background:var(--bordeaux-light);color:var(--bordeaux)'}">${submitted[i]==='correct'?'✅ Correct':'❌ Raté'}</span></div><p class="q-text">${Exposants.formater(formaterVVF(adapterEnonce(q,i)))}</p>${renderVisuel(q,i)}${renderFigure(q.figure)}`
     q.opts.forEach((opt, j) => {
       let cls = 'option'
       if(j === q.answer) cls += ' correct'
       else if(j === answers[i] && answers[i] !== 'aucune') cls += ' wrong'
-      html += `<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span>${opt}</div>`
+      html += `<div class="${cls}" style="cursor:default"><span class="letter">${letters[j]}</span><span class="opt-texte">${Exposants.formater(opt)}</span></div>`
     })
     if(estAucune){
       html += `<div class="option aucune" style="cursor:default;margin-top:4px;border-style:dashed"><span class="letter">😅</span>Aucune idée !</div>`
-      html += `<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong><br><br>${q.explication}</div>`
+      html += `<div class="explication-aucune"><strong>😅 Pas de panique —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${Exposants.formater(q.opts[q.answer])}</strong><br><br>${Exposants.formater(q.explication)}</div>`
     } else {
-      html += `<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${q.opts[q.answer]}</strong>`}<br><br>${q.explication}</div>`
+      html += `<div class="explication">${submitted[i]==='correct'?'<strong style="color:#1f7a45">✓ Bravo !</strong>':`<strong style="color:var(--bordeaux)">✗ Pas tout à fait —</strong> <strong style="color:#1f7a45">La bonne réponse est : ${Exposants.formater(q.opts[q.answer])}</strong>`}<br><br>${Exposants.formater(q.explication)}</div>`
     }
     html += '</div>'
   })
