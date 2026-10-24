@@ -1,0 +1,6 @@
+/* Exposants Unicode affichés en <sup class="exp"> (js/exposants.js).
+   position:relative + line-height:0 : l'exposant est remonté sans agrandir
+   l'interligne (vertical-align:super l'élargirait). */
+.exp { font-size: .72em; line-height: 0; position: relative; top: -.45em; vertical-align: baseline; }
+/* Le texte d'une option : .option est en flex, un <sup> nu y deviendrait un élément à part (écart de 10 px). */
+.opt-texte { min-width: 0; }
