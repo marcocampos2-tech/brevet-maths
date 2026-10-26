@@ -885,10 +885,35 @@ async function generer() {
     if(data.error)throw new Error(data.error)
     questions=data.questions;sourceQuestions=data.source||'ia'
     if(data.vues)console.log('[questions_vues]',data.vues)
-    questions.forEach(function(q,i){const type=detecterTypeGraphique(q.tableau);if(type){modeAffichage[i]=Math.random()<0.5?'tableau':'graphique'}else{modeAffichage[i]='tableau'}})
+    modeAffichage=attribuerModes(questions,lireDernierMode())
     bloquerConfig();demarrerChrono();renderQuiz()
     setTimeout(()=>{const quizArea=document.getElementById('quiz-area');if(quizArea)quizArea.scrollIntoView({behavior:'smooth',block:'start'})},100)
   }catch(e){document.getElementById('quiz-area').innerHTML='<div class="loader">❌ '+e.message+'</div>';debloquerConfig()}
+}
+
+// Alternance tableau / graphique (26/10/2026) : les questions a support (fonction ou diagramme en barres)
+// alternent entre les deux modes au lieu d'un tirage independant a 50 % (qui pouvait donner 5 graphiques
+// de suite). Le mode de la premiere question eligible est l'inverse de celui de la derniere question
+// eligible du quiz precedent (localStorage, avec repli : premier mode tire au hasard). Les autres
+// questions restent en tableau. Fonction pure : `premier` vaut 'tableau', 'graphique' ou autre (hasard).
+// Couvert par lib/quiz-alternance.manual-test.js.
+function attribuerModes(qs,premier){
+  var modes={};var courant=(premier==='tableau'||premier==='graphique')?premier:(Math.random()<0.5?'tableau':'graphique')
+  var dernier=null
+  for(var i=0;i<qs.length;i++){
+    if(detecterTypeGraphique(qs[i].tableau)){modes[i]=courant;dernier=courant;courant=courant==='tableau'?'graphique':'tableau'}
+    else modes[i]='tableau'
+  }
+  if(dernier)memoriserDernierMode(dernier)
+  return modes
+}
+// Renvoie le mode a donner a la premiere question eligible du prochain quiz (inverse du dernier servi), ou null.
+function lireDernierMode(){
+  try{var d=localStorage.getItem('academika_dernier_mode');if(d==='tableau')return 'graphique';if(d==='graphique')return 'tableau'}catch(e){}
+  return null
+}
+function memoriserDernierMode(mode){
+  try{localStorage.setItem('academika_dernier_mode',mode)}catch(e){}
 }
 
 function detecterTypeGraphique(tableau){
@@ -977,7 +1002,17 @@ function renderGraphique(tableau,questionIndex){
     var canvas=document.getElementById(chartId);if(!canvas)return
     var config={}
     if(type==='barres'){config={type:'bar',data:{labels:labels,datasets:[{data:values,backgroundColor:'#1B2A4A',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{title:{display:true,text:t.headers[0],color:textColor,font:{size:9}},ticks:{color:textColor,font:{size:9}},grid:{color:gridColor}},y:{title:{display:true,text:t.rows[0][0],color:textColor,font:{size:9}},ticks:{color:textColor,stepSize:1,font:{size:9}},grid:{color:gridColor},beginAtZero:true}}}}}
-    else if(type==='fonction'){config={type:'line',data:{datasets:[{data:points,borderColor:'#1B2A4A',backgroundColor:'#1B2A4A',borderWidth:2,pointRadius:3,pointBackgroundColor:'#1B2A4A',tension:0}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{left:28}},plugins:{legend:{display:false}},scales:{x:{type:'linear',title:{display:true,text:'x',color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}},y:{position:{x:0},title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:gridColor}}}}}}
+    else if(type==='fonction'){
+      // Lecture claire (26/10/2026) : une graduation a chaque valeur du tableau sur les deux axes (et 0 si la
+      // courbe le traverse), axes x=0 et y=0 en trait plus marque.
+      var ys=points.map(function(p){return p.y}).filter(function(v){return v!==null}),xs=points.map(function(p){return p.x})
+      var num=function(a,b){return a-b}
+      var tickY=ys.slice();if(ys.length&&Math.min.apply(null,ys)<=0&&Math.max.apply(null,ys)>=0&&tickY.indexOf(0)<0)tickY.push(0);tickY.sort(num)
+      var tickX=xs.slice().sort(num)
+      var zeroGrid=function(c){return c.tick&&c.tick.value===0?(isDark?'#aaa':'#777'):gridColor}
+      var zeroW=function(c){return c.tick&&c.tick.value===0?1.5:1}
+      config={type:'line',data:{datasets:[{data:points,borderColor:'#1B2A4A',backgroundColor:'#1B2A4A',borderWidth:2,pointRadius:3,pointBackgroundColor:'#1B2A4A',tension:0}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:8,right:8}},plugins:{legend:{display:false}},scales:{x:{type:'linear',title:{display:true,text:'x',color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:zeroGrid,lineWidth:zeroW},afterBuildTicks:function(a){a.ticks=tickX.map(function(v){return {value:v}})}},y:{position:'left',title:{display:true,text:t.rows[0][0],color:textColor,font:{size:11}},ticks:{color:textColor},grid:{color:zeroGrid,lineWidth:zeroW},afterBuildTicks:function(a){a.ticks=tickY.map(function(v){return {value:v}})}}}}}
+    }
     charts[chartId]=new Chart(canvas,config)
   },50)
   return html
