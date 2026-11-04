@@ -118,6 +118,17 @@ h2 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
 .q-tableau { border-collapse: collapse; margin: 10px 0 14px 0; font-size: 14px; width: 100%; }
 .q-tableau th { border: 1px solid #ccc; padding: 6px 14px; background: var(--creme); font-weight: 600; text-align: center; }
 .q-tableau td { border: 1px solid #ccc; padding: 6px 14px; text-align: center; }
+.q-grille { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 6px 0 14px 0; font-size: 12px; overflow-wrap: anywhere; }
+.q-grille th, .q-grille td { border: 0.5px solid var(--border); padding: 4px 2px; text-align: center; overflow-wrap: anywhere; }
+.q-grille td { background: #fff; }
+.q-grille th { background: var(--creme); color: var(--muted); font-weight: 400; }
+.q-grille th.q-gr-num { width: 22px; }
+.q-grille th.q-gr-hl { background: var(--marine-light); color: var(--marine); }
+.q-grille td.q-gr-cible { background: var(--marine-light); outline: 2px solid var(--marine); outline-offset: -2px; }
+.q-fx { display: flex; align-items: center; gap: 6px; margin: 10px 0 0 0; font-size: 12px; }
+.q-fx-adr { border: 0.5px solid var(--border); background: #fff; padding: 2px 8px; min-width: 32px; text-align: center; color: var(--marine); }
+.q-fx-sym { color: var(--muted); font-style: italic; }
+.q-fx-champ { flex: 1; min-width: 0; height: 22px; border: 0.5px solid var(--border); background: #fff; }
 .q-chart { margin: 10px 0 14px 0; position: relative; width: 100%; }
 .loader { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
 .chrono { display: flex; align-items: center; gap: 8px; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 500; color: var(--ardoise); }
@@ -935,6 +946,39 @@ function detecterTypeGraphique(tableau){
   return null
 }
 
+// Grille de tableur (famille tableur_formule) : headers = ["", "A", "B", …], première cellule de chaque ligne =
+// numéro de ligne. Aucun autre tableau n'est concerné. Même code dans quiz.html et prof.html : à garder identiques.
+function estGrilleTableur(t){
+  if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return false}}
+  if(!t||!Array.isArray(t.headers)||!Array.isArray(t.rows)||t.headers.length<2)return false
+  if(t.headers[0]!=='')return false
+  for(var k=1;k<t.headers.length;k++){if(typeof t.headers[k]!=='string'||!/^[A-Z]$/.test(t.headers[k]))return false}
+  return true
+}
+
+function renderGrilleTableur(t){
+  if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return ''}}
+  if(!estGrilleTableur(t))return ''
+  var f=Exposants.formater
+  // Cellules « ? » (données uniquement, pas la colonne des numéros) ; la première alimente la barre de formule.
+  var cibles=[],colCibles={},ligCibles={}
+  t.rows.forEach(function(row,r){row.forEach(function(cell,c){if(c>=1&&estCaseATrouver(cell)){cibles.push([r,c]);colCibles[c]=true;ligCibles[r]=true}})})
+  var barre=''
+  if(cibles.length){
+    var r0=cibles[0][0],c0=cibles[0][1]
+    var adr=String(t.headers[c0])+String(t.rows[r0][0]==null?'':t.rows[r0][0]).replace(/[\s  ]/g,'')
+    barre='<div class="q-fx"><span class="q-fx-adr">'+f(adr)+'</span><span class="q-fx-sym">fx</span><span class="q-fx-champ"></span></div>'
+  }
+  var h='<tr><th class="q-gr-num"></th>'+t.headers.slice(1).map(function(l,k){return '<th'+(colCibles[k+1]?' class="q-gr-hl"':'')+'>'+f(l)+'</th>'}).join('')+'</tr>'
+  var corps=t.rows.map(function(row,r){
+    return '<tr>'+row.map(function(cell,c){
+      if(c===0)return '<th class="q-gr-num'+(ligCibles[r]?' q-gr-hl':'')+'">'+f(cell)+'</th>'
+      return '<td'+(estCaseATrouver(cell)?' class="q-gr-cible"':'')+'>'+f(cell)+'</td>'
+    }).join('')+'</tr>'
+  }).join('')
+  return barre+'<table class="q-grille">'+h+corps+'</table>'
+}
+
 function renderTableau(tableau){
   if(!tableau)return ''
   var t=tableau;if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return ''}}
@@ -967,6 +1011,7 @@ function nombreTableau(v){
 function renderGraphique(tableau,questionIndex){
   if(!tableau)return ''
   var t=tableau;if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return ''}}
+  if(estGrilleTableur(t))return renderGrilleTableur(t)
   if(!t||!t.headers||!t.rows||t.rows.length===0)return ''
   var type=detecterTypeGraphique(t);if(!type)return renderTableau(tableau)
   var chartId='chart-q-'+questionIndex
@@ -1042,7 +1087,7 @@ function formaterVVF(texte){
   return t.replace(/\s+(Affirmation\s+\d+\s*:)/g,'<br>$1').replace(/\s+(Quelle suite est correcte)/,'<br>$1')
 }
 
-function renderVisuel(q,i){if(!q.tableau)return '';var mode=modeAffichage[i]||'tableau';if(mode==='graphique')return renderGraphique(q.tableau,i);return renderTableau(q.tableau)}
+function renderVisuel(q,i){if(!q.tableau)return '';if(estGrilleTableur(q.tableau))return renderGrilleTableur(q.tableau);var mode=modeAffichage[i]||'tableau';if(mode==='graphique')return renderGraphique(q.tableau,i);return renderTableau(q.tableau)}
 
 // Figure du théorème de Pythagore : fond quadrillé, triangle aux proportions proches du réel
 // (rapport des côtés borné entre 1/2 et 2), côté inconnu déduit de l'hypoténuse pour le dessin.

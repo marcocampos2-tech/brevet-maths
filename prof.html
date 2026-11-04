@@ -134,6 +134,17 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 .q-tableau { border-collapse: collapse; margin: 8px 0; font-size: 12px; width: 100%; }
 .q-tableau th { border: 1px solid #ccc; padding: 4px 10px; background: var(--bg); font-weight: 600; text-align: center; }
 .q-tableau td { border: 1px solid #ccc; padding: 4px 10px; text-align: center; }
+.q-grille { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 6px 0 14px 0; font-size: 12px; overflow-wrap: anywhere; }
+.q-grille th, .q-grille td { border: 0.5px solid var(--border); padding: 4px 2px; text-align: center; overflow-wrap: anywhere; }
+.q-grille td { background: #fff; }
+.q-grille th { background: var(--bg); color: var(--muted); font-weight: 400; }
+.q-grille th.q-gr-num { width: 22px; }
+.q-grille th.q-gr-hl { background: var(--blue-bg); color: var(--blue); }
+.q-grille td.q-gr-cible { background: var(--blue-bg); outline: 2px solid var(--blue); outline-offset: -2px; }
+.q-fx { display: flex; align-items: center; gap: 6px; margin: 10px 0 0 0; font-size: 12px; }
+.q-fx-adr { border: 0.5px solid var(--border); background: #fff; padding: 2px 8px; min-width: 32px; text-align: center; color: var(--blue); }
+.q-fx-sym { color: var(--muted); font-style: italic; }
+.q-fx-champ { flex: 1; min-width: 0; height: 22px; border: 0.5px solid var(--border); background: #fff; }
 .banque-filters { display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
 .banque-filters select { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; background: white; }
 .banque-filters input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; flex: 1; min-width: 160px; }
@@ -1494,6 +1505,39 @@ function renderFigureSVG(fig) {
   return ''
 }
 
+// Grille de tableur (famille tableur_formule) : headers = ["", "A", "B", …], première cellule de chaque ligne =
+// numéro de ligne. Aucun autre tableau n'est concerné. Même code dans quiz.html et prof.html : à garder identiques.
+function estGrilleTableur(t){
+  if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return false}}
+  if(!t||!Array.isArray(t.headers)||!Array.isArray(t.rows)||t.headers.length<2)return false
+  if(t.headers[0]!=='')return false
+  for(var k=1;k<t.headers.length;k++){if(typeof t.headers[k]!=='string'||!/^[A-Z]$/.test(t.headers[k]))return false}
+  return true
+}
+
+function renderGrilleTableur(t){
+  if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return ''}}
+  if(!estGrilleTableur(t))return ''
+  var f=Exposants.formater
+  // Cellules « ? » (données uniquement, pas la colonne des numéros) ; la première alimente la barre de formule.
+  var cibles=[],colCibles={},ligCibles={}
+  t.rows.forEach(function(row,r){row.forEach(function(cell,c){if(c>=1&&estCaseATrouver(cell)){cibles.push([r,c]);colCibles[c]=true;ligCibles[r]=true}})})
+  var barre=''
+  if(cibles.length){
+    var r0=cibles[0][0],c0=cibles[0][1]
+    var adr=String(t.headers[c0])+String(t.rows[r0][0]==null?'':t.rows[r0][0]).replace(/[\s  ]/g,'')
+    barre='<div class="q-fx"><span class="q-fx-adr">'+f(adr)+'</span><span class="q-fx-sym">fx</span><span class="q-fx-champ"></span></div>'
+  }
+  var h='<tr><th class="q-gr-num"></th>'+t.headers.slice(1).map(function(l,k){return '<th'+(colCibles[k+1]?' class="q-gr-hl"':'')+'>'+f(l)+'</th>'}).join('')+'</tr>'
+  var corps=t.rows.map(function(row,r){
+    return '<tr>'+row.map(function(cell,c){
+      if(c===0)return '<th class="q-gr-num'+(ligCibles[r]?' q-gr-hl':'')+'">'+f(cell)+'</th>'
+      return '<td'+(estCaseATrouver(cell)?' class="q-gr-cible"':'')+'>'+f(cell)+'</td>'
+    }).join('')+'</tr>'
+  }).join('')
+  return barre+'<table class="q-grille">'+h+corps+'</table>'
+}
+
 function renderTableauHTML(tableau) {
   if (!tableau) return ''
   var t = tableau
@@ -1560,6 +1604,7 @@ let PROF_CHARTS = {}
 function renderGraphiqueProf(tableau, qId){
   if(!tableau)return ''
   var t=tableau;if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return ''}}
+  if(estGrilleTableur(t))return renderGrilleTableur(t)
   if(!t||!t.headers||!t.rows||t.rows.length===0)return ''
   var type=detecterTypeGraphique(t);if(!type)return renderTableauHTML(tableau)
   var chartId='pchart-q-'+qId
@@ -1656,7 +1701,7 @@ async function chargerBanque() {
     html += '</div></div></div>'
     if (hasFigSVG) { const svg = renderFigureSVG(q.figure); if (svg) html += '<div class="q-figure">'+svg+'</div>' }
     if (hasFigURL) html += '<div class="q-figure"><img src="'+escHtml(q.figure_url)+'" alt="figure"></div>'
-    if (hasTab)    html += typeGraph ? renderGraphiqueProf(q.tableau, q.id) : renderTableauHTML(q.tableau)
+    if (hasTab)    html += estGrilleTableur(q.tableau) ? renderGrilleTableur(q.tableau) : typeGraph ? renderGraphiqueProf(q.tableau, q.id) : renderTableauHTML(q.tableau)
     html += '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px">'
     opts.forEach((opt, i) => {
       const correct = i === q.answer
