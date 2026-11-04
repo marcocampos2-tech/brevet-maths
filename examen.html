@@ -9,6 +9,8 @@
 <title>Examen en ligne — ACADEMIKA</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/js/simulation-bascule.js?v=1"></script>
+<script src="/js/exposants.js?v=1"></script>
+<link rel="stylesheet" href="/css/exposants.css?v=1">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; min-height: 100vh; }
@@ -385,9 +387,9 @@ function renderTableau(tableau) {
   if (typeof t === 'string') { try { t = JSON.parse(t) } catch(e) { return '' } }
   if (!t || !t.headers || !t.rows) return ''
   return '<table class="q-tableau"><tr>' +
-    t.headers.map(function(h){ return '<th>' + h + '</th>' }).join('') +
+    t.headers.map(function(h){ return '<th>' + Exposants.formater(h) + '</th>' }).join('') +
     '</tr>' +
-    t.rows.map(function(row){ return '<tr>' + row.map(function(cell){ return '<td>' + cell + '</td>' }).join('') + '</tr>' }).join('') +
+    t.rows.map(function(row){ return '<tr>' + row.map(function(cell){ return '<td>' + Exposants.formater(cell) + '</td>' }).join('') + '</tr>' }).join('') +
     '</table>'
 }
 
@@ -588,13 +590,13 @@ function renderExamen(){
     const sel=answers[i]
     html+='<div class="card">'
     html+='<div class="q-meta"><span class="q-num">Question '+(i+1)+'/20</span><span class="badge-partie">Partie '+q.partie+'</span><span class="badge-theme">'+(q.chapitre||q.theme)+'</span></div>'
-    html+='<p class="q-text">'+q.q+'</p>'
+    html+='<p class="q-text">'+Exposants.formater(q.q)+'</p>'
     html+=renderTableau(q.tableau)
     html+=renderFigure(q.figure)
     q.opts.forEach(function(opt,j){
       const cls=j===sel?'option selected':'option'
-      if(examEnCours){html+='<div class="'+cls+'" onclick="pick('+i+','+j+')"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'}
-      else{html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'}
+      if(examEnCours){html+='<div class="'+cls+'" onclick="pick('+i+','+j+')"><span class="letter">'+letters[j]+'</span><span class="opt-texte">'+Exposants.formater(opt)+'</span></div>'}
+      else{html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span><span class="opt-texte">'+Exposants.formater(opt)+'</span></div>'}
     })
     html+='</div>'
   })
@@ -776,16 +778,16 @@ function voirCorrection(){
     const correct=sel===bonneReponse
     const couleur=correct?'#16a34a':'#dc2626'
     const titre=correct?'✓ Bravo !':'✗ Pas tout à fait.'
-    const bonneRep=!correct?'<br><strong style="color:#16a34a">La bonne réponse est : '+q.opts[bonneReponse]+'</strong>':''
+    const bonneRep=!correct?'<br><strong style="color:#16a34a">La bonne réponse est : '+Exposants.formater(q.opts[bonneReponse])+'</strong>':''
     html+='<div class="card">'
     html+='<div class="q-meta"><span class="q-num">Question '+(i+1)+'/20</span>'
     html+='<span class="badge" style="'+(correct?'background:#f0fdf4;color:#16a34a':'background:#fef2f2;color:#dc2626')+'">'+(correct?'✅ Correct':'❌ Raté')+'</span>'
     html+='<span class="badge-theme">'+(q.chapitre||q.theme)+'</span></div>'
-    html+='<p class="q-text">'+q.q+'</p>'
+    html+='<p class="q-text">'+Exposants.formater(q.q)+'</p>'
     html+=renderTableau(q.tableau)
     html+=renderFigure(q.figure)
-    q.opts.forEach(function(opt,j){let cls='option';if(j===bonneReponse)cls+=' correct';else if(j===sel&&sel!==bonneReponse)cls+=' wrong';html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span>'+opt+'</div>'})
-    html+='<div class="explication"><strong style="color:'+couleur+'">'+titre+'</strong>'+bonneRep+'<br><br>'+explication+'</div>'
+    q.opts.forEach(function(opt,j){let cls='option';if(j===bonneReponse)cls+=' correct';else if(j===sel&&sel!==bonneReponse)cls+=' wrong';html+='<div class="'+cls+'" style="cursor:default"><span class="letter">'+letters[j]+'</span><span class="opt-texte">'+Exposants.formater(opt)+'</span></div>'})
+    html+='<div class="explication"><strong style="color:'+couleur+'">'+titre+'</strong>'+bonneRep+'<br><br>'+Exposants.formater(explication)+'</div>'
     html+='</div>'
   })
   html+='<a href="quiz.html" class="btn btn-outline btn-full" style="margin-bottom:2rem">← Retour à l\'accueil</a>'

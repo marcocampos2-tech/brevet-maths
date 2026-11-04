@@ -171,6 +171,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 }
 </style>
 <link rel="stylesheet" href="/css/niveaux.css?v=5">
+<link rel="stylesheet" href="/css/exposants.css?v=1">
 </head>
 <body>
 <div class="wrap">
@@ -248,6 +249,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <script src="/js/catalogue.js?v=1"></script>
 <script src="/js/niveaux.js?v=9"></script>
 <script src="/js/prenom.js?v=1"></script>
+<script src="/js/exposants.js?v=1"></script>
 <script src="/js/bilan-pdf.js?v=2"></script>
 <script>
 const SB_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -594,7 +596,7 @@ function renderRatees(userId) {
           const compte = n.nb + '×' + (n.aucune ? ' (dont ' + n.aucune + ' « aucune idée »)' : '')
           // ids (énoncé complet) : « #753 » en petit ; 3 au plus puis « +N » si plusieurs ids partagent l'énoncé
           const idsAff = n.ids.length ? '<span style="font-size:11px;color:var(--muted);margin-left:6px;white-space:nowrap">'+escHtml(n.ids.slice(0, 3).map(i => '#' + i).join(', ') + (n.ids.length > 3 ? ' +' + (n.ids.length - 3) : ''))+'</span>' : ''
-          h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:7px 0 7px 22px;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="flex:1;min-width:0;overflow-wrap:anywhere;color:#444">'+escHtml(n.notion)+idsAff+'</span><span style="flex:0 1 auto;max-width:9.5rem;color:#9E2B25;font-weight:600;text-align:right">'+escHtml(compte)+'</span></div>'
+          h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:7px 0 7px 22px;border-bottom:1px solid #f3f3ef;font-size:13px"><span style="flex:1;min-width:0;overflow-wrap:anywhere;color:#444">'+Exposants.formater(escHtml(n.notion))+idsAff+'</span><span style="flex:0 1 auto;max-width:9.5rem;color:#9E2B25;font-weight:600;text-align:right">'+escHtml(compte)+'</span></div>'
         })
       })
     })
@@ -1497,7 +1499,7 @@ function renderTableauHTML(tableau) {
   var t = tableau
   if (typeof t === 'string') { try { t = JSON.parse(t) } catch(e) { return '' } }
   if (!t || !t.headers || !t.rows) return ''
-  return '<table class="q-tableau"><tr>'+t.headers.map(h=>'<th>'+h+'</th>').join('')+'</tr>'+t.rows.map(row=>'<tr>'+row.map(cell=>'<td>'+cell+'</td>').join('')+'</tr>').join('')+'</table>'
+  return '<table class="q-tableau"><tr>'+t.headers.map(h=>'<th>'+Exposants.formater(h)+'</th>').join('')+'</tr>'+t.rows.map(row=>'<tr>'+row.map(cell=>'<td>'+Exposants.formater(cell)+'</td>').join('')+'</tr>').join('')+'</table>'
 }
 
 // ═══════════════════════════════════════════════════
@@ -1643,7 +1645,7 @@ async function chargerBanque() {
     if (hasFigURL) html += '<span class="badge" style="background:#fff0f0;color:#9E2B25">🖼 Image</span>'
     if (hasTab)    html += '<span class="badge badge-banque">📊 Tableau</span>'
     html += '</div>'
-    html += '<div class="q-card-text">'+formaterVVF(texteAffiche)+'</div>'
+    html += '<div class="q-card-text">'+Exposants.formater(formaterVVF(texteAffiche))+'</div>'
     html += '</div>'
     html += '<div class="q-card-right">'
     html += '<span class="q-card-id" title="id de la question">'+q.id+'</span>'
@@ -1659,7 +1661,7 @@ async function chargerBanque() {
     opts.forEach((opt, i) => {
       const correct = i === q.answer
       html += '<div style="font-size:11px;padding:4px 8px;border-radius:6px;background:'+(correct?'#EAF6EF':'#F7F6F1')+';color:'+(correct?'#2F9E5C':'#555')+';border:1px solid '+(correct?'#86efac':'#e8e8e4')+'">'
-      html += '<strong>'+letters[i]+'.</strong> '+opt+(correct?' ✓':'')+'</div>'
+      html += '<strong>'+letters[i]+'.</strong> '+Exposants.formater(opt)+(correct?' ✓':'')+'</div>'
     })
     html += '</div></div>'
   })
