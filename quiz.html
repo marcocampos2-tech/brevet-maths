@@ -960,11 +960,11 @@ function renderGrilleTableur(t){
   if(typeof t==='string'){try{t=JSON.parse(t)}catch(e){return ''}}
   if(!estGrilleTableur(t))return ''
   var f=Exposants.formater
-  // Cellules « ? » (données uniquement, pas la colonne des numéros) ; la première alimente la barre de formule.
+  // Cellules « ? » (données uniquement, pas la colonne des numéros) ; la barre de formule n'apparaît que s'il y en a exactement une.
   var cibles=[],colCibles={},ligCibles={}
   t.rows.forEach(function(row,r){row.forEach(function(cell,c){if(c>=1&&estCaseATrouver(cell)){cibles.push([r,c]);colCibles[c]=true;ligCibles[r]=true}})})
   var barre=''
-  if(cibles.length){
+  if(cibles.length===1){
     var r0=cibles[0][0],c0=cibles[0][1]
     var adr=String(t.headers[c0])+String(t.rows[r0][0]==null?'':t.rows[r0][0]).replace(/[\s  ]/g,'')
     barre='<div class="q-fx"><span class="q-fx-adr">'+f(adr)+'</span><span class="q-fx-sym">fx</span><span class="q-fx-champ"></span></div>'
