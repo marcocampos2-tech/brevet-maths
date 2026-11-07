@@ -393,6 +393,106 @@ function renderTableau(tableau) {
     '</table>'
 }
 
+// Figure « pythagore_compose » (mode "hauteur" seulement) : triangle de sommet A au-dessus d'une droite de base
+// portant des points alignés, hauteur [A pied] perpendiculaire. Proportions approximatives (échelle commune x/h,
+// hauteur minimale de lisibilité) ; mêmes couleurs que figurePythagoreSVG. Type, mode ou champs invalides : chaîne vide, jamais d'exception.
+// Même logique dans quiz.html, prof.html et examen.html (figurePythagoreComposeSVG) : à garder identiques.
+function figurePythagoreComposeSVG(f,maxW){
+  try{
+    if(!f||f.type!=='pythagore_compose'||f.mode!=='hauteur')return ''
+    var nom=function(s){return typeof s==='string'&&/^[A-Za-z]$/.test(s)}
+    var sommet=f.sommet,pied=f.pied,h=Number(f.h)
+    if(!nom(sommet)||!nom(pied)||!isFinite(h)||h<=0||!Array.isArray(f.points)||f.points.length<2||f.points.length>8)return ''
+    var pts=[],vus={}
+    for(var i=0;i<f.points.length;i++){
+      var p=f.points[i],px=p&&Number(p.x)
+      if(!p||!nom(p.nom)||p.nom===sommet||vus[p.nom]||p.x===null||p.x===''||!isFinite(px))return ''
+      vus[p.nom]=1;pts.push({nom:p.nom,x:px})
+    }
+    pts.sort(function(a,b){return a.x-b.x})
+    var idx={};pts.forEach(function(p,k){idx[p.nom]=k})
+    if(idx[pied]===undefined)return ''
+    var x0=pts[idx[pied]].x,xmin=pts[0].x,xmax=pts[pts.length-1].x,etendue=xmax-xmin
+    if(!(etendue>0))return ''
+    var segs=Array.isArray(f.segments)?f.segments:[]
+    for(var j=0;j<segs.length;j++){if(typeof segs[j]!=='string'||segs[j].length!==2||segs[j][0]!==sommet||idx[segs[j][1]]===undefined)return ''}
+    if(f.longueurs!==undefined&&f.longueurs!==null&&(typeof f.longueurs!=='object'||Array.isArray(f.longueurs)))return ''
+    var L=f.longueurs||{}
+    var texte=function(k){var v=L[k];if(v===undefined||v===null)return null;v=String(v).replace(/[<>&"']/g,'').trim();return v===''?null:v}
+    var r=function(n){return Math.round(n*10)/10}
+    var W0=320,base=140,hmax=116,bandeau=0.8*W0
+    var s=Math.min(bandeau/etendue,hmax/h)
+    var W=etendue*s,gx=(W0-W)/2
+    var hd=Math.min(hmax,Math.max(h*s,60,0.35*W))
+    var X=function(x){return gx+(x-xmin)*s}
+    var ax=X(x0),ay=base-hd
+    // étiquettes de base : clé = deux noms de points (portion ou ensemble), jamais un segment issu du sommet
+    var bl=[]
+    Object.keys(L).forEach(function(k){
+      if(k.length!==2||k[0]===sommet||k[1]===sommet||idx[k[0]]===undefined||idx[k[1]]===undefined||k[0]===k[1])return
+      var t=texte(k);if(t===null)return
+      var a=Math.min(idx[k[0]],idx[k[1]]),b=Math.max(idx[k[0]],idx[k[1]])
+      var cx=(X(pts[a].x)+X(pts[b].x))/2
+      bl.push({t:t,cx:cx,span:b-a,w:t.length*7.4+10,niv:0})
+    })
+    var recouvre=function(u,v){return Math.abs(u.cx-v.cx)<(u.w+v.w)/2}
+    var places=[]
+    bl.sort(function(u,v){return v.span-u.span||u.cx-v.cx})
+    bl.forEach(function(u){
+      var n=u.span>1?2:1
+      for(;;n++){
+        var conflit=places.some(function(v){return v.niv===n&&recouvre(u,v)})
+        if(!conflit||n>=4)break
+      }
+      u.niv=n;places.push(u)
+    })
+    var nivMax=Math.max(2,places.reduce(function(m,u){return Math.max(m,u.niv)},0))
+    var Ht=200+17*(nivMax-2)
+    var T=function(t,x,y,o){
+      o=o||{}
+      return '<text x="'+r(x)+'" y="'+r(y)+'" text-anchor="'+(o.anchor||'middle')+'" font-size="'+(o.size||13.5)+'" font-weight="'+(o.poids||600)+'" fill="'+(o.fill||'#14304F')+'" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Inter,sans-serif">'+t+'</text>'
+    }
+    var lab=function(t,x,y,anchor){var q=(t==='?');return T(t,x,y,{anchor:anchor,fill:q?'#B45309':'#14304F',poids:q?700:600,size:q?17:13.5})}
+    var out='<svg viewBox="0 0 '+W0+' '+Ht+'" width="100%" style="width:100%;max-width:'+(maxW||400)+'px;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Figure : triangle de sommet '+sommet+' et hauteur ['+sommet+pied+']">'
+    out+='<defs><pattern id="fg-pyc" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#E3EAF5" stroke-width="1"/></pattern></defs>'
+    out+='<rect width="'+W0+'" height="'+Ht+'" rx="10" fill="#fff"/><rect width="'+W0+'" height="'+Ht+'" rx="10" fill="url(#fg-pyc)"/>'
+    out+='<line x1="'+r(X(xmin))+'" y1="'+base+'" x2="'+r(X(xmax))+'" y2="'+base+'" stroke="#14304F" stroke-width="2.5" stroke-linecap="round"/>'
+    // segments depuis le sommet
+    var etiq=''
+    segs.forEach(function(sg){
+      var p=pts[idx[sg[1]]],bx=X(p.x)
+      out+='<line x1="'+r(ax)+'" y1="'+r(ay)+'" x2="'+r(bx)+'" y2="'+base+'" stroke="#14304F" stroke-width="2.5" stroke-linecap="round"/>'
+      var t=texte(sg);if(t===null)return
+      var mx=(ax+bx)/2,my=(ay+base)/2
+      if(Math.abs(bx-ax)<1){
+        // verticale : du côté où il y a le plus de place (voisin le plus proche ou bord de la figure), à 65 % de la descente où l'écart est plus large
+        var fr=0.65,ey=ay+(base-ay)*fr
+        var gG=(idx[pied]>0?(ax-X(pts[idx[pied]-1].x))*fr:ax-6),gD=(idx[pied]<pts.length-1?(X(pts[idx[pied]+1].x)-ax)*fr:W0-6-ax)
+        var g=gG>gD
+        etiq+=lab(t,ax+(g?-8:8),ey+5,g?'end':'start')
+      }else{
+        var g2=bx<ax
+        etiq+=lab(t,mx+(g2?-7:7),my-4,g2?'end':'start')
+      }
+    })
+    out+=etiq
+    // carré d'angle droit au pied
+    var c=Math.max(8,0.08*h*s*1.0)
+    if(f.angle_droit===pied||f.angle_droit===undefined){
+      var gG2=idx[pied]>0,gD2=idx[pied]<pts.length-1,sg2=(gD2&&!gG2)?1:(gG2&&!gD2?-1:-1)
+      out+='<polyline points="'+r(ax+sg2*c)+','+base+' '+r(ax+sg2*c)+','+r(base-c)+' '+r(ax)+','+r(base-c)+'" fill="none" stroke="#14304F" stroke-width="1.5"/>'
+    }
+    // points, noms
+    pts.forEach(function(p){
+      out+='<circle cx="'+r(X(p.x))+'" cy="'+base+'" r="3.5" fill="#14304F"/>'+T(p.nom,X(p.x),base+19,{size:15,poids:700})
+    })
+    out+='<circle cx="'+r(ax)+'" cy="'+r(ay)+'" r="3.5" fill="#14304F"/>'+T(sommet,ax,ay-9,{size:15,poids:700})
+    // étiquettes de base
+    places.forEach(function(u){out+=lab(u.t,u.cx,base+19+17*u.niv+(u.niv>0?0:0),'middle')})
+    return out+'</svg>'
+  }catch(e){return ''}
+}
+
 function renderFigure(fig) {
   if (!fig || !fig.type) return ''
   var f = fig
@@ -431,6 +531,7 @@ function renderFigure(fig) {
     const u=f.unite||'cm',R=(S-2*P)/2*0.82,cx=S/2,cy=S/2
     return '<div class="q-figure">'+open+'<circle class="fig-sh" cx="'+cx+'" cy="'+cy+'" r="'+R+'"/><line class="fig-dm" x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R)+'" y2="'+cy+'"/><circle class="fig-dot" cx="'+cx+'" cy="'+cy+'" r="2.5"/><text class="fig-lb" x="'+(cx+R/2)+'" y="'+(cy-8)+'" text-anchor="middle">r = '+f.rayon+' '+u+'</text></svg></div>'
   }
+  if (f.type === 'pythagore_compose') { const svgPc = figurePythagoreComposeSVG(f, 400); return svgPc ? '<div class="q-figure">'+svgPc+'</div>' : '' }
   if (f.type === 'pythagore') {
     const u=f.unite||'cm'
     const aVal=(f.a&&f.a!=='?'&&f.a!==null)?Number(f.a):null
