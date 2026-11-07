@@ -1130,7 +1130,7 @@ function figurePythagoreSVG(f,pxW,pxH){
 // Figure « pythagore_compose » (mode "hauteur" seulement) : triangle de sommet A au-dessus d'une droite de base
 // portant des points alignés, hauteur [A pied] perpendiculaire. Proportions approximatives (échelle commune x/h,
 // hauteur minimale de lisibilité) ; mêmes couleurs que figurePythagoreSVG. Type, mode ou champs invalides : chaîne vide, jamais d'exception.
-// Même logique dans quiz.html, prof.html et examen.html (figurePythagoreComposeSVG) : à garder identiques.
+// Étiquette couvrant plusieurs portions (BD) : cote en bas. Même logique dans quiz.html, prof.html et examen.html (figurePythagoreComposeSVG) : à garder identiques.
 function figurePythagoreComposeSVG(f,maxW){
   try{
     if(!f||f.type!=='pythagore_compose'||f.mode!=='hauteur')return ''
@@ -1167,18 +1167,25 @@ function figurePythagoreComposeSVG(f,maxW){
       var t=texte(k);if(t===null)return
       var a=Math.min(idx[k[0]],idx[k[1]]),b=Math.max(idx[k[0]],idx[k[1]])
       var cx=(X(pts[a].x)+X(pts[b].x))/2
-      bl.push({t:t,cx:cx,span:b-a,w:t.length*7.4+10,niv:0})
+      bl.push({t:t,cx:cx,span:b-a,w:(t==='?'?14:t.length*7.4)+10,niv:0,x1:X(pts[a].x),x2:X(pts[b].x)})
     })
     var recouvre=function(u,v){return Math.abs(u.cx-v.cx)<(u.w+v.w)/2}
-    var places=[]
-    bl.sort(function(u,v){return v.span-u.span||u.cx-v.cx})
-    bl.forEach(function(u){
-      var n=u.span>1?2:1
+    var places=[],cotes=[]
+    // portions simples : au premier niveau libre sous les noms de points
+    bl.filter(function(u){return u.span===1}).sort(function(u,v){return u.cx-v.cx}).forEach(function(u){
+      var n=1
       for(;;n++){
         var conflit=places.some(function(v){return v.niv===n&&recouvre(u,v)})
         if(!conflit||n>=4)break
       }
       u.niv=n;places.push(u)
+    })
+    // étiquette couvrant plusieurs portions (BD) : cote tout en bas, trait fin de point à point avec un petit trait à chaque bout
+    var nivCote=Math.max(2,places.reduce(function(m,u){return Math.max(m,u.niv)},0)+1)
+    bl.filter(function(u){return u.span>1}).sort(function(u,v){return u.span-v.span||u.cx-v.cx}).forEach(function(u){
+      var n=nivCote
+      while(n<6&&cotes.some(function(v){return v.niv===n&&u.x1<v.x2&&v.x1<u.x2}))n++
+      u.niv=n;cotes.push(u);places.push(u)
     })
     var nivMax=Math.max(2,places.reduce(function(m,u){return Math.max(m,u.niv)},0))
     var Ht=200+17*(nivMax-2)
@@ -1222,7 +1229,17 @@ function figurePythagoreComposeSVG(f,maxW){
     })
     out+='<circle cx="'+r(ax)+'" cy="'+r(ay)+'" r="3.5" fill="#14304F"/>'+T(sommet,ax,ay-9,{size:15,poids:700})
     // étiquettes de base
-    places.forEach(function(u){out+=lab(u.t,u.cx,base+19+17*u.niv+(u.niv>0?0:0),'middle')})
+    places.forEach(function(u){
+      var yl=base+19+17*u.niv
+      if(u.span>1){
+        var yc=yl-5,dm=u.w/2+1
+        // cote : trait coupé autour de l'étiquette, petit trait vertical à chaque extrémité
+        if(u.cx-dm>u.x1)out+='<line x1="'+r(u.x1)+'" y1="'+yc+'" x2="'+r(u.cx-dm)+'" y2="'+yc+'" stroke="#14304F" stroke-width="1.25"/>'
+        if(u.cx+dm<u.x2)out+='<line x1="'+r(u.cx+dm)+'" y1="'+yc+'" x2="'+r(u.x2)+'" y2="'+yc+'" stroke="#14304F" stroke-width="1.25"/>'
+        out+='<line x1="'+r(u.x1)+'" y1="'+(yc-5)+'" x2="'+r(u.x1)+'" y2="'+(yc+5)+'" stroke="#14304F" stroke-width="1.25"/><line x1="'+r(u.x2)+'" y1="'+(yc-5)+'" x2="'+r(u.x2)+'" y2="'+(yc+5)+'" stroke="#14304F" stroke-width="1.25"/>'
+      }
+      out+=lab(u.t,u.cx,yl,'middle')
+    })
     return out+'</svg>'
   }catch(e){return ''}
 }
