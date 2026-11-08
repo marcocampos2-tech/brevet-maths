@@ -1156,7 +1156,16 @@ function figurePythagoreComposeSVG(f,maxW){
     var r=function(n){return Math.round(n*10)/10}
     var W0=320,base=140,hmax=116,bandeau=0.8*W0
     var s=Math.min(bandeau/etendue,hmax/h)
-    var W=etendue*s,gx=(W0-W)/2
+    var W=etendue*s,gx=(W0-W)/2,W1=W0
+    // étiquette de la hauteur à l'EXTÉRIEUR du triangle quand les points de la base sont d'un seul côté du pied (de l'autre côté de la verticale) :
+    // si la marge ne suffit pas, la zone de dessin s'élargit (sans changer l'échelle des longueurs). Points des deux côtés du pied : comportement inchangé.
+    var hauteurSg=segs.filter(function(g){return g[1]===pied})[0],hautOut=null
+    if(hauteurSg!==undefined&&texte(hauteurSg)!==null&&(idx[pied]===0||idx[pied]===pts.length-1)){
+      var th=texte(hauteurSg),wh=(th==='?'?14:th.length*7.4)+4
+      hautOut={t:th,gauche:idx[pied]===0,w:wh}
+      var manque=8+wh+6-(hautOut.gauche?gx:W0-gx-W)
+      if(manque>0){W1=W0+manque;if(hautOut.gauche)gx+=manque}
+    }
     var hd=Math.min(hmax,Math.max(h*s,60,0.35*W))
     var X=function(x){return gx+(x-xmin)*s}
     var ax=X(x0),ay=base-hd
@@ -1194,9 +1203,9 @@ function figurePythagoreComposeSVG(f,maxW){
       return '<text x="'+r(x)+'" y="'+r(y)+'" text-anchor="'+(o.anchor||'middle')+'" font-size="'+(o.size||13.5)+'" font-weight="'+(o.poids||600)+'" fill="'+(o.fill||'#14304F')+'" stroke="#fff" stroke-width="4" stroke-linejoin="round" paint-order="stroke" font-family="Inter,sans-serif">'+t+'</text>'
     }
     var lab=function(t,x,y,anchor){var q=(t==='?');return T(t,x,y,{anchor:anchor,fill:q?'#B45309':'#14304F',poids:q?700:600,size:q?17:13.5})}
-    var out='<svg viewBox="0 0 '+W0+' '+Ht+'" width="100%" style="width:100%;max-width:'+(maxW||400)+'px;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Figure : triangle de sommet '+sommet+' et hauteur ['+sommet+pied+']">'
+    var out='<svg viewBox="0 0 '+W1+' '+Ht+'" width="100%" style="width:100%;max-width:'+(maxW||400)+'px;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Figure : triangle de sommet '+sommet+' et hauteur ['+sommet+pied+']">'
     out+='<defs><pattern id="fg-pyc" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#E3EAF5" stroke-width="1"/></pattern></defs>'
-    out+='<rect width="'+W0+'" height="'+Ht+'" rx="10" fill="#fff"/><rect width="'+W0+'" height="'+Ht+'" rx="10" fill="url(#fg-pyc)"/>'
+    out+='<rect width="'+W1+'" height="'+Ht+'" rx="10" fill="#fff"/><rect width="'+W1+'" height="'+Ht+'" rx="10" fill="url(#fg-pyc)"/>'
     out+='<line x1="'+r(X(xmin))+'" y1="'+base+'" x2="'+r(X(xmax))+'" y2="'+base+'" stroke="#14304F" stroke-width="2.5" stroke-linecap="round"/>'
     // segments depuis le sommet. Étiquette d'un segment oblique : centrée SUR le segment, texte horizontal, fond blanc qui coupe le trait derrière le texte.
     // Position : milieu du segment ; si l'étiquette toucherait un autre texte (étiquette, nom de point), un point, le carré d'angle droit ou un autre segment,
@@ -1214,10 +1223,16 @@ function figurePythagoreComposeSVG(f,maxW){
       var p=pts[idx[sg[1]]],bx=X(p.x)
       out+='<line x1="'+r(ax)+'" y1="'+r(ay)+'" x2="'+r(bx)+'" y2="'+base+'" stroke="#14304F" stroke-width="2.5" stroke-linecap="round"/>'
       var t=texte(sg);if(t===null)return
-      if(Math.abs(bx-ax)<1){
+      if(Math.abs(bx-ax)<1&&hautOut&&sg===hauteurSg){
+        // hauteur, points d'un seul côté du pied : de l'autre côté de la verticale, à mi-hauteur, même écart à la ligne (8 px), fond blanc
+        var my=(ay+base)/2,xh=ax+(hautOut.gauche?-8:8)
+        var Rh=hautOut.gauche?{x1:xh-hautOut.w-3,x2:ax-5,y1:my-8.5,y2:my+8.5}:{x1:ax+5,x2:xh+hautOut.w+3,y1:my-8.5,y2:my+8.5}
+        pris.push(Rh)
+        etiq+='<rect x="'+r(Rh.x1)+'" y="'+r(Rh.y1)+'" width="'+r(Rh.x2-Rh.x1)+'" height="17" rx="3" fill="#fff"/>'+lab(t,xh,my+5,hautOut.gauche?'end':'start')
+      }else if(Math.abs(bx-ax)<1){
         // verticale : du côté où il y a le plus de place (voisin le plus proche ou bord de la figure), à 65 % de la descente où l'écart est plus large
         var fr=0.65,ey=ay+(base-ay)*fr
-        var gG=(idx[pied]>0?(ax-X(pts[idx[pied]-1].x))*fr:ax-6),gD=(idx[pied]<pts.length-1?(X(pts[idx[pied]+1].x)-ax)*fr:W0-6-ax)
+        var gG=(idx[pied]>0?(ax-X(pts[idx[pied]-1].x))*fr:ax-6),gD=(idx[pied]<pts.length-1?(X(pts[idx[pied]+1].x)-ax)*fr:W1-6-ax)
         var g=gG>gD,wv=(t==='?'?14:t.length*7.4)+4,xv=ax+(g?-8:8)
         pris.push({x1:g?xv-wv:xv,x2:g?xv:xv+wv,y1:ey-7,y2:ey+9})
         etiq+=lab(t,xv,ey+5,g?'end':'start')
@@ -1234,7 +1249,7 @@ function figurePythagoreComposeSVG(f,maxW){
       for(var pass=0;pass<2&&!best;pass++)for(var ti=0;ti<ts.length;ti++){
         var cx=ax+dx*ts[ti],cy=ay+dy*ts[ti]
         var R={x1:cx-w/2,x2:cx+w/2,y1:cy-hb/2,y2:cy+hb/2}
-        if(R.x1<3||R.x2>W0-3||R.y1<3||R.y2>base-3)continue
+        if(R.x1<3||R.x2>W1-3||R.y1<3||R.y2>base-3)continue
         if(fixes.some(function(Q){return chev(R,Q,1)})||pris.some(function(Q){return chev(R,Q,pass?1:5)}))continue
         // nombre de points des AUTRES segments cachés par le fond blanc
         var hits=0
