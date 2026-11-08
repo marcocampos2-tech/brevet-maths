@@ -1198,23 +1198,61 @@ function figurePythagoreComposeSVG(f,maxW){
     out+='<defs><pattern id="fg-pyc" width="16" height="16" patternUnits="userSpaceOnUse"><path d="M16 0H0V16" fill="none" stroke="#E3EAF5" stroke-width="1"/></pattern></defs>'
     out+='<rect width="'+W0+'" height="'+Ht+'" rx="10" fill="#fff"/><rect width="'+W0+'" height="'+Ht+'" rx="10" fill="url(#fg-pyc)"/>'
     out+='<line x1="'+r(X(xmin))+'" y1="'+base+'" x2="'+r(X(xmax))+'" y2="'+base+'" stroke="#14304F" stroke-width="2.5" stroke-linecap="round"/>'
-    // segments depuis le sommet
-    var etiq=''
+    // segments depuis le sommet. Étiquette d'un segment oblique : perpendiculaire au segment, à son milieu, du côté du pied de la hauteur
+    // (intérieur du triangle formé avec la hauteur) ; si elle toucherait un autre segment (à moins de 6 px) : autre position le long du segment,
+    // puis autre côté ; à défaut, la position la plus dégagée. Halo blanc autour du texte (voir T). Étiquette de la hauteur (verticale) : inchangée.
+    var etiq='',pris=[]
+    var ech=function(x1,y1,x2,y2){var o=[],n=Math.max(2,Math.ceil(Math.hypot(x2-x1,y2-y1)/2));for(var k=0;k<=n;k++)o.push([x1+(x2-x1)*k/n,y1+(y2-y1)*k/n]);return o}
+    var obst=segs.map(function(sg){return ech(ax,ay,X(pts[idx[sg[1]]].x),base)})
+    var obstBase=ech(X(xmin),base,X(xmax),base),cc=Math.max(8,0.08*h*s)
+    var carreRect={x1:ax-cc,x2:ax+cc,y1:base-cc,y2:base}
+    var dR=function(px,py,R){return Math.hypot(Math.max(R.x1-px,0,px-R.x2),Math.max(R.y1-py,0,py-R.y2))}
+    // écart à tout autre segment (et à la base), puis écart aux autres étiquettes et au carré d'angle droit
+    var ecartSeg=function(R,soi){
+      var m=1e9,ver=function(L){for(var k=0;k<L.length;k++){var d=dR(L[k][0],L[k][1],R);if(d<m)m=d}}
+      obst.forEach(function(L,i){if(i!==soi)ver(L)})
+      ver(obstBase)
+      return m
+    }
+    var ecartEtiq=function(R){
+      var m=1e9
+      pris.concat([carreRect]).forEach(function(Q){var d=Math.hypot(Math.max(Q.x1-R.x2,R.x1-Q.x2,0),Math.max(Q.y1-R.y2,R.y1-Q.y2,0));if(d<m)m=d})
+      return m
+    }
     segs.forEach(function(sg){
       var p=pts[idx[sg[1]]],bx=X(p.x)
       out+='<line x1="'+r(ax)+'" y1="'+r(ay)+'" x2="'+r(bx)+'" y2="'+base+'" stroke="#14304F" stroke-width="2.5" stroke-linecap="round"/>'
       var t=texte(sg);if(t===null)return
-      var mx=(ax+bx)/2,my=(ay+base)/2
       if(Math.abs(bx-ax)<1){
         // verticale : du côté où il y a le plus de place (voisin le plus proche ou bord de la figure), à 65 % de la descente où l'écart est plus large
         var fr=0.65,ey=ay+(base-ay)*fr
         var gG=(idx[pied]>0?(ax-X(pts[idx[pied]-1].x))*fr:ax-6),gD=(idx[pied]<pts.length-1?(X(pts[idx[pied]+1].x)-ax)*fr:W0-6-ax)
-        var g=gG>gD
-        etiq+=lab(t,ax+(g?-8:8),ey+5,g?'end':'start')
-      }else{
-        var g2=bx<ax
-        etiq+=lab(t,mx+(g2?-7:7),my-4,g2?'end':'start')
+        var g=gG>gD,wv=(t==='?'?14:t.length*7.4)+4,xv=ax+(g?-8:8)
+        pris.push({x1:g?xv-wv:xv,x2:g?xv:xv+wv,y1:ey-7,y2:ey+9})
+        etiq+=lab(t,xv,ey+5,g?'end':'start')
       }
+    })
+    segs.forEach(function(sg,i){
+      var t=texte(sg);if(t===null)return
+      var bx=X(pts[idx[sg[1]]].x)
+      if(Math.abs(bx-ax)<1)return
+      var dx=bx-ax,dy=base-ay,L=Math.hypot(dx,dy),nx=(ax>bx?dy:-dy)/L,ny=(ax>bx?-dx:dx)/L
+      var w=(t==='?'?14:t.length*7.4)+6,hb=16,best=null,cotes=[[nx,ny],[-nx,-ny]],ts=[0.5,0.4,0.6,0.32,0.68,0.25,0.75,0.85]
+      // 1re position dégagée (≥ 6 px des autres segments, sans toucher une autre étiquette) ; à défaut, celle qui n'écrase aucune étiquette, reste plus proche de son segment que de tout autre, et s'écarte le plus des autres segments
+      chercher:for(var si=0;si<2;si++)for(var ex=0;ex<3;ex++)for(var ti=0;ti<ts.length;ti++){
+        var u=cotes[si],off=4+5*ex+Math.abs(u[0])*w/2+Math.abs(u[1])*hb/2
+        var cx=ax+dx*ts[ti]+u[0]*off,cy=ay+dy*ts[ti]+u[1]*off
+        var R={x1:cx-w/2,x2:cx+w/2,y1:cy-hb/2,y2:cy+hb/2}
+        if(R.x1<3||R.x2>W0-3||R.y1<3||R.y2>base-3)continue
+        var eS=ecartSeg(R,i),eE=ecartEtiq(R)
+        if(eS>=6&&eE>=1){best={cx:cx,cy:cy,R:R};break chercher}
+        var dP=1e9;obst[i].forEach(function(q){var d=dR(q[0],q[1],R);if(d<dP)dP=d})
+        var sc=(eE>=1?100:eE)+2*Math.min(eS,50)+(eS>0&&dP<=eS?20:0)-ex
+        if(!best||sc>best.sc)best={cx:cx,cy:cy,R:R,sc:sc}
+      }
+      if(!best){var cx0=(ax+bx)/2+(bx<ax?-7:7),cy0=(ay+base)/2-4;best={cx:cx0,cy:cy0,R:{x1:cx0-w/2,x2:cx0+w/2,y1:cy0-hb/2,y2:cy0+hb/2}}}
+      pris.push(best.R)
+      etiq+=lab(t,best.cx,best.cy+5,'middle')
     })
     out+=etiq
     // carré d'angle droit au pied
