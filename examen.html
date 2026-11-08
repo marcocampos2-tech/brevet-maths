@@ -510,6 +510,212 @@ function figurePythagoreComposeSVG(f,maxW){
   }catch(e){return ''}
 }
 
+// Figure « courbe » : représentation graphique d'une fonction dans un repère quadrillé, à l'échelle (carreaux carrés).
+// Fenêtre xmin/xmax/ymin/ymax entiers ; courbes (1 ou 2) = "points" triés par x (lisse:true = cubique monotone passant exactement
+// par tous les points, sinon polyligne) ou "droite" {a,b} (y = ax+b coupée aux bords) ; points marqués {nom,x,y} (nom seul, sans coordonnées) ;
+// pas_etiquette_x / pas_etiquette_y facultatifs (entiers, défaut 1). Type, fenêtre, courbes ou points invalides : chaîne vide, jamais d'exception.
+// Même logique dans quiz.html, prof.html et examen.html (figureCourbeSVG) : à garder identiques.
+function figureCourbeSVG(f,maxW){
+  try{
+    if(!f||f.type!=='courbe')return ''
+    var num=function(v){return (typeof v==='number'||(typeof v==='string'&&v.trim()!==''))&&isFinite(Number(v))?Number(v):null}
+    var ent=function(v){var n=num(v);return n!==null&&Math.floor(n)===n?n:null}
+    var xmin=ent(f.xmin),xmax=ent(f.xmax),ymin=ent(f.ymin),ymax=ent(f.ymax)
+    if(xmin===null||xmax===null||ymin===null||ymax===null||xmax<=xmin||ymax<=ymin||xmax-xmin>40||ymax-ymin>40)return ''
+    var pasX=1,pasY=1
+    if(f.pas_etiquette_x!==undefined&&f.pas_etiquette_x!==null){pasX=ent(f.pas_etiquette_x);if(pasX===null||pasX<1||pasX>50)return ''}
+    if(f.pas_etiquette_y!==undefined&&f.pas_etiquette_y!==null){pasY=ent(f.pas_etiquette_y);if(pasY===null||pasY<1||pasY>50)return ''}
+    var nomOk=function(s){return typeof s==='string'&&/^[A-Za-z][A-Za-z0-9]{0,2}$/.test(s)}
+    if(!Array.isArray(f.courbes)||f.courbes.length<1||f.courbes.length>2)return ''
+    var pm=f.points===undefined||f.points===null?[]:f.points
+    if(!Array.isArray(pm)||pm.length>12)return ''
+    var nx=xmax-xmin,ny=ymax-ymin
+    // carreaux carrés ; fenêtre très haute (hauteur > 2 × largeur) : carreaux plus larges que hauts (au plus 3 fois, jamais plus de 40 px),
+    // le tracé reste fidèle aux coordonnées du repère (une droite de pente 3 reste de pente 3 en unités)
+    var uy=Math.floor(Math.min(250/nx,250/ny,40)),ux=uy
+    if(ny>2*nx)ux=Math.floor(Math.min(250/nx,40,uy*Math.min(ny/nx,3)))
+    if(Math.min(ux,uy)<5)return ''
+    var ml=32,mr=20,mt=20,mb=28
+    var W=nx*ux+ml+mr,H=ny*uy+mt+mb
+    var r=function(n){return Math.round(n*100)/100}
+    var X=function(x){return ml+(x-xmin)*ux},Y=function(y){return mt+(ymax-y)*uy}
+    var inX=function(x){return x>=xmin-1e-9&&x<=xmax+1e-9},inY=function(y){return y>=ymin-1e-9&&y<=ymax+1e-9}
+    var gauche=X(xmin),droite=X(xmax),haut=Y(ymax),bas=Y(ymin)
+    // axes : en x = 0 et y = 0, ou sur le bord de la fenêtre si 0 est dehors
+    var axeX=X(xmin>0?xmin:(xmax<0?xmax:0)),axeY=Y(ymin>0?ymin:(ymax<0?ymax:0))
+    var origine=xmin<=0&&xmax>=0&&ymin<=0&&ymax>=0
+    // courbes : tracé (pour le dessin) et échantillon (pour le placement des noms)
+    var couleurs=['#2563A8','#B45309'],tr=[]
+    for(var c=0;c<f.courbes.length;c++){
+      var cb=f.courbes[c]
+      if(!cb||typeof cb!=='object'||!nomOk(cb.nom))return ''
+      var o={nom:cb.nom,couleur:couleurs[c],d:'',ech:[],dr:null}
+      var aPts=cb.points!==undefined&&cb.points!==null,aDr=cb.droite!==undefined&&cb.droite!==null
+      if(aPts===aDr)return ''
+      if(aDr){
+        var a=num(cb.droite&&cb.droite.a),b=num(cb.droite&&cb.droite.b)
+        if(a===null||b===null)return ''
+        // y = ax+b découpée aux bords de la fenêtre
+        var lo=xmin,hi=xmax
+        if(a!==0){var t1=(ymin-b)/a,t2=(ymax-b)/a;lo=Math.max(lo,Math.min(t1,t2));hi=Math.min(hi,Math.max(t1,t2))}
+        else if(!inY(b))return ''
+        if(!(hi>lo))return ''
+        var p1=[X(lo),Y(a*lo+b)],p2=[X(hi),Y(a*hi+b)]
+        o.dr=[p1,p2]
+        o.d='M'+r(p1[0])+' '+r(p1[1])+'L'+r(p2[0])+' '+r(p2[1])
+        var ln=Math.hypot(p2[0]-p1[0],p2[1]-p1[1]),ne=Math.max(2,Math.ceil(ln/2))
+        for(var k=0;k<=ne;k++)o.ech.push([p1[0]+(p2[0]-p1[0])*k/ne,p1[1]+(p2[1]-p1[1])*k/ne])
+      }else{
+        if(!Array.isArray(cb.points)||cb.points.length<2||cb.points.length>400)return ''
+        var P=[]
+        for(var i=0;i<cb.points.length;i++){
+          var q=cb.points[i]
+          if(!Array.isArray(q)||q.length!==2)return ''
+          var qx=num(q[0]),qy=num(q[1])
+          if(qx===null||qy===null)return ''
+          P.push([qx,qy])
+        }
+        P.sort(function(m,n){return m[0]-n[0]})
+        for(var i2=1;i2<P.length;i2++)if(!(P[i2][0]>P[i2-1][0]))return ''
+        if(!P.some(function(q2){return inX(q2[0])&&inY(q2[1])}))return ''
+        var S=P.map(function(q3){return [X(q3[0]),Y(q3[1])]}),n=S.length
+        var segs=[]
+        for(var j=0;j<n;j++)segs.push(null)
+        if(cb.lisse){
+          // cubique monotone (Fritsch-Butland) : passe exactement par chaque point, sans dépassement entre deux points
+          var hh=[],dd=[],m=[]
+          for(var s=0;s<n-1;s++){hh.push(S[s+1][0]-S[s][0]);dd.push((S[s+1][1]-S[s][1])/hh[s])}
+          m[0]=dd[0];m[n-1]=dd[n-2]
+          for(var s2=1;s2<n-1;s2++)m[s2]=dd[s2-1]*dd[s2]<=0?0:3*(hh[s2-1]+hh[s2])/((2*hh[s2]+hh[s2-1])/dd[s2-1]+(hh[s2]+2*hh[s2-1])/dd[s2])
+          o.d='M'+r(S[0][0])+' '+r(S[0][1])
+          o.ech.push(S[0])
+          for(var s3=0;s3<n-1;s3++){
+            var h3=hh[s3],c1=[S[s3][0]+h3/3,S[s3][1]+m[s3]*h3/3],c2=[S[s3+1][0]-h3/3,S[s3+1][1]-m[s3+1]*h3/3]
+            o.d+='C'+r(c1[0])+' '+r(c1[1])+' '+r(c2[0])+' '+r(c2[1])+' '+r(S[s3+1][0])+' '+r(S[s3+1][1])
+            var nb=Math.max(2,Math.ceil(h3/3))
+            for(var k2=1;k2<=nb;k2++){
+              var tt=k2/nb,mt1=1-tt
+              o.ech.push([mt1*mt1*mt1*S[s3][0]+3*mt1*mt1*tt*c1[0]+3*mt1*tt*tt*c2[0]+tt*tt*tt*S[s3+1][0],mt1*mt1*mt1*S[s3][1]+3*mt1*mt1*tt*c1[1]+3*mt1*tt*tt*c2[1]+tt*tt*tt*S[s3+1][1]])
+            }
+          }
+        }else{
+          o.d='M'+S.map(function(q4){return r(q4[0])+' '+r(q4[1])}).join('L')
+          for(var s4=0;s4<n-1;s4++){
+            var nb2=Math.max(1,Math.ceil(Math.hypot(S[s4+1][0]-S[s4][0],S[s4+1][1]-S[s4][1])/2))
+            for(var k3=0;k3<=nb2;k3++)o.ech.push([S[s4][0]+(S[s4+1][0]-S[s4][0])*k3/nb2,S[s4][1]+(S[s4+1][1]-S[s4][1])*k3/nb2])
+          }
+        }
+      }
+      tr.push(o)
+    }
+    // points marqués
+    var mar=[],vus={}
+    for(var e=0;e<pm.length;e++){
+      var pt=pm[e]
+      if(!pt||typeof pt!=='object'||!nomOk(pt.nom)||vus[pt.nom])return ''
+      var px=num(pt.x),py=num(pt.y)
+      if(px===null||py===null||!inX(px)||!inY(py))return ''
+      vus[pt.nom]=1;mar.push({nom:pt.nom,x:X(px),y:Y(py)})
+    }
+    // obstacles pour le placement des noms : tracés, axes, points, étiquettes de graduation, noms déjà posés
+    var courbes=tr.map(function(o){return o.ech}),lignes=courbes.slice(),rects=[],disques=[]
+    var axH=[],axV=[]
+    for(var xa=gauche;xa<=droite;xa+=3)axH.push([xa,axeY])
+    for(var ya=haut;ya<=bas;ya+=3)axV.push([axeX,ya])
+    lignes.push(axH,axV)
+    mar.forEach(function(q5){disques.push({x:q5.x,y:q5.y,r:4.5})})
+    var T=function(t,x,y,o){
+      o=o||{}
+      return '<text x="'+r(x)+'" y="'+r(y)+'" text-anchor="'+(o.anchor||'middle')+'" font-size="'+(o.size||12.5)+'" font-weight="'+(o.poids||600)+'" fill="'+(o.fill||'#14304F')+'"'+(o.halo===false?'':' stroke="#fff" stroke-width="3.5" stroke-linejoin="round" paint-order="stroke"')+' font-family="Inter,sans-serif">'+t+'</text>'
+    }
+    var moins=function(n){return n<0?'−'+(-n):String(n)}
+    var grille='',ticks=''
+    for(var gx=xmin;gx<=xmax;gx++)grille+='<line x1="'+r(X(gx))+'" y1="'+r(haut)+'" x2="'+r(X(gx))+'" y2="'+r(bas)+'"/>'
+    for(var gy=ymin;gy<=ymax;gy++)grille+='<line x1="'+r(gauche)+'" y1="'+r(Y(gy))+'" x2="'+r(droite)+'" y2="'+r(Y(gy))+'"/>'
+    // placement d'un nom : première position dégagée dans l'ordre de préférence, sinon la plus dégagée ; toujours dans la fenêtre
+    var dRect=function(px2,py2,R){var dx=Math.max(R.x1-px2,0,px2-R.x2),dy=Math.max(R.y1-py2,0,py2-R.y2);return Math.hypot(dx,dy)}
+    var degage=function(R){
+      var mn=1e9
+      lignes.forEach(function(L){for(var i3=0;i3<L.length;i3++){var d=dRect(L[i3][0],L[i3][1],R);if(d<mn)mn=d}})
+      disques.forEach(function(D){var d=dRect(D.x,D.y,R)-D.r;if(d<mn)mn=d})
+      rects.forEach(function(Q){var dx=Math.max(Q.x1-R.x2,R.x1-Q.x2,0),dy=Math.max(Q.y1-R.y2,R.y1-Q.y2,0);var d=Math.hypot(dx,dy);if(d<mn)mn=d})
+      return mn
+    }
+    // graduations : position habituelle, sinon première position dégagée du tracé (autre côté de l'axe, décalée, plus loin) ; jamais de halo : le tracé reste continu
+    var boiteDe=function(t,cd){var w=t.length*7.4+3,x1=cd[2]==='end'?cd[0]-w:(cd[2]==='start'?cd[0]:cd[0]-w/2);return {x1:x1,x2:x1+w,y1:cd[1]-11,y2:cd[1]+3}}
+    var posTick=function(t,cands){
+      var best=null
+      for(var i4=0;i4<cands.length;i4++){
+        var R=boiteDe(t,cands[i4])
+        if(R.x1<1||R.x2>W-1||R.y1<1||R.y2>H-1)continue
+        var cl=1e9
+        courbes.forEach(function(L){for(var i5=0;i5<L.length;i5++){var d=dRect(L[i5][0],L[i5][1],R);if(d<cl)cl=d}})
+        disques.forEach(function(D){var d=dRect(D.x,D.y,R)-D.r;if(d<cl)cl=d})
+        rects.forEach(function(Q){var dx=Math.max(Q.x1-R.x2,R.x1-Q.x2,0),dy=Math.max(Q.y1-R.y2,R.y1-Q.y2,0);var d=Math.hypot(dx,dy)+6;if(d<cl)cl=d}) // entre deux graduations : seulement pas de chevauchement
+        if(cl>=6){best={cd:cands[i4],R:R};break}
+        if(!best||cl>best.cl)best={cd:cands[i4],R:R,cl:cl}
+      }
+      if(!best)best={cd:cands[0],R:boiteDe(t,cands[0])}
+      rects.push(best.R)
+      ticks+=T(t,best.cd[0],best.cd[1],{anchor:best.cd[2],halo:false})
+    }
+    if(origine)posTick('0',[[axeX-6,axeY+15,'end'],[axeX+6,axeY+15,'start'],[axeX-6,axeY-6,'end'],[axeX+6,axeY-6,'start']])
+    for(var tx=xmin;tx<=xmax;tx++){
+      if(tx%pasX!==0||(tx===0&&origine))continue
+      var xx=X(tx)
+      posTick(moins(tx),[[xx,axeY+15,'middle'],[xx,axeY-7,'middle'],[xx-10,axeY+15,'middle'],[xx+10,axeY+15,'middle'],[xx-10,axeY-7,'middle'],[xx+10,axeY-7,'middle'],[xx,axeY+28,'middle'],[xx,axeY-20,'middle']])
+    }
+    for(var ty=ymin;ty<=ymax;ty++){
+      if(ty%pasY!==0||(ty===0&&origine))continue
+      var yy=Y(ty)+4.5
+      posTick(moins(ty),[[axeX-6,yy,'end'],[axeX+6,yy,'start'],[axeX-6,yy-9,'end'],[axeX-6,yy+9,'end'],[axeX+6,yy-9,'start'],[axeX+6,yy+9,'start'],[axeX-18,yy,'end'],[axeX+18,yy,'start']])
+    }
+    var poser=function(t,ax2,ay2,dirs,gaps,seuil,couleur){
+      var w=t.length*8.5+3,h=15,meilleur=null
+      for(var g=0;g<gaps.length;g++)for(var di=0;di<dirs.length;di++){
+        var cx=ax2+dirs[di][0]*(w/2+gaps[g]),cy=ay2+dirs[di][1]*(h/2+gaps[g])
+        // position recalée dans la fenêtre (marge 1 px), puis jugée telle quelle
+        cx=Math.min(droite-1-w/2,Math.max(gauche+1+w/2,cx));cy=Math.min(bas-1-h/2,Math.max(haut+1+h/2,cy))
+        var R={x1:cx-w/2,x2:cx+w/2,y1:cy-h/2,y2:cy+h/2}
+        var cl=degage(R)
+        if(cl>=seuil){meilleur={R:R,cx:cx,cy:cy};g=gaps.length;break}
+        if(!meilleur||cl>meilleur.cl)meilleur={R:R,cx:cx,cy:cy,cl:cl}
+      }
+      if(!meilleur){var cx0=Math.min(droite-w/2-1,Math.max(gauche+w/2+1,ax2)),cy0=Math.min(bas-h/2-1,Math.max(haut+h/2+1,ay2));meilleur={R:{x1:cx0-w/2,x2:cx0+w/2,y1:cy0-h/2,y2:cy0+h/2},cx:cx0,cy:cy0}}
+      rects.push(meilleur.R)
+      return T(t,meilleur.cx,meilleur.cy+5,{size:14,poids:700,fill:couleur||'#14304F'})
+    }
+    var dirsPt=[[1,-1],[-1,-1],[1,1],[-1,1],[1,0],[-1,0],[0,-1],[0,1]]
+    var dirsCb=[[1,0],[1,-1],[1,1],[0,-1],[0,1],[-1,-1],[-1,1],[-1,0]]
+    var noms=''
+    mar.forEach(function(q6){noms+=poser(q6.nom,q6.x,q6.y,dirsPt,[3,8,14],4)})
+    tr.forEach(function(o){
+      // extrémité droite visible du tracé
+      var E=o.ech[0]
+      o.ech.forEach(function(q7){if(q7[0]>=gauche-0.5&&q7[0]<=droite+0.5&&q7[1]>=haut-0.5&&q7[1]<=bas+0.5&&q7[0]>E[0])E=q7})
+      // la courbe elle-même ne doit pas compter comme obstacle trop proche de son propre point d'ancrage : on la garde (distance ≥ 7)
+      noms+=poser(o.nom,E[0],E[1],dirsCb,[8,12,17,23],7,o.couleur)
+    })
+    // flèches au bout des axes
+    var bx=droite+12,by=haut-12
+    var fl='<polygon points="'+r(bx)+','+r(axeY)+' '+r(bx-9)+','+r(axeY-4)+' '+r(bx-9)+','+r(axeY+4)+'" fill="#14304F"/>'
+      +'<polygon points="'+r(axeX)+','+r(by)+' '+r(axeX-4)+','+r(by+9)+' '+r(axeX+4)+','+r(by+9)+'" fill="#14304F"/>'
+    var id='fg-crb-'+(figureCourbeSVG._n=(figureCourbeSVG._n||0)+1)
+    var out='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="width:100%;max-width:'+Math.min(maxW||400,W)+'px;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Représentation graphique de '+tr.map(function(o){return o.nom}).join(' et ')+'" data-ux="'+ux+'" data-uy="'+uy+'" data-ox="'+r(X(0))+'" data-oy="'+r(Y(0))+'">'
+    out+='<defs><clipPath id="'+id+'"><rect x="'+r(gauche)+'" y="'+r(haut)+'" width="'+(nx*ux)+'" height="'+(ny*uy)+'"/></clipPath></defs>'
+    out+='<rect width="'+W+'" height="'+H+'" rx="10" fill="#fff"/>'
+    out+='<g stroke="#D3DDEE" stroke-width="1">'+grille+'</g>'
+    out+='<g stroke="#14304F" stroke-width="1.8" stroke-linecap="round"><line x1="'+r(gauche)+'" y1="'+r(axeY)+'" x2="'+r(bx-1)+'" y2="'+r(axeY)+'"/><line x1="'+r(axeX)+'" y1="'+r(bas)+'" x2="'+r(axeX)+'" y2="'+r(by+1)+'"/></g>'+fl
+    out+=ticks
+    out+='<g clip-path="url(#'+id+')" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">'
+    tr.forEach(function(o){out+='<path class="crb-courbe" data-nom="'+o.nom+'" d="'+o.d+'" stroke="'+o.couleur+'"/>'})
+    out+='</g>'
+    mar.forEach(function(q8){out+='<circle class="crb-point" cx="'+r(q8.x)+'" cy="'+r(q8.y)+'" r="3.8" fill="#14304F" stroke="#fff" stroke-width="1.2"/>'})
+    out+=noms
+    return out+'</svg>'
+  }catch(e){return ''}
+}
+
 function renderFigure(fig) {
   if (!fig || !fig.type) return ''
   var f = fig
@@ -549,6 +755,7 @@ function renderFigure(fig) {
     return '<div class="q-figure">'+open+'<circle class="fig-sh" cx="'+cx+'" cy="'+cy+'" r="'+R+'"/><line class="fig-dm" x1="'+cx+'" y1="'+cy+'" x2="'+(cx+R)+'" y2="'+cy+'"/><circle class="fig-dot" cx="'+cx+'" cy="'+cy+'" r="2.5"/><text class="fig-lb" x="'+(cx+R/2)+'" y="'+(cy-8)+'" text-anchor="middle">r = '+f.rayon+' '+u+'</text></svg></div>'
   }
   if (f.type === 'pythagore_compose') { const svgPc = figurePythagoreComposeSVG(f, 400); return svgPc ? '<div class="q-figure">'+svgPc+'</div>' : '' }
+  if (f.type === 'courbe') { const svgCb = figureCourbeSVG(f, 400); return svgCb ? '<div class="q-figure">'+svgCb+'</div>' : '' }
   if (f.type === 'pythagore') {
     const u=f.unite||'cm'
     const aVal=(f.a&&f.a!=='?'&&f.a!==null)?Number(f.a):null
