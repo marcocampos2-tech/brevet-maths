@@ -1371,6 +1371,12 @@ function figurePythagoreComposeSVG(f,maxW){
     var X=function(x){return gx+(x-xmin)*s}
     var ax=X(x0),ay=base-hd
     // étiquettes de base : clé = deux noms de points (portion ou ensemble), jamais un segment issu du sommet
+    // obstacles fixes communs aux étiquettes de segments et de base : carré d'angle droit, noms et disques des points, nom du sommet
+    var cc=Math.max(8,0.08*h*s),fixes=[]
+    fixes.push({x1:ax-cc,x2:ax+cc,y1:base-cc,y2:base})
+    pts.forEach(function(p){var px=X(p.x),wn=p.nom.length*10+2;fixes.push({x1:px-wn/2,x2:px+wn/2,y1:base+5,y2:base+23},{x1:px-4.5,x2:px+4.5,y1:base-4.5,y2:base+4.5})})
+    fixes.push({x1:ax-6,x2:ax+6,y1:ay-23,y2:ay-5},{x1:ax-4.5,x2:ax+4.5,y1:ay-4.5,y2:ay+4.5})
+    var chev=function(A,B,m){return A.x1<B.x2+m&&B.x1<A.x2+m&&A.y1<B.y2+m&&B.y1<A.y2+m}
     var bl=[]
     Object.keys(L).forEach(function(k){
       if(k.length!==2||k[0]===sommet||k[1]===sommet||idx[k[0]]===undefined||idx[k[1]]===undefined||k[0]===k[1])return
@@ -1381,8 +1387,25 @@ function figurePythagoreComposeSVG(f,maxW){
     })
     var recouvre=function(u,v){return Math.abs(u.cx-v.cx)<(u.w+v.w)/2}
     var places=[],cotes=[]
-    // portions simples : au premier niveau libre sous les noms de points
+    // portions simples (AD, DC…) : étiquette collée à son segment. A : sur la ligne de base, centrée, fond blanc qui coupe la ligne ;
+    // si le segment est trop court : B : juste sous la ligne, entre la ligne et les noms de points, centrée (décalée sans quitter son segment si un nom gêne) ;
+    // sinon C : sur la rangée des noms, à droite du nom de l'extrémité droite (ou à gauche de celui de gauche) ; sinon D : ancien placement, au premier niveau libre sous les noms.
+    var posesBase=[],occupes=[],aPlacer=[]
+    var libre=function(R){return !fixes.concat(occupes).some(function(Q){return chev(R,Q,1)})}
     bl.filter(function(u){return u.span===1}).sort(function(u,v){return u.cx-v.cx}).forEach(function(u){
+      var wt=(u.t==='?'?14:u.t.length*7.4)+2,wr=wt+6,pose=null,R
+      if(u.x2-u.x1>=wr+16){R={x1:u.cx-wr/2,x2:u.cx+wr/2,y1:base-8,y2:base+7.5};if(libre(R))pose={R:R,mode:'sur',x:u.cx,y:base+4.5}}
+      var dec=[0,-4,4,-8,8,-12,12]
+      for(var o=0;o<dec.length&&!pose;o++){R={x1:u.cx+dec[o]-wt/2,x2:u.cx+dec[o]+wt/2,y1:base+4,y2:base+20};if(R.x1>u.x1&&R.x2<u.x2&&libre(R))pose={R:R,mode:'sous',x:u.cx+dec[o],y:base+16}}
+      if(!pose){
+        var Rd={x1:u.x2+9,x2:u.x2+9+wt,y1:base+6,y2:base+23},Rg={x1:u.x1-9-wt,x2:u.x1-9,y1:base+6,y2:base+23}
+        if(Rd.x2<W1-3&&libre(Rd))pose={R:Rd,mode:'droite',x:Rd.x1,y:base+19,anchor:'start'}
+        else if(Rg.x1>3&&libre(Rg))pose={R:Rg,mode:'gauche',x:Rg.x2,y:base+19,anchor:'end'}
+      }
+      if(pose){occupes.push(pose.R);posesBase.push({u:u,pose:pose})}else aPlacer.push(u)
+    })
+    fixes=fixes.concat(occupes)
+    aPlacer.forEach(function(u){
       var n=1
       for(;;n++){
         var conflit=places.some(function(v){return v.niv===n&&recouvre(u,v)})
@@ -1411,15 +1434,9 @@ function figurePythagoreComposeSVG(f,maxW){
     // segments depuis le sommet. Étiquette d'un segment oblique : centrée SUR le segment, texte horizontal, fond blanc qui coupe le trait derrière le texte.
     // Position : milieu du segment ; si l'étiquette toucherait un autre texte (étiquette, nom de point), un point, le carré d'angle droit ou un autre segment,
     // elle glisse le long de son propre segment (35 %, 65 %, 25 %, 75 %…), jamais à côté. Étiquette de la hauteur (verticale) : inchangée.
-    var etiq='',pris=[],fixes=[]
+    var etiq='',pris=[]
     var ech=function(x1,y1,x2,y2){var o=[],n=Math.max(2,Math.ceil(Math.hypot(x2-x1,y2-y1)/2));for(var k=0;k<=n;k++)o.push([x1+(x2-x1)*k/n,y1+(y2-y1)*k/n]);return o}
     var obst=segs.map(function(sg){return ech(ax,ay,X(pts[idx[sg[1]]].x),base)})
-    var cc=Math.max(8,0.08*h*s)
-    // textes et marques qu'une étiquette ne doit jamais recouvrir : carré d'angle droit, noms et disques des points, nom du sommet
-    fixes.push({x1:ax-cc,x2:ax+cc,y1:base-cc,y2:base})
-    pts.forEach(function(p){var px=X(p.x),wn=p.nom.length*10+2;fixes.push({x1:px-wn/2,x2:px+wn/2,y1:base+5,y2:base+23},{x1:px-4.5,x2:px+4.5,y1:base-4.5,y2:base+4.5})})
-    fixes.push({x1:ax-6,x2:ax+6,y1:ay-23,y2:ay-5},{x1:ax-4.5,x2:ax+4.5,y1:ay-4.5,y2:ay+4.5})
-    var chev=function(A,B,m){return A.x1<B.x2+m&&B.x1<A.x2+m&&A.y1<B.y2+m&&B.y1<A.y2+m}
     segs.forEach(function(sg){
       var p=pts[idx[sg[1]]],bx=X(p.x)
       out+='<line x1="'+r(ax)+'" y1="'+r(ay)+'" x2="'+r(bx)+'" y2="'+base+'" stroke="#14304F" stroke-width="2.5" stroke-linecap="round"/>'
@@ -1474,6 +1491,12 @@ function figurePythagoreComposeSVG(f,maxW){
       out+='<circle cx="'+r(X(p.x))+'" cy="'+base+'" r="3.5" fill="#14304F"/>'+T(p.nom,X(p.x),base+19,{size:15,poids:700})
     })
     out+='<circle cx="'+r(ax)+'" cy="'+r(ay)+'" r="3.5" fill="#14304F"/>'+T(sommet,ax,ay-9,{size:15,poids:700})
+    // étiquettes de portions simples collées à leur segment
+    posesBase.forEach(function(q){
+      var P=q.pose
+      if(P.mode==='sur')out+='<rect x="'+r(P.R.x1)+'" y="'+r(P.R.y1)+'" width="'+r(P.R.x2-P.R.x1)+'" height="'+r(P.R.y2-P.R.y1)+'" rx="3" fill="#fff"/>'
+      out+=lab(q.u.t,P.x,P.y,P.anchor||'middle')
+    })
     // étiquettes de base
     places.forEach(function(u){
       var yl=base+19+17*u.niv
