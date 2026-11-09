@@ -1130,6 +1130,7 @@ function figurePythagoreSVG(f,pxW,pxH){
 // Figure « pythagore_compose » (mode "hauteur" seulement) : triangle de sommet A au-dessus d'une droite de base
 // portant des points alignés, hauteur [A pied] perpendiculaire. Proportions approximatives (échelle commune x/h,
 // hauteur minimale de lisibilité) ; mêmes couleurs que figurePythagoreSVG. Type, mode ou champs invalides : chaîne vide, jamais d'exception.
+// Clés facultatives : angles {point: texte} (arc + valeur à un point de la base) ; angle_droit égal à sommet : carré au sommet EN PLUS du carré au pied.
 // Étiquette couvrant plusieurs portions (BD) : cote en bas. Même logique dans quiz.html, prof.html et examen.html (figurePythagoreComposeSVG) : à garder identiques.
 function figurePythagoreComposeSVG(f,maxW){
   try{
@@ -1176,6 +1177,74 @@ function figurePythagoreComposeSVG(f,maxW){
     pts.forEach(function(p){var px=X(p.x),wn=p.nom.length*10+2;fixes.push({x1:px-wn/2,x2:px+wn/2,y1:base+5,y2:base+23},{x1:px-4.5,x2:px+4.5,y1:base-4.5,y2:base+4.5})})
     fixes.push({x1:ax-6,x2:ax+6,y1:ay-23,y2:ay-5},{x1:ax-4.5,x2:ax+4.5,y1:ay-4.5,y2:ay+4.5})
     var chev=function(A,B,m){return A.x1<B.x2+m&&B.x1<A.x2+m&&A.y1<B.y2+m&&B.y1<A.y2+m}
+    // angle droit au SOMMET (angle_droit égal à sommet) : carré le long de [sommet extrémité gauche] et [sommet extrémité droite] de la base, en plus du carré au pied.
+    // Pas de carré au sommet si le pied est une extrémité de la base. Son rectangle englobant est ajouté à fixes.
+    var carreA=null
+    if(f.angle_droit===sommet&&idx[pied]>0&&idx[pied]<pts.length-1){
+      var bgA=X(xmin),bdA=X(xmax),dgA=Math.hypot(bgA-ax,base-ay),ddA=Math.hypot(bdA-ax,base-ay),caA=Math.min(Math.max(8,0.08*h*s),0.3*dgA,0.3*ddA)
+      var ugA=[(bgA-ax)/dgA,(base-ay)/dgA],udA=[(bdA-ax)/ddA,(base-ay)/ddA]
+      carreA=[[ax+caA*ugA[0],ay+caA*ugA[1]],[ax+caA*(ugA[0]+udA[0]),ay+caA*(ugA[1]+udA[1])],[ax+caA*udA[0],ay+caA*udA[1]]]
+      fixes.push({x1:Math.min(ax,carreA[0][0],carreA[1][0],carreA[2][0]),x2:Math.max(ax,carreA[0][0],carreA[1][0],carreA[2][0]),y1:ay,y2:Math.max(carreA[0][1],carreA[1][1],carreA[2][1])})
+    }
+    // angles (facultatif) : {point: texte}, p. ex. {"B":"44°","C":"31°"}. Au point visé : arc entre la base (du côté du pied) et [sommet point] (ce segment doit être dans "segments"),
+    // texte sur la bissectrice à l'intérieur du triangle (au plus près de l'arc sans rien toucher), sinon à l'extérieur (angle faible). Rectangles du texte et de l'arc ajoutés à fixes.
+    // Clé absente : rien n'est lu ni dessiné. Clé invalide (pas un objet, point inconnu ou égal au pied, segment absent, texte vide ou de plus de 8 caractères) : chaîne vide.
+    var angPoses=[]
+    if(f.angles!==undefined&&f.angles!==null){
+      if(typeof f.angles!=='object'||Array.isArray(f.angles))return ''
+      var echA=function(x1,y1,x2,y2){var o=[],n=Math.max(2,Math.ceil(Math.hypot(x2-x1,y2-y1)/2));for(var k=0;k<=n;k++)o.push([x1+(x2-x1)*k/n,y1+(y2-y1)*k/n]);return o}
+      var lignesA=[echA(X(xmin),base,X(xmax),base)],zonesA=[]
+      segs.forEach(function(sg){
+        lignesA.push(echA(ax,ay,X(pts[idx[sg[1]]].x),base))
+        // zone de l'étiquette de la hauteur, là où le rendu la pose (même règle que plus bas : extérieur à mi-hauteur, sinon côté le plus large à 65 %)
+        if(sg[1]===pied&&texte(sg)!==null){
+          var tvA=texte(sg),wvA=(tvA==='?'?14:tvA.length*7.4)+4,myA=(ay+base)/2
+          if(hautOut&&sg===hauteurSg)zonesA.push(hautOut.gauche?{x1:ax-8-hautOut.w-3,x2:ax-5,y1:myA-8.5,y2:myA+8.5}:{x1:ax+5,x2:ax+8+hautOut.w+3,y1:myA-8.5,y2:myA+8.5})
+          else{
+            var eyA=ay+(base-ay)*0.65,gGA=(idx[pied]>0?(ax-X(pts[idx[pied]-1].x))*0.65:ax-6),gDA=(idx[pied]<pts.length-1?(X(pts[idx[pied]+1].x)-ax)*0.65:W1-6-ax)
+            zonesA.push(gGA>gDA?{x1:ax-8-wvA-1,x2:ax-6,y1:eyA-8,y2:eyA+10}:{x1:ax+6,x2:ax+8+wvA+1,y1:eyA-8,y2:eyA+10})
+          }
+        }
+      })
+      var clesA=Object.keys(f.angles)
+      if(clesA.length>6)return ''
+      for(var ia=0;ia<clesA.length;ia++){
+        var nmA=clesA[ia]
+        if(!nom(nmA)||idx[nmA]===undefined||nmA===pied||segs.indexOf(sommet+nmA)<0)return ''
+        var taA=f.angles[nmA]
+        taA=(typeof taA==='string'||typeof taA==='number')?String(taA).replace(/[<>&"']/g,'').trim():''
+        if(taA===''||taA.length>8)return ''
+        var pxA=X(pts[idx[nmA]].x),sgA=pts[idx[nmA]].x<x0?1:-1,lenA=Math.hypot(ax-pxA,ay-base),thA=Math.atan2(base-ay,Math.abs(ax-pxA))
+        var rA=Math.min(22,0.45*lenA),dpA=Math.abs(pxA-ax)
+        if(dpA>=1)rA=Math.min(rA,0.45*dpA)
+        var p1A=[pxA+sgA*rA,base],p2A=[pxA+sgA*rA*Math.cos(thA),base-rA*Math.sin(thA)],arcPts=[]
+        for(var ka=0;ka<=8;ka++)arcPts.push([pxA+sgA*rA*Math.cos(thA*ka/8),base-rA*Math.sin(thA*ka/8)])
+        var wA=(taA==='?'?14:taA.length*7.4)+4,hA=17
+        var okA=function(Rr){
+          if(Rr.x1<3||Rr.x2>W1-3||Rr.y1<3||Rr.y2>base-3)return false
+          if(fixes.some(function(F){return chev(Rr,F,1)})||zonesA.some(function(F){return chev(Rr,F,0)}))return false
+          var dedans=function(L){return L.some(function(q){return q[0]>=Rr.x1-2&&q[0]<=Rr.x2+2&&q[1]>=Rr.y1-2&&q[1]<=Rr.y2+2})}
+          return !lignesA.some(dedans)&&!dedans(arcPts)
+        }
+        var posA=null,posIn=null,cxa,cya,Rr
+        for(var rr=rA+8;rr<=0.95*lenA&&!posIn;rr+=3){
+          cxa=pxA+sgA*rr*Math.cos(thA/2);cya=base-rr*Math.sin(thA/2);Rr={x1:cxa-wA/2,x2:cxa+wA/2,y1:cya-hA/2,y2:cya+hA/2}
+          if(okA(Rr))posIn={R:Rr,x:cxa,y:cya+5,rr:rr}
+        }
+        // à l'intérieur s'il y a de la place près de l'arc (au plus 34 px au-delà) ; angle faible : texte à l'EXTÉRIEUR, de l'autre côté de [sommet point], près du sommet de l'angle ;
+        // à défaut, l'emplacement intérieur trouvé même plus loin
+        if(posIn&&posIn.rr<=rA+34)posA=posIn
+        for(var dl=14;dl<=150&&!posA;dl+=12)for(var r2=rA+10;r2<=rA+40&&!posA;r2+=6){
+          var fiA=thA+dl*Math.PI/180
+          cxa=pxA+sgA*r2*Math.cos(fiA);cya=base-r2*Math.sin(fiA);Rr={x1:cxa-wA/2,x2:cxa+wA/2,y1:cya-hA/2,y2:cya+hA/2}
+          if(okA(Rr))posA={R:Rr,x:cxa,y:cya+5}
+        }
+        if(!posA)posA=posIn
+        if(!posA){cxa=pxA+sgA*(rA+8)*Math.cos(thA/2);cya=base-(rA+8)*Math.sin(thA/2);posA={R:{x1:cxa-wA/2,x2:cxa+wA/2,y1:cya-hA/2,y2:cya+hA/2},x:cxa,y:cya+5}}
+        fixes.push(posA.R,{x1:Math.min.apply(null,arcPts.map(function(q){return q[0]})),x2:Math.max.apply(null,arcPts.map(function(q){return q[0]})),y1:Math.min(p2A[1],base-rA),y2:base})
+        angPoses.push({t:taA,x:posA.x,y:posA.y,arc:'M'+r(p1A[0])+' '+r(p1A[1])+' A'+r(rA)+' '+r(rA)+' 0 0 '+(sgA>0?0:1)+' '+r(p2A[0])+' '+r(p2A[1])})
+      }
+    }
     var bl=[]
     Object.keys(L).forEach(function(k){
       if(k.length!==2||k[0]===sommet||k[1]===sommet||idx[k[0]]===undefined||idx[k[1]]===undefined||k[0]===k[1])return
@@ -1281,10 +1350,12 @@ function figurePythagoreComposeSVG(f,maxW){
     out+=etiq
     // carré d'angle droit au pied
     var c=Math.max(8,0.08*h*s*1.0)
-    if(f.angle_droit===pied||f.angle_droit===undefined){
+    if(f.angle_droit===pied||f.angle_droit===undefined||f.angle_droit===sommet){
       var gG2=idx[pied]>0,gD2=idx[pied]<pts.length-1,sg2=(gD2&&!gG2)?1:(gG2&&!gD2?-1:-1)
       out+='<polyline points="'+r(ax+sg2*c)+','+base+' '+r(ax+sg2*c)+','+r(base-c)+' '+r(ax)+','+r(base-c)+'" fill="none" stroke="#14304F" stroke-width="1.5"/>'
     }
+    if(carreA)out+='<polyline points="'+carreA.map(function(q){return r(q[0])+','+r(q[1])}).join(' ')+'" fill="none" stroke="#14304F" stroke-width="1.5"/>'
+    angPoses.forEach(function(g){out+='<path d="'+g.arc+'" fill="none" stroke="#14304F" stroke-width="1.5"/>'+lab(g.t,g.x,g.y,'middle')})
     // points, noms
     pts.forEach(function(p){
       out+='<circle cx="'+r(X(p.x))+'" cy="'+base+'" r="3.5" fill="#14304F"/>'+T(p.nom,X(p.x),base+19,{size:15,poids:700})
