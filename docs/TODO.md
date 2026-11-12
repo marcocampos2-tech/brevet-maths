@@ -62,8 +62,9 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 ## 🔴 Banque de questions — chantier en cours
 
 1. Angles — périmètre validé 02/09, calibrage facile/moyen/difficile à faire
-2. 7 sous-thèmes restants du tour des 20 : Algorithmique, Transformations, Triangles semblables, Représentation de l'espace, Agrandissement, Aires et volumes (Proportionnalité rédigeable)
+2. 6 sous-thèmes restants du tour des 20 : Algorithmique, Transformations, Représentation de l'espace, Agrandissement, Aires et volumes (Proportionnalité rédigeable)
     - Supprimer les tables `backup_explications_pyth_20261013` et `backup_explications_thales_20261013` quand CM le décide
+    - Supprimer la table `questions_banque_sauv_triangles_semblables_20261112` (30 anciennes questions) quand CM le décide, après un test réel des figures en papillon et du CM Difficile
     - Thalès : un quiz contient au plus 2 questions de calcul sur 5 (une par famille) — garder, ou autoriser 2 par famille ?
     - Mesurer combien d'élèves bouclent leur pool (`questions_vues`) avant de décider d'écrire 10 ou 20 questions de plus par famille
     - [ ] Exclusion du dernier quiz à la reboucle (`api/generer.js`, `getBanqueSupabase()`) — option A étudiée le 24/10/2026, **reportée** (aucun ALTER, aucun code) : sur un pool de 10 elle produit un cycle fixe (quiz N+2 = quiz N), donc aucun gain ; sur un pool de 30 le gain est faible (0,8 question commune en moyenne après une reboucle). La priorité reste l'écriture de questions. **À n'appliquer que si le pool distinct est ≥ 15.** Principe : colonne `questions_vues.created_at timestamptz` (nullable, ajoutée puis `SET DEFAULT now()` pour que l'existant reste à `NULL` ; vérifier d'abord si elle existe déjà et les droits par colonne), lecture du dernier tirage (lignes du pool à `created_at` maximal, converties en énoncés) **avant** la purge, exclusion seulement s'il reste ≥ 5 énoncés distincts, fail-open si la lecture échoue (valeur dédiée de `echec`, documentée dans CLAUDE.md). Tests prévus dans `lib/questions-vues.manual-test.js` : pool de 10, pool de 30 (dont 1 à 4 énoncés jamais vus à la reboucle), pool de 6 (pas d'exclusion), élève sans historique, doublons de texte, lignes à `NULL`, colonne absente ou erreur 400, non-régression des 107 assertions, test par mutation.
@@ -86,6 +87,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     - Doublons bénins entre deux mauvaises réponses uniquement, bonne réponse toujours unique, aucun élève pénalisé : `examen_questions` 106, 120, 122, 125 ; `questions_banque` 492, 772
 15. **Pythagore/difficile — aucune figure** (30 questions sans dessin, choix assumé du 12/10/2026). Si des figures y sont voulues un jour, il faut un nouveau type de figure (autre PR). Thalès/difficile : 15 questions sur 30 sans figure.
 16. **`examen.html` : figure `thales` en ancienne version** (points D et E, pas de papillon, pas des options `noms`, `angles_droits`, `arcs_egaux` ajoutées dans `quiz.html` et `prof.html` le 12/11/2026). Sans effet tant qu'aucune question d'`examen_questions` n'utilise ces options ; à aligner avant d'en écrire.
+17. **Agrandissement — reprendre 4 questions archivées de Triangles semblables** (hors périmètre de ce sous-thème, rapport k² pour les aires et volumes) : `questions_banque` 1548, 1556, 1559, 1561, à réécrire et re-niveler dans la refonte d'Agrandissement (elles ne sont plus servies).
 
 ---
 
