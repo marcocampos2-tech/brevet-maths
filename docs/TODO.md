@@ -85,6 +85,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     - `examen_questions` 113 (126/180) — faux positif assumé : les 4 options valent 0,7, mais c'est le principe même de la question (identifier la seule écriture irréductible)
     - Doublons bénins entre deux mauvaises réponses uniquement, bonne réponse toujours unique, aucun élève pénalisé : `examen_questions` 106, 120, 122, 125 ; `questions_banque` 492, 772
 15. **Pythagore/difficile — aucune figure** (30 questions sans dessin, choix assumé du 12/10/2026). Si des figures y sont voulues un jour, il faut un nouveau type de figure (autre PR). Thalès/difficile : 15 questions sur 30 sans figure.
+16. **`examen.html` : figure `thales` en ancienne version** (points D et E, pas de papillon, pas des options `noms`, `angles_droits`, `arcs_egaux` ajoutées dans `quiz.html` et `prof.html` le 12/11/2026). Sans effet tant qu'aucune question d'`examen_questions` n'utilise ces options ; à aligner avant d'en écrire.
 
 ---
 
