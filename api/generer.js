@@ -44,6 +44,11 @@ Sous-thème Puissances (et écriture scientifique) :
 Sous-thème Arithmétique (nombres premiers, divisibilité, PGCD) :
 - "Décompose 84 en produit de facteurs premiers."
 - "Le nombre 91 est-il premier ?"
+Sous-thème Racines carrées (carrés parfaits, encadrement, valeur approchée à la calculatrice, aire et côté d'un carré) :
+- "Calcule : √81 + √16"
+- "Entre quels deux entiers consécutifs se trouve √40 ?"
+- "Un carré a pour aire 64 cm². Quelle est la longueur de son côté ?"
+- "À la calculatrice, donne √7 arrondie au centième."
 Sous-thème Calcul littéral (développer, factoriser, identités remarquables) :
 - "Développe et réduis : 3(2x+5) - 2(x-1)"
 - "Factorise : 6x² + 9x"
@@ -127,7 +132,8 @@ INTERDITS ABSOLUS : Python, boucles Python, variables Python — ce domaine util
         'Nombres relatifs', 'Règle des signes', 'Fractions', 'Priorités opératoires', 'Puissances', 'Écriture scientifique',
         'Nombres premiers', 'Divisibilité', 'PGCD',
         'Calcul littéral', 'Développement', 'Factorisation',
-        'Identités remarquables', 'Équations du 1er degré', 'Équations-produit'
+        'Identités remarquables', 'Équations du 1er degré', 'Équations-produit',
+        'Racines carrées'
       ],
       'Organisation et gestion de données, fonctions': [
         'Moyenne', 'Médiane', 'Étendue', 'Statistiques descriptives',

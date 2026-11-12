@@ -13,11 +13,11 @@
 // supprime sa copie et utilise celle-ci (un doublon `const` ferait échouer
 // le chargement bruyamment plutôt que de diverger en silence).
 //
-// Chargement : <script src="/js/catalogue.js?v=1"></script> — incrémenter v
+// Chargement : <script src="/js/catalogue.js?v=2"></script> — incrémenter v
 // à chaque modification pour contourner le cache.
 const SOUS_THEMES = {
   'Nombres et calculs': [
-    'Nombres relatifs', 'Équations', 'Calcul littéral', 'Fractions', 'Puissances', 'Arithmétique'
+    'Nombres relatifs', 'Équations', 'Calcul littéral', 'Fractions', 'Puissances', 'Arithmétique', 'Racines carrées'
   ],
   'Organisation et gestion de données, fonctions': [
     'Fonctions', 'Statistiques', 'Probabilités', 'Proportionnalité', 'Pourcentages'
