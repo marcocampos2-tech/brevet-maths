@@ -62,7 +62,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 ## 🔴 Banque de questions — chantier en cours
 
 1. Angles — périmètre validé 02/09, calibrage facile/moyen/difficile à faire
-2. 5 sous-thèmes restants du tour des 20 : Algorithmique, Transformations, Représentation de l'espace, Aires et volumes (Proportionnalité rédigeable)
+2. 4 sous-thèmes restants du tour des 20 : Algorithmique, Transformations, Représentation de l'espace (Proportionnalité rédigeable)
+    - Supprimer la table `questions_banque_sauv_aires_volumes_20261113` (155 lignes) quand CM le décide, après un test réel du rendu de « ² » dans les explications Pythagore d'Aires et volumes (ids 2841, 2842, 2843, 2850, 1163)
     - Supprimer les tables `backup_explications_pyth_20261013` et `backup_explications_thales_20261013` quand CM le décide
     - Thalès : un quiz contient au plus 2 questions de calcul sur 5 (une par famille) — garder, ou autoriser 2 par famille ?
     - Mesurer combien d'élèves bouclent leur pool (`questions_vues`) avant de décider d'écrire 10 ou 20 questions de plus par famille
