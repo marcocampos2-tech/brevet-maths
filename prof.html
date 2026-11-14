@@ -2002,9 +2002,10 @@ function renderFigureSVG(fig) {
     const mAnchor=papillon?'start':'end'
     const nX=papillon?N.x-7:N.x+7
     const nAnchor=papillon?'end':'start'
+    // Pastilles coloriées par droite parallèle dans les deux configurations : M et N bleus comme (MN), B et C verts comme (BC).
     const polyAMN=papillon?'<polygon class="fig-sh" points="'+A.x+','+A.y+' '+M.x+','+M.y+' '+N.x+','+N.y+'"/>':''
-    const dotN=papillon?'fig-dot':'fig-dotg'
-    const dotB=papillon?'fig-dotg':'fig-dot'
+    const dotN='fig-dot'
+    const dotB='fig-dotg'
     return open+
       '<polygon class="fig-sh" points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'"/>'+
       polyAMN+
