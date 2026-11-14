@@ -1660,7 +1660,11 @@ function figureTrigoSVG(f,pxW,pxH){
 // Options facultatives de la figure « thales » : noms, angles_droits, arcs_egaux. Même code dans quiz.html et prof.html : à garder identique.
 // noms : {A,M,N,B,C} -> lettres affichées (cinq lettres distinctes, les cinq clés obligatoires). Absent : A, M, N, B, C (rendu historique).
 // angles_droits, arcs_egaux : listes de lettres AFFICHÉES (une marque par sommet, au plus 5). Absentes : rien de dessiné.
+// forme : facultative. Absente : le sommet A est décalé (à 30 % de la base) pour que le triangle ne soit pas isocèle, car une figure
+// symétrique suggère AB = AC et rend « égal à l'œil » des angles qui ne le sont pas. « isocele » : sommet centré (triangle isocèle en A),
+// à poser sur toute question dont l'énoncé dit isocèle ou donne des longueurs égales. Autre valeur : null, donc pas de figure.
 // Clé invalide : null, donc pas de figure plutôt qu'une figure fausse. Aucune valeur numérique n'est jamais écrite par ces options.
+var FRAC_SOMMET_THALES=0.3
 function thalesOptions(f){
   var roles=['A','M','N','B','C'],nm={A:'A',M:'M',N:'N',B:'B',C:'C'}
   if(f.noms!==undefined&&f.noms!==null){
@@ -1686,7 +1690,12 @@ function thalesOptions(f){
   }
   var d=lire('angles_droits'),e=lire('arcs_egaux')
   if(d===null||e===null)return null
-  return {noms:nm,droits:d,egaux:e}
+  var forme='defaut'
+  if(f.forme!==undefined&&f.forme!==null){
+    if(f.forme!=='isocele')return null
+    forme='isocele'
+  }
+  return {noms:nm,droits:d,egaux:e,forme:forme}
 }
 // Marques d'angle aux sommets (P = positions des cinq points). Angle de chaque sommet entre ses deux côtés :
 // A (AB, AC), B (BA, BC), C (CA, CB), M (MN, MB), N (NM, NC). Carré d'angle droit de côté k, arc de rayon ra.
@@ -1735,12 +1744,14 @@ function renderFigure(fig){
     // Deux configurations partagent les memes cles ab / am, avec la meme semantique :
     // ab = longueur AB, am = longueur AM, rapport = am/ab. Seule la position de M et N change —
     // du meme cote de A qu'en emboitee, du cote oppose en papillon.
-    // La cle configuration est facultative : absente ou non reconnue, on rend l'emboitee, ce qui
-    // laisse le comportement des lignes deja en base strictement inchange.
+    // La cle configuration est facultative : absente ou non reconnue, on rend l'emboitee.
+    // La cle forme (voir thalesOptions) decide de la position du sommet A : centre (isocele) ou decale.
+    // frac = position horizontale de A le long de la base BC (0,5 = centre).
     const opt=thalesOptions(f)
     if(opt===null)return ''
     const nm=opt.noms
     const ox=S/2
+    const frac=opt.forme==='isocele'?0.5:FRAC_SOMMET_THALES
     const abVal=f.ab==='?'?6:Number(f.ab)||6
     const amVal=f.am==='?'?3:Number(f.am)||3
     const papillon=String(f.configuration||'emboitee').toLowerCase()==='papillon'
@@ -1753,23 +1764,30 @@ function renderFigure(fig){
       const ratio=Math.min(Math.max(amVal/abVal,0.45),2.2)
       const demiLargeur=0.375
       const zone=S-2*P
-      const sc=Math.min(zone/(1+ratio),zone/(2*demiLargeur*Math.max(1,ratio)))
-      const hB=sc,hM=sc*ratio,wB=sc*demiLargeur,wM=wB*ratio
+      // La largeur totale (2*demiLargeur*sc) se repartit a gauche (wl) et a droite (wr) de A selon frac.
+      // M est du cote oppose a B et N du cote oppose a C : l'emprise horizontale couvre les quatre points
+      // (cadrage calcule sur elle), et A est recentre pour que l'ensemble reste au milieu de la zone.
+      const tot=2*demiLargeur
+      const gl=tot*frac,gr=tot-gl
+      const emprise=Math.max(gr,gl*ratio)+Math.max(gl,gr*ratio)
+      const sc=Math.min(zone/(1+ratio),zone/emprise)
+      const hB=sc,hM=sc*ratio,wl=sc*gl,wr=sc*gr
       const oy=P+hM
-      A={x:ox,y:oy}
-      B={x:ox-wB,y:oy+hB}
-      C={x:ox+wB,y:oy+hB}
-      M={x:ox+wM,y:oy-hM}
-      N={x:ox-wM,y:oy-hM}
+      const ax=ox-(Math.min(-wl,-wr*ratio)+Math.max(wr,wl*ratio))/2
+      A={x:ax,y:oy}
+      B={x:ax-wl,y:oy+hB}
+      C={x:ax+wr,y:oy+hB}
+      M={x:ax+wl*ratio,y:oy-hM}
+      N={x:ax-wr*ratio,y:oy-hM}
     } else {
       const oy=P+10
       const ratio=Math.min(Math.max(amVal/abVal,0.2),0.8)
       const H=S-2*P,W=H*0.75
-      A={x:ox,y:oy}
+      A={x:ox+W*(frac-0.5),y:oy}
       B={x:ox-W/2,y:oy+H}
       C={x:ox+W/2,y:oy+H}
-      M={x:ox-(W/2)*ratio,y:oy+H*ratio}
-      N={x:ox+(W/2)*ratio,y:oy+H*ratio}
+      M={x:A.x+(B.x-A.x)*ratio,y:oy+H*ratio}
+      N={x:A.x+(C.x-A.x)*ratio,y:oy+H*ratio}
     }
     // M suit B et N suit C dans les deux configurations, mais leur cote a l'ecran s'inverse en
     // papillon : les etiquettes se placent donc par configuration, pas par nom de point. Le point A
