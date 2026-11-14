@@ -1801,11 +1801,11 @@ function renderFigure(fig){
     const mAnchor=papillon?'start':'end'
     const nX=papillon?N.x-7:N.x+7
     const nAnchor=papillon?'end':'start'
-    // En papillon, les pastilles sont coloriees par droite parallele (M et N bleus, B et C verts),
-    // ce qui rend le role des deux paralleles lisible. L'emboitee garde son coloriage historique.
+    // Dans les deux configurations, les pastilles sont coloriees par droite parallele (M et N bleus comme (MN),
+    // B et C verts comme (BC)), ce qui rend le role des deux paralleles lisible.
     const polyAMN=papillon?'<polygon class="fig-sh" points="'+A.x+','+A.y+' '+M.x+','+M.y+' '+N.x+','+N.y+'"/>':''
-    const dotN=papillon?'fig-dot':'fig-dotg'
-    const dotB=papillon?'fig-dotg':'fig-dot'
+    const dotN='fig-dot'
+    const dotB='fig-dotg'
     return '<div class="q-figure">'+open+
       '<polygon class="fig-sh" points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'"/>'+
       polyAMN+
