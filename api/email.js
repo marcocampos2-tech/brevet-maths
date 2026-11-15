@@ -996,7 +996,7 @@ export default async function handler(req, res) {
 
       const maintenant = new Date()
       const dateParisStr = dateVisee || dateParis(maintenant)
-      const { libelle: quand } = libelleJour(dateParisStr, maintenant)
+      const { sujet: quandSujet, corps: quandCorps } = libelleJour(dateParisStr, maintenant)
       const sessionsRes = await fetch(
         `${SUPA_URL}/rest/v1/resultats?user_id=eq.${user_id}` +
         `&select=id,theme,sous_theme,difficulte,score,total,temps_secondes,questions_ratees,created_at,alerte_envoyee,abandonne` +
@@ -1066,7 +1066,7 @@ export default async function handler(req, res) {
 
       const activite = lignesActivite(sessionsDuJour)
       const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`
-      const resume = `${esc(prenom)} a révisé ${quand} : ${pluriel(totalSessions, 'session')}, ${formatDuree(dureeSecondes)}` +
+      const resume = `${esc(prenom)} a révisé ${quandCorps} : ${pluriel(totalSessions, 'session')}, ${formatDuree(dureeSecondes)}` +
         (interrompues > 0 ? ` (+ ${pluriel(interrompues, 'interrompue')})` : '')
 
       const detailHTML = detailComplet
@@ -1075,7 +1075,7 @@ export default async function handler(req, res) {
             <p style="color:#444;line-height:1.6;margin-top:14px">Son niveau par sous-thème est détaillé dans votre espace parent.</p>`
         : `<p style="color:#444;line-height:1.6;margin-top:20px">Le détail par sous-thème est disponible avec l'offre Accompagné.</p>`
 
-      const sujet = `${prenom} a révisé ${quand} — ACADEMIKA`
+      const sujet = `${prenom} a révisé ${quandSujet} — ACADEMIKA`
 
       const html = `
           <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
