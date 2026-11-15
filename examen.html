@@ -855,6 +855,64 @@ function figureCourbeSVG(f,maxW){
   }catch(e){return ''}
 }
 
+// Options facultatives de la figure « thales » : noms, angles_droits, arcs_egaux. Même code dans quiz.html, prof.html et examen.html : à garder identique.
+// noms : {A,M,N,B,C} -> lettres affichées (cinq lettres distinctes, les cinq clés obligatoires). Absent : A, M, N, B, C (rendu historique).
+// angles_droits, arcs_egaux : listes de lettres AFFICHÉES (une marque par sommet, au plus 5). Absentes : rien de dessiné.
+// forme : facultative. Absente : le sommet A est décalé (à 30 % de la base) pour que le triangle ne soit pas isocèle, car une figure
+// symétrique suggère AB = AC et rend « égal à l'œil » des angles qui ne le sont pas. « isocele » : sommet centré (triangle isocèle en A),
+// à poser sur toute question dont l'énoncé dit isocèle ou donne des longueurs égales. Autre valeur : null, donc pas de figure.
+// Clé invalide : null, donc pas de figure plutôt qu'une figure fausse. Aucune valeur numérique n'est jamais écrite par ces options.
+var FRAC_SOMMET_THALES=0.3
+function thalesOptions(f){
+  var roles=['A','M','N','B','C'],nm={A:'A',M:'M',N:'N',B:'B',C:'C'}
+  if(f.noms!==undefined&&f.noms!==null){
+    if(typeof f.noms!=='object'||Array.isArray(f.noms))return null
+    var vus={}
+    for(var i=0;i<roles.length;i++){
+      var v=f.noms[roles[i]]
+      if(typeof v!=='string'||!/^[A-Za-z]$/.test(v)||vus[v])return null
+      vus[v]=1;nm[roles[i]]=v
+    }
+  }
+  var inv={};roles.forEach(function(r){inv[nm[r]]=r})
+  var lire=function(cle){
+    var l=f[cle]
+    if(l===undefined||l===null)return []
+    if(!Array.isArray(l)||l.length>5)return null
+    var o=[]
+    for(var k=0;k<l.length;k++){
+      if(typeof l[k]!=='string'||inv[l[k]]===undefined||o.indexOf(inv[l[k]])>=0)return null
+      o.push(inv[l[k]])
+    }
+    return o
+  }
+  var d=lire('angles_droits'),e=lire('arcs_egaux')
+  if(d===null||e===null)return null
+  var forme='defaut'
+  if(f.forme!==undefined&&f.forme!==null){
+    if(f.forme!=='isocele')return null
+    forme='isocele'
+  }
+  return {noms:nm,droits:d,egaux:e,forme:forme}
+}
+// Marques d'angle aux sommets (P = positions des cinq points). Angle de chaque sommet entre ses deux côtés :
+// A (AB, AC), B (BA, BC), C (CA, CB), M (MN, MB), N (NM, NC). Carré d'angle droit de côté k, arc de rayon ra.
+function thalesMarquesSVG(P,opt,k,ra){
+  var voisins={A:['B','C'],B:['A','C'],C:['A','B'],M:['N','B'],N:['M','C']}
+  var u=function(de,vers){var dx=P[vers].x-P[de].x,dy=P[vers].y-P[de].y,n=Math.hypot(dx,dy)||1;return [dx/n,dy/n]}
+  var r1=function(n){return Math.round(n*10)/10}
+  var s=''
+  opt.droits.forEach(function(r){
+    var a=u(r,voisins[r][0]),b=u(r,voisins[r][1]),V=P[r]
+    s+='<path class="fig-rt" d="M'+r1(V.x+k*a[0])+' '+r1(V.y+k*a[1])+'L'+r1(V.x+k*(a[0]+b[0]))+' '+r1(V.y+k*(a[1]+b[1]))+'L'+r1(V.x+k*b[0])+' '+r1(V.y+k*b[1])+'"/>'
+  })
+  opt.egaux.forEach(function(r){
+    var a=u(r,voisins[r][0]),b=u(r,voisins[r][1]),V=P[r],sens=(a[0]*b[1]-a[1]*b[0])>0?1:0
+    s+='<path d="M'+r1(V.x+ra*a[0])+' '+r1(V.y+ra*a[1])+'A'+ra+' '+ra+' 0 0 '+sens+' '+r1(V.x+ra*b[0])+' '+r1(V.y+ra*b[1])+'" fill="none" stroke="#3730a3" stroke-width="1"/>'
+  })
+  return s
+}
+
 function renderFigure(fig) {
   if (!fig || !fig.type) return ''
   var f = fig
@@ -907,26 +965,88 @@ function renderFigure(fig) {
     const hypLabel=(f.c&&f.c!=='?'&&f.c!==null)?f.c+' '+u:'?'
     return '<div class="q-figure">'+open+'<polygon class="fig-sh" points="'+ox+','+oy+' '+(ox+B)+','+oy+' '+ox+','+(oy-A)+'"/><rect class="fig-rt" x="'+ox+'" y="'+(oy-sq)+'" width="'+sq+'" height="'+sq+'"/><text class="fig-lb" x="'+(ox+B/2)+'" y="'+(oy+16)+'" text-anchor="middle">'+bLabel+'</text><text class="fig-lb" x="'+(ox-8)+'" y="'+(oy-A/2+4)+'" text-anchor="end">'+aLabel+'</text><text class="fig-lb" x="'+(ox+B/2+14)+'" y="'+(oy-A/2-6)+'" text-anchor="start">'+hypLabel+'</text></svg></div>'
   }
-  if (f.type === 'thales') {
-    const ox=S/2, oy=P+10
+  if(f.type==='thales'){
+    // Deux configurations partagent les memes cles ab / am, avec la meme semantique :
+    // ab = longueur AB, am = longueur AM, rapport = am/ab. Seule la position de M et N change —
+    // du meme cote de A qu'en emboitee, du cote oppose en papillon.
+    // La cle configuration est facultative : absente ou non reconnue, on rend l'emboitee.
+    // La cle forme (voir thalesOptions) decide de la position du sommet A : centre (isocele) ou decale.
+    // frac = position horizontale de A le long de la base BC (0,5 = centre).
+    const opt=thalesOptions(f)
+    if(opt===null)return ''
+    const nm=opt.noms
+    const ox=S/2
+    const frac=opt.forme==='isocele'?0.5:FRAC_SOMMET_THALES
     const abVal=f.ab==='?'?6:Number(f.ab)||6
     const amVal=f.am==='?'?3:Number(f.am)||3
-    const ratio=Math.min(Math.max(amVal/abVal,0.2),0.8)
-    const H=S-2*P, W=H*0.75
-    const A={x:ox,y:oy}, B={x:ox-W/2,y:oy+H}, C={x:ox+W/2,y:oy+H}
-    const D={x:ox-(W/2)*ratio,y:oy+H*ratio}, E={x:ox+(W/2)*ratio,y:oy+H*ratio}
+    const papillon=String(f.configuration||'emboitee').toLowerCase()==='papillon'
+    let A,B,C,M,N
+    if(papillon){
+      // En papillon rien n'impose que le triangle AMN soit le plus petit : le rapport peut depasser 1,
+      // contrairement a l'emboitee ou M est forcement entre A et B. Les bornes sont donc reciproques
+      // l'une de l'autre (0,45 et ~1/0,45), et le cadrage se recalcule pour que les DEUX triangles
+      // reunis remplissent la zone, au lieu d'etre dimensionnes par un seul d'entre eux.
+      const ratio=Math.min(Math.max(amVal/abVal,0.45),2.2)
+      const demiLargeur=0.375
+      const zone=S-2*P
+      // La largeur totale (2*demiLargeur*sc) se repartit a gauche (wl) et a droite (wr) de A selon frac.
+      // M est du cote oppose a B et N du cote oppose a C : l'emprise horizontale couvre les quatre points
+      // (cadrage calcule sur elle), et A est recentre pour que l'ensemble reste au milieu de la zone.
+      const tot=2*demiLargeur
+      const gl=tot*frac,gr=tot-gl
+      const emprise=Math.max(gr,gl*ratio)+Math.max(gl,gr*ratio)
+      const sc=Math.min(zone/(1+ratio),zone/emprise)
+      const hB=sc,hM=sc*ratio,wl=sc*gl,wr=sc*gr
+      const oy=P+hM
+      const ax=ox-(Math.min(-wl,-wr*ratio)+Math.max(wr,wl*ratio))/2
+      A={x:ax,y:oy}
+      B={x:ax-wl,y:oy+hB}
+      C={x:ax+wr,y:oy+hB}
+      M={x:ax+wl*ratio,y:oy-hM}
+      N={x:ax-wr*ratio,y:oy-hM}
+    } else {
+      const oy=P+10
+      const ratio=Math.min(Math.max(amVal/abVal,0.2),0.8)
+      const H=S-2*P,W=H*0.75
+      A={x:ox+W*(frac-0.5),y:oy}
+      B={x:ox-W/2,y:oy+H}
+      C={x:ox+W/2,y:oy+H}
+      M={x:A.x+(B.x-A.x)*ratio,y:oy+H*ratio}
+      N={x:A.x+(C.x-A.x)*ratio,y:oy+H*ratio}
+    }
+    // M suit B et N suit C dans les deux configurations, mais leur cote a l'ecran s'inverse en
+    // papillon : les etiquettes se placent donc par configuration, pas par nom de point. Le point A
+    // cesse d'etre le sommet haut en papillon — son etiquette part a droite, dans le secteur laisse
+    // libre entre les demi-droites [AM) et [AC).
+    const marques=thalesMarquesSVG({A:A,M:M,N:N,B:B,C:C},opt,8,18)
+    const aX=papillon?A.x+9:A.x
+    const aY=papillon?A.y+4:A.y-7
+    const aAnchor=papillon?'start':'middle'
+    const mX=papillon?M.x+7:M.x-7
+    const mAnchor=papillon?'start':'end'
+    const nX=papillon?N.x-7:N.x+7
+    const nAnchor=papillon?'end':'start'
+    // Dans les deux configurations, les pastilles sont coloriees par droite parallele (M et N bleus comme (MN),
+    // B et C verts comme (BC)), ce qui rend le role des deux paralleles lisible.
+    const polyAMN=papillon?'<polygon class="fig-sh" points="'+A.x+','+A.y+' '+M.x+','+M.y+' '+N.x+','+N.y+'"/>':''
+    const dotN='fig-dot'
+    const dotB='fig-dotg'
     return '<div class="q-figure">'+open+
       '<polygon class="fig-sh" points="'+A.x+','+A.y+' '+B.x+','+B.y+' '+C.x+','+C.y+'"/>'+
-      '<line class="fig-lnb" x1="'+D.x+'" y1="'+D.y+'" x2="'+E.x+'" y2="'+E.y+'"/>'+
+      polyAMN+
+      '<line class="fig-lnb" x1="'+M.x+'" y1="'+M.y+'" x2="'+N.x+'" y2="'+N.y+'"/>'+
       '<line class="fig-lng" x1="'+B.x+'" y1="'+B.y+'" x2="'+C.x+'" y2="'+C.y+'"/>'+
+      marques+
       '<circle class="fig-dot" cx="'+A.x+'" cy="'+A.y+'" r="3"/>'+
-      '<circle class="fig-dot" cx="'+D.x+'" cy="'+D.y+'" r="3"/>'+
-      '<circle class="fig-dot" cx="'+B.x+'" cy="'+B.y+'" r="3"/>'+
-      '<circle class="fig-dotg" cx="'+E.x+'" cy="'+E.y+'" r="3"/>'+
+      '<circle class="fig-dot" cx="'+M.x+'" cy="'+M.y+'" r="3"/>'+
+      '<circle class="'+dotN+'" cx="'+N.x+'" cy="'+N.y+'" r="3"/>'+
+      '<circle class="'+dotB+'" cx="'+B.x+'" cy="'+B.y+'" r="3"/>'+
       '<circle class="fig-dotg" cx="'+C.x+'" cy="'+C.y+'" r="3"/>'+
-      '<text class="fig-lb" x="'+A.x+'" y="'+(A.y-7)+'" text-anchor="middle">A</text>'+
-      '<text class="fig-lb" x="'+(B.x-7)+'" y="'+(B.y+4)+'" text-anchor="end">B</text>'+
-      '<text class="fig-lb" x="'+(C.x+7)+'" y="'+(C.y+4)+'" text-anchor="start">C</text>'+
+      '<text class="fig-lb" x="'+aX+'" y="'+aY+'" text-anchor="'+aAnchor+'">'+nm.A+'</text>'+
+      '<text class="fig-lb" x="'+mX+'" y="'+(M.y+4)+'" text-anchor="'+mAnchor+'">'+nm.M+'</text>'+
+      '<text class="fig-lb" x="'+nX+'" y="'+(N.y+4)+'" text-anchor="'+nAnchor+'">'+nm.N+'</text>'+
+      '<text class="fig-lb" x="'+(B.x-7)+'" y="'+(B.y+4)+'" text-anchor="end">'+nm.B+'</text>'+
+      '<text class="fig-lb" x="'+(C.x+7)+'" y="'+(C.y+4)+'" text-anchor="start">'+nm.C+'</text>'+
       '</svg></div>'
   }
   if (f.type === 'trapeze') {
