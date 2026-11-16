@@ -62,7 +62,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 ## 🔴 Banque de questions — chantier en cours
 
 1. Angles — périmètre validé 02/09, calibrage facile/moyen/difficile à faire
-2. 4 sous-thèmes restants du tour des 20 : Algorithmique, Transformations, Représentation de l'espace (Proportionnalité rédigeable)
+2. 3 sous-thèmes restants du tour des 20 : Transformations, Représentation de l'espace (Proportionnalité rédigeable)
     - Tester en réel le rendu de « ² » dans les explications Pythagore d'Aires et volumes (ids 2841, 2842, 2843, 2850, 1163)
     - Supprimer les tables `backup_explications_pyth_20261013` et `backup_explications_thales_20261013` quand CM le décide
     - Thalès : un quiz contient au plus 2 questions de calcul sur 5 (une par famille) — garder, ou autoriser 2 par famille ?
@@ -300,6 +300,8 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 95. **Vercel : merges sur `main` non déployés automatiquement** — constaté deux fois, dont la #136 le 21/10/2026 (rattrapée par la #139 ; précédent : la PR #4, déploiement forcé). Si cela se reproduit : vérifier l'intégration GitHub de Vercel (Settings > Git) et la page de statut Vercel avant de forcer un redéploiement.
 
 96. **Prénom avec majuscule : points d'affichage non couverts** — laissés de côté le 23/10/2026 (PR « prénom avec majuscule », fonction `js/prenom.js`, périmètre : emails, PDF du bilan, page parent, fiche prof). Restent : pages élève (`quiz.html`, `resultats.html`, `examen.html`, `connexion.html`), listes d'inscrits brevet et stage de `prof.html` (`inscrit.prenom`, dialogues `confirm()`), formulaire de création d'enfant de `suivi-parent.html` (`afficherEncartOrigine`). Un prénom saisi tout en majuscules (« DIVINE ») reste affiché tel quel (règle : seule la première lettre de chaque mot est forcée). À évaluer : normaliser aussi à la saisie (stockage), ce que la PR s'interdit.
+
+- [ ] **Vue « Banque » de `prof.html` sur mobile : colonne d'énoncé écrasée** — constaté le 16/11/2026 en testant Algorithmique sur iPhone : l'énoncé tient dans une colonne d'environ 190 px à côté des badges et des boutons (Modifier, Image, Figure), et le bouton « Figure » touche le bord de la carte. Les figures (scripts compris) s'affichent correctement, seule la mise en page de la carte est en cause. À corriger : empiler badges, boutons et énoncé en colonne sous une largeur donnée.
 
 ---
 
