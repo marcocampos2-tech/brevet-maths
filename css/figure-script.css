@@ -1,0 +1,38 @@
+/* Figure « script » en blocs (js/figure-script.js).
+   Couleurs : variables propres au fichier (préfixe --fs-), valeurs de la charte
+   du site. Trois familles : variables (doré), contrôle (bordeaux), mouvement (vert).
+   Largeur : 100 % du cadre, 340 px au plus ; vérifié à 340 px avec si/sinon
+   imbriqué dans un sinon. Texte à la ligne, jamais coupé dans un mot. */
+.fs-script {
+  --fs-var-bg: #FBF4E4; --fs-var-bord: #D4A23C; --fs-var-txt: #6b4f10;
+  --fs-ctrl-bg: #FBEDEC; --fs-ctrl-bord: #9E2B25; --fs-ctrl-txt: #7a1f1a;
+  --fs-mvt-bg: #EAF6EF; --fs-mvt-bord: #2F9E5C; --fs-mvt-txt: #1f7a45;
+  --fs-dire-bg: #F1F1F3; --fs-dire-bord: #8a8d93; --fs-dire-txt: #41454C;
+  width: 100%; max-width: 340px; box-sizing: border-box; text-align: left;
+  font-size: 13px; line-height: 1.4; font-weight: 500;
+}
+.fs-script .fs-b, .fs-script .fs-head {
+  box-sizing: border-box; padding: 6px 10px; border: 1px solid; border-radius: 6px;
+  margin: 3px 0; overflow-wrap: break-word; word-break: normal;
+}
+.fs-script .fs-var  { background: var(--fs-var-bg);  border-color: var(--fs-var-bord);  color: var(--fs-var-txt); }
+.fs-script .fs-mvt  { background: var(--fs-mvt-bg);  border-color: var(--fs-mvt-bord);  color: var(--fs-mvt-txt); }
+.fs-script .fs-dire { background: var(--fs-dire-bg); border-color: var(--fs-dire-bord); color: var(--fs-dire-txt); }
+.fs-script .fs-c { margin: 3px 0; }
+.fs-script .fs-ctrl > .fs-head {
+  background: var(--fs-ctrl-bg); border-color: var(--fs-ctrl-bord); color: var(--fs-ctrl-txt);
+  margin: 0; border-radius: 6px 6px 0 0;
+}
+.fs-script .fs-ctrl > .fs-mid { border-radius: 0; border-top-width: 0; }
+.fs-script .fs-in {
+  margin: 0; padding: 3px 0 3px 12px; border-left: 4px solid var(--fs-ctrl-bord); background: #fff;
+}
+.fs-script .fs-foot {
+  height: 10px; background: var(--fs-ctrl-bg); border: 1px solid var(--fs-ctrl-bord);
+  border-top-width: 0; border-radius: 0 0 6px 6px;
+}
+.fs-script .fs-v {
+  display: inline-block; background: #fff; color: #41454C; border-radius: 10px;
+  padding: 0 7px; font-weight: 600; white-space: nowrap;
+}
+.fs-script .fs-op { font-weight: 700; }
