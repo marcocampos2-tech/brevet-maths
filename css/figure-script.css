@@ -36,3 +36,5 @@
   padding: 0 7px; font-weight: 600; white-space: nowrap;
 }
 .fs-script .fs-op { font-weight: 700; }
+/* Inconnue « ? » : pastille mise en évidence (doré de la charte, bord en pointillés). */
+.fs-script .fs-v.fs-inconnu { background: #FBF4E4; border: 1px dashed #D4A23C; color: #6b4f10; padding: 0 9px; }
