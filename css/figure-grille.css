@@ -1,0 +1,30 @@
+/* Figure « grille » (js/figure-grille.js) : formes sur un quadrillage.
+   Couleurs : variables propres au fichier (préfixe --fg-). Bleu = figure de départ,
+   vert = image, neutre et gris = candidates ou motifs : une question « laquelle est
+   l'image ? » met toutes ses candidates en neutre, jamais une couleur propre.
+   Largeur : le SVG se réduit à la largeur du cadre (100 %), 308 px au plus pour
+   12 colonnes ; lisible à 300 px (case d'environ 23 px). La règle générale
+   « .q-figure svg { max-width: … } » des pages est écrasée ici par une règle plus
+   spécifique : sans elle, 12 colonnes tomberaient à 260 px (200 px dans prof.html). */
+.q-figure .fg-fig {
+  --fg-grille: #c9c3b6;
+  --fg-bleu-fond: #B5D4F4;   --fg-bleu-bord: #185FA5;
+  --fg-vert-fond: #9FE1CB;   --fg-vert-bord: #0F6E56;
+  --fg-neutre-fond: #F1EFE8; --fg-gris-fond: #D3D1C7; --fg-neutre-bord: #5F5E5A;
+  --fg-droite: #993C1D;
+  --fg-texte: #2b2b2b;
+  display: block; width: 100%; max-width: none; height: auto; margin: 0 auto;
+  font-family: inherit;
+}
+.fg-fig .fg-grille   { fill: none; stroke: var(--fg-grille); stroke-width: 0.6; }
+.fg-fig .fg-forme    { stroke-width: 1.5; stroke-linejoin: round; }
+.fg-fig .fg-bleu     { fill: var(--fg-bleu-fond);   stroke: var(--fg-bleu-bord); }
+.fg-fig .fg-vert     { fill: var(--fg-vert-fond);   stroke: var(--fg-vert-bord); }
+.fg-fig .fg-neutre   { fill: var(--fg-neutre-fond); stroke: var(--fg-neutre-bord); }
+.fg-fig .fg-gris     { fill: var(--fg-gris-fond);   stroke: var(--fg-neutre-bord); }
+.fg-fig .fg-droite   { stroke: var(--fg-droite); stroke-width: 1.5; fill: none; }
+.fg-fig .fg-pointille { stroke-dasharray: 5 4; }
+.fg-fig .fg-point    { fill: var(--fg-texte); }
+.fg-fig .fg-nom      { font-size: 13px; font-weight: 600; fill: var(--fg-texte); }
+.fg-fig .fg-sommet   { font-size: 13px; font-weight: 600; fill: var(--fg-texte); }
+.fg-fig .fg-nom-droite { font-size: 12px; font-weight: 600; fill: var(--fg-droite); }
