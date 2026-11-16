@@ -21,12 +21,16 @@
 //   stylo     { etat: "baisse"|"leve" }     « baisser le stylo » / « lever le stylo »
 //
 // condition = { gauche, op, droite } avec op dans { "plus_grand", "plus_petit",
-// "egal" } : les symboles > < = sont dessinés par ce code, jamais écrits en base
-// (énoncés et explications restent en toutes lettres : pas de <, > ni & en base).
+// "egal", "plus_grand_egal", "plus_petit_egal" } : les symboles > < = ≥ ≤ sont
+// dessinés par ce code, jamais écrits en base (énoncés et explications restent
+// en toutes lettres : pas de <, > ni & en base).
 //
 // Valeur = nombre, nom de variable (lettre puis lettres/chiffres/_, 12 signes au
 // plus) ou expression de 3 éléments au plus « a × b » (+ − × ÷, séparés par des
-// espaces). Limites : 10 blocs au plus (blocs imbriqués compris), 3 niveaux
+// espaces). La valeur « ? » (chaîne seule) marque l'inconnue que l'élève doit
+// retrouver (questions « compléter le script ») : une pastille « ? » est dessinée
+// à sa place ; une seule par script ; jamais dans un nom de variable ni dans une
+// expression. Limites : 10 blocs au plus (blocs imbriqués compris), 3 niveaux
 // d'imbrication au plus. Tout script mal formé donne une figure VIDE (jamais un
 // script tronqué qui contredirait la réponse) ; erreurs() dit pourquoi.
 //
@@ -41,7 +45,7 @@
 
   const MAX_BLOCS = 10
   const MAX_NIVEAUX = 3
-  const OPS_CONDITION = { plus_grand: '>', plus_petit: '<', egal: '=' }
+  const OPS_CONDITION = { plus_grand: '>', plus_petit: '<', egal: '=', plus_grand_egal: '≥', plus_petit_egal: '≤' }
   const OPS_CALCUL = { '+': '+', '-': '−', '−': '−', '×': '×', '*': '×', '÷': '÷', '/': '÷' }
   const RE_NOMBRE = /^\d+([.,]\d+)?$/
   const RE_VARIABLE = /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9_]{0,11}$/
@@ -69,6 +73,7 @@
       return String(v).replace('.', ',').replace('-', '−')
     }
     if (typeof v !== 'string') return null
+    if (v === '?') return '?'
     const morceaux = v.trim().split(/\s+/)
     if (morceaux.length !== 1 && morceaux.length !== 3) return null
     const sortie = []
@@ -164,6 +169,8 @@
     if (!f || f.type !== 'script') return ['ce n\'est pas une figure de type script']
     const etat = { erreurs: [], nb: 0 }
     valideListe(f.blocs, 1, etat, 'blocs')
+    const nbInconnues = (String(JSON.stringify(f.blocs)).match(/"\?"/g) || []).length
+    if (nbInconnues > 1) etat.erreurs.push('plus d\'une inconnue « ? » (' + nbInconnues + ')')
     if (etat.nb > MAX_BLOCS) etat.erreurs.push('plus de ' + MAX_BLOCS + ' blocs (' + etat.nb + ')')
     return etat.erreurs
   }
@@ -174,7 +181,10 @@
   }
 
   // ── Rendu ──────────────────────────────────────────────────────────────
-  function v(valeur) { return '<span class="fs-v">' + esc(valeurAffichee(valeur)) + '</span>' }
+  function v(valeur) {
+    const t = valeurAffichee(valeur)
+    return '<span class="fs-v' + (t === '?' ? ' fs-inconnu' : '') + '">' + esc(t) + '</span>'
+  }
 
   function condition(c) {
     return v(c.gauche) + ' <span class="fs-op">' + esc(OPS_CONDITION[c.op]) + '</span> ' + v(c.droite)
