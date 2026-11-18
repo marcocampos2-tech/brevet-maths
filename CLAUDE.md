@@ -377,7 +377,7 @@ Type de figure de `questions_banque.figure` pour le futur sous-thème **Représe
 
 **Étiquettes** : latitudes à droite du globe, longitudes sous l'équateur (méridiens à 60° au plus du centre), Nord / Sud / Ouest / Est / Équateur à l'extérieur. Deux étiquettes, ou une étiquette et une croix, qui se chevauchent font **refuser** la figure. Largeur : 301 px pour la figure type (globe de 200 px, étiquettes comprises), texte de 11 px conservé à 300 px de large ; le plafond réel est le style en ligne `max-width`.
 
-**Règle de rédaction (à confirmer par CM avant le lot 2)** : la mention « La figure n'est pas en vraie grandeur. » n'est **pas exigée** sur une figure `geo`, comme sur `grille` (proposition du 18/11/2026, non encore confirmée). Ajouter `'geo'` à la liste des types de figure connus du contrôle du Niveau 0 de la norme de rédaction avant d'écrire la première question.
+**Règle de rédaction (décision de CM du 18/11/2026)** : la mention « La figure n'est pas en vraie grandeur. » est **exigée** en tête de chaque énoncé à figure `geo` (contrairement à `grille`, seule exemptée) : la projection orthographique écrase les distances et les angles près du bord, et les graduations ne donnent aucune échelle. Ajouter `'geo'` à la liste des types de figure connus du contrôle du Niveau 0 de la norme de rédaction avant d'écrire la première question.
 
 **Limites connues** : le contrôle de chevauchement repose sur une estimation de largeur de texte (0,6 em par signe, hauteur ±0,75 em) ; **un trait du quadrillage qui passe sous une étiquette n'est pas détecté**. Le globe n'a ni continents ni lecture de villes réelles.
 
