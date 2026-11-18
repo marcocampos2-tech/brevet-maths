@@ -1,0 +1,27 @@
+/* Figure « geo » (js/figure-geo.js) : globe terrestre vu de l'extérieur.
+   Couleurs : propres au fichier (préfixe --fgeo-). Équateur en rouge, méridien de
+   Greenwich en bleu (comme les supports de cours), quadrillage en gris, points en
+   croix noires.
+   Largeur : le SVG se réduit à la largeur du cadre (100 %), 301 px au plus pour la
+   figure type (globe de 200 px, étiquettes comprises). La règle générale
+   « .q-figure svg { max-width: … } » des pages est écrasée ici par une règle plus
+   spécifique ; le plafond réel est le style en ligne (max-width = largeur du SVG). */
+.q-figure .fgeo-fig {
+  --fgeo-bord: #3d3d3a;
+  --fgeo-trait: #8f8a7e;
+  --fgeo-equateur: #D8442A;      --fgeo-equateur-t: #B5361E;
+  --fgeo-greenwich: #2B7BD0;     --fgeo-greenwich-t: #1F62AD;
+  --fgeo-texte: #2b2b2b;         --fgeo-grad: #5F5E5A;
+  display: block; width: 100%; max-width: none; height: auto; margin: 0 auto;
+  font-family: inherit;
+}
+.fgeo-fig .fgeo-bord      { fill: none; stroke: var(--fgeo-bord); stroke-width: 1.4; }
+.fgeo-fig .fgeo-trait     { fill: none; stroke: var(--fgeo-trait); stroke-width: 0.8; stroke-linejoin: round; }
+.fgeo-fig .fgeo-equateur  { fill: none; stroke: var(--fgeo-equateur); stroke-width: 2.2; stroke-linejoin: round; }
+.fgeo-fig .fgeo-greenwich { fill: none; stroke: var(--fgeo-greenwich); stroke-width: 2.2; stroke-linejoin: round; }
+.fgeo-fig .fgeo-croix     { fill: none; stroke: var(--fgeo-texte); stroke-width: 1.8; stroke-linecap: round; }
+.fgeo-fig .fgeo-grad      { font-size: 11px; fill: var(--fgeo-grad); }
+.fgeo-fig .fgeo-orient    { font-size: 11px; fill: var(--fgeo-grad); }
+.fgeo-fig .fgeo-equateur-t  { font-size: 11px; fill: var(--fgeo-equateur-t); }
+.fgeo-fig .fgeo-greenwich-t { font-size: 11px; fill: var(--fgeo-greenwich-t); }
+.fgeo-fig .fgeo-pt        { font-size: 14px; font-weight: 600; fill: var(--fgeo-texte); }
