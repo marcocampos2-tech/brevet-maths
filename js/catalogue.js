@@ -13,7 +13,7 @@
 // supprime sa copie et utilise celle-ci (un doublon `const` ferait échouer
 // le chargement bruyamment plutôt que de diverger en silence).
 //
-// Chargement : <script src="/js/catalogue.js?v=2"></script> — incrémenter v
+// Chargement : <script src="/js/catalogue.js?v=3"></script> — incrémenter v
 // à chaque modification pour contourner le cache.
 const SOUS_THEMES = {
   'Nombres et calculs': [
@@ -26,7 +26,8 @@ const SOUS_THEMES = {
     'Aires et volumes', 'Conversions', 'Agrandissement'
   ],
   'Espace et géométrie': [
-    'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie', 'Transformations', 'Triangles semblables'
+    'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie', 'Transformations', 'Triangles semblables',
+    "Représentation de l'espace"
   ],
   'Algorithmique et programmation': [
     'Algorithmique'

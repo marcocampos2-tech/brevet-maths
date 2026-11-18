@@ -110,7 +110,10 @@ Sous-thème Théorème de Thalès :
 Sous-thème Trigonométrie :
 - "Dans un triangle rectangle, l'angle A vaut 35° et l'hypoténuse mesure 10cm. Calcule le côté opposé à A."
 Sous-thème Transformations :
-- "Le point A(2;3) subit une translation de vecteur (1;-2). Quelles sont les coordonnées de l'image ?"`,
+- "Le point A(2;3) subit une translation de vecteur (1;-2). Quelles sont les coordonnées de l'image ?"
+Sous-thème Représentation de l'espace (repérage sur la sphère terrestre : latitude, longitude, hémisphères, parallèles, méridiens) :
+- "Un point a pour coordonnées (40° N ; 20° E) (latitude ; longitude). Dans quels hémisphères se trouve-t-il ?"
+- "Quelle est la latitude de tous les points de l'équateur ?"`,
 
       'Algorithmique et programmation': `
 Exemples de BONNES questions pour ce domaine :
@@ -150,7 +153,8 @@ INTERDITS ABSOLUS : Python, boucles Python, variables Python — ce domaine util
       ],
       'Espace et géométrie': [
         'Théorème de Pythagore', 'Théorème de Thalès', 'Trigonométrie',
-        'Symétrie centrale', 'Translation', 'Rotation', 'Homothétie'
+        'Symétrie centrale', 'Translation', 'Rotation', 'Homothétie',
+        'Repérage sur la sphère'
       ],
       'Algorithmique et programmation': [
         'Boucles Scratch', 'Variables Scratch', 'Programmes de calcul'
