@@ -62,13 +62,15 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 ## 🔴 Banque de questions — chantier en cours
 
 1. Angles — périmètre validé 02/09, calibrage facile/moyen/difficile à faire
-2. 3 sous-thèmes restants du tour des 20 : Transformations, Représentation de l'espace (Proportionnalité rédigeable)
+2. 2 sous-thèmes restants du tour des 20 : Représentation de l'espace (Proportionnalité rédigeable)
     - Tester en réel le rendu de « ² » dans les explications Pythagore d'Aires et volumes (ids 2841, 2842, 2843, 2850, 1163)
     - Supprimer les tables `backup_explications_pyth_20261013` et `backup_explications_thales_20261013` quand CM le décide
+    - [ ] Transformations (bascule du 18/11/2026, 103 actives) : tester sur téléphone les figures `grille` des trois niveaux
+    - [ ] Supprimer les tables `questions_banque_backup_transformations_20261116` et `questions_banque_backup_transformations_20261118` quand CM le décide
+    - [ ] Enchaînement de transformations dans les examens blancs en ligne (`examen_questions`) : chantier à part, export id / thème / partie / chapitre nécessaire (la famille ENCH existe dans la banque depuis le 18/11/2026)
     - Thalès : un quiz contient au plus 2 questions de calcul sur 5 (une par famille) — garder, ou autoriser 2 par famille ?
     - Mesurer combien d'élèves bouclent leur pool (`questions_vues`) avant de décider d'écrire 10 ou 20 questions de plus par famille
     - [ ] Exclusion du dernier quiz à la reboucle (`api/generer.js`, `getBanqueSupabase()`) — option A étudiée le 24/10/2026, **reportée** (aucun ALTER, aucun code) : sur un pool de 10 elle produit un cycle fixe (quiz N+2 = quiz N), donc aucun gain ; sur un pool de 30 le gain est faible (0,8 question commune en moyenne après une reboucle). La priorité reste l'écriture de questions. **À n'appliquer que si le pool distinct est ≥ 15.** Principe : colonne `questions_vues.created_at timestamptz` (nullable, ajoutée puis `SET DEFAULT now()` pour que l'existant reste à `NULL` ; vérifier d'abord si elle existe déjà et les droits par colonne), lecture du dernier tirage (lignes du pool à `created_at` maximal, converties en énoncés) **avant** la purge, exclusion seulement s'il reste ≥ 5 énoncés distincts, fail-open si la lecture échoue (valeur dédiée de `echec`, documentée dans CLAUDE.md). Tests prévus dans `lib/questions-vues.manual-test.js` : pool de 10, pool de 30 (dont 1 à 4 énoncés jamais vus à la reboucle), pool de 6 (pas d'exclusion), élève sans historique, doublons de texte, lignes à `NULL`, colonne absente ou erreur 400, non-régression des 107 assertions, test par mutation.
-3. Transformations/difficile — 2 questions actives seulement, sans garde-fou serveur ; figure `grille` disponible (cf. CLAUDE.md), reste à rédiger les 90 questions niveau par niveau (V2)
 4. Représentation de l'espace — 0 question, format QCM pas confirmé
 5. 6 sous-thèmes de prérequis validés, aucun construit : Proportionnalité, Fractions, Nombres relatifs, Opérations, Opérations combinées, Angles
 6. Équations — 3 questions manquantes à identifier par niveau
