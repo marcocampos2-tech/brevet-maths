@@ -1,4 +1,4 @@
-# TODO consolidé — 13/10/2026
+# TODO consolidé — 18/11/2026
 
 ---
 
@@ -11,7 +11,7 @@
 
 Le bilan 21 jours et le bouton prof lisent désormais la vue `niveaux_sous_theme` (`lib/bilan-email.js`, `CLAUDE.md` § Bilan parent). Reste :
 
-- Exécuter `db/bilan-niveaux-snapshot.sql` (avant le merge), puis tester en preview (procédure dans la PR) et vérifier le premier bilan réel de production (cron de 21 jours : envoi, ligne `historique_bilans` avec `niveaux_snapshot`).
+- Tester en preview (procédure dans la PR) et vérifier le premier bilan réel de production (cron de 21 jours : envoi, ligne `historique_bilans` avec `niveaux_snapshot`).
 - `api/cron-rappel.js` : les emails de fin d'année et d'été interpolent `prenom_affiche` sans échappement HTML (le bilan, lui, est échappé par `lib/bilan-email.js`).
 - Généraliser le garde d'envoi (`lib/garde-envoi.js`, hors production = un seul destinataire de test) aux autres envois : types `adresse-brevet`, `stage`, `resultats-brevet`, `resiliation-confirmee` de `api/email.js`, `api/inscription-brevet.js`, `api/inscription-stage.js`. Une preview partage la base et la clé Resend de la production : ces envois partent aujourd'hui à de vrais destinataires.
 - Email du bilan : le bouton « Voir le suivi complet dans l'espace parent → » est violet (`#3730a3`), hors charte (bleu marine `#1B2A4A` / or `#D4A23C`) ; même violet dans les liens et boutons des autres emails (`api/email.js`, `api/cron-rappel.js`). Hors périmètre de la PR #136.
@@ -53,6 +53,8 @@ Maquette validée, non implémentée : icônes 3 étapes "Comment ça marche", i
 
 Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'échéance. Code fait et déployé (16/08) : encart d'abonnement, sélecteur d'offre, détail récap masqués via `enPeriodeGratuite()`. **Point ouvert** : vérifier au 01/12/2026 que Stripe est opérationnel (SIRET, mode live) avant réactivation automatique. Rappel agenda mi-novembre déjà posé. Vérifier la formulation marketing validée le 13/08 reprise partout (pas que sur le flyer).
 
+**Point de décision le 20/11/2026** : décider si la bascule du 01/12 est maintenue, d'après l'état de : Stripe live (non confirmé) et test de bout en bout de la résiliation (technique n°36) ; cases CGV A1 et B4, contenu des CGV à corriger, relecture juridique pas lancée ; Stripe C1, C2 (idempotency) et C3 (`invoice.payment_failed` non écouté) ; `shouldCreateUser: true` (technique n°1) ; échappement HTML de `suivi-parent.html` et des pages publiques (lot 5, technique n°41).
+
 **Distinction gratuit/abonnement — à appliquer avant le 01/12/2026** (gating email, verrous du lot 2 et bilan 21 jours du lot 3 faits) :
 - vérifier en conditions réelles les verrous du lot 2 (page parent, examen blanc) en aperçu avec `?simuler=apres-bascule`, puis après la bascule ;
 - vérifier en aperçu le bilan tronqué du lot 3 (cron de test avec `test_user_id` et `simuler_bascule=1`, cf. `CLAUDE.md` § Bilan parent), puis le premier bilan réel après la bascule.
@@ -62,19 +64,19 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 ## 🔴 Banque de questions — chantier en cours
 
 1. Angles — périmètre validé 02/09, calibrage facile/moyen/difficile à faire
-2. 2 sous-thèmes restants du tour des 20 : Représentation de l'espace (Proportionnalité rédigeable)
+2. Tests et nettoyages après les bascules
     - Tester en réel le rendu de « ² » dans les explications Pythagore d'Aires et volumes (ids 2841, 2842, 2843, 2850, 1163)
     - Supprimer les tables `backup_explications_pyth_20261013` et `backup_explications_thales_20261013` quand CM le décide
-    - [ ] Transformations (bascule du 18/11/2026, 103 actives) : tester sur téléphone les figures `grille` des trois niveaux
+    - [ ] Test sur téléphone : une question de Transformations, de Fractions et d'Arithmétique (explications uniformisées le 18/11/2026), plus les figures `grille` des trois niveaux de Transformations (bascule du 18/11/2026, 103 actives)
     - [ ] Supprimer les tables `questions_banque_backup_transformations_20261116` et `questions_banque_backup_transformations_20261118` quand CM le décide
+    - [ ] Supprimer la table `backup_explications_format_20261118` (553 lignes, sauvegarde de l'uniformisation des explications) quand CM le décide
+    - [ ] Arithmétique : harmoniser les alertes et retirer les commentaires sur les autres réponses
     - [ ] Enchaînement de transformations dans les examens blancs en ligne (`examen_questions`) : chantier à part, export id / thème / partie / chapitre nécessaire (la famille ENCH existe dans la banque depuis le 18/11/2026)
     - Thalès : un quiz contient au plus 2 questions de calcul sur 5 (une par famille) — garder, ou autoriser 2 par famille ?
     - Mesurer combien d'élèves bouclent leur pool (`questions_vues`) avant de décider d'écrire 10 ou 20 questions de plus par famille
     - [ ] Exclusion du dernier quiz à la reboucle (`api/generer.js`, `getBanqueSupabase()`) — option A étudiée le 24/10/2026, **reportée** (aucun ALTER, aucun code) : sur un pool de 10 elle produit un cycle fixe (quiz N+2 = quiz N), donc aucun gain ; sur un pool de 30 le gain est faible (0,8 question commune en moyenne après une reboucle). La priorité reste l'écriture de questions. **À n'appliquer que si le pool distinct est ≥ 15.** Principe : colonne `questions_vues.created_at timestamptz` (nullable, ajoutée puis `SET DEFAULT now()` pour que l'existant reste à `NULL` ; vérifier d'abord si elle existe déjà et les droits par colonne), lecture du dernier tirage (lignes du pool à `created_at` maximal, converties en énoncés) **avant** la purge, exclusion seulement s'il reste ≥ 5 énoncés distincts, fail-open si la lecture échoue (valeur dédiée de `echec`, documentée dans CLAUDE.md). Tests prévus dans `lib/questions-vues.manual-test.js` : pool de 10, pool de 30 (dont 1 à 4 énoncés jamais vus à la reboucle), pool de 6 (pas d'exclusion), élève sans historique, doublons de texte, lignes à `NULL`, colonne absente ou erreur 400, non-régression des 107 assertions, test par mutation.
 4. Représentation de l'espace — 0 question, format QCM pas confirmé
-5. 6 sous-thèmes de prérequis validés, aucun construit : Proportionnalité, Fractions, Nombres relatifs, Opérations, Opérations combinées, Angles
-6. Équations — 3 questions manquantes à identifier par niveau
-7. Bloc C dette sur Statistiques — non-répétition inter-niveaux non vérifiée
+5. Sous-thèmes de prérequis validés, pas encore construits : Proportionnalité, Opérations, Opérations combinées, Angles (Fractions et Nombres relatifs sont faits)
 8. Mention "figure pas en vraie grandeur" — rétroactivité sous-thèmes basculés avant 27/08, décision ouverte
 9. Dénominateur sous-thèmes possiblement codé en dur — à généraliser en COUNT dynamique
     ⚠️ **Contradiction à arbitrer par CM (constatée le 30/09/2026, non tranchée)** : ce point traite le `SOUS_THEMES` codé en dur comme une dette à généraliser, alors que la refonte de `suivi-parent.html` (PR #43) l'avait retenu comme un écart assumé (pas de `COUNT` dynamique, lecture publique de `questions_banque` retirée par l'audit sécurité). Écart assumé ou dette ?
@@ -284,7 +286,7 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
     - `verifier_login` et `verifier_email_parent` sont fermées à `anon` et `authenticated` (seul `service_role` peut encore les exécuter) et sans appelant : fonctions mortes, à supprimer (ce qui règle aussi leur `search_path` et le défaut de `lower(trim())` ci-dessus).
     - `inscription_stage_valide` n'est pas atomique : deux inscriptions simultanées peuvent dépasser le nombre de places.
     - Pas d'index sur `resultats.user_id`, `examens_blancs.user_id`, `profils.email_parent` : à poser quand le volume le justifie.
-    - 7 tables de sauvegarde `questions_banque_backup_*` / `backup_explications_*` à purger en fin de refonte de la banque (les deux tables `backup_explications_*_20261013` sont déjà suivies dans la section « Banque de questions »).
+    - 8 tables de sauvegarde `questions_banque_backup_*` / `backup_explications_*` à purger en fin de refonte de la banque (les deux tables `backup_explications_*_20261013` sont déjà suivies dans la section « Banque de questions »).
 
 88. **`examen.html` : en-tête (`.nav-left`) non aligné** — 18 px, graisse 600, sans police serif, alors que `quiz.html`, `resultats.html`, `espace-parent.html` et `suivi-parent.html` utilisent Newsreader 22 px / 500, couleur marine, sans `letter-spacing`. À harmoniser (logo « ∑ ACADEMIKA »).
 
