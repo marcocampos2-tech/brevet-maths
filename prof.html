@@ -185,6 +185,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <link rel="stylesheet" href="/css/exposants.css?v=1">
 <link rel="stylesheet" href="/css/figure-script.css?v=2">
 <link rel="stylesheet" href="/css/figure-grille.css?v=1">
+<link rel="stylesheet" href="/css/figure-geo.css?v=1">
 </head>
 <body>
 <div class="wrap">
@@ -265,6 +266,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 <script src="/js/exposants.js?v=1"></script>
 <script src="/js/figure-script.js?v=2"></script>
 <script src="/js/figure-grille.js?v=1"></script>
+<script src="/js/figure-geo.js?v=1"></script>
 <script src="/js/bilan-pdf.js?v=2"></script>
 <script>
 const SB_URL = 'https://vkkgadwqumqqwpaayjac.supabase.co'
@@ -1935,6 +1937,11 @@ function renderFigureSVG(fig) {
     const htmlGr = FigureGrille.html(f)
     return htmlGr || '<div style="color:#9E2B25;font-size:12px">Grille invalide : '+escHtml(FigureGrille.erreurs(f).join(' ; '))+'</div>'
   }
+  if (f.type === 'geo') {
+    // Globe : SVG. Mal formé : on dit pourquoi au prof, l'élève verrait une figure vide.
+    const htmlGe = FigureGeo.html(f)
+    return htmlGe || '<div style="color:#9E2B25;font-size:12px">Globe invalide : '+escHtml(FigureGeo.erreurs(f).join(' ; '))+'</div>'
+  }
   if (f.type === 'triangle_rect' && f.base === '?' && f.hauteur === '?') return ''
   const S = 180, P = 28
   const style = '<style>.fig-sh{fill:#eef2ff;stroke:#3730a3;stroke-width:1.5;stroke-linejoin:round}.fig-dm{fill:none;stroke:#3730a3;stroke-width:0.8;stroke-dasharray:3,2}.fig-lb{font-size:10px;fill:#3730a3;font-weight:600;font-family:sans-serif}.fig-rt{fill:none;stroke:#16a34a;stroke-width:1.3}.fig-dot{fill:#3730a3}.fig-dotg{fill:#16a34a}.fig-ln{stroke:#888;stroke-width:1;fill:none}.fig-lnb{stroke:#3730a3;stroke-width:1.3;fill:none}.fig-lng{stroke:#16a34a;stroke-width:1.3;fill:none}</style>'
@@ -2237,7 +2244,7 @@ async function chargerBanque() {
     if (q.sous_theme) html += '<span class="badge" style="background:#f0f0f5;color:#555">'+escHtml(q.sous_theme)+'</span>'
     html += '<span class="badge '+(q.difficulte==='facile'?'badge-tb':q.difficulte==='moyen'?'badge-ab':'badge-insuf')+'">'+escHtml(q.difficulte)+'</span>'
     if (estArchive) html += '<span class="badge" style="background:#f0f0f0;color:#888">📦 Archivée</span>'
-    if (hasFigSVG) html += '<span class="badge" style="background:#f0f0ff;color:#3730a3">'+(q.figure.type === 'script' ? '🧩 Script' : q.figure.type === 'grille' ? '🔲 Grille' : '🔷 Figure SVG')+'</span>'
+    if (hasFigSVG) html += '<span class="badge" style="background:#f0f0ff;color:#3730a3">'+(q.figure.type === 'script' ? '🧩 Script' : q.figure.type === 'grille' ? '🔲 Grille' : q.figure.type === 'geo' ? '🌍 Globe' : '🔷 Figure SVG')+'</span>'
     if (hasFigURL) html += '<span class="badge" style="background:#fff0f0;color:#9E2B25">🖼 Image</span>'
     if (hasTab)    html += '<span class="badge badge-banque">📊 Tableau</span>'
     html += '</div>'
