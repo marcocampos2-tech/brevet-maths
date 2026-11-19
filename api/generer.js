@@ -1,5 +1,5 @@
 import { memoireQuestionsVues, contexteEleve, noterEchec, journaliserEchec } from '../lib/questions-vues.js'
-import { tirerParFamille } from '../lib/tirage-familles.js'
+import { tirerParFamille, melanger } from '../lib/tirage-familles.js'
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -374,7 +374,7 @@ async function getBanqueSupabase(theme, sous_theme, difficulte, access_token) {
     const questions = shuffled.map(q => {
       const opts = typeof q.opts === 'string' ? JSON.parse(q.opts) : q.opts
       const correcte = opts[q.answer]
-      const shuffledOpts = [...opts].sort(() => Math.random() - 0.5)
+      const shuffledOpts = melanger(opts)
       const newAnswer = shuffledOpts.indexOf(correcte)
       return {
         id: q.id,   // identifiant questions_banque : renvoyé par le client à api/quiz-resultat.js (questions_ratees_detail)
