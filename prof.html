@@ -127,6 +127,13 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
 /* Le # est un ::before : le contenu d'un pseudo-element n'entre pas dans la selection, donc un
    simple clic sur l'id copie « 101 » et non « #101 » — directement collable dans une requete. */
 .q-card-id::before { content: '#'; opacity: 0.5; }
+/* Mobile : l'énoncé prenait la place laissée par les boutons et tenait en quelques mots par
+   ligne (constat du 19/11/2026). Sous 640 px, id et boutons passent au-dessus, sur une ligne,
+   et badges + énoncé occupent toute la largeur. */
+@media (max-width: 640px) {
+  .q-card-header { flex-direction: column-reverse; align-items: stretch; }
+  .q-card-right { flex-direction: row; align-items: center; justify-content: space-between; }
+}
 .banque-notice { font-size: 12px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; }
 .q-figure { margin: 8px 0; display: flex; justify-content: center; background: white; border-radius: 8px; padding: 10px; border: 1px solid var(--border); }
 .q-figure svg { max-width: 200px; height: auto; }
@@ -2197,17 +2204,34 @@ function renderGraphiqueProf(tableau, qId){
 // ═══════════════════════════════════════════════════
 // BANQUE
 // ═══════════════════════════════════════════════════
+// Supabase (PostgREST) renvoie au plus 1 000 lignes par requête : la banque en compte
+// plus de 3 000. Une seule requête tronquait la liste sans erreur (constat du 19/11/2026 :
+// « 3920 » introuvable sans filtre). On lit donc par tranches de 1 000 jusqu'à la fin.
+// order('id') en dernier : un ordre total, sinon deux tranches peuvent se recouvrir ou
+// sauter des lignes de même thème et difficulté.
+async function lireBanqueComplete() {
+  const TAILLE = 1000, MAX_TRANCHES = 50
+  let toutes = []
+  for (let n = 0; n < MAX_TRANCHES; n++) {
+    let query = sb.from('questions_banque').select('*').order('theme').order('difficulte').order('id')
+    if (banqueFiltre.theme) query = query.eq('theme', banqueFiltre.theme)
+    if (banqueFiltre.sousTheme) query = query.eq('sous_theme', banqueFiltre.sousTheme)
+    if (banqueFiltre.diff)  query = query.eq('difficulte', banqueFiltre.diff)
+    const { data, error } = await query.range(n * TAILLE, n * TAILLE + TAILLE - 1)
+    if (error) return { data: null, error }
+    toutes = toutes.concat(data || [])
+    if (!data || data.length < TAILLE) break
+  }
+  return { data: toutes, error: null }
+}
+
 async function chargerBanque() {
   const el = document.getElementById('banque-list')
   if (!el) return
   Object.values(PROF_CHARTS).forEach(c => c.destroy())
   PROF_CHARTS = {}
   el.innerHTML = '<div class="loader">Chargement…</div>'
-  let query = sb.from('questions_banque').select('*').order('theme').order('difficulte')
-  if (banqueFiltre.theme) query = query.eq('theme', banqueFiltre.theme)
-  if (banqueFiltre.sousTheme) query = query.eq('sous_theme', banqueFiltre.sousTheme)
-  if (banqueFiltre.diff)  query = query.eq('difficulte', banqueFiltre.diff)
-  const { data, error } = await query
+  const { data, error } = await lireBanqueComplete()
   if (error) { el.innerHTML='<div class="empty">Erreur : '+escHtml(error.message)+'</div>'; return }
   let filtered = data || []
   if (banqueFiltre.search) {
