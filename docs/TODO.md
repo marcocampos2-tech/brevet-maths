@@ -66,7 +66,6 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 1. Angles — périmètre validé 02/09, calibrage facile/moyen/difficile à faire
 2. Tests et nettoyages après les bascules
     - Tester en réel le rendu de « ² » dans les explications Pythagore d'Aires et volumes (ids 2841, 2842, 2843, 2850, 1163)
-    - Supprimer les tables `backup_explications_pyth_20261013` et `backup_explications_thales_20261013` quand CM le décide
     - [ ] Test sur téléphone : une question de Transformations, de Fractions et d'Arithmétique (explications uniformisées le 18/11/2026), plus les figures `grille` des trois niveaux de Transformations (bascule du 18/11/2026, 103 actives)
     - [ ] Supprimer les tables `questions_banque_backup_transformations_20261116` et `questions_banque_backup_transformations_20261118` quand CM le décide
     - [ ] Supprimer la table `backup_explications_format_20261118` (553 lignes, sauvegarde de l'uniformisation des explications) quand CM le décide
@@ -80,20 +79,19 @@ Offre Libre gratuite à vie ; seul Suivi (7,90€/mois) devient payant à l'éch
 4. Représentation de l'espace — 75 actives depuis le 19/11/2026 (25 / 25 / 25, 8 familles, ids 3888 à 3962) : globe `geo`, tableaux de villes réelles, angle au centre, sections de sphère (Moyen et Difficile)
     - [ ] Test sur téléphone : figures `geo` des trois niveaux, tableaux de villes (ex. 3899, 3942), énoncés V/F, sections de sphère et Difficile Pythagore (id 3937)
     - [ ] Planisphère (`vue: "planisphere"`, rectangulaire ou ovale) et continents (`fond: "continents"`) : prévus dans `js/figure-geo.js`, non décidés, non construits
-5. Sous-thèmes de prérequis validés, pas encore construits : Proportionnalité, Opérations, Opérations combinées, Angles (Fractions et Nombres relatifs sont faits)
+5. Sous-thèmes de prérequis : seul Angles reste à construire (cf. point 1). Proportionnalité, Fractions et Nombres relatifs sont faits ; Opérations et Opérations combinées sont couvertes par Nombres relatifs (choix B de CM, 05/10/2026), à redécouper en sous-thèmes distincts si les résultats des élèves le justifient
 8. Mention "figure pas en vraie grandeur" — rétroactivité sous-thèmes basculés avant 27/08, décision ouverte
 9. Dénominateur sous-thèmes possiblement codé en dur — à généraliser en COUNT dynamique
     ⚠️ **Contradiction à arbitrer par CM (constatée le 30/09/2026, non tranchée)** : ce point traite le `SOUS_THEMES` codé en dur comme une dette à généraliser, alors que la refonte de `suivi-parent.html` (PR #43) l'avait retenu comme un écart assumé (pas de `COUNT` dynamique, lecture publique de `questions_banque` retirée par l'audit sécurité). Écart assumé ou dette ?
 10. `api/generer.js` — "Triangles semblables" absent de `chapitres['Espace et géométrie']`
 11. Refonte `examen_questions` (chantier 2) — jamais entamée, 180 questions non auditées, pas de dédoublonnage par énoncé
     - À rappeler lors de la refonte (03/11/2026) : respecter la structure officielle de l'épreuve de maths du DNB (candidats scolaires) — 2 h, coefficient 2, total /20 = Partie 1 « automatismes » /6 + Partie 2 « raisonnement et résolution de problème » /14. À confronter à la répartition actuelle de l'examen blanc en ligne (parties, 20 questions) et à décider si la répartition /6 + /14 doit se refléter dans la structure des parties.
-12. Stratification par difficulté inopérante dans `api/examen.js` (l. 127-130) — tri après `sort(() => Math.random()-0.5)`, tirage aléatoire pur en pratique
-13. Shuffle biaisé (`sort(() => Math.random() - 0.5)`) — reste dans le mélange des options (`api/generer.js` l. 367), `api/examen.js` (l. 127-130 et 152) et `questions.js` (l. 234)
+12. Stratification par difficulté inopérante dans `api/examen.js` (l. 134-137) — tri après `sort(() => Math.random()-0.5)`, tirage aléatoire pur en pratique
+13. Shuffle biaisé (`sort(() => Math.random() - 0.5)`) — reste dans le mélange des options (`api/generer.js` l. 377), `api/examen.js` (l. 134-137 et 159) et `questions.js` (l. 234)
 14. **Audit doublons numériques (22/09/2026)** — 13 questions remontées par script SQL, 6 corrigées en base directement (`examen_questions` 116/122/125/186, `questions_banque` 234/627 — bonne réponse dupliquée dans les options). Sur `questions_banque` 234, premier distracteur proposé (`6/8`) lui-même invalide — simplification incomplète de `36/48`, donc toujours égal à `3/4` — corrigé en `4/3` (inversion numérateur/dénominateur). Audit relancé après corrections : 8 lignes restantes, toutes des cas déjà identifiés, aucune nouvelle anomalie, bonne réponse distincte des doublons dans tous les cas restants. Reste pour la refonte :
     - `examen_questions` 181 (roue de loterie, 2/8 vs 1/4) — les deux options sont mathématiquement justes et l'explication le reconnaît elle-même ; à reformuler (ex. demander la forme irréductible), pas une simple substitution d'option
     - `examen_questions` 113 (126/180) — faux positif assumé : les 4 options valent 0,7, mais c'est le principe même de la question (identifier la seule écriture irréductible)
     - Doublons bénins entre deux mauvaises réponses uniquement, bonne réponse toujours unique, aucun élève pénalisé : `examen_questions` 106, 120, 122, 125 ; `questions_banque` 492, 772
-15. **Pythagore/difficile — aucune figure** (30 questions sans dessin, choix assumé du 12/10/2026). Si des figures y sont voulues un jour, il faut un nouveau type de figure (autre PR). Thalès/difficile : 15 questions sur 30 sans figure.
 
 ---
 
