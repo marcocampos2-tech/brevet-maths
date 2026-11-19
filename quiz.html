@@ -618,8 +618,10 @@ function populateFocusBar(){
 
 // Menu d'accueil : le formulaire du quiz (#config) n'est affiché qu'après un
 // clic sur l'entrée Quiz. bloquerConfig()/debloquerConfig() continuent de ne
-// gérer QUE #config pendant une session — le menu reste caché tant qu'un quiz
-// est ouvert, et c'est nouvelleRonde() qui ramène au menu à la fin.
+// gérer QUE #config — le menu reste caché pendant toute la durée d'un quiz ET
+// à sa fin : « Nouvelle ronde » relance une ronde et laisse donc l'élève sur
+// le formulaire (c'est aussi là qu'il change de sous-thème). Le menu ne
+// revient que par le bouton « Retour ».
 function ouvrirQuiz(){
   document.getElementById('menu').style.display='none'
   document.getElementById('config').style.display=''
@@ -2176,7 +2178,7 @@ async function nouvelleRonde(){
   deblocageCache={}
   quizEnCours=false;arreterChrono()
   document.getElementById('quiz-area').innerHTML=''
-  debloquerConfig();retourMenu()
+  debloquerConfig();window.scrollTo({top:0,behavior:'smooth'})
 }
 
 async function terminer(){
