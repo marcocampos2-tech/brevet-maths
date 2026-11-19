@@ -326,9 +326,9 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 
 ### Reste ouvert
 
-* **Découpage en tiers inopérant** (`api/examen.js`) : `acc`/`std`/`exp` sont découpés *après* `sort(() => Math.random() - 0.5)`, la stratification par difficulté ne produit rien. C'est aussi ce qui impose le seuil à 6 — le corriger rendrait le 9ᵉ examen sans recouvrement. À traiter avec le vrai sujet derrière : stratification réelle par difficulté, ou tirage aléatoire assumé.
+* **Découpage en tiers inopérant** (`api/examen.js`) : `acc`/`std`/`exp` sont découpés *après* un mélange complet du pool (`melanger`), la stratification par difficulté ne produit rien. C'est aussi ce qui impose le seuil à 6 — le corriger rendrait le 9ᵉ examen sans recouvrement. À traiter avec le vrai sujet derrière : stratification réelle par difficulté, ou tirage aléatoire assumé.
 * **Pas de dédoublonnage par énoncé sur `examen_questions`**, contrairement à `questions_banque`. Si deux lignes portent le même texte sous des ids différents, marquer l'une ne protège pas de l'autre.
-* **`sort(() => Math.random() - 0.5)`** est un mélange biaisé, motif présent dans tout le dépôt.
+* **Mélanges : toujours `melanger()` de `lib/tirage-familles.js`** (Fisher-Yates, uniforme). `sort(() => Math.random() - 0.5)` est biaisé (sur 4 options, la première reste au rang 1 environ 36 % du temps au lieu de 25 %) ; retiré de `api/generer.js` (options du quiz) et de `api/examen.js` le 19/11/2026. Reste seulement dans `questions.js`, fichier inutilisé (`docs/TODO.md`).
 
 ## Note — Bilan manuel (`api/email.js`, type `bilan`) et désabonnement
 

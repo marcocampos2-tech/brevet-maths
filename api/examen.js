@@ -1,5 +1,6 @@
 import { memoireQuestionsVues, contexteEleve, noterEchec, journaliserEchec } from '../lib/questions-vues.js'
 import { corrigerExamen } from '../lib/examen-score.js'
+import { melanger } from '../lib/tirage-familles.js'
 import { verifierGateEleve } from '../lib/auth-eleve.js'
 import { verifierToken, verifierProf } from '../lib/auth-token.js'
 import { apresBascule, estVerrouille } from '../lib/gating.js'
@@ -131,10 +132,10 @@ export default async function handler(req, res) {
         const data = pools[partie]
         const total = data.length
         const tiers = Math.floor(total / 3)
-        const shuffled = data.sort(() => Math.random() - 0.5)
-        const acc = shuffled.slice(0, tiers).sort(() => Math.random() - 0.5).slice(0, 2)
-        const std = shuffled.slice(tiers, tiers * 2).sort(() => Math.random() - 0.5).slice(0, 2)
-        const exp = shuffled.slice(tiers * 2).sort(() => Math.random() - 0.5).slice(0, 1)
+        const shuffled = melanger(data)
+        const acc = melanger(shuffled.slice(0, tiers)).slice(0, 2)
+        const std = melanger(shuffled.slice(tiers, tiers * 2)).slice(0, 2)
+        const exp = melanger(shuffled.slice(tiers * 2)).slice(0, 1)
         toutesLesQuestions = toutesLesQuestions.concat(acc).concat(std).concat(exp)
       }
 
@@ -156,7 +157,7 @@ export default async function handler(req, res) {
         }
       }
 
-      const questionsFinales = toutesLesQuestions.sort(() => Math.random() - 0.5).map(mapperQuestionPourClient)
+      const questionsFinales = melanger(toutesLesQuestions).map(mapperQuestionPourClient)
 
       // ── Progression : bootstrap d'une nouvelle tentative ──────────
       // tentative_id/heure_fin ne sont plus jamais modifiables par le client
