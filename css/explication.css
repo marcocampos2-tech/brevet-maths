@@ -1,0 +1,9 @@
+/* Explications de questions (js/explication.js) : un espace entre chaque idée,
+   la ligne « Attention : » mise à part par un espace et un trait pointillé.
+   Le bloc est placé dans .explication / .explication-aucune, qui gardent leurs
+   couleurs. white-space:normal : les lignes sont déjà découpées en blocs. */
+.expl-corps { margin-top: 12px; white-space: normal; }
+.expl-ligne { margin-bottom: 9px; }
+.expl-ligne:last-child { margin-bottom: 0; }
+.expl-attention { margin-top: 14px; padding-top: 9px; border-top: 1px dashed #C9BFA8; }
+.expl-ligne:first-child.expl-attention { margin-top: 0; padding-top: 0; border-top: 0; }
