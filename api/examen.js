@@ -293,12 +293,15 @@ export default async function handler(req, res) {
         // que le timeout normal côté client.
         const reponsesValides = filtrerReponsesValides(reponsesStockees, questionIds)
         const { nbOk, themes, questionsRatees, correction } = await corrigerExamen({ reponses: reponsesValides, supabaseUrl: SUPA_URL, headers })
+        // Durée = jusqu'à la dernière activité de l'élève (updated_at), pas 40:00
+        // d'office : un élève parti à 12 min n'a pas passé 40 min sur l'examen.
+        const tempsAuto = dureeJusquaDerniereActivite(prog)
 
         const result = await enregistrerExamen({
           user_id: userId, email: req.body.email || '', prenom: req.body.prenom || '',
           score: nbOk, total: 20, scores_themes: themes, questions_ratees: questionsRatees,
           questions_posees: reponsesValides.map(r => r.id),
-          temps_secondes: DUREE_EXAMEN_S,
+          temps_secondes: tempsAuto,
           tentative_id: prog.tentative_id, abandonne: false
         })
         if (result.error) {
@@ -311,7 +314,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           success: true, encours: true, soumisAuto: true,
           questions: questionsFinales, reponses: reponsesStockees,
-          score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: DUREE_EXAMEN_S,
+          score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: tempsAuto,
           duree_s: DUREE_EXAMEN_S, maintenant_serveur: Date.now()
         })
       }
@@ -524,6 +527,24 @@ function filtrerReponsesValides(reponses, questionIds) {
 // fausse : un échec de lecture n'applique jamais l'échéance (fail-open).
 function limiteReponsesMs(heureFin) {
   return new Date(heureFin).getTime() + MARGE_GRACE_MS
+}
+
+// Date lue comme UTC même si la colonne n'a pas de fuseau (« 2026-11-21T10:00:00.123 »
+// sans Z ni décalage) : sans cela, new Date() la prendrait pour une heure locale.
+function dateUTCms(valeur) {
+  const t = typeof valeur === 'string' && /T/.test(valeur) && !/(Z|[+-]\d{2}(:?\d{2})?)$/.test(valeur) ? valeur + 'Z' : valeur
+  return new Date(t).getTime()
+}
+
+// Durée à enregistrer pour une soumission automatique de 'reprise' : du début
+// (heure_fin − durée) à la dernière activité (examens_progression.updated_at,
+// écrit par 'demarrer' puis par chaque 'progression'), bornée à 0–40:00.
+// Date de dernière activité illisible ou absente : 40:00 comme avant.
+function dureeJusquaDerniereActivite(prog) {
+  const fin = dateUTCms(prog.heure_fin)
+  const activite = dateUTCms(prog.updated_at)
+  if (!Number.isFinite(fin) || !Number.isFinite(activite)) return DUREE_EXAMEN_S
+  return Math.max(0, Math.min(DUREE_EXAMEN_S, Math.floor((activite - (fin - DUREE_EXAMEN_MS)) / 1000)))
 }
 
 function journaliserEchecProgression(operation, statut, corps) {
