@@ -12,6 +12,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="/js/exposants.js?v=1"></script>
 <script src="/js/explication.js?v=1"></script>
+<script src="/js/chrono.js?v=1"></script>
 <script src="/js/figure-script.js?v=2"></script>
 <script src="/js/figure-grille.js?v=1"></script>
 <script src="/js/figure-geo.js?v=1"></script>
@@ -397,7 +398,11 @@ let accessToken=null
 // : sauvegarde lancée à la dernière réponse validée (valider()), attendue avant
 // de quitter ; « Voir mon résultat » n'en lance jamais une deuxième.
 let corpsResultat=null, quizTermine=false, resultatConfirme=false, promesseSauvegarde=null, resultatAffiche=false
-let chronoInterval=null, chronoSecondes=0, sourceQuestions='ia'
+// Durée du quiz : horodatage (js/chrono.js), pas un compteur de ticks — un écran
+// verrouillé suspend setInterval sur mobile. chronoInterval ne sert plus qu'à
+// rafraîchir l'affichage mm:ss.
+const chrono=Chrono.creer()
+let chronoInterval=null, sourceQuestions='ia'
 let quizEnCours=false
 let modeAffichage={}, charts={}
 let deblocageCache={}
@@ -582,7 +587,7 @@ async function sauvegarderAbandonne() {
         user_id: user.id, email: user.email, prenom,
         theme, sous_theme: sousTheme, difficulte: diff,
         abandonne: true,
-        temps_secondes: chronoSecondes,
+        temps_secondes: chrono.ecoule(),
         source_questions: sourceQuestions,
         client_key: crypto.randomUUID() // même clé d'idempotence que sauvegarder() — écrit dans la même table via le même endpoint
       }),
@@ -919,8 +924,10 @@ async function logout(){
   }
 }
 
-function demarrerChrono(){chronoSecondes=0;chronoInterval=setInterval(()=>{chronoSecondes++;const m=Math.floor(chronoSecondes/60).toString().padStart(2,'0');const s=(chronoSecondes%60).toString().padStart(2,'0');const el=document.getElementById('focus-chrono-text');if(el)el.textContent=`${m}:${s}`},1000)}
-function arreterChrono(){clearInterval(chronoInterval)}
+function afficherChrono(){const t=chrono.ecoule();const m=Math.floor(t/60).toString().padStart(2,'0');const s=(t%60).toString().padStart(2,'0');const el=document.getElementById('focus-chrono-text');if(el)el.textContent=`${m}:${s}`}
+// Un seul intervalle à la fois ; l'affichage est recalculé depuis l'heure de départ à chaque tick (il se recale seul au retour de veille).
+function demarrerChrono(){clearInterval(chronoInterval);chrono.demarrer();chronoInterval=setInterval(afficherChrono,1000)}
+function arreterChrono(){clearInterval(chronoInterval);chrono.figer()}
 function formatTemps(secondes){const m=Math.floor(secondes/60);const s=secondes%60;if(m===0)return `${s} sec`;return `${m} min ${s} sec`}
 
 // Préchauffage des fonctions serverless : un OPTIONS part au démarrage du quiz
@@ -2059,7 +2066,7 @@ function renderResultats() {
       <div class="results-sep"></div>
       <div class="results-detail">
         <div class="results-mention-sm">${mention}</div>
-        <div class="results-meta-sm">${themeCourt} · ${diff} · ${formatTemps(chronoSecondes)}</div>
+        <div class="results-meta-sm">${themeCourt} · ${diff} · ${formatTemps(chrono.ecoule())}</div>
         <div id="statut-enregistrement">${rendreStatutEnregistrement('enCours')}</div>
       </div>
     </div>
@@ -2128,7 +2135,7 @@ function construireCorpsResultat() {
     user_id: user.id, email: user.email, prenom,
     theme, sous_theme: sousTheme, difficulte: diff,
     questions, reponses: reponsesEnvoyees,
-    temps_secondes: chronoSecondes,
+    temps_secondes: chrono.ecoule(), // figé par arreterChrono() à la dernière réponse
     source_questions: sourceQuestions,
     client_key: crypto.randomUUID() // clé d'idempotence : ferme le TOCTOU via la contrainte unique côté base
   }
