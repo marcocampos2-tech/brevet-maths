@@ -8,6 +8,12 @@ import { apresBascule, estVerrouille } from '../lib/gating.js'
 const ACTIONS_VALIDES = ['demarrer', 'progression', 'reprise', 'enregistrer']
 const DUREE_EXAMEN_MS = 40 * 60 * 1000
 const DUREE_EXAMEN_S = 40 * 60
+// Marge de grâce après heure_fin (21/11/2026) : jusqu'à heure_fin + 60 s, le
+// serveur accepte encore des réponses (latence réseau, appli qui se réveille
+// d'une veille juste avant l'échéance). Passé ce délai, 'progression' refuse
+// toute nouvelle réponse et 'enregistrer' ne compte que celles déjà stockées.
+const MARGE_GRACE_S = 60
+const MARGE_GRACE_MS = MARGE_GRACE_S * 1000
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -187,7 +193,7 @@ export default async function handler(req, res) {
         console.error('[examens_progression] écriture demarrer échouée:', e.message)
       }
 
-      return res.status(200).json({ success: true, questions: questionsFinales, vues: diag, tentative_id: tentativeId, heure_fin: heureFin })
+      return res.status(200).json({ success: true, questions: questionsFinales, vues: diag, tentative_id: tentativeId, heure_fin: heureFin, duree_s: DUREE_EXAMEN_S, maintenant_serveur: Date.now() })
     } catch (e) {
       console.error('[demarrer] échec inattendu:', e.message)
       return res.status(500).json({ error: e.message })
@@ -205,14 +211,29 @@ export default async function handler(req, res) {
       const { tentative_id, reponses } = req.body
       if (!tentative_id || !Array.isArray(reponses)) return res.status(400).json({ error: 'Paramètres manquants' })
 
-      const r = await fetch(`${SUPA_URL}/rest/v1/examens_progression?user_id=eq.${userId}&tentative_id=eq.${tentative_id}`, {
+      // Échéance imposée par le serveur : le filtre heure_fin >= maintenant − marge
+      // est dans le PATCH lui-même (une seule requête atomique, aucune lecture
+      // préalable). Passé heure_fin + MARGE_GRACE_S, aucune ligne ne correspond :
+      // les réponses stockées restent figées.
+      const limiteIso = new Date(Date.now() - MARGE_GRACE_MS).toISOString()
+      const r = await fetch(`${SUPA_URL}/rest/v1/examens_progression?user_id=eq.${userId}&tentative_id=eq.${tentative_id}&heure_fin=gte.${encodeURIComponent(limiteIso)}&select=tentative_id`, {
         method: 'PATCH',
-        headers: { ...headers, 'Prefer': 'return=minimal' },
+        headers: { ...headers, 'Prefer': 'return=representation' },
         body: JSON.stringify({ reponses, updated_at: new Date().toISOString() })
       })
       if (!r.ok) {
         journaliserEchecProgression('patch', r.status, await r.text())
         return res.status(500).json({ error: 'Sauvegarde échouée' })
+      }
+      const modifiees = await r.json().catch(() => null)
+      if (Array.isArray(modifiees) && modifiees.length === 0) {
+        // Aucune ligne modifiée : échéance dépassée, ou ligne absente (tentative
+        // remplacée, écriture de 'demarrer' ratée) — ce dernier cas reste un
+        // succès silencieux comme avant ce contrôle.
+        const prog = await lireProgression(userId, SUPA_URL, headers, tentative_id)
+        if (prog && Date.now() > limiteReponsesMs(prog.heure_fin)) {
+          return res.status(409).json({ success: false, code: 'echeance_depassee', error: "Temps écoulé : cette réponse n'est plus enregistrée." })
+        }
       }
       return res.status(200).json({ success: true })
     } catch (e) {
@@ -272,12 +293,15 @@ export default async function handler(req, res) {
         // que le timeout normal côté client.
         const reponsesValides = filtrerReponsesValides(reponsesStockees, questionIds)
         const { nbOk, themes, questionsRatees, correction } = await corrigerExamen({ reponses: reponsesValides, supabaseUrl: SUPA_URL, headers })
+        // Durée = jusqu'à la dernière activité de l'élève (updated_at), pas 40:00
+        // d'office : un élève parti à 12 min n'a pas passé 40 min sur l'examen.
+        const tempsAuto = dureeJusquaDerniereActivite(prog)
 
         const result = await enregistrerExamen({
           user_id: userId, email: req.body.email || '', prenom: req.body.prenom || '',
           score: nbOk, total: 20, scores_themes: themes, questions_ratees: questionsRatees,
           questions_posees: reponsesValides.map(r => r.id),
-          temps_secondes: DUREE_EXAMEN_S,
+          temps_secondes: tempsAuto,
           tentative_id: prog.tentative_id, abandonne: false
         })
         if (result.error) {
@@ -290,14 +314,20 @@ export default async function handler(req, res) {
         return res.status(200).json({
           success: true, encours: true, soumisAuto: true,
           questions: questionsFinales, reponses: reponsesStockees,
-          score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: DUREE_EXAMEN_S
+          score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: tempsAuto,
+          duree_s: DUREE_EXAMEN_S, maintenant_serveur: Date.now()
         })
       }
 
       return res.status(200).json({
         success: true, encours: true,
         questions: questionsFinales, reponses: reponsesStockees,
-        heure_fin: prog.heure_fin, tentative_id: prog.tentative_id
+        heure_fin: prog.heure_fin, tentative_id: prog.tentative_id,
+        duree_s: DUREE_EXAMEN_S, // source unique de la durée : le client n'en code aucune
+        // Heure du serveur à l'envoi : le client en déduit son décalage d'horloge
+        // (cf. examen.html, decalageHorloge) pour afficher et déclencher l'échéance
+        // sur l'heure du serveur, pas sur celle de l'appareil.
+        maintenant_serveur: Date.now()
       })
     } catch (e) {
       console.error('[reprise] échec inattendu:', e.message)
@@ -373,14 +403,23 @@ export default async function handler(req, res) {
 
       if (!reponses || !Array.isArray(reponses)) return res.status(400).json({ error: 'Réponses manquantes' })
 
+      // Soumission au-delà de heure_fin + MARGE_GRACE_S : seules comptent les
+      // réponses déjà stockées dans examens_progression (que 'progression'
+      // refuse de modifier après cette limite), jamais celles du corps. Dans la
+      // marge, ou sans ligne de progression (fail-open, comme pour le temps),
+      // le corps est pris tel quel.
+      const apresLimite = !!(prog && prog.heure_fin && Date.now() > limiteReponsesMs(prog.heure_fin))
+      const reponsesSoumises = apresLimite ? (Array.isArray(prog.reponses) ? prog.reponses : []) : reponses
+      if (apresLimite) console.log('[enregistrer] soumission après heure_fin + marge : réponses stockées seules, tentative_id=' + tentative_id)
+
       // Écarte les ids absents de question_ids (tentative falsifiée) et les
       // doublons — garde la première occurrence (répéter l'id d'une question
       // facile pour gonfler le score). Fail-open (reponses non filtrées) si
       // la ligne de progression est absente : même compromis que pour le
       // temps ci-dessus.
       const reponsesValides = prog && Array.isArray(prog.question_ids)
-        ? filtrerReponsesValides(reponses, prog.question_ids)
-        : reponses
+        ? filtrerReponsesValides(reponsesSoumises, prog.question_ids)
+        : reponsesSoumises
 
       const { nbOk, themes, questionsRatees, correction } = await corrigerExamen({ reponses: reponsesValides, supabaseUrl: SUPA_URL, headers })
 
@@ -399,7 +438,7 @@ export default async function handler(req, res) {
       // abandon (cf. ci-dessus).
       await supprimerProgression(userId, tentative_id, SUPA_URL, headers)
 
-      return res.status(200).json({ success: true, score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: tempsSecondesServeur })
+      return res.status(200).json({ success: true, score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: tempsSecondesServeur, ...(apresLimite ? { hors_delai: true } : {}) })
     } catch (e) {
       console.error('[enregistrer] échec inattendu:', e.message)
       return res.status(500).json({ error: e.message })
@@ -481,6 +520,31 @@ function filtrerReponsesValides(reponses, questionIds) {
     vues.add(r.id)
     return true
   })
+}
+
+// Instant (ms) au-delà duquel plus aucune réponse n'est acceptée : heure_fin +
+// marge de grâce. NaN si heure_fin est illisible, ce qui rend toute comparaison
+// fausse : un échec de lecture n'applique jamais l'échéance (fail-open).
+function limiteReponsesMs(heureFin) {
+  return dateUTCms(heureFin) + MARGE_GRACE_MS
+}
+
+// Date lue comme UTC même si la colonne n'a pas de fuseau (« 2026-11-21T10:00:00.123 »
+// sans Z ni décalage) : sans cela, new Date() la prendrait pour une heure locale.
+function dateUTCms(valeur) {
+  const t = typeof valeur === 'string' && /T/.test(valeur) && !/(Z|[+-]\d{2}(:?\d{2})?)$/.test(valeur) ? valeur + 'Z' : valeur
+  return new Date(t).getTime()
+}
+
+// Durée à enregistrer pour une soumission automatique de 'reprise' : du début
+// (heure_fin − durée) à la dernière activité (examens_progression.updated_at,
+// écrit par 'demarrer' puis par chaque 'progression'), bornée à 0–40:00.
+// Date de dernière activité illisible ou absente : 40:00 comme avant.
+function dureeJusquaDerniereActivite(prog) {
+  const fin = dateUTCms(prog.heure_fin)
+  const activite = dateUTCms(prog.updated_at)
+  if (!Number.isFinite(fin) || !Number.isFinite(activite)) return DUREE_EXAMEN_S
+  return Math.max(0, Math.min(DUREE_EXAMEN_S, Math.floor((activite - (fin - DUREE_EXAMEN_MS)) / 1000)))
 }
 
 function journaliserEchecProgression(operation, statut, corps) {
