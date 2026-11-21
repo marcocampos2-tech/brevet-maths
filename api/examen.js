@@ -323,10 +323,10 @@ export default async function handler(req, res) {
         success: true, encours: true,
         questions: questionsFinales, reponses: reponsesStockees,
         heure_fin: prog.heure_fin, tentative_id: prog.tentative_id,
+        duree_s: DUREE_EXAMEN_S, // source unique de la durée : le client n'en code aucune
         // Heure du serveur à l'envoi : le client en déduit son décalage d'horloge
         // (cf. examen.html, decalageHorloge) pour afficher et déclencher l'échéance
         // sur l'heure du serveur, pas sur celle de l'appareil.
-        duree_s: DUREE_EXAMEN_S, // source unique de la durée (cf. DUREE_EXAMEN_S) : le client n'en code aucune
         maintenant_serveur: Date.now()
       })
     } catch (e) {
@@ -526,7 +526,7 @@ function filtrerReponsesValides(reponses, questionIds) {
 // marge de grâce. NaN si heure_fin est illisible, ce qui rend toute comparaison
 // fausse : un échec de lecture n'applique jamais l'échéance (fail-open).
 function limiteReponsesMs(heureFin) {
-  return new Date(heureFin).getTime() + MARGE_GRACE_MS
+  return dateUTCms(heureFin) + MARGE_GRACE_MS
 }
 
 // Date lue comme UTC même si la colonne n'a pas de fuseau (« 2026-11-21T10:00:00.123 »
