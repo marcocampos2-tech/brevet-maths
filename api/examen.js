@@ -193,7 +193,7 @@ export default async function handler(req, res) {
         console.error('[examens_progression] écriture demarrer échouée:', e.message)
       }
 
-      return res.status(200).json({ success: true, questions: questionsFinales, vues: diag, tentative_id: tentativeId, heure_fin: heureFin })
+      return res.status(200).json({ success: true, questions: questionsFinales, vues: diag, tentative_id: tentativeId, heure_fin: heureFin, maintenant_serveur: Date.now() })
     } catch (e) {
       console.error('[demarrer] échec inattendu:', e.message)
       return res.status(500).json({ error: e.message })
@@ -311,14 +311,19 @@ export default async function handler(req, res) {
         return res.status(200).json({
           success: true, encours: true, soumisAuto: true,
           questions: questionsFinales, reponses: reponsesStockees,
-          score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: DUREE_EXAMEN_S
+          score: nbOk, total: 20, correction, themes, questionsRatees, temps_secondes: DUREE_EXAMEN_S,
+          maintenant_serveur: Date.now()
         })
       }
 
       return res.status(200).json({
         success: true, encours: true,
         questions: questionsFinales, reponses: reponsesStockees,
-        heure_fin: prog.heure_fin, tentative_id: prog.tentative_id
+        heure_fin: prog.heure_fin, tentative_id: prog.tentative_id,
+        // Heure du serveur à l'envoi : le client en déduit son décalage d'horloge
+        // (cf. examen.html, decalageHorloge) pour afficher et déclencher l'échéance
+        // sur l'heure du serveur, pas sur celle de l'appareil.
+        maintenant_serveur: Date.now()
       })
     } catch (e) {
       console.error('[reprise] échec inattendu:', e.message)
