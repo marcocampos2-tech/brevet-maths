@@ -1601,6 +1601,7 @@ function figurePythagoreComposeSVG(f,maxW){
 // Fenêtre xmin/xmax/ymin/ymax entiers ; courbes (1 ou 2) = "points" triés par x (lisse:true = cubique monotone passant exactement
 // par tous les points, sinon polyligne) ou "droite" {a,b} (y = ax+b coupée aux bords) ; points marqués {nom,x,y} (nom seul, sans coordonnées) ;
 // pas_etiquette_x / pas_etiquette_y facultatifs (entiers, défaut 1). Type, fenêtre, courbes ou points invalides : chaîne vide, jamais d'exception.
+// axe_x / axe_y facultatifs : titre de l'axe horizontal / vertical, avec son unité (« prix (€) »), 16 caractères au plus, sans < > & " ; invalide ou trop large : chaîne vide.
 // Même logique dans quiz.html, prof.html et examen.html (figureCourbeSVG) : à garder identiques.
 function figureCourbeSVG(f,maxW){
   try{
@@ -1612,6 +1613,10 @@ function figureCourbeSVG(f,maxW){
     var pasX=1,pasY=1
     if(f.pas_etiquette_x!==undefined&&f.pas_etiquette_x!==null){pasX=ent(f.pas_etiquette_x);if(pasX===null||pasX<1||pasX>50)return ''}
     if(f.pas_etiquette_y!==undefined&&f.pas_etiquette_y!==null){pasY=ent(f.pas_etiquette_y);if(pasY===null||pasY<1||pasY>50)return ''}
+    var titX=null,titY=null
+    var titreOk=function(v){return typeof v==='string'&&v.trim()!==''&&v.trim().length<=16&&!/[<>&"]/.test(v)}
+    if(f.axe_x!==undefined&&f.axe_x!==null){if(!titreOk(f.axe_x))return '';titX=f.axe_x.trim()}
+    if(f.axe_y!==undefined&&f.axe_y!==null){if(!titreOk(f.axe_y))return '';titY=f.axe_y.trim()}
     var nomOk=function(s){return typeof s==='string'&&/^[A-Za-z][A-Za-z0-9]{0,2}$/.test(s)}
     if(!Array.isArray(f.courbes)||f.courbes.length<1||f.courbes.length>2)return ''
     var pm=f.points===undefined||f.points===null?[]:f.points
@@ -1622,7 +1627,7 @@ function figureCourbeSVG(f,maxW){
     var uy=Math.floor(Math.min(250/nx,250/ny,40)),ux=uy
     if(ny>2*nx)ux=Math.floor(Math.min(250/nx,40,uy*Math.min(ny/nx,3)))
     if(Math.min(ux,uy)<5)return ''
-    var ml=32,mr=20,mt=20,mb=28
+    var ml=32,mr=20,mt=titY!==null?34:20,mb=titX!==null?44:28
     var W=nx*ux+ml+mr,H=ny*uy+mt+mb
     var r=function(n){return Math.round(n*100)/100}
     var X=function(x){return ml+(x-xmin)*ux},Y=function(y){return mt+(ymax-y)*uy}
@@ -1746,6 +1751,20 @@ function figureCourbeSVG(f,maxW){
       rects.push(best.R)
       ticks+=T(t,best.cd[0],best.cd[1],{anchor:best.cd[2],halo:false})
     }
+    // titres d'axes : obstacles posés avant les graduations ; y au-dessus de l'axe vertical (à droite de la flèche), x sous la fenêtre, aligné à droite du bout de l'axe
+    var titres='',wTit=function(v){return v.length*7.4+4}
+    if(titY!==null){
+      var xTy=axeX+10,yTy=haut-14,wTy=wTit(titY)
+      if(xTy<4||xTy+wTy>W-4)return ''
+      rects.push({x1:xTy,x2:xTy+wTy,y1:yTy-12,y2:yTy+4})
+      titres+=T(titY,xTy,yTy,{anchor:'start',size:12})
+    }
+    if(titX!==null){
+      var xTx=droite+12,yTx=bas+36,wTx=wTit(titX)
+      if(xTx-wTx<4||xTx>W-4)return ''
+      rects.push({x1:xTx-wTx,x2:xTx,y1:yTx-12,y2:yTx+4})
+      titres+=T(titX,xTx,yTx,{anchor:'end',size:12})
+    }
     if(origine)posTick('0',[[axeX-6,axeY+15,'end'],[axeX+6,axeY+15,'start'],[axeX-6,axeY-6,'end'],[axeX+6,axeY-6,'start']])
     for(var tx=xmin;tx<=xmax;tx++){
       if(tx%pasX!==0||(tx===0&&origine))continue
@@ -1788,12 +1807,12 @@ function figureCourbeSVG(f,maxW){
     var fl='<polygon points="'+r(bx)+','+r(axeY)+' '+r(bx-9)+','+r(axeY-4)+' '+r(bx-9)+','+r(axeY+4)+'" fill="#14304F"/>'
       +'<polygon points="'+r(axeX)+','+r(by)+' '+r(axeX-4)+','+r(by+9)+' '+r(axeX+4)+','+r(by+9)+'" fill="#14304F"/>'
     var id='fg-crb-'+(figureCourbeSVG._n=(figureCourbeSVG._n||0)+1)
-    var out='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="width:100%;max-width:'+Math.min(maxW||400,W)+'px;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Représentation graphique de '+tr.map(function(o){return o.nom}).join(' et ')+'" data-ux="'+ux+'" data-uy="'+uy+'" data-ox="'+r(X(0))+'" data-oy="'+r(Y(0))+'">'
+    var out='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="width:100%;max-width:'+Math.min(maxW||400,W)+'px;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Représentation graphique de '+tr.map(function(o){return o.nom}).join(' et ')+(titX!==null||titY!==null?' ('+[titY!==null?'axe vertical : '+titY:'',titX!==null?'axe horizontal : '+titX:''].filter(Boolean).join(', ')+')':'')+'" data-ux="'+ux+'" data-uy="'+uy+'" data-ox="'+r(X(0))+'" data-oy="'+r(Y(0))+'">'
     out+='<defs><clipPath id="'+id+'"><rect x="'+r(gauche)+'" y="'+r(haut)+'" width="'+(nx*ux)+'" height="'+(ny*uy)+'"/></clipPath></defs>'
     out+='<rect width="'+W+'" height="'+H+'" rx="10" fill="#fff"/>'
     out+='<g stroke="#D3DDEE" stroke-width="1">'+grille+'</g>'
     out+='<g stroke="#14304F" stroke-width="1.8" stroke-linecap="round"><line x1="'+r(gauche)+'" y1="'+r(axeY)+'" x2="'+r(bx-1)+'" y2="'+r(axeY)+'"/><line x1="'+r(axeX)+'" y1="'+r(bas)+'" x2="'+r(axeX)+'" y2="'+r(by+1)+'"/></g>'+fl
-    out+=ticks
+    out+=ticks+titres
     out+='<g clip-path="url(#'+id+')" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">'
     tr.forEach(function(o){out+='<path class="crb-courbe" data-nom="'+o.nom+'" d="'+o.d+'" stroke="'+o.couleur+'"/>'})
     out+='</g>'
