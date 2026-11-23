@@ -39,7 +39,7 @@ function afficherSucces() {
   content.innerHTML =
     '<div class="icon">✅</div>' +
     '<div class="title">Désabonnement confirmé</div>' +
-    '<div class="subtitle">C\'est fait : vous ne recevrez plus nos emails de suivi. Les emails liés à vos démarches (inscription, mot de passe, résiliation, stages, examens présentiels) continueront de vous parvenir.</div>' +
+    '<div class="subtitle">C\'est fait : vous ne recevrez plus nos emails de suivi. Les emails liés à vos démarches (inscription, mot de passe, résiliation, stages, Brevet blanc) continueront de vous parvenir.</div>' +
     '<div class="note">Pour vous réabonner, écrivez à :<br>' +
     '<a href="mailto:contact@academika.fr" style="color:#3730a3">contact@academika.fr</a></div>'
 }
@@ -90,7 +90,7 @@ if (success) {
   content.innerHTML =
     '<div class="icon">📧</div>' +
     '<div class="title">Confirmer le désabonnement</div>' +
-    '<div class="subtitle">Souhaitez-vous ne plus recevoir nos emails de suivi (récapitulatifs, bilans, résultats des examens en ligne) ?</div>' +
+    '<div class="subtitle">Souhaitez-vous ne plus recevoir nos emails de suivi (récapitulatifs, bilans, résultats de l\'examen blanc type Brevet) ?</div>' +
     '<div class="note" style="margin-bottom:1.5rem"><strong>' + escHtml(email) + '</strong></div>' +
     '<button id="btn-confirmer" class="btn">Confirmer le désabonnement</button>'
   document.getElementById('btn-confirmer').addEventListener('click', confirmerDesabonnement)
