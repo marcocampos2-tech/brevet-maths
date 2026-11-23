@@ -802,7 +802,7 @@ export default async function handler(req, res) {
           <div style="background:#eef2ff;border-radius:12px;padding:20px;margin:20px 0;">
             <p style="font-weight:600;margin-bottom:12px;color:#3730a3">Comment ça fonctionne</p>
             <p style="margin-bottom:8px;font-size:14px;">🎯 Des quiz ciblés par sous-thème, avec des corrections détaillées étape par étape</p>
-            <p style="margin-bottom:8px;font-size:14px;">📝 Un examen blanc type Brevet, chronométré et noté sur 20</p>
+            <p style="margin-bottom:8px;font-size:14px;">📝 Un examen blanc type Brevet, chronométré, avec la correction détaillée</p>
             <p style="margin-bottom:0;font-size:14px;">🔓 Trois niveaux — Facile, Moyen, Difficile — à débloquer progressivement</p>
           </div>
           <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0;">
