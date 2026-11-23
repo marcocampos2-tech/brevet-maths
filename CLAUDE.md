@@ -23,6 +23,22 @@ Fichiers non encore audités, à lire en priorité si pertinent : `resultats.htm
 * Cours présentiel individuel retiré de l'offre publique (conflit avec activité salariée)
 * CM ne travaille jamais le samedi ; présentiel bassin Melun = dimanches uniquement
 
+## Vocabulaire — les deux examens blancs (décision du 23/11/2026)
+
+**Deux produits, deux noms, jamais confondus.** Le produit en ligne est un entraînement sur écran ; le présentiel est l'épreuve sur papier. Les deux portaient le même nom, ce qui laissait croire qu'un bon score en ligne vaut un bon score au Brevet, et le présentiel avait quatre noms selon l'endroit.
+
+| Produit | Nom unique |
+|---|---|
+| En ligne (`examen.html`, `api/examen.js`) | **Examen blanc type Brevet** |
+| Présentiel (`brevet-blanc.html`, `api/inscription-brevet.js`) | **Brevet blanc** |
+
+* Menu d'accueil de `quiz.html` : Quiz · Examen blanc type Brevet · Brevet blanc. Badge de la liste « 30 dernières activités » (`prof.html`) : « Examen ».
+* **Graphie** : « Examen blanc type Brevet » en titre ou en libellé autonome, « examen blanc type Brevet » en minuscules au milieu d'une phrase ; « Brevet » garde toujours sa majuscule. Présentiel : « Brevet blanc », un seul B majuscule, jamais « Brevet Blanc », « Examen Blanc Présentiel » ni « Examen blanc en présentiel » (le suffixe « en présentiel » n'existe plus).
+* **Un troisième objet, distinct des deux** : le brevet blanc d'un stage de vacances (`DOMAINES_PAR_PERIODE` de `prof.html`, « Mai : révision générale + brevet blanc »), qui garde sa graphie.
+* **Ne se renomment pas** : noms de tables et colonnes (`examens_blancs`, `examen_questions`, `examens_progression`, `sessions_examen_blanc`, `resultats`), fichiers, routes et endpoints, types d'email (`brevet-blanc`, `adresse-brevet`, `resultats-brevet`), classes CSS (`banniere-presentiel-accueil`…), variables, fonctions, clés JSON, messages de `console.log`, commentaires de code. Le texte visible seul change.
+* Le message 403 de `api/examen.js` et celui de l'écran verrouillé d'`examen.html` doivent rester **mot pour mot identiques**. Les chaînes courantes d'`examen.html` qui emploient « examen » comme nom commun (« Commencer l'examen »…) ne sont pas des titres : elles seront réécrites avec la refonte en deux parties.
+* Les en-têtes d'emails portent « ACADEMIKA » comme nom (règle du 21/10/2026).
+
 ## CHANTIER — Audit sécurité & correction RLS
 
 ⚠️ **CLAUDE.md n'est pas la source de vérité sur l'état des policies.** Erreur factuelle trouvée et corrigée le 03/09/2026 (cf. section « intégrité des comptes » ci-dessous) : ce document peut décrire une policy qui n'a jamais existé sous cette forme. Toujours dumper `pg_policies` avant toute décision touchant à la RLS — ne jamais se fier à la description ci-dessous sans revérifier.
@@ -265,7 +281,7 @@ Colonne `jsonb` **nullable**, ajoutée en production le 18/10/2026 (`db/resultat
 * **`beforeunload`** : l'avertissement « Ton résultat n'est pas encore enregistré » peut désormais apparaître avant le clic, uniquement pendant l'envoi ou après un échec, à la fermeture de l'onglet (ordinateur) : il n'est jamais affiché dans la page.
 * Test : `NODE_PATH=/opt/node-tools/node_modules node lib/quiz-fin.manual-test.js` (Playwright, environ 90 s).
 
-## Examen blanc en ligne — mesure du temps (`api/examen.js`, `examen.html`)
+## Examen blanc type Brevet — mesure du temps (`api/examen.js`, `examen.html`)
 
 **Décisions du 21/11/2026.** Durée : **40 minutes**, définie **une seule fois** par `DUREE_EXAMEN_S` / `DUREE_EXAMEN_MS` (`api/examen.js`) et renvoyée au client par `demarrer` et `reprise` (`duree_s`) ; `examen.html` n'en code plus aucune (une seule constante de repli, `DUREE_REPLI_S`, lue seulement si `duree_s` est absent ou invalide : à garder égale à `DUREE_EXAMEN_S`). Les textes « 40 minutes » de l'intro d'`examen.html` et de `quiz.html` restent écrits à la main. `heure_fin` (= démarrage + durée, serveur) est écrite dans `examens_progression` au démarrage et n'est **jamais** modifiable par le client.
 
@@ -277,13 +293,13 @@ Colonne `jsonb` **nullable**, ajoutée en production le 18/10/2026 (`db/resultat
 
 ## CHANTIER — Mémoire des questions vues (terminé)
 
-Quiz normal PR #24, durcissement du diagnostic PR #25, examen blanc PR #26, extraction du socle commun dans la PR qui a ajouté cette section.
+Quiz normal PR #24, durcissement du diagnostic PR #25, examen blanc type Brevet PR #26, extraction du socle commun dans la PR qui a ajouté cette section.
 
 Avant ce chantier, rien n'empêchait un élève de revoir indéfiniment les mêmes questions : ni mémoire des questions servies, ni filtre au tirage, sur **aucun** des deux parcours.
 
 ### Le mécanisme
 
-Table `questions_vues` (`user_id`, `question_id`, `source`, contrainte unique sur le triplet, RLS `auth.uid() = user_id`). `source` vaut `'banque'` (quiz normal) ou `'examen'` (examen blanc) — les deux tables de questions partagent le même espace d'ids, c'est cette colonne qui les sépare.
+Table `questions_vues` (`user_id`, `question_id`, `source`, contrainte unique sur le triplet, RLS `auth.uid() = user_id`). `source` vaut `'banque'` (quiz normal) ou `'examen'` (examen blanc type Brevet) — les deux tables de questions partagent le même espace d'ids, c'est cette colonne qui les sépare.
 
 Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge, marquage, étanchéité des erreurs. L'accès passe par `memoireQuestionsVues('banque' | 'examen')`, qui lie la source une fois pour tout le fichier appelant — une source erronée répétée aux points d'appel enverrait un `DELETE` sur les questions vues de l'autre parcours, sans rien signaler.
 
@@ -303,7 +319,7 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 ### Comportement
 
 * **Quiz normal** — filtrage sur la combinaison thème/sous-thème/difficulté. Purge bornée à cette seule combinaison, les autres sous-thèmes intacts. Un pool de 5 énoncés distincts ou moins court-circuite tout le mécanisme (le tirage sert le pool entier de toute façon).
-* **Examen blanc** — seuil et purge **par partie** : la purge ne porte que sur les ids des parties en reboucle. Trois requêtes au maximum quel que soit le nombre de parties concernées. Une partie de moins de 6 questions est laissée entièrement de côté : ni lue, ni purgée, ni marquée.
+* **Examen blanc type Brevet** — seuil et purge **par partie** : la purge ne porte que sur les ids des parties en reboucle. Trois requêtes au maximum quel que soit le nombre de parties concernées. Une partie de moins de 6 questions est laissée entièrement de côté : ni lue, ni purgée, ni marquée.
 * **Chiffres de référence** : 45 questions par partie → **8 examens sans recouvrement, reboucle au 9ᵉ** (pas 9 : après 8 examens il reste 5 non-vues par partie, sous le seuil de 6).
 
 ### Le champ `vues` de la réponse — vocabulaire clos
@@ -349,7 +365,7 @@ Socle commun dans **`lib/questions-vues.js`** : contexte élève, lecture, purge
 
 * **Suivi — respectent `email_actif`, portent un lien « Se désabonner »** : `recap-journalier-user`, `brevet-blanc` (`raison: 'desabonne'` avant le quota), `bilan`, ainsi que les emails de `api/cron-rappel.js` (fin d'année, été, bilan périodique).
 * **Démarches — ignorent `email_actif`, sans lien de désabonnement** : `inscription` (bienvenue), `resiliation-confirmee`, `reset-password`, `adresse-brevet`, `stage`, `resultats-brevet`. Ce sont des réponses à une action du parent ou des confirmations de service (la résiliation est une confirmation sur support durable). `contact-cours` n'est pas concerné (destiné à `contact@academika.fr`).
-* **Page de désabonnement** (`desabonner.html`, `api/desabonner.js`) : promet la fin des « emails de suivi (récapitulatifs, bilans, résultats des examens en ligne) » et dit que les emails de démarches continuent. Le désabonnement porte sur **tout le foyer** (tous les profils de l'`email_parent`), comparaison sans casse (`ilike`, `*` refusé : joker PostgREST). Une adresse inconnue donne la même réponse qu'un succès (journal « 0 ligne », sans adresse). La colonne est versionnée dans `db/policies.sql` (`boolean NOT NULL DEFAULT true`).
+* **Page de désabonnement** (`desabonner.html`, `api/desabonner.js`) : promet la fin des « emails de suivi (récapitulatifs, bilans, résultats de l'examen blanc type Brevet) » et dit que les emails de démarches continuent. Le désabonnement porte sur **tout le foyer** (tous les profils de l'`email_parent`), comparaison sans casse (`ilike`, `*` refusé : joker PostgREST). Une adresse inconnue donne la même réponse qu'un succès (journal « 0 ligne », sans adresse). La colonne est versionnée dans `db/policies.sql` (`boolean NOT NULL DEFAULT true`).
 * **Risque accepté (05/10/2026) : lien de désabonnement non signé** (désabonnement possible par simple adresse ; réabonnement manuel via contact@academika.fr). À revoir si : trafic réel, plainte, ou volume d'emails imposant le désabonnement en un clic (List-Unsubscribe).
 * **Recherche `ilike` sur une saisie utilisateur : toujours via `escapeIlike()`** (échappe `\` `%` `_` et refuse `*`, joker PostgREST), avec refus explicite avant la requête. Faille constatée le 05/10/2026 : `*` dans `reset-password` visait tous les profils. `api/desabonner.js` applique sa propre validation équivalente.
 * **Rattrapage du récap journalier (`api/cron-rappel.js`) : appels internes via le domaine de production.** Le cron appelle `https://www.academika.fr/api/email` (constante `BASE_URL_PROD`), pas `https://${req.headers.host}/api/email`. Constat du 07/10/2026 : 4 POST sans email envoyé ni session marquée ; cause supposée, non prouvée : l'URL propre au déploiement (`*.vercel.app`) est soumise à la Deployment Protection, sans en-tête de contournement. Domaine canonique `www` (l'apex redirige, ce qui ferait perdre `Authorization`). Une ligne de log par POST, préfixe `[cron-rappel][rattrapage]` (user_id tronqué à 8 caractères, date, statut, type de réponse, skip / erreur / « envoyé »), plus une synthèse ; **jamais d'adresse email dans ces logs** (`pourLog()` masque tout motif d'adresse). `api/stripe-webhook.js:249` garde l'ancien motif (cf. `docs/TODO.md` n°66).

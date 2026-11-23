@@ -241,7 +241,7 @@ nav { display: flex; justify-content: space-between; align-items: center; paddin
         <div class="offre-badge">Offert jusqu'à décembre</div>
         <div class="offre-nom">Accompagné</div>
         <div class="offre-prix">7,90 €<span>/mois</span></div>
-        <div class="offre-desc">Libre, plus : emails de suivi après chaque session, bilan complet tous les 21 jours, export PDF des résultats, examen blanc en ligne</div>
+        <div class="offre-desc">Libre, plus : emails de suivi après chaque session, bilan complet tous les 21 jours, export PDF des résultats, examen blanc type Brevet</div>
       </div>
     </div>
 
@@ -453,7 +453,7 @@ async function chargerExamensBlancs(uid) {
 
   // Verrouillé : examens_blancs n'est PAS lu.
   if (eleveVerrouille(uid)) {
-    zone.innerHTML = `<div class="card"><div class="niv-verrou-tete"><div class="card-titre" style="margin-bottom:0">Examens blancs</div>${SVG_CADENAS}</div><div class="verrou-mention" style="margin-top:0"></div></div>`
+    zone.innerHTML = `<div class="card"><div class="niv-verrou-tete"><div class="card-titre" style="margin-bottom:0">Examen blanc type Brevet</div>${SVG_CADENAS}</div><div class="verrou-mention" style="margin-top:0"></div></div>`
     zone.querySelector('.verrou-mention').textContent = MENTION_ACCOMPAGNE
     return
   }
@@ -473,7 +473,7 @@ async function chargerExamensBlancs(uid) {
     return `<div class="examen-ligne"><span class="examen-ligne-date">${date}</span><span class="examen-ligne-score">${e.score}/${e.total}</span></div>`
   }).join('')
 
-  zone.innerHTML = `<div class="card"><div class="card-titre">Examens blancs</div>${lignes}</div>`
+  zone.innerHTML = `<div class="card"><div class="card-titre">Examen blanc type Brevet</div>${lignes}</div>`
 }
 
 // Encart final « Suivre la progression de … en détail », en bas de page :
@@ -498,7 +498,7 @@ function afficherEncartSuivi(uid) {
         <li>Le niveau atteint par sous-thème</li>
         <li>L'historique sur 14 et 21 jours</li>
         <li>Les bilans PDF</li>
-        <li>Les examens blancs en ligne</li>
+        <li>L'examen blanc type Brevet</li>
       </ul>
       <button class="bandeau-suivi-btn" id="btn-passer-suivi">${libelleBtn} · 7,90 €/mois</button>
       <div class="encart-suivi-note">Sans engagement, résiliable à tout moment.</div>

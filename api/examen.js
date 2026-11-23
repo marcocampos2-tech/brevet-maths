@@ -55,7 +55,7 @@ export default async function handler(req, res) {
     // un élève Accompagné démarre un examen blanc. Une tentative déjà en cours
     // se reprend et se termine (reprise/progression/enregistrer non verrouillés).
     if (await examenVerrouille(userId, req.body.access_token, req.body.simuler_bascule === true, SUPA_URL, SUPA_KEY, headers)) {
-      return res.status(403).json({ success: false, code: 'offre_requise', error: "L'examen blanc en ligne est disponible avec l'offre Accompagné." })
+      return res.status(403).json({ success: false, code: 'offre_requise', error: "L'examen blanc type Brevet est disponible avec l'offre Accompagné." })
     }
     try {
       const parties = [1, 2, 3, 4]

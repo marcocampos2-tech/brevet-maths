@@ -392,7 +392,7 @@ export default async function handler(req, res) {
 
     let sujetInterne, contenuInterne
     if (sousType === 'refus') {
-      sujetInterne = `Inscription Examen Blanc Brevet — ${prenom}`
+      sujetInterne = `Inscription Brevet blanc — ${prenom}`
       contenuInterne = `
         <p style="margin-bottom:16px">Bonjour,</p>
         <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous avons bien reçu la demande d'inscription de <strong>${esc(prenom)} ${esc(nom)}</strong> pour la session du <strong>${esc(date)}</strong>.</p>
@@ -400,17 +400,17 @@ export default async function handler(req, res) {
         <p style="color:#444;line-height:1.6;margin-bottom:20px">Si l'autre date vous convient, n'hésitez pas à vous réinscrire sur <strong>academika.fr</strong>.</p>
       `
     } else if (sousType === 'annulation') {
-      sujetInterne = `Annulation Examen Blanc Brevet — ${prenom}`
+      sujetInterne = `Annulation Brevet blanc — ${prenom}`
       contenuInterne = `
         <p style="margin-bottom:16px">Bonjour,</p>
         <p style="color:#444;line-height:1.6;margin-bottom:20px">Nous vous informons que l'inscription de <strong>${esc(prenom)} ${esc(nom)}</strong> pour la session du <strong>${esc(date)}</strong> a été annulée.</p>
       `
     } else {
       if (!adresse) return res.status(400).json({ error: 'Adresse manquante' })
-      sujetInterne = `✅ Inscription confirmée — Examen Blanc Brevet — ${prenom}`
+      sujetInterne = `✅ Inscription confirmée — Brevet blanc — ${prenom}`
       contenuInterne = `
         <p style="margin-bottom:16px">Bonjour,</p>
-        <p style="color:#444;line-height:1.6;margin-bottom:20px">L'inscription de <strong>${esc(prenom)} ${esc(nom)}</strong> pour l'examen blanc est confirmée :</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">L'inscription de <strong>${esc(prenom)} ${esc(nom)}</strong> pour le Brevet blanc est confirmée :</p>
         <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0">
           <p style="margin-bottom:8px"><strong>📅 Date :</strong> ${esc(date)} · ${esc(heure) || '15h00'}</p>
           <p style="margin-bottom:8px"><strong>📍 Adresse :</strong> ${esc(adresse)}</p>
@@ -646,7 +646,7 @@ export default async function handler(req, res) {
       const couleurScore = pct >= 80 ? '#16a34a' : pct >= 60 ? '#3730a3' : pct >= 40 ? '#f59e0b' : '#dc2626'
       const mention = pct >= 80 ? '🌟 Excellent' : pct >= 70 ? '👍 Très bon' : pct >= 60 ? '✅ Bon' : pct >= 50 ? '📋 Correct' : '📚 À retravailler'
       const messageMotivation = pct >= 50
-        ? `Bonne nouvelle : <strong>${esc(prenom)}</strong> a réussi son examen en ligne ! Encouragez-le à continuer sur les thèmes à améliorer.`
+        ? `Bonne nouvelle : <strong>${esc(prenom)}</strong> a réussi son examen blanc type Brevet ! Encouragez-le à continuer sur les thèmes à améliorer.`
         : `<strong>${esc(prenom)}</strong> n'a pas encore le niveau requis. C'est normal — c'est un entraînement ! Encouragez-le à continuer à réviser régulièrement.`
 
       const tempsFormat = tempsSecondes === null ? '' : `${Math.floor(tempsSecondes / 60)} min ${tempsSecondes % 60} sec`
@@ -664,11 +664,11 @@ export default async function handler(req, res) {
         <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
           <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
             <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
-            <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Examen en ligne</div>
+            <div style="font-size:12px;color:#666;margin-top:4px">ACADEMIKA — Examen blanc type Brevet</div>
           </div>
           <p style="margin-bottom:6px;">Bonjour Madame, Monsieur,</p>
           <p style="margin-bottom:20px;color:#444;">
-            Votre enfant <strong>${esc(prenom)}${nom ? ' ' + esc(nom) : ''}</strong> vient de passer l'Examen en ligne Brevet Maths sur ACADEMIKA.
+            Votre enfant <strong>${esc(prenom)}${nom ? ' ' + esc(nom) : ''}</strong> vient de passer l'examen blanc type Brevet sur ACADEMIKA.
           </p>
           <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
             <div style="font-size:56px;font-weight:700;color:${couleurScore}">${score}/${SCORE_MAX_EXAMEN}</div>
@@ -699,7 +699,7 @@ export default async function handler(req, res) {
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.RESEND_API_KEY}` },
-        body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `📝 ${prenom} a obtenu ${score}/${SCORE_MAX_EXAMEN} à l'Examen en ligne — ACADEMIKA`, html })
+        body: JSON.stringify({ from: 'noreply@academika.fr', to: emailParent, subject: `📝 ${prenom} a obtenu ${score}/${SCORE_MAX_EXAMEN} à l'examen blanc type Brevet — ACADEMIKA`, html })
       })
 
       const responseData = await response.json()
@@ -802,7 +802,7 @@ export default async function handler(req, res) {
           <div style="background:#eef2ff;border-radius:12px;padding:20px;margin:20px 0;">
             <p style="font-weight:600;margin-bottom:12px;color:#3730a3">Comment ça fonctionne</p>
             <p style="margin-bottom:8px;font-size:14px;">🎯 Des quiz ciblés par sous-thème, avec des corrections détaillées étape par étape</p>
-            <p style="margin-bottom:8px;font-size:14px;">📝 Un examen en ligne, au format du QCM du Brevet</p>
+            <p style="margin-bottom:8px;font-size:14px;">📝 Un examen blanc type Brevet, chronométré, avec la correction détaillée</p>
             <p style="margin-bottom:0;font-size:14px;">🔓 Trois niveaux — Facile, Moyen, Difficile — à débloquer progressivement</p>
           </div>
           <div style="background:#f5f5f0;border-radius:12px;padding:20px;margin:20px 0;">
@@ -887,10 +887,10 @@ export default async function handler(req, res) {
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px;color:#1a1a1a">
         <div style="text-align:center;padding:16px 0;border-bottom:2px solid #e8e8e4;margin-bottom:24px">
           <div style="font-size:28px;font-weight:800;">∑ ACADEMIKA</div>
-          <div style="font-size:12px;color:#666;margin-top:4px">Brevet Maths — Examen blanc présentiel</div>
+          <div style="font-size:12px;color:#666;margin-top:4px">ACADEMIKA — Brevet blanc</div>
         </div>
         <p style="margin-bottom:16px;">Bonjour,</p>
-        <p style="color:#444;line-height:1.6;margin-bottom:20px">Voici les résultats de <strong>${esc(prenom)} ${esc(nom)}</strong> pour l'examen blanc du <strong>${esc(date)}</strong> :</p>
+        <p style="color:#444;line-height:1.6;margin-bottom:20px">Voici les résultats de <strong>${esc(prenom)} ${esc(nom)}</strong> pour le Brevet blanc du <strong>${esc(date)}</strong> :</p>
         <div style="background:#f5f5f0;border-radius:12px;padding:24px;margin:20px 0;text-align:center">
           <div style="font-size:56px;font-weight:700;color:${couleur}">${note}<span style="font-size:24px;color:#999">/20</span></div>
           <div style="font-size:18px;margin-top:8px">${mention}</div>
@@ -916,7 +916,7 @@ export default async function handler(req, res) {
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${RESEND_KEY}` },
-        body: JSON.stringify({ from: 'ACADEMIKA <noreply@academika.fr>', to: emailParent, subject: `📝 Résultats Examen Blanc Brevet — ${prenom}`, html })
+        body: JSON.stringify({ from: 'ACADEMIKA <noreply@academika.fr>', to: emailParent, subject: `📝 Résultats Brevet blanc — ${prenom}`, html })
       })
       return res.status(200).json({ success: true })
     } catch(e) {

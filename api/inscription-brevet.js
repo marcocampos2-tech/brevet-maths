@@ -142,7 +142,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'ACADEMIKA <noreply@academika.fr>',
         to: PROF_EMAIL,
-        subject: `📝 Nouvelle inscription brevet blanc — ${prenomAff} ${nom}`,
+        subject: `📝 Nouvelle inscription Brevet blanc — ${prenomAff} ${nom}`,
         html: `
           <h2>Nouvelle inscription</h2>
           <p><strong>Élève :</strong> ${prenomAff} ${nom}</p>
@@ -167,7 +167,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         from: 'ACADEMIKA <noreply@academika.fr>',
         to: email_parent,
-        subject: `📝 Inscription Examen Blanc Brevet — ${prenomAff}`,
+        subject: `📝 Inscription Brevet blanc — ${prenomAff}`,
         html: `
           <h2>📋 Inscription reçue</h2>
           <p>Bonjour,</p>
